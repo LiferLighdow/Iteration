@@ -1,4 +1,4 @@
-# ⚡ Iteration Launcher
+# <img src="app/src/main/ic_launcher-playstore.png" width="48" valign="middle"> ⚡ Iteration Launcher
 
 > **iOS-inspired interactions, Android-native elegance, Material 3 refined.**
 
