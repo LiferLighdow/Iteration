@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">Iteration</string>
+    <string name="settings_title">Settings</string>
+    <string name="settings_general">General</string>
+    <string name="settings_custom_layout">Custom Layout</string>
+    <string name="settings_apply">Apply Changes</string>
+    <string name="launcher_placeholder">iOS Style Launcher</string>
+    <string name="btn_settings">Settings</string>
+</resources>
