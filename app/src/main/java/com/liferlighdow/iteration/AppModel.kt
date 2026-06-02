@@ -5,10 +5,13 @@ import androidx.compose.ui.graphics.ImageBitmap
 
 data class AppModel(
     val label: String,
-    val packageName: String,
-    val icon: Drawable,
+    val packageName: String = "",
+    val icon: Drawable? = null,
     val processedIcon: ImageBitmap? = null, // 預處理後的滿版圖示
     val isHidden: Boolean = false,
     val category: Int = -1, // ApplicationInfo.category
-    val uniqueId: String = packageName // 用於區分主畫面上的多個實例
+    val displayCategory: String = "Other",
+    val uniqueId: String = packageName, // 用於區分主畫面上的多個實例
+    val isFolder: Boolean = false,
+    val folderItems: List<AppModel> = emptyList()
 )

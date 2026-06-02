@@ -14,8 +14,9 @@ class AppRepository(private val context: Context) {
 
         // 抓取所有具有 LAUNCHER 類別的 Activity
         val resolveInfos = pm.queryIntentActivities(intent, 0)
+        val myPackageName = context.packageName
 
-        return resolveInfos.map { info ->
+        return resolveInfos.filter { it.activityInfo.packageName != myPackageName }.map { info ->
             AppModel(
                 label = info.loadLabel(pm).toString(),
                 packageName = info.activityInfo.packageName,
