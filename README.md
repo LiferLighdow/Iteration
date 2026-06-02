@@ -17,36 +17,41 @@
 ### 🎨 Design & Interaction
 *   **Immersive Edge-to-Edge**: Full transparency support that treats your wallpaper as the primary canvas.
 *   **Fluid Pagination**: Smooth `HorizontalPager` transitions with a physics-based drag-and-drop system.
-*   **Paged Folders**: Organized **3x3 grid folders** with horizontal paging, allowing you to manage large collections without clutter.
+*   **Paged Folders (3x3 Grid)**: Organized folders with horizontal paging, allowing you to manage large collections in a clean, iOS-style 3x3 layout.
 *   **Dynamic Dock**: A floating, customizable utility bar for your mission-critical applications.
 *   **Jiggle Mode**: Long-press to enter edit mode with intuitive "jiggling" icons, making reordering and folder creation a breeze.
-*   **Quick Actions**: Long-press any app in normal mode to access quick menus for **Uninstalling** or **Removing from Home Screen**.
+*   **Quick Actions (Context Menu)**: Long-press any app in normal mode to access quick menus for **Uninstalling** or **Removing from Home Screen**.
+*   **Material You Integration**: Full support for system-wide theming and dynamic color palettes.
 
 ### 🔍 Discovery & Organization
 *   **Global Search Hub**: A unified search interface (swipe-down) indexing apps, web results, and system shortcuts.
-*   **Extended Search Integration**: Directly jump to **Web**, **Google Maps**, or **App Stores** (supporting F-Droid, Aurora, etc.) from the search bar.
+*   **Extended Search Integration**: Directly jump to **Web (Google)**, **Google Maps**, or **App Stores** (supporting F-Droid, Aurora Store, App Lounge, etc.) directly from the search bar.
 *   **Smart Categorization**: Automatic grouping of applications using Android's native metadata in the App Library.
-*   **Enhanced App Library**: Integrated search with improved navigation and focus management.
+*   **App Library Custom Sections**: Create, delete, and manually assign apps to your own categories (e.g., "Work", "Productivity").
+*   **Enhanced Navigation**: Integrated search in App Library with intelligent focus management and `BackHandler` support.
 
 ### 🔒 Privacy & Personalization
 *   **Secure Vault**: Hide sensitive applications behind a password-protected layer in the App Library.
-*   **Material You Integration**: Respects system-wide theming and dynamic color palettes.
-*   **Pro Icon Re-skinning**: High-resolution icon cropping with visual masking and precision `Matrix` transformations.
-*   **Alias Management**: Rename applications to fit your personal workflow.
+*   **Deep Customization**: 
+    *   **Pro Icon Re-skinning**: High-resolution (512px) icon cropping with visual masking and precision `Matrix` transformations.
+    *   **Alias Management**: Rename applications to fit your personal workflow.
+    *   **Adaptive Icon Synchronization**: Advanced processing ensures foreground and background layers stay perfectly aligned during scaling.
 
 ---
 
 ## 🛠️ Technical Showcase
 
 ### High-Performance Rendering
-*   **Adaptive Icon Synchronization**: Automatically scales foreground and background layers synchronously to prevent "parallax breaking".
-*   **Optimized Recomposition**: Leverages stable `keys` and `remember` blocks to minimize overhead during complex animations.
-*   **Asynchronous Processing**: Offloads heavy bitmap decoding and package querying to background threads using Kotlin Coroutines.
+To maintain a consistent **60/120 FPS** on modern displays:
+*   **Adaptive Icon Synchronization**: Automatically scales foreground and background layers synchronously (1.35x default) to prevent "parallax breaking".
+*   **Optimized Recomposition**: Leverages stable `keys` and `remember` blocks in Lazy lists to minimize overhead.
+*   **Asynchronous Processing**: Offloads heavy bitmap decoding and package querying to `Dispatchers.IO` using Kotlin Coroutines.
+*   **Hardware Acceleration**: Utilizes Compose's hardware-accelerated drawing for all complex UI components.
 
 ### Architecture (MVVM)
 - **ViewModel + StateFlow**: Reactive UI updates driven by a single source of truth.
 - **Repository Pattern**: Clean separation between Package Manager interactions and UI logic.
-- **Data Persistence**: Efficient storage using `SharedPreferences` and internal binary storage for custom assets.
+- **Data Persistence**: Efficient storage using `SharedPreferences` for flags and internal binary storage for custom assets.
 
 ---
 
@@ -67,14 +72,20 @@ app/src/main/java/com/liferlighdow/iteration/
 
 ### Prerequisites
 - **Android Studio**: Ladybug | 2024.2.1 or newer.
-- **JDK**: Java 17+.
+- **JDK**: Java 17+ (Required for Gradle 8.x+).
 - **Android Device**: API 26 (Android 8.0) or higher.
 
-### Installation
-1.  Clone the repository: `git clone https://github.com/LiferLighdow/Iteration.git`
-2.  Open in Android Studio and Sync Gradle.
-3.  Run the `app` module on your device.
-4.  Set as Default: **Settings > Apps > Default Apps > Home app > Iteration**.
+### Installation & Build
+1.  **Clone the repository**:
+    ```bash
+    git clone https://github.com/LiferLighdow/Iteration.git
+    ```
+2.  **Compile via Gradle**:
+    ```bash
+    ./gradlew assembleDebug
+    ```
+3.  **Run/Install**: Open in Android Studio and run the `app` module, or use `./gradlew installDebug`.
+4.  **Set as Default**: **Settings > Apps > Default Apps > Home app > Iteration**.
 
 ---
 
@@ -82,9 +93,12 @@ app/src/main/java/com/liferlighdow/iteration/
 - **Swipe Down**: Open Global Search from anywhere on the home screen.
 - **Swipe Left (Last Page)**: Access the Smart App Library.
 - **Long Press App**: 
-    - *Normal Mode*: Quick Actions (Delete/Uninstall).
+    - *Normal Mode*: Quick Actions (Uninstall / Remove from Home).
     - *Edit Mode*: Drag to reorder or drop onto another app to create a folder.
-- **Folder Rename**: Tap the folder title while it's open to rename.
+- **Folder Management**: 
+    - Tap the folder title while it's open to **Rename**.
+    - Swipe horizontally inside a folder to navigate between pages.
+- **Vault**: Default access via App Library hidden section.
 
 ---
 
