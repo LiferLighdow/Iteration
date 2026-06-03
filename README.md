@@ -21,7 +21,17 @@
 *   **Dynamic Dock**: A floating, customizable utility bar for your mission-critical applications.
 *   **Jiggle Mode**: Long-press to enter edit mode with intuitive "jiggling" icons, making reordering and folder creation a breeze.
 *   **Quick Actions (Context Menu)**: Long-press any app in normal mode to access quick menus for **Uninstalling** or **Removing from Home Screen**.
-*   **Material You Integration**: Full support for system-wide theming and dynamic color palettes.
+*   **Wallpaper & Default Options**: Integrated shortcuts for quick system **Wallpaper changing** and **One-tap Default Launcher setting** directly from the desktop menu.
+*   **Material You Integration**: Full support for system-wide theming and dynamic color palettes using `MaterialColorUtilities`.
+
+### 🧩 Widgets & Extensions (Minus One Page)
+*   **Dynamic Theme Extraction**: Automatically extracts the dominant color from your wallpaper using **QuantizerCelebi** and **Score** algorithms to generate a harmonious theme.
+*   **Smart Battery Widget**: Real-time battery level monitoring with a circular progress indicator and charging status.
+*   **Analog Clock Widget**: A minimalist, high-performance clock with synchronized second-hand animations and dynamic M3 coloring.
+*   **Grid-Sized Calendar**: A 2x2 widget showcasing the current date, month, and day of the week at a glance.
+*   **Interactive Photo Widgets**: 
+    *   Supports **2x2 (Standard)** and **4x2 (Wide)** formats.
+    *   **Built-in Cropping Tool**: Precision gesture-based (pinch-to-zoom, drag) image cropping with a visual guide to ensure a perfect fit for your desktop.
 
 ### 🔍 Discovery & Organization
 *   **Global Search Hub**: A unified search interface (swipe-down) indexing apps, web results, and system shortcuts.
@@ -107,4 +117,4 @@ Licensed under the **MIT License**.
 
 ---
 
-**Developed with ❤️ by LiferLighdow**
+**Developed with ❤️ by Lifer_Lighdow**

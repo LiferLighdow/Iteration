@@ -9,7 +9,6 @@ import android.graphics.drawable.AdaptiveIconDrawable
 import java.io.File
 import java.io.FileOutputStream
 import android.os.Build
-import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.lifecycle.AndroidViewModel
@@ -36,10 +35,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _dockPackageNames = MutableStateFlow(listOf<String>())
     val dockPackageNames = _dockPackageNames.asStateFlow()
 
+    private val _minusOneWidgets = MutableStateFlow<List<WidgetModel>>(emptyList())
+    val minusOneWidgets: StateFlow<List<WidgetModel>> = _minusOneWidgets.asStateFlow()
+
     private val _isEditMode = MutableStateFlow(false)
     val isEditMode = _isEditMode.asStateFlow()
 
-    private val hiddenPackages = mutableStateSetOf<String>()
+    private val hiddenPackages = mutableSetOf<String>()
     private val customLabels = mutableMapOf<String, String>()
     private val customCategories = mutableMapOf<String, String>()
     private val _userCategories = MutableStateFlow<List<String>>(emptyList())
@@ -54,7 +56,84 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         loadCustomLabels()
         loadUserCategories()
         loadCustomCategories()
+        loadWidgets()
         loadApps()
+    }
+
+    private fun loadWidgets() {
+        val saved = prefs.getString("minus_one_widgets", null)
+        if (saved != null) {
+            val list = mutableListOf<WidgetModel>()
+            val array = JSONArray(saved)
+            for (i in 0 until array.length()) {
+                val obj = array.getJSONObject(i)
+                val typeStr = obj.getString("type")
+                val type = when (typeStr) {
+                    "Battery" -> WidgetType.Battery
+                    "Clock" -> WidgetType.Clock
+                    "Calendar" -> WidgetType.Calendar
+                    "Photo" -> WidgetType.Photo(obj.optBoolean("isWide", false))
+                    else -> null
+                }
+                if (type != null) {
+                    list.add(WidgetModel(
+                        id = obj.getString("id"),
+                        type = type,
+                        label = obj.getString("label"),
+                        displayMode = try { WidgetDisplayMode.valueOf(obj.getString("displayMode")) } catch(e: Exception) { WidgetDisplayMode.GLASS }
+                    ))
+                }
+            }
+            _minusOneWidgets.value = list
+        }
+    }
+
+    fun addWidget(type: WidgetType) {
+        val label = when (type) {
+            is WidgetType.Battery -> "Battery"
+            is WidgetType.Clock -> "Clock"
+            is WidgetType.Calendar -> "Calendar"
+            is WidgetType.Photo -> "Photo"
+        }
+        val newList = _minusOneWidgets.value + WidgetModel(type = type, label = label)
+        _minusOneWidgets.value = newList
+        saveWidgets(newList)
+    }
+
+    fun removeWidget(id: String) {
+        val newList = _minusOneWidgets.value.filter { it.id != id }
+        _minusOneWidgets.value = newList
+        saveWidgets(newList)
+    }
+
+    fun updateWidgetDisplayMode(id: String, mode: WidgetDisplayMode) {
+        val newList = _minusOneWidgets.value.map {
+            if (it.id == id) it.copy(displayMode = mode) else it
+        }
+        _minusOneWidgets.value = newList
+        saveWidgets(newList)
+    }
+
+    private fun saveWidgets(list: List<WidgetModel>) {
+        val array = JSONArray()
+        list.forEach { widget ->
+            val obj = JSONObject()
+            obj.put("id", widget.id)
+            obj.put("label", widget.label)
+            obj.put("displayMode", widget.displayMode.name)
+            val typeStr = when (widget.type) {
+                is WidgetType.Battery -> "Battery"
+                is WidgetType.Clock -> "Clock"
+                is WidgetType.Calendar -> "Calendar"
+                is WidgetType.Photo -> {
+                    obj.put("isWide", widget.type.isWide)
+                    "Photo"
+                }
+            }
+            obj.put("type", typeStr)
+            array.put(obj)
+        }
+        prefs.edit().putString("minus_one_widgets", array.toString()).apply()
     }
 
     fun prepareForDrag() {
@@ -220,7 +299,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         
                         if (icon != null) {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && icon is AdaptiveIconDrawable) {
-                                val scale = 1.35f
+                                val scale = 1.4f
                                 val scaledSize = (sizePx * scale).toInt()
                                 val offset = (sizePx - scaledSize) / 2
                                 
@@ -240,16 +319,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         ib
                     }
                     
+                    val appRes = getApplication<Application>()
                     val displayCategory = customCategories[app.packageName] ?: when (app.category) {
-                        0 -> "Games"
-                        1 -> "Audio"
-                        2 -> "Video"
-                        3 -> "Imaging"
-                        4 -> "Social"
-                        5 -> "News"
-                        6 -> "Maps"
-                        7 -> "Productivity"
-                        else -> "Other"
+                        0 -> appRes.getString(R.string.cat_games)
+                        1 -> appRes.getString(R.string.cat_audio)
+                        2 -> appRes.getString(R.string.cat_video)
+                        3 -> appRes.getString(R.string.cat_imaging)
+                        4 -> appRes.getString(R.string.cat_social)
+                        5 -> appRes.getString(R.string.cat_news)
+                        6 -> appRes.getString(R.string.cat_maps)
+                        7 -> appRes.getString(R.string.cat_productivity)
+                        else -> appRes.getString(R.string.cat_other)
                     }
 
                     app.copy(
@@ -339,7 +419,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                 page[tIdx] = targetItem.copy(folderItems = targetItem.folderItems + item)
                             } else {
                                 page[tIdx] = AppModel(
-                                    label = "Folder",
+                                    label = getApplication<Application>().getString(R.string.folder_default_name),
                                     isFolder = true,
                                     folderItems = listOf(targetItem, item),
                                     uniqueId = "folder_${System.currentTimeMillis()}"
@@ -427,7 +507,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val targetPage = if (pageIndex < currentPages.size) currentPages[pageIndex] else mutableListOf<AppModel>().also { currentPages.add(it) }
         
         val newFolder = AppModel(
-            label = folderName.ifBlank { "Folder" },
+            label = folderName.ifBlank { getApplication<Application>().getString(R.string.folder_default_name) },
             isFolder = true,
             uniqueId = "folder_${System.currentTimeMillis()}"
         )
@@ -481,5 +561,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (removed) {
             reorganizeAllPages(currentPages)
         }
+    }
+
+    private val widgetPhotoDir = File(getApplication<Application>().filesDir, "widget_photos").apply { mkdirs() }
+
+    fun saveWidgetPhoto(widgetId: String, bitmap: Bitmap) {
+        val file = File(widgetPhotoDir, "$widgetId.png")
+        FileOutputStream(file).use { out ->
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+        }
+        _minusOneWidgets.value = _minusOneWidgets.value.toList()
+    }
+
+    fun getWidgetPhoto(widgetId: String): Bitmap? {
+        val file = File(widgetPhotoDir, "$widgetId.png")
+        return if (file.exists()) BitmapFactory.decodeFile(file.absolutePath) else null
     }
 }

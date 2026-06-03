@@ -1,9 +1,112 @@
 <resources>
     <string name="app_name">Iteration</string>
     <string name="settings_title">Settings</string>
+
+    <!-- UI Labels -->
+    <string name="done">Done</string>
+    <string name="cancel">Cancel</string>
+    <string name="create">Create</string>
+    <string name="save">Save</string>
+    <string name="add">Add</string>
+    <string name="delete">Delete</string>
+    <string name="edit">Edit</string>
+    <string name="rename">Rename</string>
+    <string name="unlock">Unlock</string>
+    <string name="close">Close</string>
+    <string name="apply">Apply</string>
+
+    <!-- Launcher Context Menu -->
+    <string name="menu_edit_mode">Enter Edit Mode</string>
+    <string name="menu_new_folder">New Folder</string>
+    <string name="menu_launcher_settings">Launcher Settings</string>
+    <string name="menu_wallpaper">Wallpaper</string>
+    <string name="menu_set_default">Set as Default Launcher</string>
+    <string name="menu_delete_home">Delete from Home</string>
+    <string name="menu_uninstall">Uninstall</string>
+
+    <!-- Folder Dialog -->
+    <string name="folder_default_name">Folder</string>
+    <string name="folder_create_title">Create New Folder</string>
+    <string name="folder_name_hint">Folder Name</string>
+    <string name="folder_add_app">Add App</string>
+    <string name="folder_delete">Delete Folder</string>
+    <string name="folder_menu_desc">Folder Menu</string>
+
+    <!-- App Picker -->
+    <string name="select_apps">Select Apps</string>
+    <string name="select_app">Select App</string>
+
+    <!-- Search & Library -->
+    <string name="search_hint">Search Apps&#8230;</string>
+    <string name="library_hint">App Library</string>
+    <string name="app_suggestions">App Suggestions</string>
+    <string name="more_searches">More Searches</string>
+    <string name="search_web">Search on Web</string>
+    <string name="search_store">Search on Store</string>
+    <string name="search_maps">Search on Maps</string>
+    <string name="hidden_apps_title">Hidden Apps</string>
+    <string name="password_hint">Enter Password</string>
+
+    <!-- Settings Main -->
+    <string name="settings_hide_apps">Hide Apps</string>
+    <string name="settings_hide_apps_desc">Manage hidden applications and security</string>
+    <string name="settings_rename_apps">Rename Apps</string>
+    <string name="settings_rename_apps_desc">Customize app labels on home screen</string>
+    <string name="settings_change_icon">Change Apps Icon</string>
+    <string name="settings_change_icon_desc">Customize app icons with your images</string>
+    <string name="settings_library">App Library Settings</string>
+    <string name="settings_library_desc">Manage app categories and sections</string>
+
+    <!-- Settings Sub-pages -->
+    <string name="security_section">Security</string>
+    <string name="password_label">Hidden Apps Password</string>
+    <string name="hide_apps_instruction">Select apps to hide</string>
+    <string name="custom_categories">Custom Categories</string>
+    <string name="assign_categories">Assign Apps to Categories</string>
+    <string name="add_category_title">Add New Category</string>
+    <string name="category_name_label">Category Name</string>
+    <string name="select_category_for">Select Category for %1$s</string>
+    <string name="default_system">Default (System)</string>
+    <string name="restore_default">Restore Default</string>
+    <string name="change_icon">Change Icon</string>
+    <string name="adjust_icon_position">Adjust Icon Position</string>
+    <string name="crop_instruction">Ensure important parts are within the circle</string>
+    <string name="rename_app_title">Rename %1$s</string>
+    <string name="new_label_hint">New Label</string>
+    <string name="back">Back</string>
+    <string name="clear">Clear</string>
+
+    <!-- Categories -->
+    <string name="cat_games">Games</string>
+    <string name="cat_audio">Audio</string>
+    <string name="cat_video">Video</string>
+    <string name="cat_imaging">Imaging</string>
+    <string name="cat_social">Social</string>
+    <string name="cat_news">News</string>
+    <string name="cat_maps">Maps</string>
+    <string name="cat_productivity">Productivity</string>
+    <string name="cat_other">Other</string>
+
+    <!-- Content Descriptions -->
+    <string name="desc_check">Check</string>
+    <string name="desc_back">Back</string>
+    <string name="desc_delete">Delete</string>
+    <string name="desc_add">Add Category</string>
+
+    <string name="launcher_placeholder">iOS Style Launcher</string>
+    <string name="btn_settings">Settings</string>
     <string name="settings_general">General</string>
     <string name="settings_custom_layout">Custom Layout</string>
     <string name="settings_apply">Apply Changes</string>
-    <string name="launcher_placeholder">iOS Style Launcher</string>
-    <string name="btn_settings">Settings</string>
+    <!-- Widgets -->
+    <string name="widget_battery">Battery Status</string>
+    <string name="widget_clock">Analog Clock</string>
+    <string name="widget_calendar">Calendar</string>
+    <string name="widget_photo">Photo</string>
+    <string name="widget_photo_wide">Wide Photo</string>
+    <string name="select_widget">Add Widget</string>
+    <string name="minus_one_title">Widget Area</string>
+    <string name="edit_widgets">Edit Layout</string>
+    <string name="widget_glass_mode">Glass Mode</string>
+    <string name="widget_color_mode">Color Mode</string>
 </resources>

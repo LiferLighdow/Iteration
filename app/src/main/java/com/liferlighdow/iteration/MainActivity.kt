@@ -1,27 +1,43 @@
 package com.liferlighdow.iteration
 
+import android.app.WallpaperManager
+import android.content.ComponentName
 import android.content.Intent
+import android.content.IntentFilter
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.net.Uri
+import android.os.BatteryManager
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -31,11 +47,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -43,11 +65,15 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.toSize
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -55,6 +81,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.util.Calendar
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -65,7 +92,7 @@ class MainActivity : ComponentActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER)
         enableEdgeToEdge()
         setContent {
-            MaterialTheme {
+            IterationTheme {
                 Box(modifier = Modifier.fillMaxSize().background(Color.Transparent)) {
                     LauncherScreen(
                         onAppClick = { pkg ->
@@ -94,6 +121,631 @@ fun calculateOverlap(r1: Rect, r2: Rect): Float {
     } else 0f
 }
 
+@Composable
+fun BatteryWidget(displayMode: WidgetDisplayMode, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    var batteryLevel by remember { mutableStateOf(0) }
+    var isCharging by remember { mutableStateOf(false) }
+
+    val containerColor = when (displayMode) {
+        WidgetDisplayMode.GLASS -> Color.White.copy(alpha = 0.2f)
+        WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.primaryContainer
+    }
+    val contentColor = when (displayMode) {
+        WidgetDisplayMode.GLASS -> Color.White
+        WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.onPrimaryContainer
+    }
+
+    DisposableEffect(Unit) {
+        val receiver = object : android.content.BroadcastReceiver() {
+            override fun onReceive(context: android.content.Context?, intent: android.content.Intent?) {
+                val level = intent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
+                val scale = intent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
+                batteryLevel = (level * 100 / scale.toFloat()).toInt()
+                val status = intent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
+                isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
+            }
+        }
+        context.registerReceiver(receiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        onDispose { context.unregisterReceiver(receiver) }
+    }
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(110.dp),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = containerColor)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column {
+                Text(
+                    text = stringResource(R.string.widget_battery),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = contentColor
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = if (isCharging) "Charging" else "Discharging",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = contentColor.copy(alpha = 0.7f)
+                )
+            }
+            
+            Box(contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(
+                    progress = { batteryLevel / 100f },
+                    modifier = Modifier.size(60.dp),
+                    color = if (batteryLevel > 20) {
+                        if (displayMode == WidgetDisplayMode.COLOR) MaterialTheme.colorScheme.primary else Color.Green
+                    } else Color.Red,
+                    strokeWidth = 6.dp,
+                    trackColor = contentColor.copy(alpha = 0.1f)
+                )
+                Text(
+                    text = "$batteryLevel%",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = contentColor
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun AnalogClockWidget(displayMode: WidgetDisplayMode, modifier: Modifier = Modifier) {
+    var time by remember { mutableStateOf(Calendar.getInstance()) }
+    
+    val containerColor = when (displayMode) {
+        WidgetDisplayMode.GLASS -> Color.White.copy(alpha = 0.2f)
+        WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.secondaryContainer
+    }
+    val contentColor = when (displayMode) {
+        WidgetDisplayMode.GLASS -> Color.White
+        WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.onSecondaryContainer
+    }
+    val secondHandColor = if (displayMode == WidgetDisplayMode.COLOR) MaterialTheme.colorScheme.error else Color.Red
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            time = Calendar.getInstance()
+            delay(1000)
+        }
+    }
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth() // 使用 fillMaxWidth 以填滿 Grid 分配的空間
+            .aspectRatio(1f),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = containerColor)
+    ) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Canvas(modifier = Modifier.size(120.dp)) {
+                val radius = size.width / 2f
+                
+                // Draw Dial
+                drawCircle(
+                    color = contentColor.copy(alpha = 0.1f),
+                    radius = radius
+                )
+
+                // 12 Ticks
+                for (i in 0 until 12) {
+                    val angle = i * 30f
+                    rotate(angle) {
+                        val tickLength = if (i % 3 == 0) 12.dp.toPx() else 8.dp.toPx()
+                        drawLine(
+                            color = contentColor.copy(alpha = 0.6f),
+                            start = Offset(center.x, 0f),
+                            end = Offset(center.x, tickLength),
+                            strokeWidth = 2.dp.toPx(),
+                            cap = StrokeCap.Round
+                        )
+                    }
+                }
+
+                // Hands logic
+                val hour = time.get(Calendar.HOUR)
+                val minute = time.get(Calendar.MINUTE)
+                val second = time.get(Calendar.SECOND)
+
+                // Hour Hand
+                rotate(hour * 30f + minute * 0.5f) {
+                    drawLine(
+                        color = contentColor,
+                        start = center,
+                        end = Offset(center.x, center.y - (radius * 0.5f)),
+                        strokeWidth = 4.dp.toPx(),
+                        cap = StrokeCap.Round
+                    )
+                }
+
+                // Minute Hand
+                rotate(minute * 6f) {
+                    drawLine(
+                        color = contentColor,
+                        start = center,
+                        end = Offset(center.x, center.y - (radius * 0.75f)),
+                        strokeWidth = 3.dp.toPx(),
+                        cap = StrokeCap.Round
+                    )
+                }
+
+                // Second Hand
+                rotate(second * 6f) {
+                    drawLine(
+                        color = secondHandColor,
+                        start = center,
+                        end = Offset(center.x, center.y - (radius * 0.85f)),
+                        strokeWidth = 1.5.dp.toPx(),
+                        cap = StrokeCap.Round
+                    )
+                }
+
+                // Center Pin
+                drawCircle(color = contentColor, radius = 4.dp.toPx())
+            }
+            
+            // 4 Numbers (12, 3, 6, 9)
+            Text("12", modifier = Modifier.align(Alignment.TopCenter).padding(top = 18.dp), color = contentColor, style = MaterialTheme.typography.labelSmall)
+            Text("6", modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 18.dp), color = contentColor, style = MaterialTheme.typography.labelSmall)
+            Text("3", modifier = Modifier.align(Alignment.CenterEnd).padding(end = 18.dp), color = contentColor, style = MaterialTheme.typography.labelSmall)
+            Text("9", modifier = Modifier.align(Alignment.CenterStart).padding(start = 18.dp), color = contentColor, style = MaterialTheme.typography.labelSmall)
+        }
+    }
+}
+
+@Composable
+fun PhotoWidget(widget: WidgetModel, viewModel: MainViewModel, modifier: Modifier = Modifier) {
+    var photo by remember(widget.id) { mutableStateOf(viewModel.getWidgetPhoto(widget.id)) }
+    var showCropDialog by remember { mutableStateOf<Uri?>(null) }
+    
+    val isWide = (widget.type as? WidgetType.Photo)?.isWide ?: false
+    val aspectRatio = if (isWide) 2.1f else 1f
+
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.let { showCropDialog = it }
+    }
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .aspectRatio(aspectRatio)
+            .clickable { launcher.launch("image/*") },
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.1f))
+    ) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            if (photo != null) {
+                Image(
+                    bitmap = photo!!.asImageBitmap(),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(Icons.Default.AddAPhoto, contentDescription = null, tint = Color.White.copy(alpha = 0.6f))
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(stringResource(R.string.widget_photo), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelSmall)
+                }
+            }
+        }
+    }
+
+    if (showCropDialog != null) {
+        ImageCropDialog(
+            uri = showCropDialog!!,
+            isWide = isWide,
+            onDismiss = { showCropDialog = null },
+            onConfirm = { croppedBitmap ->
+                viewModel.saveWidgetPhoto(widget.id, croppedBitmap)
+                photo = croppedBitmap
+                showCropDialog = null
+            }
+        )
+    }
+}
+
+@Composable
+fun ImageCropDialog(uri: Uri, isWide: Boolean, onDismiss: () -> Unit, onConfirm: (Bitmap) -> Unit) {
+    val context = LocalContext.current
+    val originalBitmap = remember(uri) {
+        context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
+    } ?: return
+
+    var scale by remember { mutableFloatStateOf(1f) }
+    var offset by remember { mutableStateOf(Offset.Zero) }
+    var containerSize by remember { mutableStateOf(Size.Zero) }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = Color.Black
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .onGloballyPositioned { containerSize = it.size.toSize() }
+                        .pointerInput(Unit) {
+                            detectTransformGestures { _, pan, zoom, _ ->
+                                scale *= zoom
+                                offset += pan
+                            }
+                        }
+                ) {
+                    Image(
+                        bitmap = originalBitmap.asImageBitmap(),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer(
+                                scaleX = scale,
+                                scaleY = scale,
+                                translationX = offset.x,
+                                translationY = offset.y
+                            ),
+                        contentScale = ContentScale.Fit
+                    )
+                }
+
+                // Crop Overlay
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    val overlayWidth = containerSize.width * 0.9f
+                    val overlayHeight = if (isWide) overlayWidth / 2.1f else overlayWidth
+                    
+                    // Draw Overlay and Border
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        // 1. Darken background outside crop area
+                        val path = Path().apply {
+                            addRect(Rect(0f, 0f, size.width, size.height))
+                            addRoundRect(
+                                RoundRect(
+                                    left = center.x - overlayWidth / 2f,
+                                    top = center.y - overlayHeight / 2f,
+                                    right = center.x + overlayWidth / 2f,
+                                    bottom = center.y + overlayHeight / 2f,
+                                    cornerRadius = CornerRadius(24.dp.toPx())
+                                )
+                            )
+                        }
+                        drawPath(path, color = Color.Black.copy(alpha = 0.7f))
+
+                        // 2. Draw clear white border for crop area
+                        drawRoundRect(
+                            color = Color.White,
+                            topLeft = Offset(center.x - overlayWidth / 2f, center.y - overlayHeight / 2f),
+                            size = Size(overlayWidth, overlayHeight),
+                            cornerRadius = CornerRadius(24.dp.toPx()),
+                            style = Stroke(width = 2.dp.toPx())
+                        )
+                    }
+                }
+
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(32.dp)
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    Button(onClick = onDismiss, colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                    Button(onClick = {
+                        val cropped = cropBitmap(originalBitmap, scale, offset, containerSize, isWide)
+                        onConfirm(cropped)
+                    }) {
+                        Text(stringResource(R.string.done))
+                    }
+                }
+            }
+        }
+    }
+}
+
+fun cropBitmap(original: Bitmap, scale: Float, offset: Offset, containerSize: Size, isWide: Boolean): Bitmap {
+    val overlayWidth = containerSize.width * 0.9f
+    val overlayHeight = if (isWide) overlayWidth / 2.1f else overlayWidth
+    
+    val bitmapWidth = original.width.toFloat()
+    val bitmapHeight = original.height.toFloat()
+    
+    val scaleX = containerSize.width / bitmapWidth
+    val scaleY = containerSize.height / bitmapHeight
+    val baseScale = Math.min(scaleX, scaleY)
+    
+    val totalScale = baseScale * scale
+    
+    val centerX = containerSize.width / 2f
+    val centerY = containerSize.height / 2f
+    
+    val bitmapLeftInContainer = centerX - (bitmapWidth * totalScale) / 2f + offset.x
+    val bitmapTopInContainer = centerY - (bitmapHeight * totalScale) / 2f + offset.y
+    
+    val cropLeftInContainer = centerX - overlayWidth / 2f
+    val cropTopInContainer = centerY - overlayHeight / 2f
+    
+    val xOffsetInBitmap = (cropLeftInContainer - bitmapLeftInContainer) / totalScale
+    val yOffsetInBitmap = (cropTopInContainer - bitmapTopInContainer) / totalScale
+    val widthInBitmap = overlayWidth / totalScale
+    val heightInBitmap = overlayHeight / totalScale
+    
+    val result = Bitmap.createBitmap(overlayWidth.roundToInt(), overlayHeight.roundToInt(), Bitmap.Config.ARGB_8888)
+    val canvas = android.graphics.Canvas(result)
+    
+    val srcRect = android.graphics.Rect(
+        xOffsetInBitmap.roundToInt(),
+        yOffsetInBitmap.roundToInt(),
+        (xOffsetInBitmap + widthInBitmap).roundToInt(),
+        (yOffsetInBitmap + heightInBitmap).roundToInt()
+    )
+    val dstRect = android.graphics.Rect(0, 0, overlayWidth.roundToInt(), overlayHeight.roundToInt())
+    
+    canvas.drawBitmap(original, srcRect, dstRect, android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG))
+    return result
+}
+
+@Composable
+fun CalendarWidget(displayMode: WidgetDisplayMode, modifier: Modifier = Modifier) {
+    val calendar = Calendar.getInstance()
+    val dayOfMonth = calendar.get(Calendar.DAY_OF_MONTH)
+    val dayOfWeek = when (calendar.get(Calendar.DAY_OF_WEEK)) {
+        Calendar.SUNDAY -> "SUN"
+        Calendar.MONDAY -> "MON"
+        Calendar.TUESDAY -> "TUE"
+        Calendar.WEDNESDAY -> "WED"
+        Calendar.THURSDAY -> "THU"
+        Calendar.FRIDAY -> "FRI"
+        Calendar.SATURDAY -> "SAT"
+        else -> ""
+    }
+    val month = when (calendar.get(Calendar.MONTH)) {
+        Calendar.JANUARY -> "JAN"
+        Calendar.FEBRUARY -> "FEB"
+        Calendar.MARCH -> "MAR"
+        Calendar.APRIL -> "APR"
+        Calendar.MAY -> "MAY"
+        Calendar.JUNE -> "JUN"
+        Calendar.JULY -> "JUL"
+        Calendar.AUGUST -> "AUG"
+        Calendar.SEPTEMBER -> "SEP"
+        Calendar.OCTOBER -> "OCT"
+        Calendar.NOVEMBER -> "NOV"
+        Calendar.DECEMBER -> "DEC"
+        else -> ""
+    }
+
+    val containerColor = when (displayMode) {
+        WidgetDisplayMode.GLASS -> Color.White.copy(alpha = 0.2f)
+        WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.tertiaryContainer
+    }
+    val contentColor = when (displayMode) {
+        WidgetDisplayMode.GLASS -> Color.White
+        WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.onTertiaryContainer
+    }
+    val accentColor = if (displayMode == WidgetDisplayMode.COLOR) MaterialTheme.colorScheme.primary else Color.Red
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .aspectRatio(1f),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = containerColor)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = month,
+                style = MaterialTheme.typography.titleMedium,
+                color = accentColor,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+            )
+            
+            Text(
+                text = dayOfMonth.toString(),
+                style = MaterialTheme.typography.displayMedium,
+                color = contentColor,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+            )
+            
+            Text(
+                text = dayOfWeek,
+                style = MaterialTheme.typography.labelLarge,
+                color = contentColor.copy(alpha = 0.7f)
+            )
+        }
+    }
+}
+
+@Composable
+fun WidgetPickerDialog(onDismiss: () -> Unit, onWidgetSelected: (WidgetType) -> Unit) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            shape = RoundedCornerShape(28.dp)
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Text(
+                    text = stringResource(R.string.select_widget),
+                    style = MaterialTheme.typography.headlineSmall
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.widget_battery)) },
+                    leadingContent = { Icon(Icons.Default.BatteryStd, contentDescription = null) },
+                    modifier = Modifier.clickable { 
+                        onWidgetSelected(WidgetType.Battery)
+                        onDismiss()
+                    }
+                )
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.widget_clock)) },
+                    leadingContent = { Icon(Icons.Default.Schedule, contentDescription = null) },
+                    modifier = Modifier.clickable { 
+                        onWidgetSelected(WidgetType.Clock)
+                        onDismiss()
+                    }
+                )
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.widget_calendar)) },
+                    leadingContent = { Icon(Icons.Default.CalendarMonth, contentDescription = null) },
+                    modifier = Modifier.clickable { 
+                        onWidgetSelected(WidgetType.Calendar)
+                        onDismiss()
+                    }
+                )
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.widget_photo)) },
+                    leadingContent = { Icon(Icons.Default.Image, contentDescription = null) },
+                    modifier = Modifier.clickable { 
+                        onWidgetSelected(WidgetType.Photo(isWide = false))
+                        onDismiss()
+                    }
+                )
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.widget_photo_wide)) },
+                    leadingContent = { Icon(Icons.Default.Rectangle, contentDescription = null) },
+                    modifier = Modifier.clickable { 
+                        onWidgetSelected(WidgetType.Photo(isWide = true))
+                        onDismiss()
+                    }
+                )
+                // 這裡以後可以加入更多 Widget 選項
+            }
+        }
+    }
+}
+
+@Composable
+fun MinusOnePage(
+    widgets: List<WidgetModel>,
+    viewModel: MainViewModel,
+    onAddClick: () -> Unit,
+    onRemoveWidget: (String) -> Unit,
+    onUpdateWidgetMode: (String, WidgetDisplayMode) -> Unit
+) {
+    var isReorderMode by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .statusBarsPadding()
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            FilledTonalIconButton(
+                onClick = onAddClick,
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = stringResource(R.string.add),
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            
+            IconButton(onClick = { isReorderMode = !isReorderMode }) {
+                Icon(
+                    Icons.Default.MoreVert, 
+                    contentDescription = "Menu", 
+                    tint = if (isReorderMode) MaterialTheme.colorScheme.primary else Color.White
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(4),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            items(widgets, key = { it.id }, span = { widget ->
+                val span = if (widget.type is WidgetType.Battery || (widget.type as? WidgetType.Photo)?.isWide == true) 4 else 2
+                GridItemSpan(span)
+            }) { widget ->
+                var showContextMenu by remember { mutableStateOf(false) }
+
+                Box(
+                    modifier = Modifier.pointerInput(Unit) {
+                        detectTapGestures(
+                            onLongPress = { showContextMenu = true }
+                        )
+                    }
+                ) {
+                    when (widget.type) {
+                        is WidgetType.Battery -> BatteryWidget(displayMode = widget.displayMode)
+                        is WidgetType.Clock -> AnalogClockWidget(displayMode = widget.displayMode)
+                        is WidgetType.Calendar -> CalendarWidget(displayMode = widget.displayMode)
+                        is WidgetType.Photo -> PhotoWidget(widget = widget, viewModel = viewModel)
+                    }
+                    
+                    if (isReorderMode) {
+                        IconButton(
+                            onClick = { onRemoveWidget(widget.id) },
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(4.dp)
+                                .background(Color.Black.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                                .size(24.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Remove",
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+
+                    DropdownMenu(
+                        expanded = showContextMenu,
+                        onDismissRequest = { showContextMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.widget_glass_mode)) },
+                            leadingIcon = { Icon(Icons.Default.BlurOn, null) },
+                            onClick = {
+                                onUpdateWidgetMode(widget.id, WidgetDisplayMode.GLASS)
+                                showContextMenu = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.widget_color_mode)) },
+                            leadingIcon = { Icon(Icons.Default.Palette, null) },
+                            onClick = {
+                                onUpdateWidgetMode(widget.id, WidgetDisplayMode.COLOR)
+                                showContextMenu = false
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LauncherScreen(
@@ -105,6 +757,7 @@ fun LauncherScreen(
     val allAppsFlat by viewModel.allApps.collectAsState()
     val dockPkgNames by viewModel.dockPackageNames.collectAsState()
     val isEditMode by viewModel.isEditMode.collectAsState()
+    val minusOneWidgets by viewModel.minusOneWidgets.collectAsState()
     
     var shouldRefreshOnResume by remember { mutableStateOf(false) }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -124,16 +777,24 @@ fun LauncherScreen(
     val context = LocalContext.current
     val myPackageName = context.packageName
 
+    // 檢查是否為預設啟動器
+    val isDefaultLauncher = remember(allAppsFlat) {
+        val intent = Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_HOME) }
+        val resolveInfo = context.packageManager.resolveActivity(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
+        resolveInfo?.activityInfo?.packageName == myPackageName
+    }
+
     // 拖拽核心狀態
     var draggingApp by remember { mutableStateOf<AppModel?>(null) }
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
     var touchPosition by remember { mutableStateOf(Offset.Zero) }
     var folderToOpen by remember { mutableStateOf<AppModel?>(null) }
-    
+
     // 選單與對話框狀態
     var showDesktopMenu by remember { mutableStateOf(false) }
     var showCreateFolderDialog by remember { mutableStateOf(false) }
-    
+    var showWidgetPicker by remember { mutableStateOf(false) }
+
     val slotBounds = remember { mutableStateMapOf<String, Rect>() }
     var rawHoveredKey by remember { mutableStateOf<String?>(null) }
     var confirmedHoveredKey by remember { mutableStateOf<String?>(null) }
@@ -154,9 +815,12 @@ fun LauncherScreen(
     
     if (isEditMode) BackHandler { viewModel.setEditMode(false) }
 
-    val pageCount = (pages.size.coerceAtLeast(1)) + (if (draggingApp != null) 2 else 1)
-    val pagerState = rememberPagerState(pageCount = { pageCount })
+    val desktopPageCount = pages.size.coerceAtLeast(1)
+    val pageCount = 1 /* 負一頁 */ + desktopPageCount + (if (draggingApp != null) 2 else 1) /* Library */
+    val pagerState = rememberPagerState(initialPage = 1, pageCount = { pageCount })
     val scope = rememberCoroutineScope()
+    
+    val isMinusOnePage = pagerState.currentPage == 0
     val isAppLibraryPage = pagerState.currentPage == pageCount - 1
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -186,16 +850,19 @@ fun LauncherScreen(
         Box(modifier = Modifier.fillMaxSize()) {
             HorizontalPager(
                 state = pagerState, modifier = Modifier.fillMaxSize(),
-                userScrollEnabled = draggingApp == null && !isEditMode, beyondViewportPageCount = 1
+                userScrollEnabled = draggingApp == null, beyondViewportPageCount = 1
             ) { pageIndex ->
-                val isLibrary = pageIndex >= pages.size && draggingApp == null
+                val isMinusOne = pageIndex == 0
+                val isLibrary = pageIndex >= desktopPageCount + 1 && draggingApp == null
+                val isDesktop = pageIndex >= 1 && pageIndex <= desktopPageCount
+
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .statusBarsPadding()
-                        .padding(bottom = if (isLibrary) 0.dp else 140.dp)
-                        .pointerInput(draggingApp, isEditMode, isLibrary) {
-                            if (draggingApp == null && !isEditMode && !isLibrary) {
+                        .padding(bottom = if (isLibrary || isMinusOne) 0.dp else 140.dp)
+                        .pointerInput(draggingApp, isEditMode, isLibrary, isMinusOne) {
+                            if (draggingApp == null && !isEditMode && !isLibrary && !isMinusOne) {
                                 detectVerticalDragGestures { _, dragAmount ->
                                     if (dragAmount > 20) showGlobalSearch = true
                                 }
@@ -203,33 +870,43 @@ fun LauncherScreen(
                         }
                         .pointerInput(Unit) {
                             detectTapGestures(
-                                onLongPress = { if (!isLibrary) showDesktopMenu = true },
+                                onLongPress = { if (!isLibrary && !isMinusOne && !isEditMode) showDesktopMenu = true },
                                 onTap = { if (isEditMode) viewModel.setEditMode(false) }
                             )
                         }
                 ) {
                     when {
-                        pageIndex < pages.size -> {
+                        isMinusOne -> {
+                            MinusOnePage(
+                                widgets = minusOneWidgets,
+                                viewModel = viewModel,
+                                onAddClick = { showWidgetPicker = true },
+                                onRemoveWidget = { viewModel.removeWidget(it) },
+                                onUpdateWidgetMode = { id, mode -> viewModel.updateWidgetDisplayMode(id, mode) }
+                            )
+                        }
+                        isDesktop -> {
+                            val desktopIdx = pageIndex - 1
                             AppGrid(
-                                apps = pages.getOrNull(pageIndex) ?: emptyList(),
+                                apps = pages.getOrNull(desktopIdx) ?: emptyList(),
                                 columns = columns, rows = rows, iconSize = iconSize,
                                 isEditMode = isEditMode,
                                 viewModel = viewModel,
                                 draggingUniqueId = draggingApp?.uniqueId,
-                                confirmedHoveredSlotIdx = if (confirmedHoveredKey?.startsWith("$pageIndex-") == true) 
+                                confirmedHoveredSlotIdx = if (confirmedHoveredKey?.startsWith("$pageIndex-") == true)
                                     confirmedHoveredKey?.substringAfter("-")?.toInt() else null,
                                 confirmedIntent = if (isEditMode) MainViewModel.DropType.REORDER else confirmedIntent,
                                 onAppClick = { pkg ->
                                     if (isEditMode) return@AppGrid
-                                    val app = pages[pageIndex].find { it.packageName == pkg }
+                                    val app = (pages.getOrNull(desktopIdx) ?: emptyList()).find { it.packageName == pkg }
                                     if (app?.isFolder == true) folderToOpen = app else onAppClick(pkg)
                                 },
                                 onSlotPositioned = { idx, rect -> slotBounds["$pageIndex-$idx"] = rect },
-                                onDragStart = { app, offset -> 
+                                onDragStart = { app, offset ->
                                     viewModel.prepareForDrag()
                                     draggingApp = app; touchPosition = offset; dragOffset = Offset.Zero
                                 },
-                                onDrag = { delta -> 
+                                onDrag = { delta ->
                                     dragOffset += delta
                                     val currentPos = touchPosition + dragOffset
                                     val dragRect = Rect(currentPos.x - iconSizePx/2, currentPos.y - iconSizePx/2, currentPos.x + iconSizePx/2, currentPos.y + iconSizePx/2)
@@ -240,7 +917,6 @@ fun LauncherScreen(
                                         if (overlap > maxOverlap) { maxOverlap = overlap; bestKey = key }
                                     }
                                     rawHoveredKey = bestKey
-                                    // 只有在非編輯模式下才允許拖拽形成資料夾
                                     confirmedIntent = if (!isEditMode && maxOverlap > 0.50f) MainViewModel.DropType.FOLDER else MainViewModel.DropType.REORDER
                                 },
                                 onDragEnd = {
@@ -257,11 +933,11 @@ fun LauncherScreen(
                                             val parts = bestKey!!.split("-")
                                             val tPageIdx = parts[0].toInt()
                                             val tSlotIdx = parts[1].toInt()
-                                            val targetApp = pages.getOrNull(tPageIdx)?.getOrNull(tSlotIdx)
+                                            val targetApp = pages.getOrNull(tPageIdx - 1)?.getOrNull(tSlotIdx)
                                             val dropType = if (!isEditMode && maxOverlap > 0.50f && targetApp != null) MainViewModel.DropType.FOLDER else MainViewModel.DropType.REORDER
-                                            viewModel.handleAppDrop(draggingApp!!.uniqueId, targetApp?.uniqueId, tPageIdx, false, dropType)
+                                            viewModel.handleAppDrop(draggingApp!!.uniqueId, targetApp?.uniqueId, tPageIdx - 1, false, dropType)
                                         } else {
-                                            viewModel.handleAppDrop(draggingApp!!.uniqueId, null, pageIndex, false, MainViewModel.DropType.REORDER)
+                                            viewModel.handleAppDrop(draggingApp!!.uniqueId, null, pageIndex - 1, false, MainViewModel.DropType.REORDER)
                                         }
                                     }
                                     draggingApp = null; rawHoveredKey = null; confirmedHoveredKey = null
@@ -270,7 +946,7 @@ fun LauncherScreen(
                         }
                         else -> {
                             AppLibraryPage(
-                                allApps = allAppsFlat, 
+                                allApps = allAppsFlat,
                                 onAppClick = { pkg ->
                                     val app = allAppsFlat.find { it.packageName == pkg }
                                     if (app?.isFolder == true) folderToOpen = app else onAppClick(pkg)
@@ -278,7 +954,7 @@ fun LauncherScreen(
                                 onDragStart = { app, offset -> draggingApp = app; touchPosition = offset; dragOffset = Offset.Zero },
                                 onDrag = { delta -> dragOffset += delta },
                                 onDragEnd = {
-                                    if (draggingApp != null) viewModel.handleAppDrop(draggingApp!!.packageName, null, pagerState.currentPage, true, MainViewModel.DropType.REORDER)
+                                    if (draggingApp != null) viewModel.handleAppDrop(draggingApp!!.packageName, null, pagerState.currentPage - 1, true, MainViewModel.DropType.REORDER)
                                     draggingApp = null; rawHoveredKey = null; confirmedHoveredKey = null
                                 }
                             )
@@ -289,15 +965,17 @@ fun LauncherScreen(
 
             AnimatedVisibility(visible = isEditMode, enter = fadeIn() + slideInVertically(), exit = fadeOut() + slideOutVertically()) {
                 Box(modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(16.dp), contentAlignment = Alignment.TopEnd) {
-                    Button(onClick = { viewModel.setEditMode(false) }) { Text("Done") }
+                    Button(onClick = { viewModel.setEditMode(false) }) { Text(stringResource(R.string.done)) }
                 }
             }
 
             Box(modifier = Modifier.fillMaxSize().navigationBarsPadding(), contentAlignment = Alignment.BottomCenter) {
-                BackHandler(enabled = isAppLibraryPage && !showGlobalSearch) { scope.launch { pagerState.animateScrollToPage(0) } }
-                AnimatedVisibility(visible = !isAppLibraryPage, enter = slideInVertically { it } + fadeIn(), exit = slideOutVertically { it } + fadeOut()) {
+                BackHandler(enabled = (isAppLibraryPage || isMinusOnePage) && !showGlobalSearch) {
+                    scope.launch { pagerState.animateScrollToPage(1) }
+                }
+                AnimatedVisibility(visible = !isAppLibraryPage && !isMinusOnePage, enter = slideInVertically { it } + fadeIn(), exit = slideOutVertically { it } + fadeOut()) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        PageIndicator(pageCount = pageCount - 1, currentPage = pagerState.currentPage)
+                        PageIndicator(pageCount = desktopPageCount, currentPage = pagerState.currentPage - 1)
                         Dock(apps = dockApps, iconSize = iconSize, onAppClick = { pkg -> if (pkg == myPackageName) { shouldRefreshOnResume = true; onSettingsClick() } else onAppClick(pkg) }, onLongClick = { showDockPicker = it })
                         Spacer(modifier = Modifier.height(4.dp))
                     }
@@ -318,9 +996,21 @@ fun LauncherScreen(
     if (showDesktopMenu) {
         ModalBottomSheet(onDismissRequest = { showDesktopMenu = false }) {
             Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                ListItem(headlineContent = { Text("Enter Edit Mode") }, leadingContent = { Icon(Icons.Default.Edit, contentDescription = null) }, modifier = Modifier.clickable { viewModel.setEditMode(true); showDesktopMenu = false })
-                ListItem(headlineContent = { Text("New Folder") }, leadingContent = { Icon(Icons.Default.CreateNewFolder, contentDescription = null) }, modifier = Modifier.clickable { showCreateFolderDialog = true; showDesktopMenu = false })
-                ListItem(headlineContent = { Text("Launcher Settings") }, leadingContent = { Icon(Icons.Default.Settings, contentDescription = null) }, modifier = Modifier.clickable { onSettingsClick(); showDesktopMenu = false })
+                ListItem(headlineContent = { Text(stringResource(R.string.menu_edit_mode)) }, leadingContent = { Icon(Icons.Default.Edit, contentDescription = null) }, modifier = Modifier.clickable { viewModel.setEditMode(true); showDesktopMenu = false })
+                ListItem(headlineContent = { Text(stringResource(R.string.menu_new_folder)) }, leadingContent = { Icon(Icons.Default.CreateNewFolder, contentDescription = null) }, modifier = Modifier.clickable { showCreateFolderDialog = true; showDesktopMenu = false })
+                ListItem(headlineContent = { Text(stringResource(R.string.menu_wallpaper)) }, leadingContent = { Icon(Icons.Default.Image, contentDescription = null) }, modifier = Modifier.clickable {
+                    val intent = Intent(Intent.ACTION_SET_WALLPAPER)
+                    context.startActivity(Intent.createChooser(intent, context.getString(R.string.menu_wallpaper)))
+                    showDesktopMenu = false
+                })
+                if (!isDefaultLauncher) {
+                    ListItem(headlineContent = { Text(stringResource(R.string.menu_set_default)) }, leadingContent = { Icon(Icons.Default.Home, contentDescription = null) }, modifier = Modifier.clickable {
+                        val intent = Intent(android.provider.Settings.ACTION_HOME_SETTINGS)
+                        context.startActivity(intent)
+                        showDesktopMenu = false
+                    })
+                }
+                ListItem(headlineContent = { Text(stringResource(R.string.menu_launcher_settings)) }, leadingContent = { Icon(Icons.Default.Settings, contentDescription = null) }, modifier = Modifier.clickable { onSettingsClick(); showDesktopMenu = false })
                 Spacer(modifier = Modifier.height(32.dp))
             }
         }
@@ -330,15 +1020,22 @@ fun LauncherScreen(
         var folderName by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { showCreateFolderDialog = false },
-            title = { Text("Create New Folder") },
-            text = { OutlinedTextField(value = folderName, onValueChange = { folderName = it }, label = { Text("Folder Name") }, singleLine = true) },
-            confirmButton = { Button(onClick = { viewModel.createFolder(pagerState.currentPage, folderName); showCreateFolderDialog = false }) { Text("Create") } },
-            dismissButton = { TextButton(onClick = { showCreateFolderDialog = false }) { Text("Cancel") } }
+            title = { Text(stringResource(R.string.folder_create_title)) },
+            text = { OutlinedTextField(value = folderName, onValueChange = { folderName = it }, label = { Text(stringResource(R.string.folder_name_hint)) }, singleLine = true) },
+            confirmButton = { Button(onClick = { viewModel.createFolder(pagerState.currentPage, folderName); showCreateFolderDialog = false }) { Text(stringResource(R.string.create)) } },
+            dismissButton = { TextButton(onClick = { showCreateFolderDialog = false }) { Text(stringResource(R.string.cancel)) } }
         )
     }
 
     showDockPicker?.let { slotIndex -> AppPickerDialog(allApps = allAppsFlat, onDismiss = { showDockPicker = null }, onAppSelected = { pkg -> viewModel.updateDockApp(slotIndex, pkg); showDockPicker = null }) }
-    
+
+    if (showWidgetPicker) {
+        WidgetPickerDialog(
+            onDismiss = { showWidgetPicker = false },
+            onWidgetSelected = { viewModel.addWidget(it) }
+        )
+    }
+
     folderToOpen?.let { folder ->
         FolderDialog(
             folder = folder,
@@ -351,21 +1048,21 @@ fun LauncherScreen(
             onDragStartFromFolder = { app, offset -> draggingApp = app; touchPosition = offset; dragOffset = Offset.Zero; folderToOpen = null }
         )
     }
-    
+
     // 全域搜尋遮罩層保持不變...
     AnimatedVisibility(visible = showGlobalSearch, enter = fadeIn() + slideInVertically { -it / 2 }, exit = fadeOut() + slideOutVertically { -it / 2 }) {
         Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.8f)).clickable { showGlobalSearch = false; globalSearchQuery = "" }.statusBarsPadding()) {
             Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp).clickable(enabled = false) { }) {
                 OutlinedTextField(
                     value = globalSearchQuery, onValueChange = { globalSearchQuery = it }, modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp),
-                    placeholder = { Text("Search Apps...", color = Color.White.copy(alpha = 0.6f)) }, leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.White) },
+                    placeholder = { Text(stringResource(R.string.search_hint), color = Color.White.copy(alpha = 0.6f)) }, leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.White) },
                     shape = RoundedCornerShape(28.dp), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedContainerColor = Color.White.copy(alpha = 0.2f), unfocusedContainerColor = Color.White.copy(alpha = 0.2f), focusedBorderColor = Color.White.copy(alpha = 0.5f), unfocusedBorderColor = Color.Transparent),
                     singleLine = true
                 )
                 val filteredResults = remember(globalSearchQuery, allAppsFlat) { if (globalSearchQuery.isBlank()) allAppsFlat.take(8) else allAppsFlat.filter { it.label.contains(globalSearchQuery, ignoreCase = true) } }
                 LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (globalSearchQuery.isBlank() && filteredResults.isNotEmpty()) {
-                        item { Text("App Suggestions", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(vertical = 8.dp)) }
+                        item { Text(stringResource(R.string.app_suggestions), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(vertical = 8.dp)) }
                     }
                     items(filteredResults, key = { it.packageName }) { app ->
                         ListItem(
@@ -377,11 +1074,11 @@ fun LauncherScreen(
                     if (globalSearchQuery.isNotBlank()) {
                         item {
                             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color.White.copy(alpha = 0.2f))
-                            Text("More Searches", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(bottom = 8.dp))
+                            Text(stringResource(R.string.more_searches), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(bottom = 8.dp))
                         }
                         item {
                             ListItem(
-                                headlineContent = { Text("Search on Web", color = Color.White) },
+                                headlineContent = { Text(stringResource(R.string.search_web), color = Color.White) },
                                 leadingContent = { Icon(Icons.Default.Language, contentDescription = null, tint = Color.White) },
                                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                                 modifier = Modifier.clickable {
@@ -393,7 +1090,7 @@ fun LauncherScreen(
                         }
                         item {
                             ListItem(
-                                headlineContent = { Text("Search on Store", color = Color.White) },
+                                headlineContent = { Text(stringResource(R.string.search_store), color = Color.White) },
                                 leadingContent = { Icon(Icons.Default.Shop, contentDescription = null, tint = Color.White) },
                                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                                 modifier = Modifier.clickable {
@@ -405,7 +1102,7 @@ fun LauncherScreen(
                         }
                         item {
                             ListItem(
-                                headlineContent = { Text("Search on Maps", color = Color.White) },
+                                headlineContent = { Text(stringResource(R.string.search_maps), color = Color.White) },
                                 leadingContent = { Icon(Icons.Default.Place, contentDescription = null, tint = Color.White) },
                                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                                 modifier = Modifier.clickable {
@@ -448,8 +1145,8 @@ fun AppGrid(
                         val scale by animateFloatAsState(if (isHoveredFolder) 1.25f else 1.0f)
                         val infiniteTransition = rememberInfiniteTransition(label = "jiggle")
                         val rotation by infiniteTransition.animateFloat(
-                            initialValue = -1.5f, targetValue = 1.5f,
-                            animationSpec = infiniteRepeatable(animation = tween(100, easing = LinearEasing), repeatMode = RepeatMode.Reverse), label = "jiggle"
+                            initialValue = -2.5f, targetValue = 2.5f,
+                            animationSpec = infiniteRepeatable(animation = tween(120, easing = LinearEasing), repeatMode = RepeatMode.Reverse), label = "jiggle"
                         )
                         val app = apps.getOrNull(visualAppIndex)
                         if (app != null) {
@@ -458,12 +1155,12 @@ fun AppGrid(
 
                             Box {
                                 AppItem(
-                                    app = app, iconSize = iconSize, modifier = Modifier.graphicsLayer { 
+                                    app = app, iconSize = iconSize, modifier = Modifier.graphicsLayer {
                                         alpha = if (app.uniqueId == draggingUniqueId) 0f else 1f
                                         scaleX = scale; scaleY = scale
                                         if (isEditMode && app.uniqueId != draggingUniqueId) rotationZ = rotation
                                     }
-                                    .pointerInput(app.uniqueId, isEditMode) { 
+                                    .pointerInput(app.uniqueId, isEditMode) {
                                         if (isEditMode) {
                                             detectDragGesturesAfterLongPress(onDragStart = { onDragStart(app, lastPosition.pos + it) }, onDrag = { _, delta -> onDrag(delta) }, onDragCancel = onDragEnd, onDragEnd = onDragEnd)
                                         } else {
@@ -480,7 +1177,7 @@ fun AppGrid(
                                     onDismissRequest = { showContextMenu = false }
                                 ) {
                                     DropdownMenuItem(
-                                        text = { Text("Delete from Home") },
+                                        text = { Text(stringResource(R.string.menu_delete_home)) },
                                         leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) },
                                         onClick = {
                                             viewModel.removeAppFromHome(app.uniqueId)
@@ -489,7 +1186,7 @@ fun AppGrid(
                                     )
                                     if (!app.isFolder) {
                                         DropdownMenuItem(
-                                            text = { Text("Uninstall") },
+                                            text = { Text(stringResource(R.string.menu_uninstall)) },
                                             leadingIcon = { Icon(Icons.Default.DeleteForever, contentDescription = null) },
                                             onClick = {
                                                 val intent = Intent(Intent.ACTION_DELETE).apply {
@@ -576,15 +1273,15 @@ fun FolderDialog(
                                 focusedBorderColor = Color.White,
                                 unfocusedBorderColor = Color.White.copy(alpha = 0.5f)
                             ),
-                            trailingIcon = { 
-                                IconButton(onClick = { onRename(tempName); isEditingName = false }) { 
-                                    Icon(Icons.Default.Check, contentDescription = null, tint = Color.White) 
-                                } 
+                            trailingIcon = {
+                                IconButton(onClick = { onRename(tempName); isEditingName = false }) {
+                                    Icon(Icons.Default.Check, contentDescription = null, tint = Color.White)
+                                }
                             }
                         )
                     } else {
                         Text(
-                            text = folder.label, 
+                            text = folder.label,
                             style = MaterialTheme.typography.headlineMedium,
                             color = Color.White,
                             modifier = Modifier.clickable { isEditingName = true },
@@ -592,12 +1289,12 @@ fun FolderDialog(
                         )
                         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
                             IconButton(onClick = { showMoreMenu = true }) {
-                                Icon(Icons.Default.MoreVert, contentDescription = "Folder Menu", tint = Color.White)
+                                Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.folder_menu_desc), tint = Color.White)
                             }
                             DropdownMenu(expanded = showMoreMenu, onDismissRequest = { showMoreMenu = false }) {
-                                DropdownMenuItem(text = { Text("Rename") }, leadingIcon = { Icon(Icons.Default.Edit, null) }, onClick = { isEditingName = true; showMoreMenu = false })
-                                DropdownMenuItem(text = { Text("Add App") }, leadingIcon = { Icon(Icons.Default.Add, null) }, onClick = { showAppPicker = true; showMoreMenu = false })
-                                DropdownMenuItem(text = { Text("Delete Folder") }, leadingIcon = { Icon(Icons.Default.Delete, null) }, onClick = { onDeleteFolder(); showMoreMenu = false })
+                                DropdownMenuItem(text = { Text(stringResource(R.string.rename)) }, leadingIcon = { Icon(Icons.Default.Edit, null) }, onClick = { isEditingName = true; showMoreMenu = false })
+                                DropdownMenuItem(text = { Text(stringResource(R.string.folder_add_app)) }, leadingIcon = { Icon(Icons.Default.Add, null) }, onClick = { showAppPicker = true; showMoreMenu = false })
+                                DropdownMenuItem(text = { Text(stringResource(R.string.folder_delete)) }, leadingIcon = { Icon(Icons.Default.Delete, null) }, onClick = { onDeleteFolder(); showMoreMenu = false })
                             }
                         }
                     }
@@ -676,8 +1373,8 @@ fun FolderDialog(
 
     if (showAppPicker) {
         MultiAppPickerDialog(
-            allApps = allApps, 
-            onDismiss = { showAppPicker = false }, 
+            allApps = allApps,
+            onDismiss = { showAppPicker = false },
             onAppsSelected = { onAddApps(it); showAppPicker = false }
         )
     }
@@ -698,9 +1395,9 @@ fun MultiAppPickerDialog(
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Select Apps", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
+                    Text(stringResource(R.string.select_apps), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
                     TextButton(onClick = { onAppsSelected(selectedPackages.toList()) }) {
-                        Text("Done")
+                        Text(stringResource(R.string.done))
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
@@ -774,7 +1471,7 @@ fun AppPickerDialog(allApps: List<AppModel>, onDismiss: () -> Unit, onAppSelecte
     Dialog(onDismissRequest = onDismiss) {
         Card(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.8f), shape = RoundedCornerShape(16.dp)) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Select App", style = MaterialTheme.typography.headlineSmall); Spacer(modifier = Modifier.height(16.dp))
+                Text(stringResource(R.string.select_app), style = MaterialTheme.typography.headlineSmall); Spacer(modifier = Modifier.height(16.dp))
                 LazyColumn {
                     items(allApps, key = { it.packageName }) { app ->
                         ListItem(headlineContent = { Text(app.label) }, leadingContent = { Image(bitmap = app.icon!!.toBitmap().asImageBitmap(), contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp))) }, modifier = Modifier.clickable { onAppSelected(app.packageName) })
@@ -816,9 +1513,9 @@ fun AppLibraryPage(allApps: List<AppModel>, onAppClick: (String) -> Unit, onDrag
         if (selectedCategory == null) {
             Row(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
-                    value = searchQuery, onValueChange = { searchQuery = it }, 
+                    value = searchQuery, onValueChange = { searchQuery = it },
                     modifier = Modifier.weight(1f).onFocusChanged { isSearchFocused = it.isFocused },
-                    placeholder = { Text("App Library", color = Color.White.copy(alpha = 0.6f)) }, 
+                    placeholder = { Text(stringResource(R.string.library_hint), color = Color.White.copy(alpha = 0.6f)) },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.White) },
                     trailingIcon = {
                         if (searchQuery.isNotEmpty()) {
@@ -827,7 +1524,7 @@ fun AppLibraryPage(allApps: List<AppModel>, onAppClick: (String) -> Unit, onDrag
                             }
                         }
                     },
-                    shape = RoundedCornerShape(28.dp), 
+                    shape = RoundedCornerShape(28.dp),
                     colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedContainerColor = Color.White.copy(alpha = 0.1f), unfocusedContainerColor = Color.White.copy(alpha = 0.1f), focusedBorderColor = Color.Transparent, unfocusedBorderColor = Color.Transparent),
                     singleLine = true
                 )
@@ -837,7 +1534,7 @@ fun AppLibraryPage(allApps: List<AppModel>, onAppClick: (String) -> Unit, onDrag
                         focusManager.clearFocus()
                         isSearchFocused = false
                     }) {
-                        Text("Cancel", color = Color.White)
+                        Text(stringResource(R.string.cancel), color = Color.White)
                     }
                 }
             }
@@ -865,22 +1562,23 @@ fun AppLibraryPage(allApps: List<AppModel>, onAppClick: (String) -> Unit, onDrag
                 }
             }
         } else {
-            LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp), contentPadding = PaddingValues(bottom = 32.dp)) {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(bottom = 32.dp)
+            ) {
                 val folderList = categories.toMutableList(); if (showHiddenFolder) folderList.add("Hidden Apps" to hiddenApps)
-                items(folderList.chunked(2)) { chunk ->
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        chunk.forEach { (name, apps) ->
-                            AppLibraryFolder(name = name, apps = apps, isLocked = name == "Hidden Apps" && !isHiddenUnlocked, onAppClick = { if (name == "Hidden Apps" && !isHiddenUnlocked) showPasswordDialog = true else onAppClick(it) }, onMoreClick = { if (name == "Hidden Apps" && !isHiddenUnlocked) showPasswordDialog = true else selectedCategory = name }, onDragStart = onDragStart, onDrag = onDrag, onDragEnd = onDragEnd, modifier = Modifier.weight(1f))
-                        }
-                        if (chunk.size == 1) Spacer(modifier = Modifier.weight(1f))
-                    }
+                items(folderList) { (name, apps) ->
+                    AppLibraryFolder(name = name, apps = apps, isLocked = name == "Hidden Apps" && !isHiddenUnlocked, onAppClick = { if (name == "Hidden Apps" && !isHiddenUnlocked) showPasswordDialog = true else onAppClick(it) }, onMoreClick = { if (name == "Hidden Apps" && !isHiddenUnlocked) showPasswordDialog = true else selectedCategory = name }, onDragStart = onDragStart, onDrag = onDrag, onDragEnd = onDragEnd)
                 }
             }
         }
     }
     if (showPasswordDialog) {
         var passwordInput by remember { mutableStateOf("") }
-        AlertDialog(onDismissRequest = { showPasswordDialog = false }, title = { Text("Hidden Apps") }, text = { OutlinedTextField(value = passwordInput, onValueChange = { passwordInput = it }, label = { Text("Enter Password") }, singleLine = true, visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()) }, confirmButton = { Button(onClick = { if (passwordInput == viewModel.getPassword()) { isHiddenUnlocked = true; showPasswordDialog = false } }) { Text("Unlock") } })
+        AlertDialog(onDismissRequest = { showPasswordDialog = false }, title = { Text(stringResource(R.string.hidden_apps_title)) }, text = { OutlinedTextField(value = passwordInput, onValueChange = { passwordInput = it }, label = { Text(stringResource(R.string.password_hint)) }, singleLine = true, visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()) }, confirmButton = { Button(onClick = { if (passwordInput == viewModel.getPassword()) { isHiddenUnlocked = true; showPasswordDialog = false } }) { Text(stringResource(R.string.unlock)) } })
     }
 }
 

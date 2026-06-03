@@ -34,6 +34,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -94,12 +96,12 @@ fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
-        placeholder = { Text("Search apps...") },
+        placeholder = { Text(stringResource(R.string.search_hint)) },
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
         trailingIcon = {
             if (query.isNotEmpty()) {
                 IconButton(onClick = { onQueryChange("") }) {
-                    Icon(Icons.Default.Close, contentDescription = "Clear")
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.clear))
                 }
             }
         },
@@ -120,10 +122,10 @@ fun SettingsMainScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = { Text(stringResource(R.string.settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -132,32 +134,32 @@ fun SettingsMainScreen(
         LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
             item {
                 ListItem(
-                    headlineContent = { Text("Hide Apps") },
-                    supportingContent = { Text("Manage hidden applications and security") },
+                    headlineContent = { Text(stringResource(R.string.settings_hide_apps)) },
+                    supportingContent = { Text(stringResource(R.string.settings_hide_apps_desc)) },
                     trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
                     modifier = Modifier.clickable { onNavigateToHideApps() }
                 )
             }
             item {
                 ListItem(
-                    headlineContent = { Text("Rename Apps") },
-                    supportingContent = { Text("Customize app labels on home screen") },
+                    headlineContent = { Text(stringResource(R.string.settings_rename_apps)) },
+                    supportingContent = { Text(stringResource(R.string.settings_rename_apps_desc)) },
                     trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
                     modifier = Modifier.clickable { onNavigateToRenameApps() }
                 )
             }
             item {
                 ListItem(
-                    headlineContent = { Text("Change Apps Icon") },
-                    supportingContent = { Text("Customize app icons with your images") },
+                    headlineContent = { Text(stringResource(R.string.settings_change_icon)) },
+                    supportingContent = { Text(stringResource(R.string.settings_change_icon_desc)) },
                     trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
                     modifier = Modifier.clickable { onNavigateToChangeIcon() }
                 )
             }
             item {
                 ListItem(
-                    headlineContent = { Text("App Library Settings") },
-                    supportingContent = { Text("Manage app categories and sections") },
+                    headlineContent = { Text(stringResource(R.string.settings_library)) },
+                    supportingContent = { Text(stringResource(R.string.settings_library_desc)) },
                     trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
                     modifier = Modifier.clickable { onNavigateToAppLibrary() }
                 )
@@ -187,15 +189,15 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("App Library Settings") },
+                title = { Text(stringResource(R.string.settings_library)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {
                     IconButton(onClick = { showAddCategoryDialog = true }) {
-                        Icon(Icons.Default.Add, contentDescription = "Add Category")
+                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.desc_add))
                     }
                 }
             )
@@ -204,7 +206,7 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
         Column(modifier = Modifier.padding(innerPadding)) {
             // 分類管理區
             Text(
-                "Custom Categories", 
+                stringResource(R.string.custom_categories), 
                 style = MaterialTheme.typography.titleSmall, 
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 color = MaterialTheme.colorScheme.primary
@@ -216,7 +218,7 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
                         headlineContent = { Text(category) },
                         trailingContent = {
                             IconButton(onClick = { viewModel.deleteUserCategory(category) }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete")
+                                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete))
                             }
                         }
                     )
@@ -226,7 +228,7 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
             HorizontalDivider()
             
             Text(
-                "Assign Apps to Categories", 
+                stringResource(R.string.assign_categories), 
                 style = MaterialTheme.typography.titleSmall, 
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 color = MaterialTheme.colorScheme.primary
@@ -253,12 +255,12 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
         if (showAddCategoryDialog) {
             AlertDialog(
                 onDismissRequest = { showAddCategoryDialog = false },
-                title = { Text("Add New Category") },
+                title = { Text(stringResource(R.string.add_category_title)) },
                 text = {
                     OutlinedTextField(
                         value = newCategoryName,
                         onValueChange = { newCategoryName = it },
-                        label = { Text("Category Name") },
+                        label = { Text(stringResource(R.string.category_name_label)) },
                         singleLine = true
                     )
                 },
@@ -269,21 +271,21 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
                             newCategoryName = ""
                             showAddCategoryDialog = false
                         }
-                    }) { Text("Add") }
+                    }) { Text(stringResource(R.string.add)) }
                 },
-                dismissButton = { TextButton(onClick = { showAddCategoryDialog = false }) { Text("Cancel") } }
+                dismissButton = { TextButton(onClick = { showAddCategoryDialog = false }) { Text(stringResource(R.string.cancel)) } }
             )
         }
 
         if (selectingAppForCategory != null) {
             AlertDialog(
                 onDismissRequest = { selectingAppForCategory = null },
-                title = { Text("Select Category for ${selectingAppForCategory?.label}") },
+                title = { Text(stringResource(R.string.select_category_for, selectingAppForCategory?.label ?: "")) },
                 text = {
                     LazyColumn {
                         item {
                             ListItem(
-                                headlineContent = { Text("Default (System)") },
+                                headlineContent = { Text(stringResource(R.string.default_system)) },
                                 modifier = Modifier.clickable {
                                     viewModel.setAppCategory(selectingAppForCategory!!.packageName, "")
                                     selectingAppForCategory = null
@@ -302,7 +304,7 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
                     }
                 },
                 confirmButton = {},
-                dismissButton = { TextButton(onClick = { selectingAppForCategory = null }) { Text("Close") } }
+                dismissButton = { TextButton(onClick = { selectingAppForCategory = null }) { Text(stringResource(R.string.close)) } }
             )
         }
     }
@@ -330,10 +332,10 @@ fun ChangeIconScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Change Apps Icon") },
+                title = { Text(stringResource(R.string.settings_change_icon)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -358,13 +360,13 @@ fun ChangeIconScreen(onBack: () -> Unit) {
                         trailingContent = {
                             Row {
                                 IconButton(onClick = { viewModel.resetCustomIcon(app.packageName) }) {
-                                    Icon(Icons.Default.Refresh, contentDescription = "Restore Default")
+                                    Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.restore_default))
                                 }
                                 IconButton(onClick = { 
                                     selectedApp = app
                                     launcher.launch("image/*")
                                 }) {
-                                    Icon(Icons.Default.Image, contentDescription = "Change Icon")
+                                    Icon(Icons.Default.Image, contentDescription = stringResource(R.string.change_icon))
                                 }
                             }
                         }
@@ -416,7 +418,7 @@ fun IconCropperDialog(uri: Uri, onDismiss: () -> Unit, onConfirm: (Bitmap) -> Un
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Adjust Icon Position") },
+        title = { Text(stringResource(R.string.adjust_icon_position)) },
         text = {
             Box(
                 modifier = Modifier.fillMaxWidth().height(300.dp),
@@ -426,7 +428,7 @@ fun IconCropperDialog(uri: Uri, onDismiss: () -> Unit, onConfirm: (Bitmap) -> Un
                     CircularProgressIndicator()
                 } else if (originalBitmap != null) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Ensure important parts are within the circle", style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(R.string.crop_instruction), style = MaterialTheme.typography.bodySmall)
                         Spacer(modifier = Modifier.height(16.dp))
                         Box(
                             modifier = Modifier
@@ -508,11 +510,11 @@ fun IconCropperDialog(uri: Uri, onDismiss: () -> Unit, onConfirm: (Bitmap) -> Un
                     }
                 }
             ) {
-                Text("Apply")
+                Text(stringResource(R.string.apply))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         }
     )
 }
@@ -535,10 +537,10 @@ fun RenameAppsScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Rename Apps") },
+                title = { Text(stringResource(R.string.settings_rename_apps)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -559,10 +561,10 @@ fun RenameAppsScreen(onBack: () -> Unit) {
                         trailingContent = {
                             Row {
                                 IconButton(onClick = { viewModel.setCustomLabel(app.packageName, "") }) {
-                                    Icon(Icons.Default.Refresh, contentDescription = "Restore Default")
+                                    Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.restore_default))
                                 }
                                 IconButton(onClick = { editingApp = app; newLabel = app.label }) {
-                                    Icon(Icons.Default.Edit, contentDescription = "Rename")
+                                    Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.rename))
                                 }
                             }
                         }
@@ -573,15 +575,15 @@ fun RenameAppsScreen(onBack: () -> Unit) {
         if (editingApp != null) {
             AlertDialog(
                 onDismissRequest = { editingApp = null },
-                title = { Text("Rename ${editingApp?.label}") },
-                text = { OutlinedTextField(value = newLabel, onValueChange = { newLabel = it }, label = { Text("New Label") }, singleLine = true) },
+                title = { Text(stringResource(R.string.rename_app_title, editingApp?.label ?: "")) },
+                text = { OutlinedTextField(value = newLabel, onValueChange = { newLabel = it }, label = { Text(stringResource(R.string.new_label_hint)) }, singleLine = true) },
                 confirmButton = {
                     TextButton(onClick = {
                         editingApp?.let { viewModel.setCustomLabel(it.packageName, newLabel) }
                         editingApp = null
-                    }) { Text("Save") }
+                    }) { Text(stringResource(R.string.save)) }
                 },
-                dismissButton = { TextButton(onClick = { editingApp = null }) { Text("Cancel") } }
+                dismissButton = { TextButton(onClick = { editingApp = null }) { Text(stringResource(R.string.cancel)) } }
             )
         }
     }
@@ -605,10 +607,10 @@ fun HideAppsScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Hide Apps") },
+                title = { Text(stringResource(R.string.settings_hide_apps)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -620,7 +622,7 @@ fun HideAppsScreen(onBack: () -> Unit) {
         ) {
             item {
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(text = "Security", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                Text(text = stringResource(R.string.security_section), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
             }
             item {
                 OutlinedTextField(
@@ -629,7 +631,7 @@ fun HideAppsScreen(onBack: () -> Unit) {
                         currentPassword = it
                         viewModel.setPassword(it)
                     },
-                    label = { Text("Hidden Apps Password") },
+                    label = { Text(stringResource(R.string.password_label)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -643,7 +645,7 @@ fun HideAppsScreen(onBack: () -> Unit) {
             }
             item {
                 HorizontalDivider()
-                Text(text = "Select apps to hide", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(vertical = 8.dp))
+                Text(text = stringResource(R.string.hide_apps_instruction), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(vertical = 8.dp))
             }
             
             item {

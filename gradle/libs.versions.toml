@@ -1,16 +1,17 @@
 [versions]
-agp = "9.2.1"
-kotlin = "2.2.10"
-coreKtx = "1.18.0"
+agp = "8.7.2"
+kotlin = "2.1.0"
+coreKtx = "1.15.0"
 junit = "4.13.2"
-junitVersion = "1.3.0"
-espressoCore = "3.7.0"
-appcompat = "1.7.1"
-material = "1.14.0"
-composeBom = "2025.02.00"
-androidxActivityCompose = "1.13.0"
+junitVersion = "1.2.1"
+espressoCore = "3.6.1"
+appcompat = "1.7.0"
+material = "1.12.0"
+composeBom = "2024.12.01"
+androidxActivityCompose = "1.9.3"
 androidxLifecycle = "2.8.7"
 coil = "2.7.0"
+materialColorUtilities = "4.0.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -28,9 +29,9 @@ androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "j
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+materialColorUtils = { group = "com.materialkolor", name = "material-color-utilities", version.ref = "materialColorUtilities" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlinCompose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-
