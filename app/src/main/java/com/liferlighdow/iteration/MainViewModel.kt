@@ -1,16 +1,23 @@
 package com.liferlighdow.iteration
 
 import android.app.Application
+import android.app.WallpaperManager
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
+import android.graphics.Paint
 import android.graphics.drawable.AdaptiveIconDrawable
+import androidx.core.graphics.drawable.toBitmap
 import java.io.File
 import java.io.FileOutputStream
 import android.os.Build
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.material3.dynamicLightColorScheme
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
@@ -41,11 +48,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isEditMode = MutableStateFlow(false)
     val isEditMode = _isEditMode.asStateFlow()
 
+    private val _isThemedIconsEnabled = MutableStateFlow(prefs.getBoolean("themed_icons", false))
+    val isThemedIconsEnabled = _isThemedIconsEnabled.asStateFlow()
+
     private val hiddenPackages = mutableSetOf<String>()
     private val customLabels = mutableMapOf<String, String>()
     private val customCategories = mutableMapOf<String, String>()
     private val _userCategories = MutableStateFlow<List<String>>(emptyList())
     val userCategories: StateFlow<List<String>> = _userCategories.asStateFlow()
+
+    private val _suggestedApps = MutableStateFlow<List<AppModel>>(emptyList())
+    val suggestedApps = _suggestedApps.asStateFlow()
 
     private val customIconDir = File(application.filesDir, "custom_icons").apply { mkdirs() }
     private var pageSize = 20
@@ -71,7 +84,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val type = when (typeStr) {
                     "Battery" -> WidgetType.Battery
                     "Clock" -> WidgetType.Clock
-                    "Calendar" -> WidgetType.Calendar
+                    "Calendar" -> WidgetType.Calendar(obj.optBoolean("isWide", false))
                     "Photo" -> WidgetType.Photo(obj.optBoolean("isWide", false))
                     else -> null
                 }
@@ -124,7 +137,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val typeStr = when (widget.type) {
                 is WidgetType.Battery -> "Battery"
                 is WidgetType.Clock -> "Clock"
-                is WidgetType.Calendar -> "Calendar"
+                is WidgetType.Calendar -> {
+                    obj.put("isWide", widget.type.isWide)
+                    "Calendar"
+                }
                 is WidgetType.Photo -> {
                     obj.put("isWide", widget.type.isWide)
                     "Photo"
@@ -158,8 +174,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun loadUserCategories() {
-        val saved = prefs.getStringSet("user_categories", setOf("Games", "Social", "Work", "Media", "Tools")) ?: emptySet()
-        _userCategories.value = saved.toList().sorted()
+        val saved = prefs.getString("user_categories_ordered", "Games,Social,Work,Media,Tools")
+        _userCategories.value = saved?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
     }
 
     private fun loadCustomCategories() {
@@ -174,23 +190,39 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addUserCategory(name: String) {
-        val current = _userCategories.value.toMutableSet()
-        current.add(name)
-        _userCategories.value = current.toList().sorted()
-        prefs.edit().putStringSet("user_categories", current).apply()
+        val current = _userCategories.value.toMutableList()
+        if (!current.contains(name)) {
+            current.add(name)
+            _userCategories.value = current
+            saveUserCategories(current)
+        }
     }
 
     fun deleteUserCategory(name: String) {
-        val current = _userCategories.value.toMutableSet()
+        val current = _userCategories.value.toMutableList()
         current.remove(name)
-        _userCategories.value = current.toList().sorted()
-        prefs.edit().putStringSet("user_categories", current).apply()
+        _userCategories.value = current
+        saveUserCategories(current)
         
         // 清除該分類下的 App 設定
         val toRemove = customCategories.filter { it.value == name }.keys
         toRemove.forEach { customCategories.remove(it) }
         saveCustomCategories()
         loadApps()
+    }
+
+    fun moveUserCategory(fromIndex: Int, toIndex: Int) {
+        val current = _userCategories.value.toMutableList()
+        if (fromIndex in current.indices && toIndex in current.indices) {
+            val item = current.removeAt(fromIndex)
+            current.add(toIndex, item)
+            _userCategories.value = current
+            saveUserCategories(current)
+        }
+    }
+
+    private fun saveUserCategories(list: List<String>) {
+        prefs.edit().putString("user_categories_ordered", list.joinToString(",")).apply()
     }
 
     fun setAppCategory(packageName: String, category: String) {
@@ -271,28 +303,57 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val iconCache = mutableMapOf<String, ImageBitmap>()
 
     fun loadApps() {
+        // 先從儲存空間重新讀取所有設定，確保從 SettingsActivity 返回後抓到最新變更
+        loadHiddenPackages()
+        loadCustomLabels()
+        loadUserCategories()
+        loadCustomCategories()
+        loadWidgets()
+        updateSuggestions()
+        
+        val latestThemedPref = prefs.getBoolean("themed_icons", false)
+        if (_isThemedIconsEnabled.value != latestThemedPref) {
+            _isThemedIconsEnabled.value = latestThemedPref
+            iconCache.clear() // 開關狀態改變，必須清空快取
+        }
+
         viewModelScope.launch {
             val rawApps = withContext(Dispatchers.IO) {
                 repository.getInstalledApps()
             }
             
+            val isThemed = _isThemedIconsEnabled.value
+            
+            // 優先嘗試獲取 Android 12+ 的官方調色盤作為染色基準
+            val themeColors = if (isThemed) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    // Android 12+ 模擬 Compose 的 LightColorScheme 作為 Icon 生成基準 (避免 Icon 太黑)
+                    dynamicLightColorScheme(getApplication<Application>())
+                } else {
+                    // Android 12 以下，維持原有的桌布提取邏輯
+                    val seed = withContext(Dispatchers.IO) {
+                        try {
+                            val wm = WallpaperManager.getInstance(getApplication())
+                            wm.drawable?.toBitmap()?.let { DynamicColorGenerator.extractSeedColorFromBitmap(it) }
+                        } catch (e: Exception) { null }
+                    }
+                    seed?.let { DynamicColorGenerator.generateColorSchemeFromSeed(it, false) }
+                }
+            } else null
+
             val processedApps = withContext(Dispatchers.Default) {
                 val density = getApplication<Application>().resources.displayMetrics.density
                 val sizePx = (62 * density).toInt()
                 
                 rawApps.map { app ->
                     val customIconFile = File(customIconDir, "${app.packageName}.png")
-                    
-                    // 優先從快取或檔案讀取圖示
                     val cachedIcon = iconCache[app.packageName]
                     
                     val processedIcon: ImageBitmap = if (customIconFile.exists()) {
-                        // 如果有自定義圖示，每次重新讀取
                         BitmapFactory.decodeFile(customIconFile.absolutePath).asImageBitmap()
-                    } else if (cachedIcon != null) {
+                    } else if (cachedIcon != null && !isThemed) {
                         cachedIcon
                     } else {
-                        // 否則生成新的
                         val b = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
                         val canvas = Canvas(b)
                         val icon = app.icon
@@ -303,19 +364,75 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                 val scaledSize = (sizePx * scale).toInt()
                                 val offset = (sizePx - scaledSize) / 2
                                 
-                                // 背景與前景套用相同的縮放比例，確保它們看起來是一個整體
-                                icon.background?.setBounds(offset, offset, offset + scaledSize, offset + scaledSize)
-                                icon.background?.draw(canvas)
+                                if (isThemed && themeColors != null) {
+                                    // 1. 繪製背景 (使用 Primary)
+                                    val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+                                    val bgCol = themeColors.primary
+                                    bgPaint.color = Color.argb(
+                                        (bgCol.alpha * 255).toInt(),
+                                        (bgCol.red * 255).toInt(),
+                                        (bgCol.green * 255).toInt(),
+                                        (bgCol.blue * 255).toInt()
+                                    )
+                                    canvas.drawRect(0f, 0f, sizePx.toFloat(), sizePx.toFloat(), bgPaint)
 
-                                icon.foreground?.setBounds(offset, offset, offset + scaledSize, offset + scaledSize)
-                                icon.foreground?.draw(canvas)
+                                    // 2. 染色並繪製前景 (使用 OnPrimary)
+                                    val fgCol = themeColors.onPrimary
+                                    val iconColor = Color.argb(
+                                        (fgCol.alpha * 255).toInt(),
+                                        (fgCol.red * 255).toInt(),
+                                        (fgCol.green * 255).toInt(),
+                                        (fgCol.blue * 255).toInt()
+                                    )
+                                    
+                                    val cm = ColorMatrix(floatArrayOf(
+                                        0f, 0f, 0f, 0f, Color.red(iconColor).toFloat(),
+                                        0f, 0f, 0f, 0f, Color.green(iconColor).toFloat(),
+                                        0f, 0f, 0f, 0f, Color.blue(iconColor).toFloat(),
+                                        0f, 0f, 0f, 1f, 0f
+                                    ))
+                                    
+                                    val filter = ColorMatrixColorFilter(cm)
+
+                                    // 優先使用 Android 13+ 的 Monochrome (單色) 圖層
+                                    var drawn = false
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                        icon.monochrome?.let { mono ->
+                                            mono.colorFilter = filter
+                                            mono.setBounds(offset, offset, offset + scaledSize, offset + scaledSize)
+                                            mono.draw(canvas)
+                                            mono.colorFilter = null
+                                            drawn = true
+                                        }
+                                    }
+
+                                    // 如果沒有單色圖層，則回退到前景圖層染色 (雖然效果可能不如單色圖層完美)
+                                    if (!drawn) {
+                                        icon.foreground?.let {
+                                            it.colorFilter = filter
+                                            it.setBounds(offset, offset, offset + scaledSize, offset + scaledSize)
+                                            it.draw(canvas)
+                                            it.colorFilter = null
+                                        }
+                                    }
+                                } else {
+                                    icon.background?.setBounds(offset, offset, offset + scaledSize, offset + scaledSize)
+                                    icon.background?.draw(canvas)
+                                    icon.foreground?.setBounds(offset, offset, offset + scaledSize, offset + scaledSize)
+                                    icon.foreground?.draw(canvas)
+                                }
                             } else {
+                                if (isThemed && themeColors != null) {
+                                    val fgCol = themeColors.primary
+                                    val iconColor = Color.argb((fgCol.alpha * 255).toInt(), (fgCol.red * 255).toInt(), (fgCol.green * 255).toInt(), (fgCol.blue * 255).toInt())
+                                    icon.setTint(iconColor)
+                                }
                                 icon.setBounds(0, 0, sizePx, sizePx)
                                 icon.draw(canvas)
                             }
                         }
                         val ib = b.asImageBitmap()
-                        iconCache[app.packageName] = ib
+                        if (!isThemed) iconCache[app.packageName] = ib
                         ib
                     }
                     
@@ -455,7 +572,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
 
     private fun insertAtPage(pages: MutableList<MutableList<AppModel>>, index: Int, item: AppModel) {
-        val safeIndex = index.coerceIn(0, pages.size.coerceAtLeast(1) - 1)
+        val safeIndex = index.coerceIn(0, pages.size)
         if (safeIndex < pages.size) {
             pages[safeIndex].add(item)
         } else {
@@ -464,10 +581,35 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun reorganizeAllPages(pages: MutableList<MutableList<AppModel>>) {
-        val allItems = pages.flatten()
-        val newPages = allItems.chunked(pageSize).map { it.toMutableList() }.toMutableList()
-        if (newPages.isEmpty()) newPages.add(mutableListOf())
-        _pages.value = newPages
+        val result = mutableListOf<MutableList<AppModel>>()
+        var overflow = mutableListOf<AppModel>()
+        
+        for (page in pages) {
+            val current = (page + overflow).toMutableList()
+            if (current.size > pageSize) {
+                result.add(current.take(pageSize).toMutableList())
+                overflow = current.drop(pageSize).toMutableList()
+            } else {
+                // 保留分頁結構，不強制從後面的分頁往前遞補
+                if (current.isNotEmpty() || result.isEmpty()) {
+                    result.add(current)
+                }
+                overflow = mutableListOf()
+            }
+        }
+        
+        // 處理剩餘的溢出物件，建立新分頁
+        while (overflow.isNotEmpty()) {
+            result.add(overflow.take(pageSize).toMutableList())
+            overflow = overflow.drop(pageSize).toMutableList()
+        }
+        
+        // 移除結尾多餘的空分頁 (除了第一頁)
+        while (result.size > 1 && result.last().isEmpty()) {
+            result.removeAt(result.size - 1)
+        }
+
+        _pages.value = result
     }
 
     /**
@@ -502,9 +644,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _isEditMode.value = enabled
     }
 
+    fun setThemedIconsEnabled(enabled: Boolean) {
+        _isThemedIconsEnabled.value = enabled
+        prefs.edit().putBoolean("themed_icons", enabled).apply()
+        iconCache.clear() // 強制清空快取以重新生成主題圖示
+        loadApps()
+    }
+
     fun createFolder(pageIndex: Int, folderName: String) {
         val currentPages = _pages.value.map { it.toMutableList() }.toMutableList()
-        val targetPage = if (pageIndex < currentPages.size) currentPages[pageIndex] else mutableListOf<AppModel>().also { currentPages.add(it) }
+        val targetPage = if (pageIndex >= 0 && pageIndex < currentPages.size) {
+            currentPages[pageIndex]
+        } else if (currentPages.isNotEmpty()) {
+            currentPages.last()
+        } else {
+            mutableListOf<AppModel>().also { currentPages.add(it) }
+        }
         
         val newFolder = AppModel(
             label = folderName.ifBlank { getApplication<Application>().getString(R.string.folder_default_name) },
@@ -512,7 +667,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             uniqueId = "folder_${System.currentTimeMillis()}"
         )
         targetPage.add(newFolder)
-        _pages.value = currentPages
+        reorganizeAllPages(currentPages)
     }
 
     fun deleteFolder(folderId: String) {
@@ -561,6 +716,33 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (removed) {
             reorganizeAllPages(currentPages)
         }
+    }
+
+    fun logAppLaunch(packageName: String) {
+        val launchCounts = prefs.getString("launch_counts", "") ?: ""
+        val countsMap = launchCounts.split(",").filter { it.contains("|") }.associate {
+            val parts = it.split("|")
+            parts[0] to (parts[1].toIntOrNull() ?: 0)
+        }.toMutableMap()
+        
+        countsMap[packageName] = (countsMap[packageName] ?: 0) + 1
+        val serialized = countsMap.map { "${it.key}|${it.value}" }.joinToString(",")
+        prefs.edit().putString("launch_counts", serialized).apply()
+        updateSuggestions()
+    }
+
+    private fun updateSuggestions() {
+        val launchCounts = prefs.getString("launch_counts", "") ?: ""
+        val topPackages = launchCounts.split(",")
+            .filter { it.contains("|") }
+            .map { it.split("|") }
+            .filter { it.size == 2 }
+            .map { it[0] to (it[1].toIntOrNull() ?: 0) }
+            .sortedByDescending { it.second }
+            .take(4)
+            .map { it.first }
+        
+        _suggestedApps.value = _allApps.value.filter { topPackages.contains(it.packageName) && !it.isHidden }
     }
 
     private val widgetPhotoDir = File(getApplication<Application>().filesDir, "widget_photos").apply { mkdirs() }

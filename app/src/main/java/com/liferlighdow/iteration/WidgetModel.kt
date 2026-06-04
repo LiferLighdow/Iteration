@@ -5,7 +5,7 @@ import java.util.UUID
 sealed class WidgetType {
     object Battery : WidgetType()
     object Clock : WidgetType()
-    object Calendar : WidgetType()
+    data class Calendar(val isWide: Boolean = false) : WidgetType()
     data class Photo(val isWide: Boolean = false) : WidgetType()
 }
 

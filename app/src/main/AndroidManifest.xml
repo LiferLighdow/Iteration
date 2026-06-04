@@ -4,6 +4,7 @@
 
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" tools:ignore="SelectedPhotoAccess" />
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
 
     <queries>
         <intent>
@@ -26,6 +27,7 @@
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
+            android:screenOrientation="portrait"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -38,7 +40,18 @@
         <activity
             android:name=".SettingsActivity"
             android:label="@string/settings_title"
+            android:screenOrientation="portrait"
             android:parentActivityName=".MainActivity" />
+
+        <service
+            android:name=".NotificationService"
+            android:label="Iteration Notification Listener"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
 
     </application>
 

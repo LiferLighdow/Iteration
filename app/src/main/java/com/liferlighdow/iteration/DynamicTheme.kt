@@ -1,14 +1,13 @@
 package com.liferlighdow.iteration
 
 import android.annotation.SuppressLint
-import android.app.WallpaperManager
+import android.os.Build
 import android.graphics.Bitmap
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.core.graphics.drawable.toBitmap
 import com.google.android.material.color.utilities.*
 
 /**
@@ -98,28 +97,16 @@ fun IterationTheme(
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
-    var seedColor by remember { mutableStateOf<Int?>(null) }
-
-    // 取得桌面背景並提取顏色
-    LaunchedEffect(Unit) {
-        try {
-            val wallpaperManager = WallpaperManager.getInstance(context)
-            // 嘗試取得當前桌布
-            val drawable = wallpaperManager.drawable
-            if (drawable != null) {
-                seedColor = DynamicColorGenerator.extractSeedColorFromBitmap(drawable.toBitmap())
-            }
-        } catch (e: SecurityException) {
-            // 權限不足時的處理
-        } catch (e: Exception) {
-            // 其他異常
-        }
-    }
-
+    
+    // 優先使用 Android 12+ 的官方動態色彩
     val colorScheme = when {
-        seedColor != null -> DynamicColorGenerator.generateColorSchemeFromSeed(seedColor!!, darkTheme)
-        darkTheme -> darkColorScheme()
-        else -> lightColorScheme()
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        }
+        else -> {
+            // Android 12 以下的回退邏輯 (手動提取或預設)
+            if (darkTheme) darkColorScheme() else lightColorScheme()
+        }
     }
 
     MaterialTheme(

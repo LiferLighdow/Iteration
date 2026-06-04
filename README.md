@@ -16,13 +16,15 @@
 
 ### 🎨 Design & Interaction
 *   **Immersive Edge-to-Edge**: Full transparency support that treats your wallpaper as the primary canvas.
+*   **Themed Icons (Material You)**: Standard-compliant dynamic icon tinting. Supports Android 13+ **Monochrome layers** and provides high-quality fallback for older versions.
+*   **Notification Badges**: Real-time unread counts displayed as elegant badges on app icons (Requires Notification Access).
 *   **Fluid Pagination**: Smooth `HorizontalPager` transitions with a physics-based drag-and-drop system.
-*   **Paged Folders (3x3 Grid)**: Organized folders with horizontal paging, allowing you to manage large collections in a clean, iOS-style 3x3 layout.
-*   **Dynamic Dock**: A floating, customizable utility bar for your mission-critical applications.
-*   **Jiggle Mode**: Long-press to enter edit mode with intuitive "jiggling" icons, making reordering and folder creation a breeze.
-*   **Quick Actions (Context Menu)**: Long-press any app in normal mode to access quick menus for **Uninstalling** or **Removing from Home Screen**.
-*   **Wallpaper & Default Options**: Integrated shortcuts for quick system **Wallpaper changing** and **One-tap Default Launcher setting** directly from the desktop menu.
-*   **Material You Integration**: Full support for system-wide theming and dynamic color palettes using `MaterialColorUtilities`.
+*   **Dynamic Preview Pages**: Drag apps to the edge in Edit Mode to intuitively "slide out" and create new desktop pages.
+*   **Refined Motion**: UI elements like the Dock feature **Spring-physics** animations and smooth alpha transitions for a premium tactile feel.
+*   **Paged Folders (3x3 Grid)**: Organized folders with horizontal paging and a refined, transparent UI.
+*   **Jiggle Mode**: Long-press to enter edit mode with "jiggling" icons, optimized for reordering and smart folder creation.
+*   **Visual Polish**: System-wide icon corner radius refined to **105% (0.238f)** for a softer, more modern aesthetic.
+*   **Material You Integration**: Automatic UI color adaptation using official Android 12+ Dynamic Color APIs.
 
 ### 🧩 Widgets & Extensions (Minus One Page)
 *   **Dynamic Theme Extraction**: Automatically extracts the dominant color from your wallpaper using **QuantizerCelebi** and **Score** algorithms to generate a harmonious theme.
@@ -34,18 +36,20 @@
     *   **Built-in Cropping Tool**: Precision gesture-based (pinch-to-zoom, drag) image cropping with a visual guide to ensure a perfect fit for your desktop.
 
 ### 🔍 Discovery & Organization
+*   **Usage-based Suggestions**: A dedicated section at the top of the App Library that intelligently learns and displays your **4 most frequent apps**.
 *   **Global Search Hub**: A unified search interface (swipe-down) indexing apps, web results, and system shortcuts.
-*   **Extended Search Integration**: Directly jump to **Web (Google)**, **Google Maps**, or **App Stores** (supporting F-Droid, Aurora Store, App Lounge, etc.) directly from the search bar.
-*   **Smart Categorization**: Automatic grouping of applications using Android's native metadata in the App Library.
-*   **App Library Custom Sections**: Create, delete, and manually assign apps to your own categories (e.g., "Work", "Productivity").
+*   **Smart Categorization**: Automatic grouping of applications using Android's native metadata.
+*   **Custom Category Reordering**: Fully control the layout of your App Library by sorting categories using simple Up/Down controls in Settings.
+*   **Extended Search Integration**: Directly jump to **Web (Google)**, **Google Maps**, or **App Stores** (supporting F-Droid, Aurora Store, etc.).
 *   **Enhanced Navigation**: Integrated search in App Library with intelligent focus management and `BackHandler` support.
 
 ### 🔒 Privacy & Personalization
-*   **Secure Vault**: Hide sensitive applications behind a password-protected layer in the App Library.
+*   **Secure Vault**: Hide sensitive applications behind a password-protected layer with an optional **Password Visibility Toggle** for ease of use.
+*   **Instant Settings Sync**: All changes to icons, labels, and visibility apply **immediately** without requiring a launcher restart.
 *   **Deep Customization**: 
     *   **Pro Icon Re-skinning**: High-resolution (512px) icon cropping with visual masking and precision `Matrix` transformations.
     *   **Alias Management**: Rename applications to fit your personal workflow.
-    *   **Adaptive Icon Synchronization**: Advanced processing ensures foreground and background layers stay perfectly aligned during scaling.
+*   **Orientation Locking**: Optimized for a stable, fixed **Portrait** experience.
 
 ---
 
@@ -83,7 +87,7 @@ app/src/main/java/com/liferlighdow/iteration/
 ### Prerequisites
 - **Android Studio**: Ladybug | 2024.2.1 or newer.
 - **JDK**: Java 17+ (Required for Gradle 8.x+).
-- **Android Device**: API 26 (Android 8.0) or higher.
+- **Android Device**: API 23 (Android 6.0) or higher.
 
 ### Installation & Build
 1.  **Clone the repository**:

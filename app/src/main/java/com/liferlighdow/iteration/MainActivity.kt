@@ -10,6 +10,8 @@ import android.graphics.Matrix
 import android.net.Uri
 import android.os.BatteryManager
 import android.os.Bundle
+import android.provider.AlarmClock
+import android.provider.CalendarContract
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -69,18 +71,23 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Calendar
 import kotlin.math.max
 import kotlin.math.min
@@ -92,10 +99,13 @@ class MainActivity : ComponentActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER)
         enableEdgeToEdge()
         setContent {
+            val viewModel: MainViewModel = viewModel()
             IterationTheme {
                 Box(modifier = Modifier.fillMaxSize().background(Color.Transparent)) {
                     LauncherScreen(
+                        viewModel = viewModel,
                         onAppClick = { pkg ->
+                            viewModel.logAppLaunch(pkg)
                             val intent = packageManager.getLaunchIntentForPackage(pkg)
                             if (intent != null) startActivity(intent)
                         },
@@ -201,6 +211,7 @@ fun BatteryWidget(displayMode: WidgetDisplayMode, modifier: Modifier = Modifier)
 @Composable
 fun AnalogClockWidget(displayMode: WidgetDisplayMode, modifier: Modifier = Modifier) {
     var time by remember { mutableStateOf(Calendar.getInstance()) }
+    val context = LocalContext.current
     
     val containerColor = when (displayMode) {
         WidgetDisplayMode.GLASS -> Color.White.copy(alpha = 0.2f)
@@ -498,7 +509,18 @@ fun cropBitmap(original: Bitmap, scale: Float, offset: Offset, containerSize: Si
 }
 
 @Composable
-fun CalendarWidget(displayMode: WidgetDisplayMode, modifier: Modifier = Modifier) {
+fun CalendarWidget(widget: WidgetModel, displayMode: WidgetDisplayMode, modifier: Modifier = Modifier) {
+    val isWide = (widget.type as? WidgetType.Calendar)?.isWide ?: false
+    
+    if (isWide) {
+        WideCalendarWidget(displayMode, modifier)
+    } else {
+        StandardCalendarWidget(displayMode, modifier)
+    }
+}
+
+@Composable
+fun StandardCalendarWidget(displayMode: WidgetDisplayMode, modifier: Modifier = Modifier) {
     val calendar = Calendar.getInstance()
     val dayOfMonth = calendar.get(Calendar.DAY_OF_MONTH)
     val dayOfWeek = when (calendar.get(Calendar.DAY_OF_WEEK)) {
@@ -572,6 +594,138 @@ fun CalendarWidget(displayMode: WidgetDisplayMode, modifier: Modifier = Modifier
     }
 }
 
+data class CalendarEvent(val title: String, val startTime: Long, val endTime: Long)
+
+@Composable
+fun WideCalendarWidget(displayMode: WidgetDisplayMode, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val events = remember { mutableStateListOf<CalendarEvent>() }
+    
+    val containerColor = when (displayMode) {
+        WidgetDisplayMode.GLASS -> Color.White.copy(alpha = 0.2f)
+        WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.tertiaryContainer
+    }
+    val contentColor = when (displayMode) {
+        WidgetDisplayMode.GLASS -> Color.White
+        WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.onTertiaryContainer
+    }
+    val accentColor = if (displayMode == WidgetDisplayMode.COLOR) MaterialTheme.colorScheme.primary else Color.Red
+
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            try {
+                val now = System.currentTimeMillis()
+                val startOfDay = Calendar.getInstance().apply {
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                }.timeInMillis
+                val endOfDay = Calendar.getInstance().apply {
+                    set(Calendar.HOUR_OF_DAY, 23)
+                    set(Calendar.MINUTE, 59)
+                    set(Calendar.SECOND, 59)
+                }.timeInMillis
+
+                val projection = arrayOf(
+                    CalendarContract.Events.TITLE,
+                    CalendarContract.Events.DTSTART,
+                    CalendarContract.Events.DTEND
+                )
+                val selection = "${CalendarContract.Events.DTSTART} >= ? AND ${CalendarContract.Events.DTSTART} <= ?"
+                val selectionArgs = arrayOf(startOfDay.toString(), endOfDay.toString())
+
+                context.contentResolver.query(
+                    CalendarContract.Events.CONTENT_URI,
+                    projection,
+                    selection,
+                    selectionArgs,
+                    "${CalendarContract.Events.DTSTART} ASC"
+                )?.use { cursor ->
+                    val titleIdx = cursor.getColumnIndex(CalendarContract.Events.TITLE)
+                    val startIdx = cursor.getColumnIndex(CalendarContract.Events.DTSTART)
+                    val endIdx = cursor.getColumnIndex(CalendarContract.Events.DTEND)
+                    
+                    val list = mutableListOf<CalendarEvent>()
+                    while (cursor.moveToNext()) {
+                        list.add(CalendarEvent(
+                            cursor.getString(titleIdx),
+                            cursor.getLong(startIdx),
+                            cursor.getLong(endIdx)
+                        ))
+                    }
+                    withContext(Dispatchers.Main) {
+                        events.clear()
+                        events.addAll(list)
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(110.dp),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = containerColor)
+    ) {
+        Row(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            // Left part: Date
+            Column(
+                modifier = Modifier.width(60.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                val cal = Calendar.getInstance()
+                Text(
+                    text = cal.get(Calendar.DAY_OF_MONTH).toString(),
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = contentColor,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                )
+                Text(
+                    text = when(cal.get(Calendar.DAY_OF_WEEK)) {
+                        Calendar.SUNDAY -> "SUN"; Calendar.MONDAY -> "MON"; Calendar.TUESDAY -> "TUE"
+                        Calendar.WEDNESDAY -> "WED"; Calendar.THURSDAY -> "THU"; Calendar.FRIDAY -> "FRI"
+                        Calendar.SATURDAY -> "SAT"; else -> ""
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = accentColor
+                )
+            }
+
+            VerticalDivider(modifier = Modifier.padding(horizontal = 12.dp), color = contentColor.copy(alpha = 0.1f))
+
+            // Right part: Events
+            if (events.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(text = "No events today", style = MaterialTheme.typography.bodyMedium, color = contentColor.copy(alpha = 0.5f))
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(events) { event ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(modifier = Modifier.size(4.dp, 16.dp).clip(CircleShape).background(accentColor))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(text = event.title, style = MaterialTheme.typography.labelLarge, color = contentColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                val startTime = Calendar.getInstance().apply { timeInMillis = event.startTime }
+                                val timeStr = String.format("%02d:%02d", startTime.get(Calendar.HOUR_OF_DAY), startTime.get(Calendar.MINUTE))
+                                Text(text = timeStr, style = MaterialTheme.typography.labelSmall, color = contentColor.copy(alpha = 0.6f))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun WidgetPickerDialog(onDismiss: () -> Unit, onWidgetSelected: (WidgetType) -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
@@ -606,7 +760,15 @@ fun WidgetPickerDialog(onDismiss: () -> Unit, onWidgetSelected: (WidgetType) -> 
                     headlineContent = { Text(stringResource(R.string.widget_calendar)) },
                     leadingContent = { Icon(Icons.Default.CalendarMonth, contentDescription = null) },
                     modifier = Modifier.clickable { 
-                        onWidgetSelected(WidgetType.Calendar)
+                        onWidgetSelected(WidgetType.Calendar(isWide = false))
+                        onDismiss()
+                    }
+                )
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.widget_calendar_wide)) },
+                    leadingContent = { Icon(Icons.Default.EventNote, contentDescription = null) },
+                    modifier = Modifier.clickable { 
+                        onWidgetSelected(WidgetType.Calendar(isWide = true))
                         onDismiss()
                     }
                 )
@@ -641,6 +803,7 @@ fun MinusOnePage(
     onUpdateWidgetMode: (String, WidgetDisplayMode) -> Unit
 ) {
     var isReorderMode by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -682,22 +845,53 @@ fun MinusOnePage(
             modifier = Modifier.fillMaxSize()
         ) {
             items(widgets, key = { it.id }, span = { widget ->
-                val span = if (widget.type is WidgetType.Battery || (widget.type as? WidgetType.Photo)?.isWide == true) 4 else 2
+                val span = if (widget.type is WidgetType.Battery || 
+                    (widget.type as? WidgetType.Photo)?.isWide == true ||
+                    (widget.type as? WidgetType.Calendar)?.isWide == true) 4 else 2
                 GridItemSpan(span)
             }) { widget ->
                 var showContextMenu by remember { mutableStateOf(false) }
 
                 Box(
-                    modifier = Modifier.pointerInput(Unit) {
+                    modifier = Modifier.pointerInput(widget.type) {
                         detectTapGestures(
-                            onLongPress = { showContextMenu = true }
+                            onLongPress = { showContextMenu = true },
+                            onTap = {
+                                when (widget.type) {
+                                    is WidgetType.Clock -> {
+                                        try {
+                                            val intent = Intent(android.provider.AlarmClock.ACTION_SHOW_ALARMS).apply {
+                                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                            }
+                                            context.startActivity(intent)
+                                        } catch (e: Exception) {
+                                            try {
+                                                val pm = context.packageManager
+                                                val fallbackIntent = pm.getLaunchIntentForPackage("com.google.android.deskclock")
+                                                    ?: pm.getLaunchIntentForPackage("com.android.deskclock")
+                                                if (fallbackIntent != null) context.startActivity(fallbackIntent)
+                                            } catch (e2: Exception) {}
+                                        }
+                                    }
+                                    is WidgetType.Calendar -> {
+                                        try {
+                                            val intent = Intent(Intent.ACTION_MAIN).apply {
+                                                addCategory(Intent.CATEGORY_APP_CALENDAR)
+                                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                            }
+                                            context.startActivity(intent)
+                                        } catch (e: Exception) {}
+                                    }
+                                    else -> {}
+                                }
+                            }
                         )
                     }
                 ) {
                     when (widget.type) {
                         is WidgetType.Battery -> BatteryWidget(displayMode = widget.displayMode)
                         is WidgetType.Clock -> AnalogClockWidget(displayMode = widget.displayMode)
-                        is WidgetType.Calendar -> CalendarWidget(displayMode = widget.displayMode)
+                        is WidgetType.Calendar -> CalendarWidget(widget = widget, displayMode = widget.displayMode)
                         is WidgetType.Photo -> PhotoWidget(widget = widget, viewModel = viewModel)
                     }
                     
@@ -759,13 +953,11 @@ fun LauncherScreen(
     val isEditMode by viewModel.isEditMode.collectAsState()
     val minusOneWidgets by viewModel.minusOneWidgets.collectAsState()
     
-    var shouldRefreshOnResume by remember { mutableStateOf(false) }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME && shouldRefreshOnResume) {
+            if (event == Lifecycle.Event.ON_RESUME) {
                 viewModel.loadApps()
-                shouldRefreshOnResume = false
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -816,6 +1008,8 @@ fun LauncherScreen(
     if (isEditMode) BackHandler { viewModel.setEditMode(false) }
 
     val desktopPageCount = pages.size.coerceAtLeast(1)
+    // 即使停止拖拽，如果新頁面已經建立(數據同步中)，也要維持頁數，避免 Pager 抖動
+    val isPendingNewPage = draggingApp == null && pages.lastOrNull()?.isNotEmpty() == true && pages.size > 1
     val pageCount = 1 /* 負一頁 */ + desktopPageCount + (if (draggingApp != null) 2 else 1) /* Library */
     val pagerState = rememberPagerState(initialPage = 1, pageCount = { pageCount })
     val scope = rememberCoroutineScope()
@@ -853,8 +1047,9 @@ fun LauncherScreen(
                 userScrollEnabled = draggingApp == null, beyondViewportPageCount = 1
             ) { pageIndex ->
                 val isMinusOne = pageIndex == 0
-                val isLibrary = pageIndex >= desktopPageCount + 1 && draggingApp == null
+                val isLibrary = pageIndex == pageCount - 1
                 val isDesktop = pageIndex >= 1 && pageIndex <= desktopPageCount
+                val isNewPage = pageIndex == desktopPageCount + 1 && draggingApp != null
 
                 Box(
                     modifier = Modifier
@@ -885,7 +1080,7 @@ fun LauncherScreen(
                                 onUpdateWidgetMode = { id, mode -> viewModel.updateWidgetDisplayMode(id, mode) }
                             )
                         }
-                        isDesktop -> {
+                        isDesktop || isNewPage -> {
                             val desktopIdx = pageIndex - 1
                             AppGrid(
                                 apps = pages.getOrNull(desktopIdx) ?: emptyList(),
@@ -937,7 +1132,16 @@ fun LauncherScreen(
                                             val dropType = if (!isEditMode && maxOverlap > 0.50f && targetApp != null) MainViewModel.DropType.FOLDER else MainViewModel.DropType.REORDER
                                             viewModel.handleAppDrop(draggingApp!!.uniqueId, targetApp?.uniqueId, tPageIdx - 1, false, dropType)
                                         } else {
-                                            viewModel.handleAppDrop(draggingApp!!.uniqueId, null, pageIndex - 1, false, MainViewModel.DropType.REORDER)
+                                            // 檢測當前所在的 Pager 頁面
+                                            val currentPage = pagerState.currentPage
+                                            if (currentPage == pageCount - 1) {
+                                                // 丟在 App Library 頁面，視為移除
+                                                viewModel.removeAppFromHome(draggingApp!!.uniqueId)
+                                            } else {
+                                                // 丟在普通分頁空白處，取當前頁面索引 (currentPage - 1)
+                                                val targetIdx = (currentPage - 1).coerceIn(0, desktopPageCount)
+                                                viewModel.handleAppDrop(draggingApp!!.uniqueId, null, targetIdx, false, MainViewModel.DropType.REORDER)
+                                            }
                                         }
                                     }
                                     draggingApp = null; rawHoveredKey = null; confirmedHoveredKey = null
@@ -973,10 +1177,20 @@ fun LauncherScreen(
                 BackHandler(enabled = (isAppLibraryPage || isMinusOnePage) && !showGlobalSearch) {
                     scope.launch { pagerState.animateScrollToPage(1) }
                 }
-                AnimatedVisibility(visible = !isAppLibraryPage && !isMinusOnePage, enter = slideInVertically { it } + fadeIn(), exit = slideOutVertically { it } + fadeOut()) {
+                AnimatedVisibility(
+                    visible = !isAppLibraryPage && !isMinusOnePage,
+                    enter = slideInVertically(
+                        initialOffsetY = { it },
+                        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
+                    ) + fadeIn(animationSpec = tween(400)),
+                    exit = slideOutVertically(
+                        targetOffsetY = { it },
+                        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
+                    ) + fadeOut(animationSpec = tween(400))
+                ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         PageIndicator(pageCount = desktopPageCount, currentPage = pagerState.currentPage - 1)
-                        Dock(apps = dockApps, iconSize = iconSize, onAppClick = { pkg -> if (pkg == myPackageName) { shouldRefreshOnResume = true; onSettingsClick() } else onAppClick(pkg) }, onLongClick = { showDockPicker = it })
+                        Dock(apps = dockApps, iconSize = iconSize, onAppClick = { pkg -> if (pkg == myPackageName) onSettingsClick() else onAppClick(pkg) }, onLongClick = { showDockPicker = it })
                         Spacer(modifier = Modifier.height(4.dp))
                     }
                 }
@@ -1022,7 +1236,7 @@ fun LauncherScreen(
             onDismissRequest = { showCreateFolderDialog = false },
             title = { Text(stringResource(R.string.folder_create_title)) },
             text = { OutlinedTextField(value = folderName, onValueChange = { folderName = it }, label = { Text(stringResource(R.string.folder_name_hint)) }, singleLine = true) },
-            confirmButton = { Button(onClick = { viewModel.createFolder(pagerState.currentPage, folderName); showCreateFolderDialog = false }) { Text(stringResource(R.string.create)) } },
+            confirmButton = { Button(onClick = { viewModel.createFolder(pagerState.currentPage - 1, folderName); showCreateFolderDialog = false }) { Text(stringResource(R.string.create)) } },
             dismissButton = { TextButton(onClick = { showCreateFolderDialog = false }) { Text(stringResource(R.string.cancel)) } }
         )
     }
@@ -1066,7 +1280,7 @@ fun LauncherScreen(
                     }
                     items(filteredResults, key = { it.packageName }) { app ->
                         ListItem(
-                            headlineContent = { Text(app.label, color = Color.White) }, leadingContent = { if (app.processedIcon != null) Image(bitmap = app.processedIcon, contentDescription = null, modifier = Modifier.size(48.dp).clip(RoundedCornerShape(10.dp)).background(Color.White)) },
+                            headlineContent = { Text(app.label, color = Color.White) }, leadingContent = { if (app.processedIcon != null) Image(bitmap = app.processedIcon, contentDescription = null, modifier = Modifier.size(48.dp).clip(RoundedCornerShape(10.8.dp)).background(Color.White)) },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent), modifier = Modifier.clickable { onAppClick(app.packageName); showGlobalSearch = false }
                         )
                     }
@@ -1209,16 +1423,38 @@ fun AppGrid(
 
 @Composable
 fun AppItem(app: AppModel, modifier: Modifier = Modifier, showLabel: Boolean = true, iconSize: androidx.compose.ui.unit.Dp = 62.dp, onAppClick: (() -> Unit)? = null) {
+    val notificationCounts by NotificationService.notifications.collectAsState()
+    val count = notificationCounts[app.packageName] ?: 0
+
     Column(modifier = modifier.padding(vertical = if (showLabel) 4.dp else 0.dp).then(if (onAppClick != null) Modifier.clickable { onAppClick() } else Modifier), horizontalAlignment = Alignment.CenterHorizontally) {
-        if (app.isFolder) {
-            Box(modifier = Modifier.size(iconSize).clip(RoundedCornerShape(iconSize * 0.22f)).background(Color.White.copy(alpha = 0.3f)).padding(4.dp), contentAlignment = Alignment.Center) {
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { FolderPreviewIcon(app.folderItems.getOrNull(0), iconSize / 2.5f); FolderPreviewIcon(app.folderItems.getOrNull(1), iconSize / 2.5f) }
-                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { FolderPreviewIcon(app.folderItems.getOrNull(2), iconSize / 2.5f); FolderPreviewIcon(app.folderItems.getOrNull(3), iconSize / 2.5f) }
+        Box(contentAlignment = Alignment.TopEnd) {
+            if (app.isFolder) {
+                Box(modifier = Modifier.size(iconSize).clip(RoundedCornerShape(iconSize * 0.238f)).background(Color.White.copy(alpha = 0.3f)).padding(4.dp), contentAlignment = Alignment.Center) {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { FolderPreviewIcon(app.folderItems.getOrNull(0), iconSize / 2.5f); FolderPreviewIcon(app.folderItems.getOrNull(1), iconSize / 2.5f) }
+                        Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { FolderPreviewIcon(app.folderItems.getOrNull(2), iconSize / 2.5f); FolderPreviewIcon(app.folderItems.getOrNull(3), iconSize / 2.5f) }
+                    }
+                }
+            } else if (app.processedIcon != null) {
+                Image(bitmap = app.processedIcon, contentDescription = null, modifier = Modifier.size(iconSize).clip(RoundedCornerShape(iconSize * 0.238f)).background(Color.White), contentScale = ContentScale.FillBounds)
+            }
+
+            if (count > 0 && !app.isFolder) {
+                Box(
+                    modifier = Modifier
+                        .offset(x = 4.dp, y = (-4).dp)
+                        .size(20.dp)
+                        .background(Color.Red, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (count > 99) "99+" else count.toString(),
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = if (count > 9) 9.sp else 11.sp
+                    )
                 }
             }
-        } else if (app.processedIcon != null) {
-            Image(bitmap = app.processedIcon, contentDescription = null, modifier = Modifier.size(iconSize).clip(RoundedCornerShape(iconSize * 0.22f)).background(Color.White), contentScale = ContentScale.FillBounds)
         }
         if (showLabel) Text(text = app.label, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp), color = Color.White)
     }
@@ -1226,7 +1462,7 @@ fun AppItem(app: AppModel, modifier: Modifier = Modifier, showLabel: Boolean = t
 
 @Composable
 fun FolderPreviewIcon(app: AppModel?, size: androidx.compose.ui.unit.Dp) {
-    if (app?.processedIcon != null) Image(bitmap = app.processedIcon, contentDescription = null, modifier = Modifier.size(size).clip(RoundedCornerShape(size * 0.22f)).background(Color.White))
+    if (app?.processedIcon != null) Image(bitmap = app.processedIcon, contentDescription = null, modifier = Modifier.size(size).clip(RoundedCornerShape(size * 0.238f)).background(Color.White))
     else Spacer(modifier = Modifier.size(size))
 }
 
@@ -1250,7 +1486,6 @@ fun FolderDialog(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.4f)) // 增加遮罩暗度
                 .clickable { onDismiss() },
             contentAlignment = Alignment.Center
         ) {
@@ -1406,17 +1641,12 @@ fun MultiAppPickerDialog(
                         ListItem(
                             headlineContent = { Text(app.label) },
                             leadingContent = {
-                                if (app.processedIcon != null) {
+                                val icon = app.processedIcon ?: app.icon?.toBitmap()?.asImageBitmap()
+                                if (icon != null) {
                                     Image(
-                                        bitmap = app.processedIcon,
+                                        bitmap = icon,
                                         contentDescription = null,
-                                        modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)).background(Color.White)
-                                    )
-                                } else {
-                                    Image(
-                                        bitmap = app.icon!!.toBitmap().asImageBitmap(),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp))
+                                        modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.4.dp)).background(Color.White)
                                     )
                                 }
                             },
@@ -1474,7 +1704,20 @@ fun AppPickerDialog(allApps: List<AppModel>, onDismiss: () -> Unit, onAppSelecte
                 Text(stringResource(R.string.select_app), style = MaterialTheme.typography.headlineSmall); Spacer(modifier = Modifier.height(16.dp))
                 LazyColumn {
                     items(allApps, key = { it.packageName }) { app ->
-                        ListItem(headlineContent = { Text(app.label) }, leadingContent = { Image(bitmap = app.icon!!.toBitmap().asImageBitmap(), contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp))) }, modifier = Modifier.clickable { onAppSelected(app.packageName) })
+                        ListItem(
+                            headlineContent = { Text(app.label) },
+                            leadingContent = {
+                                val icon = app.processedIcon ?: app.icon?.toBitmap()?.asImageBitmap()
+                                if (icon != null) {
+                                    Image(
+                                        bitmap = icon,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.7.dp)).background(Color.White)
+                                    )
+                                }
+                            },
+                            modifier = Modifier.clickable { onAppSelected(app.packageName) }
+                        )
                     }
                 }
             }
@@ -1492,6 +1735,8 @@ fun AppLibraryPage(allApps: List<AppModel>, onAppClick: (String) -> Unit, onDrag
     var showPasswordDialog by remember { mutableStateOf(false) }
     val viewModel: MainViewModel = viewModel()
     val focusManager = LocalFocusManager.current
+    val suggestedApps by viewModel.suggestedApps.collectAsState()
+    val userCategories by viewModel.userCategories.collectAsState()
 
     BackHandler(enabled = isSearchFocused || searchQuery.isNotEmpty() || selectedCategory != null) {
         if (selectedCategory != null) {
@@ -1506,7 +1751,21 @@ fun AppLibraryPage(allApps: List<AppModel>, onAppClick: (String) -> Unit, onDrag
     val filteredApps = remember(allApps, searchQuery) { if (searchQuery.isBlank()) allApps else allApps.filter { it.label.contains(searchQuery, ignoreCase = true) } }
     val hiddenApps = remember(filteredApps) { filteredApps.filter { it.isHidden } }
     val normalApps = remember(filteredApps) { filteredApps.filter { !it.isHidden } }
-    val categories = remember(normalApps) { normalApps.groupBy { it.displayCategory }.toList().sortedBy { it.first }.toMutableList() }
+    val categories = remember(normalApps, userCategories) { 
+        val grouped = normalApps.groupBy { it.displayCategory }
+        val result = mutableListOf<Pair<String, List<AppModel>>>()
+        
+        userCategories.forEach { name ->
+            grouped[name]?.let { result.add(name to it) }
+        }
+        
+        // 加入那些不在自定義分類中的 App
+        val handledNames = userCategories.toSet()
+        grouped.forEach { (name, apps) ->
+            if (!handledNames.contains(name)) result.add(name to apps)
+        }
+        result
+    }
     val showHiddenFolder = hiddenApps.isNotEmpty() && searchQuery.isBlank() && selectedCategory == null
 
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
@@ -1547,15 +1806,24 @@ fun AppLibraryPage(allApps: List<AppModel>, onAppClick: (String) -> Unit, onDrag
         
         if (isSearchFocused || searchQuery.isNotEmpty() || selectedCategory != null) {
             val appsToShow = remember(filteredApps, selectedCategory, isHiddenUnlocked) {
-                val baseList = if (selectedCategory != null) { if (selectedCategory == "Hidden Apps") hiddenApps else categories.find { it.first == selectedCategory }?.second ?: emptyList() } else filteredApps
-                if (selectedCategory == "Hidden Apps" && !isHiddenUnlocked) emptyList() else { if (selectedCategory == "Hidden Apps") baseList.sortedBy { it.label.lowercase() } else baseList.filter { !it.isHidden }.sortedBy { it.label.lowercase() } }
+                val baseList = if (selectedCategory != null) { 
+                    if (selectedCategory == "Hidden Apps") hiddenApps 
+                    else if (selectedCategory == "Suggestions") suggestedApps
+                    else categories.find { it.first == selectedCategory }?.second ?: emptyList() 
+                } else filteredApps
+                
+                if (selectedCategory == "Hidden Apps" && !isHiddenUnlocked) emptyList() 
+                else { 
+                    if (selectedCategory == "Hidden Apps" || selectedCategory == "Suggestions") baseList.sortedBy { it.label.lowercase() } 
+                    else baseList.filter { !it.isHidden }.sortedBy { it.label.lowercase() } 
+                }
             }
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(appsToShow, key = { it.packageName }) { app ->
                     val lastPos = remember { object { var pos = Offset.Zero } }
                     Column(modifier = Modifier.onGloballyPositioned { lastPos.pos = it.positionInRoot() }) {
                         ListItem(
-                            headlineContent = { Text(app.label, color = Color.White) }, leadingContent = { if (app.processedIcon != null) Image(bitmap = app.processedIcon, contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(9.dp)).background(Color.White)) },
+                            headlineContent = { Text(app.label, color = Color.White) }, leadingContent = { if (app.processedIcon != null) Image(bitmap = app.processedIcon, contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(9.7.dp)).background(Color.White)) },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent), modifier = Modifier.combinedClickable(onClick = { onAppClick(app.packageName) }, onLongClick = { }).pointerInput(app.packageName) { if (!app.isHidden) detectDragGesturesAfterLongPress(onDragStart = { onDragStart(app, lastPos.pos + it) }, onDrag = { _, delta -> onDrag(delta) }, onDragCancel = onDragEnd, onDragEnd = onDragEnd) }
                         ); HorizontalDivider(modifier = Modifier.padding(start = 64.dp), thickness = 0.5.dp, color = Color.White.copy(alpha = 0.2f))
                     }
@@ -1569,7 +1837,11 @@ fun AppLibraryPage(allApps: List<AppModel>, onAppClick: (String) -> Unit, onDrag
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 contentPadding = PaddingValues(bottom = 32.dp)
             ) {
-                val folderList = categories.toMutableList(); if (showHiddenFolder) folderList.add("Hidden Apps" to hiddenApps)
+                val folderList = mutableListOf<Pair<String, List<AppModel>>>()
+                if (suggestedApps.isNotEmpty()) folderList.add("Suggestions" to suggestedApps)
+                folderList.addAll(categories)
+                if (showHiddenFolder) folderList.add("Hidden Apps" to hiddenApps)
+
                 items(folderList) { (name, apps) ->
                     AppLibraryFolder(name = name, apps = apps, isLocked = name == "Hidden Apps" && !isHiddenUnlocked, onAppClick = { if (name == "Hidden Apps" && !isHiddenUnlocked) showPasswordDialog = true else onAppClick(it) }, onMoreClick = { if (name == "Hidden Apps" && !isHiddenUnlocked) showPasswordDialog = true else selectedCategory = name }, onDragStart = onDragStart, onDrag = onDrag, onDragEnd = onDragEnd)
                 }
@@ -1578,7 +1850,27 @@ fun AppLibraryPage(allApps: List<AppModel>, onAppClick: (String) -> Unit, onDrag
     }
     if (showPasswordDialog) {
         var passwordInput by remember { mutableStateOf("") }
-        AlertDialog(onDismissRequest = { showPasswordDialog = false }, title = { Text(stringResource(R.string.hidden_apps_title)) }, text = { OutlinedTextField(value = passwordInput, onValueChange = { passwordInput = it }, label = { Text(stringResource(R.string.password_hint)) }, singleLine = true, visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()) }, confirmButton = { Button(onClick = { if (passwordInput == viewModel.getPassword()) { isHiddenUnlocked = true; showPasswordDialog = false } }) { Text(stringResource(R.string.unlock)) } })
+        var passwordVisible by remember { mutableStateOf(false) }
+        AlertDialog(
+            onDismissRequest = { showPasswordDialog = false }, 
+            title = { Text(stringResource(R.string.hidden_apps_title)) }, 
+            text = { 
+                OutlinedTextField(
+                    value = passwordInput, 
+                    onValueChange = { passwordInput = it }, 
+                    label = { Text(stringResource(R.string.password_hint)) }, 
+                    singleLine = true, 
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(imageVector = image, contentDescription = null)
+                        }
+                    }
+                ) 
+            }, 
+            confirmButton = { Button(onClick = { if (passwordInput == viewModel.getPassword()) { isHiddenUnlocked = true; showPasswordDialog = false } }) { Text(stringResource(R.string.unlock)) } }
+        )
     }
 }
 
@@ -1590,22 +1882,22 @@ fun AppLibraryFolder(name: String, apps: List<AppModel>, onAppClick: (String) ->
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        if (isLocked) Box(modifier = Modifier.size(72.dp).background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(14.dp)).clickable { onMoreClick() })
+                        if (isLocked) Box(modifier = Modifier.size(72.dp).background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(15.1.dp)).clickable { onMoreClick() })
                         else apps.getOrNull(0)?.let { app -> val lastPos = remember { object { var pos = Offset.Zero } }; AppItem(app, showLabel = false, iconSize = 72.dp, modifier = Modifier.onGloballyPositioned { lastPos.pos = it.positionInRoot() }.combinedClickable(onClick = { onAppClick(app.packageName) }, onLongClick = { }).pointerInput(app.packageName) { if (name != "Hidden Apps") detectDragGesturesAfterLongPress(onDragStart = { onDragStart(app, lastPos.pos + it) }, onDrag = { _, delta -> onDrag(delta) }, onDragCancel = onDragEnd, onDragEnd = onDragEnd) }) }
                     }
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        if (isLocked) Box(modifier = Modifier.size(72.dp).background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(14.dp)).clickable { onMoreClick() })
+                        if (isLocked) Box(modifier = Modifier.size(72.dp).background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(15.1.dp)).clickable { onMoreClick() })
                         else apps.getOrNull(1)?.let { app -> val lastPos = remember { object { var pos = Offset.Zero } }; AppItem(app, showLabel = false, iconSize = 72.dp, modifier = Modifier.onGloballyPositioned { lastPos.pos = it.positionInRoot() }.combinedClickable(onClick = { onAppClick(app.packageName) }, onLongClick = { }).pointerInput(app.packageName) { if (name != "Hidden Apps") detectDragGesturesAfterLongPress(onDragStart = { onDragStart(app, lastPos.pos + it) }, onDrag = { _, delta -> onDrag(delta) }, onDragCancel = onDragEnd, onDragEnd = onDragEnd) }) }
                     }
                 }
                 Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        if (isLocked) Box(modifier = Modifier.size(72.dp).background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(14.dp)).clickable { onMoreClick() })
+                        if (isLocked) Box(modifier = Modifier.size(72.dp).background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(15.1.dp)).clickable { onMoreClick() })
                         else apps.getOrNull(2)?.let { app -> val lastPos = remember { object { var pos = Offset.Zero } }; AppItem(app, showLabel = false, iconSize = 72.dp, modifier = Modifier.onGloballyPositioned { lastPos.pos = it.positionInRoot() }.combinedClickable(onClick = { onAppClick(app.packageName) }, onLongClick = { }).pointerInput(app.packageName) { if (name != "Hidden Apps") detectDragGesturesAfterLongPress(onDragStart = { onDragStart(app, lastPos.pos + it) }, onDrag = { _, delta -> onDrag(delta) }, onDragCancel = onDragEnd, onDragEnd = onDragEnd) }) }
                     }
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        if (isLocked) Box(modifier = Modifier.size(72.dp).background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(14.dp)).clickable { onMoreClick() })
-                        else if (apps.size > 4) Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.2f), RoundedCornerShape(14.dp)).clickable { onMoreClick() }, contentAlignment = Alignment.Center) { Text("+${apps.size - 3}", color = Color.White, style = MaterialTheme.typography.headlineSmall) }
+                        if (isLocked) Box(modifier = Modifier.size(72.dp).background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(15.1.dp)).clickable { onMoreClick() })
+                        else if (apps.size > 4) Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.2f), RoundedCornerShape(15.1.dp)).clickable { onMoreClick() }, contentAlignment = Alignment.Center) { Text("+${apps.size - 3}", color = Color.White, style = MaterialTheme.typography.headlineSmall) }
                         else apps.getOrNull(3)?.let { app -> val lastPos = remember { object { var pos = Offset.Zero } }; AppItem(app, showLabel = false, iconSize = 72.dp, modifier = Modifier.onGloballyPositioned { lastPos.pos = it.positionInRoot() }.combinedClickable(onClick = { onAppClick(app.packageName) }, onLongClick = { }).pointerInput(app.packageName) { if (name != "Hidden Apps") detectDragGesturesAfterLongPress(onDragStart = { onDragStart(app, lastPos.pos + it) }, onDrag = { _, delta -> onDrag(delta) }, onDragCancel = onDragEnd, onDragEnd = onDragEnd) }) }
                     }
                 }

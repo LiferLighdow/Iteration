@@ -1,10 +1,12 @@
 package com.liferlighdow.iteration
 
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -18,6 +20,7 @@ import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -47,13 +50,22 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.core.app.NotificationManagerCompat
+
+import androidx.activity.enableEdgeToEdge
 
 class SettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         setContent {
-            MaterialTheme {
-                SettingsNavigation()
+            IterationTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    SettingsNavigation()
+                }
             }
         }
     }
@@ -119,6 +131,15 @@ fun SettingsMainScreen(
     onNavigateToChangeIcon: () -> Unit,
     onNavigateToAppLibrary: () -> Unit
 ) {
+    val viewModel: MainViewModel = viewModel()
+    val isThemedIconsEnabled by viewModel.isThemedIconsEnabled.collectAsState()
+    val context = LocalContext.current
+    
+    // Check if notification permission is granted
+    val isNotificationEnabled = remember {
+        NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -132,6 +153,41 @@ fun SettingsMainScreen(
         }
     ) { innerPadding ->
         LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.settings_themed_icons)) },
+                    supportingContent = { Text(stringResource(R.string.settings_themed_icons_desc)) },
+                    trailingContent = { 
+                        Switch(
+                            checked = isThemedIconsEnabled,
+                            onCheckedChange = { viewModel.setThemedIconsEnabled(it) }
+                        )
+                    },
+                    modifier = Modifier.clickable { viewModel.setThemedIconsEnabled(!isThemedIconsEnabled) }
+                )
+            }
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.settings_notifications)) },
+                    supportingContent = { 
+                        Text(if (isNotificationEnabled) "Enabled" else stringResource(R.string.settings_notifications_desc)) 
+                    },
+                    trailingContent = { 
+                        if (!isNotificationEnabled) {
+                            TextButton(onClick = {
+                                context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                            }) {
+                                Text(stringResource(R.string.grant_permission))
+                            }
+                        } else {
+                            Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        }
+                    },
+                    modifier = Modifier.clickable { 
+                        context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                    }
+                )
+            }
             item {
                 ListItem(
                     headlineContent = { Text(stringResource(R.string.settings_hide_apps)) },
@@ -212,13 +268,27 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
                 color = MaterialTheme.colorScheme.primary
             )
             
-            LazyColumn(modifier = Modifier.heightIn(max = 200.dp)) {
-                items(userCategories) { category ->
+            LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
+                itemsIndexed(userCategories) { index, category ->
                     ListItem(
                         headlineContent = { Text(category) },
                         trailingContent = {
-                            IconButton(onClick = { viewModel.deleteUserCategory(category) }) {
-                                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete))
+                            Row {
+                                IconButton(
+                                    enabled = index > 0,
+                                    onClick = { viewModel.moveUserCategory(index, index - 1) }
+                                ) {
+                                    Icon(Icons.Default.ArrowUpward, contentDescription = "Move Up")
+                                }
+                                IconButton(
+                                    enabled = index < userCategories.size - 1,
+                                    onClick = { viewModel.moveUserCategory(index, index + 1) }
+                                ) {
+                                    Icon(Icons.Default.ArrowDownward, contentDescription = "Move Down")
+                                }
+                                IconButton(onClick = { viewModel.deleteUserCategory(category) }) {
+                                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete))
+                                }
                             }
                         }
                     )

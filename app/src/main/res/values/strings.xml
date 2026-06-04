@@ -56,6 +56,11 @@
     <string name="settings_change_icon_desc">Customize app icons with your images</string>
     <string name="settings_library">App Library Settings</string>
     <string name="settings_library_desc">Manage app categories and sections</string>
+    <string name="settings_themed_icons">Themed Icons</string>
+    <string name="settings_themed_icons_desc">Apply theme colors to application icons</string>
+    <string name="settings_notifications">Notification Badges</string>
+    <string name="settings_notifications_desc">Show unread count on app icons. Requires permission.</string>
+    <string name="grant_permission">Grant Permission</string>
 
     <!-- Settings Sub-pages -->
     <string name="security_section">Security</string>
@@ -102,6 +107,7 @@
     <string name="widget_battery">Battery Status</string>
     <string name="widget_clock">Analog Clock</string>
     <string name="widget_calendar">Calendar</string>
+    <string name="widget_calendar_wide">Wide Calendar</string>
     <string name="widget_photo">Photo</string>
     <string name="widget_photo_wide">Wide Photo</string>
     <string name="select_widget">Add Widget</string>
