@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId = "com.liferlighdow.iteration"
-        minSdk = 23
+        minSdk = 26
         targetSdk = 35
         versionCode = 5
         versionName = "1.4"

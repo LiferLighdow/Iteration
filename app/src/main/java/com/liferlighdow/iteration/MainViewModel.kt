@@ -684,10 +684,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return items.sumOf { item ->
             if (item.isWidget) {
                 when (val type = item.widget?.type) {
-                    is WidgetType.Battery -> 1 // 在 4 欄位佈局中佔 2 欄 = 1 個 2x2 單元
-                    is WidgetType.Clock -> 1
-                    is WidgetType.Calendar -> if (type.isWide) 2 else 1
-                    is WidgetType.Photo -> if (type.isWide) 2 else 1
+                    is WidgetType.Battery -> 4
+                    is WidgetType.Clock -> 4
+                    is WidgetType.Calendar -> if (type.isWide) 8 else 4
+                    is WidgetType.Photo -> if (type.isWide) 8 else 4
                     else -> 1
                 }
             } else 1

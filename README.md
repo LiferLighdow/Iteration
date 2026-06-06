@@ -104,7 +104,7 @@ To provide a full launcher experience, **Iteration** requires the following perm
 ### Prerequisites
 - **Android Studio**: Ladybug | 2024.2.1 or newer.
 - **JDK**: Java 17+ (Required for Gradle 8.x+).
-- **Android Device**: API 23 (Android 6.0) or higher (API 31+ recommended for full Material You support).
+- **Android Device**: API 26 (Android 8.0) or higher (API 31+ recommended for full Material You support).
 
 ### Installation & Build
 1.  **Clone the repository**:

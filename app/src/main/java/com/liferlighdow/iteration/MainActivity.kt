@@ -47,6 +47,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.CornerRadius
@@ -1006,6 +1007,7 @@ fun LauncherScreen(
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
     var touchPosition by remember { mutableStateOf(Offset.Zero) }
     var folderToOpen by remember { mutableStateOf<AppModel?>(null) }
+    var folderIconPosition by remember { mutableStateOf(Offset.Zero) }
 
     var showDesktopMenu by remember { mutableStateOf(false) }
     var showCreateFolderDialog by remember { mutableStateOf(false) }
@@ -1037,6 +1039,21 @@ fun LauncherScreen(
 
     var showGlobalSearch by remember { mutableStateOf(false) }
     var globalSearchQuery by remember { mutableStateOf("") }
+    
+    // iOS 感的主畫面聯動動畫
+    val launcherScale by animateFloatAsState(
+        targetValue = if (showGlobalSearch) 0.92f else 1f,
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "launcherScale"
+    )
+
+    // 新增：高強度模糊動畫
+    val launcherBlur by animateDpAsState(
+        targetValue = if (showGlobalSearch || folderToOpen != null) 20.dp else 0.dp,
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "launcherBlur"
+    )
+    
     if (showGlobalSearch) BackHandler { showGlobalSearch = false; globalSearchQuery = "" }
     
     if (isEditMode) BackHandler { viewModel.setEditMode(false) }
@@ -1073,11 +1090,24 @@ fun LauncherScreen(
             }
         }
 
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .blur(launcherBlur) // 套用高強度模糊
+                .graphicsLayer {
+                    scaleX = launcherScale
+                    scaleY = launcherScale
+                }
+        ) {
             HorizontalPager(
-                state = pagerState, modifier = Modifier.fillMaxSize(),
-                userScrollEnabled = draggingApp == null, beyondViewportPageCount = 1
+                state = pagerState,
+                modifier = Modifier.fillMaxSize(),
+                userScrollEnabled = draggingApp == null,
+                beyondViewportPageCount = 1
             ) { pageIndex ->
+                // 計算頁面偏移量 (-1.0 到 1.0)
+                val pageOffset = ((pagerState.currentPage - pageIndex) + pagerState.currentPageOffsetFraction)
+
                 val isMinusOne = pageIndex == 0
                 val isLibrary = pageIndex == pageCount - 1
                 val isDesktop = pageIndex >= 1 && pageIndex <= desktopPageCount
@@ -1119,18 +1149,20 @@ fun LauncherScreen(
                                 columns = columns, rows = rows, iconSize = iconSize,
                                 isEditMode = isEditMode,
                                 viewModel = viewModel,
+                                pageOffset = pageOffset, // 傳入偏移量
                                 draggingApp = draggingApp,
                                 confirmedHoveredSlotIdx = if (confirmedHoveredKey?.startsWith("$pageIndex-") == true)
                                     confirmedHoveredKey?.substringAfter("-")?.toInt() else null,
                                 confirmedIntent = if (isEditMode) MainViewModel.DropType.REORDER else confirmedIntent,
-                                onAppClick = { pkg ->
+                                onAppClick = { app, pos ->
                                     if (isEditMode) {
-                                        val app = (pages.getOrNull(desktopIdx) ?: emptyList()).find { it.packageName == pkg }
-                                        if (app != null && !app.isFolder) appToEdit = app
+                                        if (!app.isFolder) appToEdit = app
                                         return@AppGrid
                                     }
-                                    val app = (pages.getOrNull(desktopIdx) ?: emptyList()).find { it.packageName == pkg }
-                                    if (app?.isFolder == true) folderToOpen = app else onAppClick(pkg)
+                                    if (app.isFolder) {
+                                        folderIconPosition = pos
+                                        folderToOpen = app
+                                    } else onAppClick(app.packageName)
                                 },
                                 onSlotPositioned = { idx, rect -> slotBounds["$pageIndex-$idx"] = rect },
                                 onDragStart = { app, offset ->
@@ -1326,21 +1358,107 @@ fun LauncherScreen(
         )
     }
 
-    folderToOpen?.let { folder ->
-        FolderDialog(
-            folder = folder,
-            allApps = allAppsFlat,
-            onDismiss = { folderToOpen = null },
-            onAppClick = { onAppClick(it); folderToOpen = null },
-            onRename = { viewModel.updateFolderName(folder.uniqueId, it) },
-            onDeleteFolder = { viewModel.deleteFolder(folder.uniqueId); folderToOpen = null },
-            onAddApps = { viewModel.addAppsToFolder(folder.uniqueId, it) },
-            onDragStartFromFolder = { app, offset -> draggingApp = app; touchPosition = offset; dragOffset = Offset.Zero; folderToOpen = null }
-        )
+    AnimatedVisibility(
+        visible = folderToOpen != null,
+        enter = fadeIn(),
+        exit = fadeOut()
+    ) {
+        val folder = folderToOpen ?: return@AnimatedVisibility
+        
+        // 使用自定義全螢幕 Overlay 取代 Dialog，以實現 iOS 感的縮放與模糊
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.2f))
+                .clickable { folderToOpen = null },
+            contentAlignment = Alignment.Center
+        ) {
+            var isEditingName by remember { mutableStateOf(false) }
+            var tempName by remember { mutableStateOf(folder.label) }
+            var showMoreMenu by remember { mutableStateOf(false) }
+            var showAppPicker by remember { mutableStateOf(false) }
+
+            // 內層容器動畫
+            Box(
+                modifier = Modifier
+                    .width(320.dp)
+                    .animateEnterExit(
+                        enter = scaleIn(initialScale = 0.2f, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)) + fadeIn(),
+                        exit = scaleOut(targetScale = 0.2f) + fadeOut()
+                    )
+                    .clickable(enabled = false) { } // 阻止點擊穿透
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+                        if (isEditingName) {
+                            OutlinedTextField(value = tempName, onValueChange = { tempName = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = Color.White, unfocusedBorderColor = Color.White.copy(alpha = 0.5f)), trailingIcon = { IconButton(onClick = { viewModel.updateFolderName(folder.uniqueId, tempName); isEditingName = false }) { Icon(Icons.Default.Check, null, tint = Color.White) } })
+                        } else {
+                            Text(text = folder.label, style = MaterialTheme.typography.headlineMedium, color = Color.White, modifier = Modifier.clickable { isEditingName = true }, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+                                IconButton(onClick = { showMoreMenu = true }) { Icon(Icons.Default.MoreVert, null, tint = Color.White) }
+                                DropdownMenu(expanded = showMoreMenu, onDismissRequest = { showMoreMenu = false }) {
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.rename)) }, leadingIcon = { Icon(Icons.Default.Edit, null) }, onClick = { isEditingName = true; showMoreMenu = false })
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.folder_add_app)) }, leadingIcon = { Icon(Icons.Default.Add, null) }, onClick = { showAppPicker = true; showMoreMenu = false })
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.folder_delete)) }, leadingIcon = { Icon(Icons.Default.Delete, null) }, onClick = { viewModel.deleteFolder(folder.uniqueId); folderToOpen = null; showMoreMenu = false })
+                                }
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    val itemsPerPage = 9
+                    val folderPages = remember(folder.folderItems) { folder.folderItems.chunked(itemsPerPage) }
+                    val folderPagerState = rememberPagerState { folderPages.size }
+                    
+                    Box(modifier = Modifier.size(320.dp).clip(RoundedCornerShape(32.dp)).background(Color.White.copy(alpha = 0.25f)).padding(16.dp), contentAlignment = Alignment.TopCenter) {
+                        HorizontalPager(state = folderPagerState, modifier = Modifier.fillMaxSize()) { pageIdx ->
+                            val pageItems = folderPages[pageIdx]
+                            Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                                pageItems.chunked(3).forEach { rowItems ->
+                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                        rowItems.forEach { app ->
+                                            val lastPos = remember { object { var pos = Offset.Zero } }
+                                            Box(modifier = Modifier.weight(1f).onGloballyPositioned { lastPos.pos = it.positionInRoot() }, contentAlignment = Alignment.Center) {
+                                                AppItem(app = app, onAppClick = { onAppClick(app.packageName); folderToOpen = null }, iconSize = 58.dp, modifier = Modifier.pointerInput(app.uniqueId) { detectDragGesturesAfterLongPress(onDragStart = { offset -> draggingApp = app; touchPosition = lastPos.pos + offset; dragOffset = Offset.Zero; folderToOpen = null }, onDrag = { _, _ -> }, onDragCancel = {}, onDragEnd = {}) })
+                                            }
+                                        }
+                                        repeat(3 - rowItems.size) { Spacer(modifier = Modifier.weight(1f)) }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (folderPages.size > 1) { 
+                        Spacer(modifier = Modifier.height(8.dp))
+                        PageIndicator(pageCount = folderPages.size, currentPage = folderPagerState.currentPage) 
+                    }
+                }
+            }
+
+            if (showAppPicker) {
+                MultiAppPickerDialog(allApps = allAppsFlat, onDismiss = { showAppPicker = false }, onAppsSelected = { viewModel.addAppsToFolder(folder.uniqueId, it); showAppPicker = false })
+            }
+        }
     }
 
-    AnimatedVisibility(visible = showGlobalSearch, enter = fadeIn() + slideInVertically { -it / 2 }, exit = fadeOut() + slideOutVertically { -it / 2 }) {
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.8f)).clickable { showGlobalSearch = false; globalSearchQuery = "" }.statusBarsPadding()) {
+    AnimatedVisibility(
+        visible = showGlobalSearch,
+        enter = slideInVertically(
+            initialOffsetY = { -it },
+            animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
+        ) + fadeIn(),
+        exit = slideOutVertically(
+            targetOffsetY = { -it },
+            animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+        ) + fadeOut()
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.3f)) // 降低遮罩濃度，讓模糊後的顏色透出來
+                .clickable { showGlobalSearch = false; globalSearchQuery = "" }
+                .statusBarsPadding()
+        ) {
             Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp).clickable(enabled = false) { }) {
                 OutlinedTextField(
                     value = globalSearchQuery, onValueChange = { globalSearchQuery = it }, modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp),
@@ -1426,14 +1544,15 @@ fun AppGrid(
     draggingApp: AppModel?, 
     isEditMode: Boolean,
     viewModel: MainViewModel,
+    pageOffset: Float = 0f, // 新增
     confirmedHoveredSlotIdx: Int?, confirmedIntent: MainViewModel.DropType,
-    onAppClick: (String) -> Unit, 
+    onAppClick: (AppModel, Offset) -> Unit, 
     onSlotPositioned: (Int, Rect) -> Unit, 
     onDragStart: (AppModel, Offset) -> Unit, 
     onDrag: (Offset) -> Unit, 
     onDragEnd: () -> Unit,
-    onBackgroundLongPress: () -> Unit = {}, // 新增：背景長按
-    onBackgroundClick: () -> Unit = {}      // 新增：背景點擊
+    onBackgroundLongPress: () -> Unit = {},
+    onBackgroundClick: () -> Unit = {}
 ) {
     val draggingUniqueId = draggingApp?.uniqueId
 
@@ -1454,8 +1573,7 @@ fun AppGrid(
         list
     }
 
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(columns),
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp)
@@ -1464,115 +1582,165 @@ fun AppGrid(
                     onLongPress = { onBackgroundLongPress() },
                     onTap = { onBackgroundClick() }
                 )
-            },
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        userScrollEnabled = false
-    ) {
-        items(
-            items = displayApps,
-            key = { it.uniqueId },
-            span = { app ->
-                val span = if (app.isWidget) {
-                    when (val type = app.widget?.type) {
-                        is WidgetType.Battery -> 2
-                        is WidgetType.Clock -> 2
-                        is WidgetType.Calendar -> if (type.isWide) 4 else 2
-                        is WidgetType.Photo -> if (type.isWide) 4 else 2
-                        else -> 1
-                    }
-                } else 1
-                GridItemSpan(span)
             }
-        ) { app ->
-            val index = displayApps.indexOf(app)
-            val lastPosition = remember { object { var pos = Offset.Zero } }
-            
-            val isHoveredFolder = confirmedHoveredSlotIdx == index && confirmedIntent == MainViewModel.DropType.FOLDER
-            val scale by animateFloatAsState(if (isHoveredFolder) 1.25f else 1.0f)
-            val infiniteTransition = rememberInfiniteTransition(label = "jiggle")
-            val rotation by infiniteTransition.animateFloat(
-                initialValue = -2.5f, targetValue = 2.5f,
-                animationSpec = infiniteRepeatable(animation = tween(120, easing = LinearEasing), repeatMode = RepeatMode.Reverse), label = "jiggle"
-            )
+    ) {
+        val cellWidth = maxWidth / columns
+        val cellHeight = maxHeight / rows
+        
+        val grid = Array(rows) { BooleanArray(columns) { false } }
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .animateItem() 
-                    .onGloballyPositioned {
-                        val pos = it.positionInRoot()
-                        lastPosition.pos = pos
-                        onSlotPositioned(index, Rect(pos, Size(it.size.width.toFloat(), it.size.height.toFloat())))
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                if (app.isWidget) {
-                    var showContextMenu by remember { mutableStateOf(false) }
-                    Box(
-                        modifier = Modifier
-                            .graphicsLayer { alpha = if (app.uniqueId == draggingUniqueId) 0f else 1f }
-                            .pointerInput(app.uniqueId, isEditMode) {
-                                detectTapGestures(
-                                    onLongPress = { if (!isEditMode) showContextMenu = true }
-                                )
-                            }
-                            .pointerInput(app.uniqueId, isEditMode) {
-                                if (isEditMode) {
-                                    detectDragGesturesAfterLongPress(
-                                        onDragStart = { onDragStart(app, lastPosition.pos + it) },
-                                        onDrag = { _, delta -> onDrag(delta) },
-                                        onDragCancel = onDragEnd,
-                                        onDragEnd = onDragEnd
-                                    )
+        displayApps.forEachIndexed { index, app ->
+            val w: Int
+            val h: Int
+            if (app.isWidget) {
+                when (val type = app.widget?.type) {
+                    is WidgetType.Battery -> { w = 2; h = 2 }
+                    is WidgetType.Clock -> { w = 2; h = 2 }
+                    is WidgetType.Calendar -> { w = if (type.isWide) 4 else 2; h = 2 }
+                    is WidgetType.Photo -> { w = if (type.isWide) 4 else 2; h = 2 }
+                    else -> { w = 1; h = 1 }
+                }
+            } else {
+                w = 1; h = 1
+            }
+
+            // Find first available spot
+            var foundRow = -1
+            var foundCol = -1
+            outer@for (r in 0 until rows) {
+                for (c in 0 until columns) {
+                    var canFit = true
+                    if (r + h > rows || c + w > columns) {
+                        canFit = false
+                    } else {
+                        for (tr in r until r + h) {
+                            for (tc in c until c + w) {
+                                if (grid[tr][tc]) {
+                                    canFit = false
+                                    break
                                 }
                             }
-                    ) {
-                        when (app.widget?.type) {
-                            is WidgetType.Battery -> BatteryWidget(displayMode = app.widget.displayMode)
-                            is WidgetType.Clock -> AnalogClockWidget(displayMode = app.widget.displayMode)
-                            is WidgetType.Calendar -> CalendarWidget(widget = app.widget, displayMode = app.widget.displayMode)
-                            is WidgetType.Photo -> PhotoWidget(widget = app.widget, viewModel = viewModel)
-                            else -> {}
-                        }
-                        DropdownMenu(expanded = showContextMenu, onDismissRequest = { showContextMenu = false }) {
-                            DropdownMenuItem(text = { Text(stringResource(R.string.widget_glass_mode)) }, leadingIcon = { Icon(Icons.Default.BlurOn, null) }, onClick = { app.widget?.let { viewModel.updateWidgetDisplayMode(it.id, WidgetDisplayMode.GLASS) }; showContextMenu = false })
-                            DropdownMenuItem(text = { Text(stringResource(R.string.widget_color_mode)) }, leadingIcon = { Icon(Icons.Default.Palette, null) }, onClick = { app.widget?.let { viewModel.updateWidgetDisplayMode(it.id, WidgetDisplayMode.COLOR) }; showContextMenu = false })
-                            HorizontalDivider()
-                            DropdownMenuItem(text = { Text(stringResource(R.string.menu_delete_home)) }, leadingIcon = { Icon(Icons.Default.Delete, null) }, onClick = { viewModel.removeAppFromHome(app.uniqueId); showContextMenu = false })
+                            if (!canFit) break
                         }
                     }
-                } else {
-                    var showContextMenu by remember { mutableStateOf(false) }
-                    val context = LocalContext.current
-                    Box {
-                        AppItem(
-                            app = app, iconSize = iconSize, modifier = Modifier.graphicsLayer {
-                                alpha = if (app.uniqueId == draggingUniqueId) 0f else 1f
-                                scaleX = scale; scaleY = scale
-                                if (isEditMode && app.uniqueId != draggingUniqueId) rotationZ = rotation
+                    
+                    if (canFit) {
+                        foundRow = r
+                        foundCol = c
+                        for (tr in r until r + h) {
+                            for (tc in c until c + w) {
+                                grid[tr][tc] = true
                             }
-                            .pointerInput(app.uniqueId, isEditMode) {
-                                detectTapGestures(
-                                    onLongPress = { if (!isEditMode) showContextMenu = true },
-                                    onTap = { onAppClick(app.packageName) }
-                                )
-                            }
-                            .pointerInput(app.uniqueId, isEditMode) {
-                                if (isEditMode) {
-                                    detectDragGesturesAfterLongPress(
-                                        onDragStart = { onDragStart(app, lastPosition.pos + it) },
-                                        onDrag = { _, delta -> onDrag(delta) },
-                                        onDragCancel = onDragEnd,
-                                        onDragEnd = onDragEnd
+                        }
+                        break@outer
+                    }
+                }
+            }
+
+            if (foundRow != -1) {
+                val lastPosition = remember { object { var pos = Offset.Zero } }
+                val isHoveredFolder = confirmedHoveredSlotIdx == index && confirmedIntent == MainViewModel.DropType.FOLDER
+                val scale by animateFloatAsState(if (isHoveredFolder) 1.25f else 1.0f)
+                val infiniteTransition = rememberInfiniteTransition(label = "jiggle")
+                val rotation by infiniteTransition.animateFloat(
+                    initialValue = -2.5f, targetValue = 2.5f,
+                    animationSpec = infiniteRepeatable(animation = tween(120, easing = LinearEasing), repeatMode = RepeatMode.Reverse), label = "jiggle"
+                )
+
+                // 使用 animateDpAsState 來讓位置變動更平滑
+                val targetX = cellWidth * foundCol
+                val targetY = cellHeight * foundRow
+                val animX by animateDpAsState(targetX, label = "x")
+                val animY by animateDpAsState(targetY, label = "y")
+
+                // 計算圖示彈性位移 (iOS 感的關鍵)
+                val density = androidx.compose.ui.platform.LocalDensity.current
+                val elasticOffset = with(density) { pageOffset * (foundCol - (columns - 1) / 2f) * 12.dp.toPx() }
+
+                Box(
+                    modifier = Modifier
+                        .offset(animX, animY)
+                        .size(cellWidth * w, cellHeight * h)
+                        .graphicsLayer {
+                            // 套用彈性位移
+                            translationX = elasticOffset
+                        }
+                        .onGloballyPositioned {
+                            val pos = it.positionInRoot()
+                            lastPosition.pos = pos
+                            onSlotPositioned(index, Rect(pos, Size(it.size.width.toFloat(), it.size.height.toFloat())))
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (app.isWidget) {
+                        var showContextMenu by remember { mutableStateOf(false) }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(8.dp)
+                                .graphicsLayer { alpha = if (app.uniqueId == draggingUniqueId) 0f else 1f }
+                                .pointerInput(app.uniqueId, isEditMode) {
+                                    detectTapGestures(
+                                        onLongPress = { if (!isEditMode) showContextMenu = true }
                                     )
                                 }
+                                .pointerInput(app.uniqueId, isEditMode) {
+                                    if (isEditMode) {
+                                        detectDragGesturesAfterLongPress(
+                                            onDragStart = { onDragStart(app, lastPosition.pos + it) },
+                                            onDrag = { _, delta -> onDrag(delta) },
+                                            onDragCancel = onDragEnd,
+                                            onDragEnd = onDragEnd
+                                        )
+                                    }
+                                }
+                        ) {
+                            when (app.widget?.type) {
+                                is WidgetType.Battery -> BatteryWidget(displayMode = app.widget.displayMode)
+                                is WidgetType.Clock -> AnalogClockWidget(displayMode = app.widget.displayMode)
+                                is WidgetType.Calendar -> CalendarWidget(widget = app.widget, displayMode = app.widget.displayMode)
+                                is WidgetType.Photo -> PhotoWidget(widget = app.widget, viewModel = viewModel)
+                                else -> {}
                             }
-                        )
-                        DropdownMenu(expanded = showContextMenu, onDismissRequest = { showContextMenu = false }) {
-                            DropdownMenuItem(text = { Text(stringResource(R.string.menu_delete_home)) }, leadingIcon = { Icon(Icons.Default.Delete, null) }, onClick = { viewModel.removeAppFromHome(app.uniqueId); showContextMenu = false })
-                            if (!app.isFolder) {
-                                DropdownMenuItem(text = { Text(stringResource(R.string.menu_uninstall)) }, leadingIcon = { Icon(Icons.Default.DeleteForever, null) }, onClick = { val intent = Intent(Intent.ACTION_DELETE).apply { data = Uri.parse("package:${app.packageName}") }; context.startActivity(intent); showContextMenu = false })
+                            DropdownMenu(expanded = showContextMenu, onDismissRequest = { showContextMenu = false }) {
+                                DropdownMenuItem(text = { Text(stringResource(R.string.widget_glass_mode)) }, leadingIcon = { Icon(Icons.Default.BlurOn, null) }, onClick = { app.widget?.let { viewModel.updateWidgetDisplayMode(it.id, WidgetDisplayMode.GLASS) }; showContextMenu = false })
+                                DropdownMenuItem(text = { Text(stringResource(R.string.widget_color_mode)) }, leadingIcon = { Icon(Icons.Default.Palette, null) }, onClick = { app.widget?.let { viewModel.updateWidgetDisplayMode(it.id, WidgetDisplayMode.COLOR) }; showContextMenu = false })
+                                HorizontalDivider()
+                                DropdownMenuItem(text = { Text(stringResource(R.string.menu_delete_home)) }, leadingIcon = { Icon(Icons.Default.Delete, null) }, onClick = { viewModel.removeAppFromHome(app.uniqueId); showContextMenu = false })
+                            }
+                        }
+                    } else {
+                        var showContextMenu by remember { mutableStateOf(false) }
+                        val context = LocalContext.current
+                        Box {
+                            AppItem(
+                                app = app, iconSize = iconSize, modifier = Modifier.graphicsLayer {
+                                    alpha = if (app.uniqueId == draggingUniqueId) 0f else 1f
+                                    scaleX = scale; scaleY = scale
+                                    if (isEditMode && app.uniqueId != draggingUniqueId) rotationZ = rotation
+                                }
+                                .pointerInput(app.uniqueId, isEditMode) {
+                                    detectTapGestures(
+                                        onLongPress = { if (!isEditMode) showContextMenu = true },
+                                        onTap = { onAppClick(app, lastPosition.pos) }
+                                    )
+                                }
+                                .pointerInput(app.uniqueId, isEditMode) {
+                                    if (isEditMode) {
+                                        detectDragGesturesAfterLongPress(
+                                            onDragStart = { onDragStart(app, lastPosition.pos + it) },
+                                            onDrag = { _, delta -> onDrag(delta) },
+                                            onDragCancel = onDragEnd,
+                                            onDragEnd = onDragEnd
+                                        )
+                                    }
+                                }
+                            )
+                            DropdownMenu(expanded = showContextMenu, onDismissRequest = { showContextMenu = false }) {
+                                DropdownMenuItem(text = { Text(stringResource(R.string.menu_delete_home)) }, leadingIcon = { Icon(Icons.Default.Delete, null) }, onClick = { viewModel.removeAppFromHome(app.uniqueId); showContextMenu = false })
+                                if (!app.isFolder) {
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.menu_uninstall)) }, leadingIcon = { Icon(Icons.Default.DeleteForever, null) }, onClick = { val intent = Intent(Intent.ACTION_DELETE).apply { data = Uri.parse("package:${app.packageName}") }; context.startActivity(intent); showContextMenu = false })
+                                }
                             }
                         }
                     }
@@ -1630,68 +1798,6 @@ fun AppItem(app: AppModel, modifier: Modifier = Modifier, showLabel: Boolean = t
 fun FolderPreviewIcon(app: AppModel?, size: androidx.compose.ui.unit.Dp) {
     if (app?.processedIcon != null) Image(bitmap = app.processedIcon, contentDescription = null, modifier = Modifier.size(size).clip(RoundedCornerShape(size * 0.238f)).background(Color.White))
     else Spacer(modifier = Modifier.size(size))
-}
-
-@Composable
-fun FolderDialog(
-    folder: AppModel,
-    allApps: List<AppModel>,
-    onDismiss: () -> Unit,
-    onAppClick: (String) -> Unit,
-    onRename: (String) -> Unit,
-    onDeleteFolder: () -> Unit,
-    onAddApps: (List<String>) -> Unit,
-    onDragStartFromFolder: (AppModel, Offset) -> Unit
-) {
-    var isEditingName by remember { mutableStateOf(false) }
-    var tempName by remember { mutableStateOf(folder.label) }
-    var showMoreMenu by remember { mutableStateOf(false) }
-    var showAppPicker by remember { mutableStateOf(false) }
-    Dialog(onDismissRequest = onDismiss) {
-        Box(modifier = Modifier.fillMaxSize().clickable { onDismiss() }, contentAlignment = Alignment.Center) {
-            Column(modifier = Modifier.width(320.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
-                    if (isEditingName) {
-                        OutlinedTextField(value = tempName, onValueChange = { tempName = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = Color.White, unfocusedBorderColor = Color.White.copy(alpha = 0.5f)), trailingIcon = { IconButton(onClick = { onRename(tempName); isEditingName = false }) { Icon(Icons.Default.Check, null, tint = Color.White) } })
-                    } else {
-                        Text(text = folder.label, style = MaterialTheme.typography.headlineMedium, color = Color.White, modifier = Modifier.clickable { isEditingName = true }, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-                            IconButton(onClick = { showMoreMenu = true }) { Icon(Icons.Default.MoreVert, null, tint = Color.White) }
-                            DropdownMenu(expanded = showMoreMenu, onDismissRequest = { showMoreMenu = false }) {
-                                DropdownMenuItem(text = { Text(stringResource(R.string.rename)) }, leadingIcon = { Icon(Icons.Default.Edit, null) }, onClick = { isEditingName = true; showMoreMenu = false })
-                                DropdownMenuItem(text = { Text(stringResource(R.string.folder_add_app)) }, leadingIcon = { Icon(Icons.Default.Add, null) }, onClick = { showAppPicker = true; showMoreMenu = false })
-                                DropdownMenuItem(text = { Text(stringResource(R.string.folder_delete)) }, leadingIcon = { Icon(Icons.Default.Delete, null) }, onClick = { onDeleteFolder(); showMoreMenu = false })
-                            }
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                val itemsPerPage = 9
-                val pages = remember(folder.folderItems) { folder.folderItems.chunked(itemsPerPage) }
-                val pagerState = rememberPagerState { pages.size }
-                Box(modifier = Modifier.size(320.dp).clip(RoundedCornerShape(32.dp)).background(Color.White.copy(alpha = 0.25f)).clickable(enabled = false) {}.padding(16.dp), contentAlignment = Alignment.TopCenter) {
-                    HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { pageIdx ->
-                        val pageItems = pages[pageIdx]
-                        Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                            pageItems.chunked(3).forEach { rowItems ->
-                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                                    rowItems.forEach { app ->
-                                        val lastPos = remember { object { var pos = Offset.Zero } }
-                                        Box(modifier = Modifier.weight(1f).onGloballyPositioned { lastPos.pos = it.positionInRoot() }, contentAlignment = Alignment.Center) {
-                                            AppItem(app = app, onAppClick = { onAppClick(app.packageName) }, iconSize = 58.dp, modifier = Modifier.pointerInput(app.uniqueId) { detectDragGesturesAfterLongPress(onDragStart = { offset -> onDragStartFromFolder(app, lastPos.pos + offset) }, onDrag = { _, _ -> }, onDragCancel = {}, onDragEnd = {}) })
-                                        }
-                                    }
-                                    repeat(3 - rowItems.size) { Spacer(modifier = Modifier.weight(1f)) }
-                                }
-                            }
-                        }
-                    }
-                }
-                if (pages.size > 1) { Spacer(modifier = Modifier.height(8.dp)); PageIndicator(pageCount = pages.size, currentPage = pagerState.currentPage) }
-            }
-        }
-    }
-    if (showAppPicker) MultiAppPickerDialog(allApps = allApps, onDismiss = { showAppPicker = false }, onAppsSelected = { onAddApps(it); showAppPicker = false })
 }
 
 @Composable
@@ -1908,89 +2014,105 @@ fun AppLibraryPage(allApps: List<AppModel>, onAppClick: (String) -> Unit, onDrag
             }
         }
 
-        if (isSearchFocused || searchQuery.isNotEmpty() || selectedCategory != null) {
-            val appsToShow = remember(filteredApps, selectedCategory, isHiddenUnlocked, searchQuery) {
-                val baseList = if (selectedCategory != null) {
-                    val catApps = if (selectedCategory == "Hidden Apps") hiddenApps
-                                 else if (selectedCategory == "Suggestions") suggestedApps
-                                 else categories.find { it.first == selectedCategory }?.second ?: emptyList()
-                    // 如果有搜尋文字，則在分類內過濾
-                    if (searchQuery.isNotBlank()) catApps.filter { it.label.contains(searchQuery, ignoreCase = true) }
-                    else catApps
-                } else filteredApps
+        val isLibraryView = isSearchFocused || searchQuery.isNotEmpty() || selectedCategory != null
 
-                if (selectedCategory == "Hidden Apps" && !isHiddenUnlocked) emptyList()
-                else baseList.filter { !it.isHidden || selectedCategory == "Hidden Apps" }.sortedBy { it.label.lowercase() }
-            }
+        AnimatedContent(
+            targetState = isLibraryView,
+            transitionSpec = {
+                if (targetState) {
+                    // 進入詳細列表：從右側滑入並淡入
+                    (slideInHorizontally { it } + fadeIn()).togetherWith(fadeOut())
+                } else {
+                    // 返回分頁網格：向右側滑出並淡出
+                    fadeIn().togetherWith(slideOutHorizontally { it } + fadeOut())
+                }
+            },
+            label = "LibraryTransition"
+        ) { targetIsLibraryView ->
+            if (targetIsLibraryView) {
+                val appsToShow = remember(filteredApps, selectedCategory, isHiddenUnlocked, searchQuery) {
+                    val baseList = if (selectedCategory != null) {
+                        val catApps = if (selectedCategory == "Hidden Apps") hiddenApps
+                                     else if (selectedCategory == "Suggestions") suggestedApps
+                                     else categories.find { it.first == selectedCategory }?.second ?: emptyList()
+                        // 如果有搜尋文字，則在分類內過濾
+                        if (searchQuery.isNotBlank()) catApps.filter { it.label.contains(searchQuery, ignoreCase = true) }
+                        else catApps
+                    } else filteredApps
 
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(appsToShow, key = { it.packageName }) { app ->
-                    val lastPos = remember { object { var pos = Offset.Zero } }
-                    var showMenu by remember { mutableStateOf(false) }
+                    if (selectedCategory == "Hidden Apps" && !isHiddenUnlocked) emptyList()
+                    else baseList.filter { !it.isHidden || selectedCategory == "Hidden Apps" }.sortedBy { it.label.lowercase() }
+                }
 
-                    Box(modifier = Modifier.fillMaxWidth().onGloballyPositioned { lastPos.pos = it.positionInRoot() }) {
-                        ListItem(
-                            headlineContent = { Text(app.label, color = Color.White) },
-                            leadingContent = {
-                                if (app.processedIcon != null) {
-                                    Image(bitmap = app.processedIcon, contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(9.7.dp)).background(Color.White))
-                                }
-                            },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                            modifier = Modifier.combinedClickable(
-                                onClick = { onAppClick(app.packageName) },
-                                onLongClick = { showMenu = true }
-                            ).pointerInput(app.packageName) {
-                                if (!app.isHidden) detectDragGesturesAfterLongPress(onDragStart = { onDragStart(app, lastPos.pos + it) }, onDrag = { _, delta -> onDrag(delta) }, onDragCancel = onDragEnd, onDragEnd = onDragEnd)
-                            }
-                        )
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    items(appsToShow, key = { it.packageName }) { app ->
+                        val lastPos = remember { object { var pos = Offset.Zero } }
+                        var showMenu by remember { mutableStateOf(false) }
 
-                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.rename)) },
-                                leadingIcon = { Icon(Icons.Default.Edit, null) },
-                                onClick = { appToRename = app; newLabelText = app.label; showMenu = false }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(if (app.isHidden) "Unhide" else "Hide") },
-                                leadingIcon = { Icon(if (app.isHidden) Icons.Default.Visibility else Icons.Default.VisibilityOff, null) },
-                                onClick = { viewModel.toggleHiddenApp(app.packageName); showMenu = false }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("App Info") },
-                                leadingIcon = { Icon(Icons.Default.Info, null) },
-                                onClick = {
-                                    val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                        data = Uri.parse("package:${app.packageName}")
-                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        Box(modifier = Modifier.fillMaxWidth().onGloballyPositioned { lastPos.pos = it.positionInRoot() }) {
+                            ListItem(
+                                headlineContent = { Text(app.label, color = Color.White) },
+                                leadingContent = {
+                                    if (app.processedIcon != null) {
+                                        Image(bitmap = app.processedIcon, contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(9.7.dp)).background(Color.White))
                                     }
-                                    context.startActivity(intent)
-                                    showMenu = false
+                                },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                modifier = Modifier.combinedClickable(
+                                    onClick = { onAppClick(app.packageName) },
+                                    onLongClick = { showMenu = true }
+                                ).pointerInput(app.packageName) {
+                                    if (!app.isHidden) detectDragGesturesAfterLongPress(onDragStart = { onDragStart(app, lastPos.pos + it) }, onDrag = { _, delta -> onDrag(delta) }, onDragCancel = onDragEnd, onDragEnd = onDragEnd)
                                 }
                             )
-                            HorizontalDivider()
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.menu_uninstall)) },
-                                leadingIcon = { Icon(Icons.Default.Delete, null) },
-                                onClick = {
-                                    val intent = Intent(Intent.ACTION_DELETE).apply { data = Uri.parse("package:${app.packageName}") }
-                                    context.startActivity(intent)
-                                    showMenu = false
-                                }
-                            )
+
+                            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.rename)) },
+                                    leadingIcon = { Icon(Icons.Default.Edit, null) },
+                                    onClick = { appToRename = app; newLabelText = app.label; showMenu = false }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(if (app.isHidden) "Unhide" else "Hide") },
+                                    leadingIcon = { Icon(if (app.isHidden) Icons.Default.Visibility else Icons.Default.VisibilityOff, null) },
+                                    onClick = { viewModel.toggleHiddenApp(app.packageName); showMenu = false }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("App Info") },
+                                    leadingIcon = { Icon(Icons.Default.Info, null) },
+                                    onClick = {
+                                        val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                            data = Uri.parse("package:${app.packageName}")
+                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                        }
+                                        context.startActivity(intent)
+                                        showMenu = false
+                                    }
+                                )
+                                HorizontalDivider()
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.menu_uninstall)) },
+                                    leadingIcon = { Icon(Icons.Default.Delete, null) },
+                                    onClick = {
+                                        val intent = Intent(Intent.ACTION_DELETE).apply { data = Uri.parse("package:${app.packageName}") }
+                                        context.startActivity(intent)
+                                        showMenu = false
+                                    }
+                                )
+                            }
+                            HorizontalDivider(modifier = Modifier.padding(start = 64.dp).align(Alignment.BottomCenter), thickness = 0.5.dp, color = Color.White.copy(alpha = 0.2f))
                         }
-                        HorizontalDivider(modifier = Modifier.padding(start = 64.dp).align(Alignment.BottomCenter), thickness = 0.5.dp, color = Color.White.copy(alpha = 0.2f))
                     }
                 }
-            }
-        } else {
-            LazyVerticalGrid(columns = GridCells.Fixed(2), modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp), contentPadding = PaddingValues(bottom = 32.dp)) {
-                val folderList = mutableListOf<Pair<String, List<AppModel>>>()
-                if (suggestedApps.isNotEmpty()) folderList.add("Suggestions" to suggestedApps)
-                folderList.addAll(categories)
-                if (showHiddenFolder) folderList.add("Hidden Apps" to hiddenApps)
-                items(folderList) { (name, apps) ->
-                    AppLibraryFolder(name = name, apps = apps, isLocked = name == "Hidden Apps" && !isHiddenUnlocked, onAppClick = { if (name == "Hidden Apps" && !isHiddenUnlocked) showPasswordDialog = true else onAppClick(it) }, onMoreClick = { if (name == "Hidden Apps" && !isHiddenUnlocked) showPasswordDialog = true else selectedCategory = name }, onDragStart = onDragStart, onDrag = onDrag, onDragEnd = onDragEnd)
+            } else {
+                LazyVerticalGrid(columns = GridCells.Fixed(2), modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp), contentPadding = PaddingValues(bottom = 32.dp)) {
+                    val folderList = mutableListOf<Pair<String, List<AppModel>>>()
+                    if (suggestedApps.isNotEmpty()) folderList.add("Suggestions" to suggestedApps)
+                    folderList.addAll(categories)
+                    if (showHiddenFolder) folderList.add("Hidden Apps" to hiddenApps)
+                    items(folderList) { (name, apps) ->
+                        AppLibraryFolder(name = name, apps = apps, isLocked = name == "Hidden Apps" && !isHiddenUnlocked, onAppClick = { if (name == "Hidden Apps" && !isHiddenUnlocked) showPasswordDialog = true else onAppClick(it) }, onMoreClick = { if (name == "Hidden Apps" && !isHiddenUnlocked) showPasswordDialog = true else selectedCategory = name }, onDragStart = onDragStart, onDrag = onDrag, onDragEnd = onDragEnd)
+                    }
                 }
             }
         }
