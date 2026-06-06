@@ -7,6 +7,7 @@ import android.graphics.Matrix
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -134,6 +135,40 @@ fun SettingsMainScreen(
     val viewModel: MainViewModel = viewModel()
     val isThemedIconsEnabled by viewModel.isThemedIconsEnabled.collectAsState()
     val context = LocalContext.current
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        uri?.let {
+            try {
+                context.contentResolver.openOutputStream(it)?.use { out ->
+                    out.write(viewModel.exportConfig().toByteArray())
+                }
+                Toast.makeText(context, context.getString(R.string.export_success), Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(context, "Export failed: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let {
+            try {
+                context.contentResolver.openInputStream(it)?.use { input ->
+                    val content = input.bufferedReader().readText()
+                    if (viewModel.importConfig(content)) {
+                        Toast.makeText(context, context.getString(R.string.import_success), Toast.LENGTH_LONG).show()
+                    } else {
+                        Toast.makeText(context, context.getString(R.string.import_failed), Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Toast.makeText(context, "Import failed: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
     
     // Check if notification permission is granted
     val isNotificationEnabled = remember {
@@ -218,6 +253,32 @@ fun SettingsMainScreen(
                     supportingContent = { Text(stringResource(R.string.settings_library_desc)) },
                     trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
                     modifier = Modifier.clickable { onNavigateToAppLibrary() }
+                )
+            }
+
+            item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
+            item {
+                Text(
+                    text = stringResource(R.string.settings_backup_restore),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.settings_export)) },
+                    supportingContent = { Text(stringResource(R.string.settings_backup_restore_desc)) },
+                    leadingContent = { Icon(Icons.Default.Backup, contentDescription = null) },
+                    modifier = Modifier.clickable { exportLauncher.launch("iteration_backup.json") }
+                )
+            }
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.settings_import)) },
+                    supportingContent = { Text("Restore layout and settings from a backup file") },
+                    leadingContent = { Icon(Icons.Default.Restore, contentDescription = null) },
+                    modifier = Modifier.clickable { importLauncher.launch("application/json") }
                 )
             }
         }

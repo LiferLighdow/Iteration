@@ -39,16 +39,17 @@
 *   **Usage-based Suggestions**: A dedicated section at the top of the App Library that intelligently learns and displays your **4 most frequent apps**.
 *   **Global Search Hub**: A unified search interface (swipe-down) indexing apps, web results, and system shortcuts.
 *   **Smart Categorization**: Automatic grouping of applications using Android's native metadata.
-*   **Custom Category Reordering**: Fully control the layout of your App Library by sorting categories using simple Up/Down controls in Settings.
+*   **Custom Category Management**: Create, delete, and reorder categories to fit your workflow.
+*   **App Re-categorization**: Manually assign any app to your custom categories or restore it to its system default.
 *   **Extended Search Integration**: Directly jump to **Web (Google)**, **Google Maps**, or **App Stores** (supporting F-Droid, Aurora Store, etc.).
 *   **Enhanced Navigation**: Integrated search in App Library with intelligent focus management and `BackHandler` support.
 
 ### 🔒 Privacy & Personalization
-*   **Secure Vault**: Hide sensitive applications behind a password-protected layer with an optional **Password Visibility Toggle** for ease of use.
-*   **Instant Settings Sync**: All changes to icons, labels, and visibility apply **immediately** without requiring a launcher restart.
+*   **Secure Vault**: Hide sensitive applications behind a password-protected layer with an optional **Password Visibility Toggle**.
 *   **Deep Customization**: 
     *   **Pro Icon Re-skinning**: High-resolution (512px) icon cropping with visual masking and precision `Matrix` transformations.
-    *   **Alias Management**: Rename applications to fit your personal workflow.
+    *   **Alias Management**: Rename applications to fit your personal aesthetic.
+*   **Backup & Restore**: Export your entire launcher configuration (layout, custom icons, labels, categories) to a single JSON file and restore it instantly on any device.
 *   **Orientation Locking**: Optimized for a stable, fixed **Portrait** experience.
 
 ---
@@ -57,15 +58,20 @@
 
 ### High-Performance Rendering
 To maintain a consistent **60/120 FPS** on modern displays:
-*   **Adaptive Icon Synchronization**: Automatically scales foreground and background layers synchronously (1.35x default) to prevent "parallax breaking".
-*   **Optimized Recomposition**: Leverages stable `keys` and `remember` blocks in Lazy lists to minimize overhead.
-*   **Asynchronous Processing**: Offloads heavy bitmap decoding and package querying to `Dispatchers.IO` using Kotlin Coroutines.
-*   **Hardware Acceleration**: Utilizes Compose's hardware-accelerated drawing for all complex UI components.
+*   **Multi-Layer Icon Processing**: Decouples icon fetching, processing (tinting/masking), and caching.
+*   **Two-Level Caching**: 
+    *   **Memory (LruCache)**: Instant access to recently used `ImageBitmaps`.
+    *   **Disk (Internal Storage)**: Persistent cache for processed icons to avoid re-computation on reboot.
+*   **Optimized Recomposition**: Leverages stable `keys` in Lazy lists and `remembered` lambdas to minimize UI overhead.
+*   **Asynchronous Processing**: Uses `CoroutineScope` with `Dispatchers.Default` and `awaitAll()` for massive parallel package processing.
 
 ### Architecture (MVVM)
 - **ViewModel + StateFlow**: Reactive UI updates driven by a single source of truth.
 - **Repository Pattern**: Clean separation between Package Manager interactions and UI logic.
-- **Data Persistence**: Efficient storage using `SharedPreferences` for flags and internal binary storage for custom assets.
+- **Data Persistence**: 
+    *   `SharedPreferences`: Lightweight settings and layout serialization.
+    *   `Internal Files`: Binary storage for custom cropped icons and widget photos.
+- **JSON Serialization**: Custom logic to convert complex folder/widget structures into portable JSON formats.
 
 ---
 
@@ -73,12 +79,23 @@ To maintain a consistent **60/120 FPS** on modern displays:
 
 ```text
 app/src/main/java/com/liferlighdow/iteration/
-├── MainActivity.kt        # Main Entry, Desktop, Library & Folder UI
-├── MainViewModel.kt       # Core business logic & State management
-├── AppRepository.kt      # App list & Metadata fetching
-├── AppModel.kt           # Data definitions for Apps & Folders
-└── SettingsActivity.kt    # Launcher configuration & Customization
+├── MainActivity.kt        # Entry point, Desktop (Pager), Dock, & App Library
+├── MainViewModel.kt       # State machine, layout logic, and data orchestration
+├── AppRepository.kt      # System package querying and metadata extraction
+├── AppModel.kt           # Domain models for Apps, Folders, and Widgets
+├── IconProcessor.kt      # Complex bitmap manipulation & M3 tinting logic
+├── SettingsActivity.kt    # Preferences, Customization UI, & Backup Tools
+└── NotificationService.kt # Background listener for real-time app badges
 ```
+
+---
+
+## 🔑 Permissions
+To provide a full launcher experience, **Iteration** requires the following permissions:
+- **Query All Packages**: Necessary to list and launch installed applications.
+- **Notification Listener**: Required to display unread badges on app icons.
+- **Read External Storage**: Required for selecting custom icons and photo widget images.
+- **Read Calendar**: Required for the Calendar widget to display upcoming events (Optional).
 
 ---
 
@@ -87,7 +104,7 @@ app/src/main/java/com/liferlighdow/iteration/
 ### Prerequisites
 - **Android Studio**: Ladybug | 2024.2.1 or newer.
 - **JDK**: Java 17+ (Required for Gradle 8.x+).
-- **Android Device**: API 23 (Android 6.0) or higher.
+- **Android Device**: API 23 (Android 6.0) or higher (API 31+ recommended for full Material You support).
 
 ### Installation & Build
 1.  **Clone the repository**:
@@ -112,7 +129,7 @@ app/src/main/java/com/liferlighdow/iteration/
 - **Folder Management**: 
     - Tap the folder title while it's open to **Rename**.
     - Swipe horizontally inside a folder to navigate between pages.
-- **Vault**: Default access via App Library hidden section.
+- **Backup**: Always keep a copy of your exported JSON in a safe place when switching devices.
 
 ---
 
