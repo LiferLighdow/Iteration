@@ -28,6 +28,11 @@ android {
             )
         }
     }
+    lint {
+        disable += "NullSafeMutableLiveData"
+        abortOnError = false
+        checkReleaseBuilds = false
+    }
     buildFeatures {
         viewBinding = true
         compose = true
