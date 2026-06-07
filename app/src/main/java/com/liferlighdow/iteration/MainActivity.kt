@@ -24,6 +24,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -681,7 +682,7 @@ fun WideCalendarWidget(displayMode: WidgetDisplayMode, modifier: Modifier = Modi
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .height(110.dp),
+            .fillMaxHeight(),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor)
     ) {
@@ -1006,7 +1007,10 @@ fun LauncherScreen(
     var draggingApp by remember { mutableStateOf<AppModel?>(null) }
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
     var touchPosition by remember { mutableStateOf(Offset.Zero) }
-    var folderToOpen by remember { mutableStateOf<AppModel?>(null) }
+    var folderToOpenId by remember { mutableStateOf<String?>(null) }
+    val openFolder = remember(folderToOpenId, pages) {
+        pages.flatten().find { it.uniqueId == folderToOpenId }
+    }
     var folderIconPosition by remember { mutableStateOf(Offset.Zero) }
 
     var showDesktopMenu by remember { mutableStateOf(false) }
@@ -1049,7 +1053,7 @@ fun LauncherScreen(
 
     // 新增：高強度模糊動畫
     val launcherBlur by animateDpAsState(
-        targetValue = if (showGlobalSearch || folderToOpen != null) 20.dp else 0.dp,
+        targetValue = if (showGlobalSearch || folderToOpenId != null) 20.dp else 0.dp,
         animationSpec = spring(stiffness = Spring.StiffnessLow),
         label = "launcherBlur"
     )
@@ -1161,7 +1165,7 @@ fun LauncherScreen(
                                     }
                                     if (app.isFolder) {
                                         folderIconPosition = pos
-                                        folderToOpen = app
+                                        folderToOpenId = app.uniqueId
                                     } else onAppClick(app.packageName)
                                 },
                                 onSlotPositioned = { idx, rect -> slotBounds["$pageIndex-$idx"] = rect },
@@ -1224,7 +1228,7 @@ fun LauncherScreen(
                                 allApps = allAppsFlat,
                                 onAppClick = { pkg ->
                                     val app = allAppsFlat.find { it.packageName == pkg }
-                                    if (app?.isFolder == true) folderToOpen = app else onAppClick(pkg)
+                                    if (app?.isFolder == true) folderToOpenId = app.uniqueId else onAppClick(pkg)
                                 },
                                 onDragStart = { app, offset -> draggingApp = app; touchPosition = offset; dragOffset = Offset.Zero },
                                 onDrag = { delta -> dragOffset += delta },
@@ -1359,22 +1363,22 @@ fun LauncherScreen(
     }
 
     AnimatedVisibility(
-        visible = folderToOpen != null,
+        visible = openFolder != null,
         enter = fadeIn(),
         exit = fadeOut()
     ) {
-        val folder = folderToOpen ?: return@AnimatedVisibility
+        val folder = openFolder ?: return@AnimatedVisibility
         
         // 使用自定義全螢幕 Overlay 取代 Dialog，以實現 iOS 感的縮放與模糊
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.2f))
-                .clickable { folderToOpen = null },
+                .clickable { folderToOpenId = null },
             contentAlignment = Alignment.Center
         ) {
             var isEditingName by remember { mutableStateOf(false) }
-            var tempName by remember { mutableStateOf(folder.label) }
+            var tempName by remember(folder.label) { mutableStateOf(folder.label) }
             var showMoreMenu by remember { mutableStateOf(false) }
             var showAppPicker by remember { mutableStateOf(false) }
 
@@ -1399,7 +1403,7 @@ fun LauncherScreen(
                                 DropdownMenu(expanded = showMoreMenu, onDismissRequest = { showMoreMenu = false }) {
                                     DropdownMenuItem(text = { Text(stringResource(R.string.rename)) }, leadingIcon = { Icon(Icons.Default.Edit, null) }, onClick = { isEditingName = true; showMoreMenu = false })
                                     DropdownMenuItem(text = { Text(stringResource(R.string.folder_add_app)) }, leadingIcon = { Icon(Icons.Default.Add, null) }, onClick = { showAppPicker = true; showMoreMenu = false })
-                                    DropdownMenuItem(text = { Text(stringResource(R.string.folder_delete)) }, leadingIcon = { Icon(Icons.Default.Delete, null) }, onClick = { viewModel.deleteFolder(folder.uniqueId); folderToOpen = null; showMoreMenu = false })
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.folder_delete)) }, leadingIcon = { Icon(Icons.Default.Delete, null) }, onClick = { viewModel.deleteFolder(folder.uniqueId); folderToOpenId = null; showMoreMenu = false })
                                 }
                             }
                         }
@@ -1419,7 +1423,7 @@ fun LauncherScreen(
                                         rowItems.forEach { app ->
                                             val lastPos = remember { object { var pos = Offset.Zero } }
                                             Box(modifier = Modifier.weight(1f).onGloballyPositioned { lastPos.pos = it.positionInRoot() }, contentAlignment = Alignment.Center) {
-                                                AppItem(app = app, onAppClick = { onAppClick(app.packageName); folderToOpen = null }, iconSize = 58.dp, modifier = Modifier.pointerInput(app.uniqueId) { detectDragGesturesAfterLongPress(onDragStart = { offset -> draggingApp = app; touchPosition = lastPos.pos + offset; dragOffset = Offset.Zero; folderToOpen = null }, onDrag = { _, _ -> }, onDragCancel = {}, onDragEnd = {}) })
+                                                AppItem(app = app, onAppClick = { onAppClick(app.packageName); folderToOpenId = null }, iconSize = 58.dp, modifier = Modifier.pointerInput(app.uniqueId) { detectDragGesturesAfterLongPress(onDragStart = { offset -> draggingApp = app; touchPosition = lastPos.pos + offset; dragOffset = Offset.Zero; folderToOpenId = null }, onDrag = { _, _ -> }, onDragCancel = {}, onDragEnd = {}) })
                                             }
                                         }
                                         repeat(3 - rowItems.size) { Spacer(modifier = Modifier.weight(1f)) }
@@ -1674,7 +1678,8 @@ fun AppGrid(
                 ) {
                     if (app.isWidget) {
                         var showContextMenu by remember { mutableStateOf(false) }
-                        Box(
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(8.dp)
@@ -1695,13 +1700,25 @@ fun AppGrid(
                                     }
                                 }
                         ) {
-                            when (app.widget?.type) {
-                                is WidgetType.Battery -> BatteryWidget(displayMode = app.widget.displayMode)
-                                is WidgetType.Clock -> AnalogClockWidget(displayMode = app.widget.displayMode)
-                                is WidgetType.Calendar -> CalendarWidget(widget = app.widget, displayMode = app.widget.displayMode)
-                                is WidgetType.Photo -> PhotoWidget(widget = app.widget, viewModel = viewModel)
-                                else -> {}
+                            Box(modifier = Modifier.weight(1f)) {
+                                when (app.widget?.type) {
+                                    is WidgetType.Battery -> BatteryWidget(displayMode = app.widget.displayMode)
+                                    is WidgetType.Clock -> AnalogClockWidget(displayMode = app.widget.displayMode)
+                                    is WidgetType.Calendar -> CalendarWidget(widget = app.widget, displayMode = app.widget.displayMode)
+                                    is WidgetType.Photo -> PhotoWidget(widget = app.widget, viewModel = viewModel)
+                                    else -> {}
+                                }
                             }
+                            
+                            Text(
+                                text = app.label,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+
                             DropdownMenu(expanded = showContextMenu, onDismissRequest = { showContextMenu = false }) {
                                 DropdownMenuItem(text = { Text(stringResource(R.string.widget_glass_mode)) }, leadingIcon = { Icon(Icons.Default.BlurOn, null) }, onClick = { app.widget?.let { viewModel.updateWidgetDisplayMode(it.id, WidgetDisplayMode.GLASS) }; showContextMenu = false })
                                 DropdownMenuItem(text = { Text(stringResource(R.string.widget_color_mode)) }, leadingIcon = { Icon(Icons.Default.Palette, null) }, onClick = { app.widget?.let { viewModel.updateWidgetDisplayMode(it.id, WidgetDisplayMode.COLOR) }; showContextMenu = false })
@@ -1775,14 +1792,38 @@ fun AppItem(app: AppModel, modifier: Modifier = Modifier, showLabel: Boolean = t
                     Icon(Icons.Default.Add, contentDescription = null, tint = Color.White.copy(alpha = 0.7f))
                 }
             } else if (app.isFolder) {
-                Box(modifier = Modifier.size(iconSize).clip(RoundedCornerShape(iconSize * 0.238f)).background(Color.White.copy(alpha = 0.3f)).padding(4.dp), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier
+                        .size(iconSize)
+                        .clip(RoundedCornerShape(iconSize * 0.238f))
+                        .background(Color.White.copy(alpha = 0.3f))
+                        .border(
+                            width = 0.5.dp,
+                            color = Color.White.copy(alpha = 0.25f),
+                            shape = RoundedCornerShape(iconSize * 0.238f)
+                        )
+                        .padding(4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { FolderPreviewIcon(app.folderItems.getOrNull(0), iconSize / 2.5f); FolderPreviewIcon(app.folderItems.getOrNull(1), iconSize / 2.5f) }
                         Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { FolderPreviewIcon(app.folderItems.getOrNull(2), iconSize / 2.5f); FolderPreviewIcon(app.folderItems.getOrNull(3), iconSize / 2.5f) }
                     }
                 }
             } else if (app.processedIcon != null) {
-                Image(bitmap = app.processedIcon, contentDescription = null, modifier = Modifier.size(iconSize).clip(RoundedCornerShape(iconSize * 0.238f)).background(Color.White), contentScale = ContentScale.FillBounds)
+                Image(
+                    bitmap = app.processedIcon,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(iconSize)
+                        .clip(RoundedCornerShape(iconSize * 0.238f))
+                        .border(
+                            width = 0.5.dp,
+                            color = Color.White.copy(alpha = 0.3f),
+                            shape = RoundedCornerShape(iconSize * 0.238f)
+                        ),
+                    contentScale = ContentScale.FillBounds
+                )
             }
             if (count > 0) {
                 Box(modifier = Modifier.offset(x = 4.dp, y = (-4).dp).size(20.dp).background(Color.Red, CircleShape), contentAlignment = Alignment.Center) {

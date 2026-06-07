@@ -73,7 +73,7 @@ class SettingsActivity : ComponentActivity() {
 }
 
 enum class SettingsPage {
-    MAIN, HIDE_APPS, RENAME_APPS, CHANGE_ICON, APP_LIBRARY
+    MAIN, HIDE_APPS, RENAME_APPS, CHANGE_ICON, APP_LIBRARY, ICON_THEME
 }
 
 @Composable
@@ -91,12 +91,14 @@ fun SettingsNavigation() {
             onNavigateToHideApps = { currentPage = SettingsPage.HIDE_APPS },
             onNavigateToRenameApps = { currentPage = SettingsPage.RENAME_APPS },
             onNavigateToChangeIcon = { currentPage = SettingsPage.CHANGE_ICON },
-            onNavigateToAppLibrary = { currentPage = SettingsPage.APP_LIBRARY }
+            onNavigateToAppLibrary = { currentPage = SettingsPage.APP_LIBRARY },
+            onNavigateToIconTheme = { currentPage = SettingsPage.ICON_THEME }
         )
         SettingsPage.HIDE_APPS -> HideAppsScreen(onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.RENAME_APPS -> RenameAppsScreen(onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.CHANGE_ICON -> ChangeIconScreen(onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.APP_LIBRARY -> AppLibrarySettingsScreen(onBack = { currentPage = SettingsPage.MAIN })
+        SettingsPage.ICON_THEME -> IconThemeScreen(onBack = { currentPage = SettingsPage.MAIN })
     }
 }
 
@@ -130,7 +132,8 @@ fun SettingsMainScreen(
     onNavigateToHideApps: () -> Unit, 
     onNavigateToRenameApps: () -> Unit,
     onNavigateToChangeIcon: () -> Unit,
-    onNavigateToAppLibrary: () -> Unit
+    onNavigateToAppLibrary: () -> Unit,
+    onNavigateToIconTheme: () -> Unit
 ) {
     val viewModel: MainViewModel = viewModel()
     val isThemedIconsEnabled by viewModel.isThemedIconsEnabled.collectAsState()
@@ -190,15 +193,10 @@ fun SettingsMainScreen(
         LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
             item {
                 ListItem(
-                    headlineContent = { Text(stringResource(R.string.settings_themed_icons)) },
-                    supportingContent = { Text(stringResource(R.string.settings_themed_icons_desc)) },
-                    trailingContent = { 
-                        Switch(
-                            checked = isThemedIconsEnabled,
-                            onCheckedChange = { viewModel.setThemedIconsEnabled(it) }
-                        )
-                    },
-                    modifier = Modifier.clickable { viewModel.setThemedIconsEnabled(!isThemedIconsEnabled) }
+                    headlineContent = { Text("Icon Theme") },
+                    supportingContent = { Text("Change the style and color of your app icons") },
+                    trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
+                    modifier = Modifier.clickable { onNavigateToIconTheme() }
                 )
             }
             item {
@@ -279,6 +277,74 @@ fun SettingsMainScreen(
                     supportingContent = { Text("Restore layout and settings from a backup file") },
                     leadingContent = { Icon(Icons.Default.Restore, contentDescription = null) },
                     modifier = Modifier.clickable { importLauncher.launch("application/json") }
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun IconThemeScreen(onBack: () -> Unit) {
+    val viewModel: MainViewModel = viewModel()
+    val isThemedIconsEnabled by viewModel.isThemedIconsEnabled.collectAsState()
+    val currentStyle by viewModel.iconStyle.collectAsState()
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Icon Theme") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+            item {
+                ListItem(
+                    headlineContent = { Text("Themed Icons (M3)") },
+                    supportingContent = { Text("Apply dynamic colors from your wallpaper to icons") },
+                    trailingContent = {
+                        Switch(
+                            checked = isThemedIconsEnabled,
+                            onCheckedChange = { viewModel.setThemedIconsEnabled(it) }
+                        )
+                    },
+                    modifier = Modifier.clickable { viewModel.setThemedIconsEnabled(!isThemedIconsEnabled) }
+                )
+            }
+            
+            item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
+            
+            item {
+                Text(
+                    text = "Icon Style",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+
+            val styles = listOf(
+                IconStyle.STANDARD to "Standard",
+                IconStyle.BLACK to "Black",
+                IconStyle.WHITE to "White",
+                IconStyle.GLASS to "Glass"
+            )
+
+            items(styles) { (style, label) ->
+                ListItem(
+                    headlineContent = { Text(label) },
+                    trailingContent = {
+                        RadioButton(
+                            selected = currentStyle == style,
+                            onClick = { viewModel.setIconStyle(style) }
+                        )
+                    },
+                    modifier = Modifier.clickable { viewModel.setIconStyle(style) }
                 )
             }
         }

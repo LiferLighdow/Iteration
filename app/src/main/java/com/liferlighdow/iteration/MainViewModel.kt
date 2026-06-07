@@ -52,6 +52,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isThemedIconsEnabled = MutableStateFlow(prefs.getBoolean("themed_icons", false))
     val isThemedIconsEnabled = _isThemedIconsEnabled.asStateFlow()
 
+    private val _iconStyle = MutableStateFlow(
+        try { IconStyle.valueOf(prefs.getString("icon_style", "STANDARD") ?: "STANDARD") }
+        catch (e: Exception) { IconStyle.STANDARD }
+    )
+    val iconStyle = _iconStyle.asStateFlow()
+
     private val hiddenPackages = mutableSetOf<String>()
     private val customLabels = mutableMapOf<String, String>()
     private val customCategories = mutableMapOf<String, String>()
@@ -67,12 +73,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var dragBackupPages: List<List<AppModel>>? = null
 
     init {
+        loadSettings()
+        loadApps()
+    }
+
+    private fun loadSettings() {
         loadHiddenPackages()
         loadCustomLabels()
         loadUserCategories()
         loadCustomCategories()
         loadWidgets()
-        loadApps()
+        loadDock()
+        
+        // 關鍵：重新從 Prefs 讀取樣式設定並偵測變化
+        val savedStyleStr = prefs.getString("icon_style", "STANDARD") ?: "STANDARD"
+        val newStyle = try { IconStyle.valueOf(savedStyleStr) } catch (e: Exception) { IconStyle.STANDARD }
+        val newThemed = prefs.getBoolean("themed_icons", false)
+
+        if (_iconStyle.value != newStyle || _isThemedIconsEnabled.value != newThemed) {
+            _iconStyle.value = newStyle
+            _isThemedIconsEnabled.value = newThemed
+            iconCache.evictAll() // 樣式改變，必須清空記憶體快取
+        }
     }
 
     private fun saveLayout() {
@@ -440,31 +462,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun loadApps() {
-        // 先從儲存空間重新讀取所有設定，確保從 SettingsActivity 返回後抓到最新變更
-        loadHiddenPackages()
-        loadCustomLabels()
-        loadUserCategories()
-        loadCustomCategories()
-        loadWidgets()
-        loadDock()
+        // 1. 強制重新載入設定
+        loadSettings()
         updateSuggestions()
         
-        val latestThemedPref = prefs.getBoolean("themed_icons", false)
-        if (_isThemedIconsEnabled.value != latestThemedPref) {
-            _isThemedIconsEnabled.value = latestThemedPref
-            iconCache.evictAll() // 開關狀態改變，必須清空快取
-            processedIconCacheDir.deleteRecursively()
-            processedIconCacheDir.mkdirs()
-        }
+        val isThemed = _isThemedIconsEnabled.value
+        val currentStyle = _iconStyle.value
 
         viewModelScope.launch {
             val rawApps = withContext(Dispatchers.IO) {
                 repository.getInstalledApps()
             }
             
-            val isThemed = _isThemedIconsEnabled.value
-
-            // 優先嘗試獲取 Android 12+ 的官方調色盤作為染色基準
+            // 2. 獲取主題色
             val themeColors = if (isThemed) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     dynamicLightColorScheme(getApplication())
@@ -483,31 +493,46 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val density = getApplication<Application>().resources.displayMetrics.density
                 val sizePx = (62 * density).toInt()
                 
-                // 使用 coroutineScope 進行平行處理
+                // 獲取目前的顏色特徵值，用於區分快取 (使用 ARGB 確保唯一性)
+                val colorKey = themeColors?.primary?.let { 
+                    val argb = ((it.alpha * 255).toInt() shl 24) or 
+                               ((it.red * 255).toInt() shl 16) or 
+                               ((it.green * 255).toInt() shl 8) or 
+                               (it.blue * 255).toInt()
+                    argb.toString(16)
+                } ?: "default"
+
                 coroutineScope {
                     rawApps.map { app ->
                         async {
                             val customIconFile = File(customIconDir, "${app.packageName}.png")
-                            val cachedIcon = iconCache[app.packageName]
-
-                            // 嘗試從磁碟快取讀取 (如果不是自定義圖示)
-                            val diskCacheFile = File(processedIconCacheDir, "${app.packageName}.png")
                             
-                            val processedIcon: ImageBitmap = if (customIconFile.exists()) {
-                                BitmapFactory.decodeFile(customIconFile.absolutePath).asImageBitmap()
-                            } else cachedIcon ?: if (diskCacheFile.exists()) {
-                                val bitmap = BitmapFactory.decodeFile(diskCacheFile.absolutePath).asImageBitmap()
-                                iconCache.put(app.packageName, bitmap)
-                                bitmap
-                            } else {
-                                val processedIconBitmap = iconProcessor.processIcon(app.icon, isThemed, themeColors, sizePx)
+                            // 關鍵：快取檔名現在包含顏色數值，桌布一換，快取即失效
+                            val styleSuffix = "${currentStyle.name}_${if (isThemed) "T_$colorKey" else "N"}"
+                            val diskCacheFile = File(processedIconCacheDir, "${app.packageName}_$styleSuffix.png")
+                            
+                            val cacheKey = "${app.packageName}_$styleSuffix"
+                            val cachedIcon = iconCache[cacheKey]
 
-                                // 儲存到磁碟快取與記憶體快取
-                                val b = processedIconBitmap.asAndroidBitmap()
-                                FileOutputStream(diskCacheFile).use { out ->
-                                    b.compress(Bitmap.CompressFormat.PNG, 100, out)
+                            val processedIcon: ImageBitmap = if (customIconFile.exists()) {
+                                BitmapFactory.decodeFile(customIconFile.absolutePath)?.asImageBitmap() 
+                                    ?: iconProcessor.processIcon(app.icon, isThemed, themeColors, currentStyle, sizePx)
+                            } else cachedIcon ?: if (diskCacheFile.exists()) {
+                                val bitmap = BitmapFactory.decodeFile(diskCacheFile.absolutePath)
+                                if (bitmap != null) {
+                                    val imageBitmap = bitmap.asImageBitmap()
+                                    iconCache.put(cacheKey, imageBitmap)
+                                    imageBitmap
+                                } else {
+                                    val processed = iconProcessor.processIcon(app.icon, isThemed, themeColors, currentStyle, sizePx)
+                                    saveIconToDisk(processed, diskCacheFile)
+                                    iconCache.put(cacheKey, processed)
+                                    processed
                                 }
-                                iconCache.put(app.packageName, processedIconBitmap)
+                            } else {
+                                val processedIconBitmap = iconProcessor.processIcon(app.icon, isThemed, themeColors, currentStyle, sizePx)
+                                saveIconToDisk(processedIconBitmap, diskCacheFile)
+                                iconCache.put(cacheKey, processedIconBitmap)
                                 processedIconBitmap
                             }
                             
@@ -536,6 +561,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
             
             _allApps.value = processedApps
+            // ... 後續佈局恢復邏輯保持不變
             
             // 優先從儲存的佈局恢復
             val savedLayout = prefs.getString("launcher_layout_v2", null)
@@ -565,6 +591,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 prefs.edit().putString("dock_packages", defaultDock.joinToString(",")).apply()
             }
         }
+    }
+
+    private fun saveIconToDisk(bitmap: ImageBitmap, file: File) {
+        try {
+            val b = bitmap.asAndroidBitmap()
+            FileOutputStream(file).use { out ->
+                b.compress(Bitmap.CompressFormat.PNG, 100, out)
+            }
+        } catch (e: Exception) { e.printStackTrace() }
     }
 
     /**
@@ -775,7 +810,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setThemedIconsEnabled(enabled: Boolean) {
         _isThemedIconsEnabled.value = enabled
         prefs.edit().putBoolean("themed_icons", enabled).apply()
-        iconCache.evictAll() // 強制清空快取以重新生成主題圖示
+        iconCache.evictAll() 
+        loadApps()
+    }
+
+    fun setIconStyle(style: IconStyle) {
+        _iconStyle.value = style
+        prefs.edit().putString("icon_style", style.name).apply()
+        iconCache.evictAll()
         loadApps()
     }
 
@@ -866,6 +908,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         // 1. 基礎設定
         settings.put("themed_icons", _isThemedIconsEnabled.value)
+        settings.put("icon_style", _iconStyle.value.name)
         settings.put("page_size", pageSize)
         settings.put("hidden_password", getPassword())
 
@@ -932,6 +975,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             // 恢復基礎設定
             setThemedIconsEnabled(settings.optBoolean("themed_icons", false))
+            val savedStyle = settings.optString("icon_style", "STANDARD")
+            _iconStyle.value = try { IconStyle.valueOf(savedStyle) } catch(e: Exception) { IconStyle.STANDARD }
+            prefs.edit().putString("icon_style", _iconStyle.value.name).apply()
+
             pageSize = settings.optInt("page_size", 20)
             setPassword(settings.optString("hidden_password", "1234"))
             
