@@ -50,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -90,6 +91,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import androidx.compose.ui.graphics.rememberGraphicsLayer
 import java.util.Calendar
 import kotlin.math.max
 import kotlin.math.min
@@ -976,11 +983,35 @@ fun LauncherScreen(
     onAppClick: (String) -> Unit,
     onSettingsClick: () -> Unit
 ) {
+    val backdrop = rememberLayerBackdrop()
+    val blurredWallpaper by viewModel.blurredWallpaper.collectAsState()
+    
+    // 背景採樣層：提供「清晰」桌布數據給 Backdrop 庫，以產生劇烈折射
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .layerBackdrop(backdrop)
+    ) {
+        blurredWallpaper?.let {
+            Image(
+                bitmap = it,
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxSize()
+                    // 關鍵：採樣層內部的 Image 保持相對清晰
+                    // 而 LauncherScreen 外部會再套用一次全域模糊，不影響折射
+                    .graphicsLayer(alpha = 0.99f), 
+                contentScale = ContentScale.FillBounds
+            )
+        }
+    }
+
     val pages by viewModel.pages.collectAsState()
     val allAppsFlat by viewModel.allApps.collectAsState()
     val dockPkgNames by viewModel.dockPackageNames.collectAsState()
     val isEditMode by viewModel.isEditMode.collectAsState()
     val minusOneWidgets by viewModel.minusOneWidgets.collectAsState()
+    val isLiquidGlassDockEnabled by viewModel.isLiquidGlassDockEnabled.collectAsState()
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -1259,7 +1290,14 @@ fun LauncherScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         PageIndicator(pageCount = desktopPageCount, currentPage = pagerState.currentPage - 1)
-                        Dock(apps = dockApps, iconSize = iconSize, onAppClick = { pkg -> if (pkg == myPackageName) onSettingsClick() else onAppClick(pkg) }, onLongClick = { showDockPicker = it })
+                        Dock(
+                            apps = dockApps, 
+                            iconSize = iconSize, 
+                            isLiquidGlass = isLiquidGlassDockEnabled,
+                            backdrop = backdrop,
+                            onAppClick = { pkg -> if (pkg == myPackageName) onSettingsClick() else onAppClick(pkg) }, 
+                            onLongClick = { showDockPicker = it }
+                        )
                         Spacer(modifier = Modifier.height(4.dp))
                     }
                 }
@@ -1865,12 +1903,46 @@ fun MultiAppPickerDialog(allApps: List<AppModel>, onDismiss: () -> Unit, onAppsS
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-fun Dock(apps: List<AppModel>, iconSize: androidx.compose.ui.unit.Dp, onAppClick: (String) -> Unit, onLongClick: (Int) -> Unit) {
-    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp).height(105.dp).background(color = Color.White.copy(alpha = 0.3f), shape = RoundedCornerShape(42.dp)), contentAlignment = Alignment.Center) {
-        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.SpaceAround, verticalAlignment = Alignment.CenterVertically) {
+fun Dock(
+    apps: List<AppModel>, 
+    iconSize: androidx.compose.ui.unit.Dp, 
+    isLiquidGlass: Boolean = false,
+    backdrop: com.kyant.backdrop.Backdrop,
+    onAppClick: (String) -> Unit, 
+    onLongClick: (Int) -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .height(105.dp)
+            // 關鍵：將所有背景、模糊、折射邏輯統一交給 liquidGlassDock
+            .liquidGlassDock(
+                isLiquidGlass = isLiquidGlass,
+                backdrop = backdrop,
+                cornerRadius = 42.dp
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        // 內容層：不受任何模糊影響
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp), 
+            horizontalArrangement = Arrangement.SpaceAround, 
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             apps.forEachIndexed { index, app ->
                 Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                    AppItem(app = app, modifier = Modifier.combinedClickable(onClick = { onAppClick(app.packageName) }, onLongClick = { onLongClick(index) }), showLabel = false, iconSize = iconSize)
+                    AppItem(
+                        app = app, 
+                        modifier = Modifier.combinedClickable(
+                            onClick = { onAppClick(app.packageName) }, 
+                            onLongClick = { onLongClick(index) }
+                        ), 
+                        showLabel = false, 
+                        iconSize = iconSize
+                    )
                 }
             }
         }

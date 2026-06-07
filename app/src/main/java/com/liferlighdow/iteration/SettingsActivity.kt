@@ -288,6 +288,7 @@ fun SettingsMainScreen(
 fun IconThemeScreen(onBack: () -> Unit) {
     val viewModel: MainViewModel = viewModel()
     val isThemedIconsEnabled by viewModel.isThemedIconsEnabled.collectAsState()
+    val isLiquidGlassDockEnabled by viewModel.isLiquidGlassDockEnabled.collectAsState()
     val currentStyle by viewModel.iconStyle.collectAsState()
 
     Scaffold(
@@ -314,6 +315,20 @@ fun IconThemeScreen(onBack: () -> Unit) {
                         )
                     },
                     modifier = Modifier.clickable { viewModel.setThemedIconsEnabled(!isThemedIconsEnabled) }
+                )
+            }
+
+            item {
+                ListItem(
+                    headlineContent = { Text("Liquid Glass Dock") },
+                    supportingContent = { Text("Enable real-time rendered glass effect for the dock") },
+                    trailingContent = {
+                        Switch(
+                            checked = isLiquidGlassDockEnabled,
+                            onCheckedChange = { viewModel.setLiquidGlassDockEnabled(it) }
+                        )
+                    },
+                    modifier = Modifier.clickable { viewModel.setLiquidGlassDockEnabled(!isLiquidGlassDockEnabled) }
                 )
             }
             

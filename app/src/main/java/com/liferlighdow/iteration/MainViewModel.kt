@@ -5,12 +5,21 @@ import android.app.WallpaperManager
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.RenderEffect
+import android.graphics.Shader
 import android.graphics.drawable.AdaptiveIconDrawable
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.util.LruCache
 import androidx.core.graphics.drawable.toBitmap
 import java.io.File
 import java.io.FileOutputStream
 import android.os.Build
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -29,11 +38,20 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
-class MainViewModel(application: Application) : AndroidViewModel(application) {
+class MainViewModel(application: Application) : AndroidViewModel(application), SensorEventListener {
     private val repository = AppRepository(application)
     private val prefs = application.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
     private val iconProcessor = IconProcessor(application)
     
+    private val sensorManager = application.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+    private val gyroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+
+    private val _gyroOffset = MutableStateFlow(Offset.Zero)
+    val gyroOffset = _gyroOffset.asStateFlow()
+
+    private val _blurredWallpaper = MutableStateFlow<ImageBitmap?>(null)
+    val blurredWallpaper = _blurredWallpaper.asStateFlow()
+
     private val _pages = MutableStateFlow<List<List<AppModel>>>(emptyList())
     val pages: StateFlow<List<List<AppModel>>> = _pages
 
@@ -51,6 +69,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _isThemedIconsEnabled = MutableStateFlow(prefs.getBoolean("themed_icons", false))
     val isThemedIconsEnabled = _isThemedIconsEnabled.asStateFlow()
+
+    private val _isLiquidGlassDockEnabled = MutableStateFlow(prefs.getBoolean("liquid_glass_dock", false))
+    val isLiquidGlassDockEnabled = _isLiquidGlassDockEnabled.asStateFlow()
 
     private val _iconStyle = MutableStateFlow(
         try { IconStyle.valueOf(prefs.getString("icon_style", "STANDARD") ?: "STANDARD") }
@@ -75,6 +96,67 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     init {
         loadSettings()
         loadApps()
+        startSensor()
+        updateBlurredWallpaper()
+    }
+
+    private fun startSensor() {
+        gyroSensor?.let {
+            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
+        }
+    }
+
+    override fun onSensorChanged(event: SensorEvent?) {
+        if (event?.sensor?.type == Sensor.TYPE_ACCELEROMETER) {
+            // 平滑處理加速度計數據，模擬陀螺儀傾斜
+            val x = event.values[0]
+            val y = event.values[1]
+            _gyroOffset.value = Offset(-x, y)
+        }
+    }
+
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+
+    fun updateBlurredWallpaper() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val wm = WallpaperManager.getInstance(getApplication())
+                val drawable = wm.drawable ?: return@launch
+                val rawBitmap = drawable.toBitmap()
+                
+                val dm = getApplication<Application>().resources.displayMetrics
+                val screenW = dm.widthPixels
+                val screenH = dm.heightPixels
+                
+                // 1. 精確裁剪
+                val wallpaperAspectRatio = rawBitmap.width.toFloat() / rawBitmap.height
+                val screenAspectRatio = screenW.toFloat() / screenH
+                
+                val cropW = if (wallpaperAspectRatio > screenAspectRatio) (rawBitmap.height * screenAspectRatio).toInt() else rawBitmap.width
+                val cropH = if (wallpaperAspectRatio > screenAspectRatio) rawBitmap.height else (rawBitmap.width / screenAspectRatio).toInt()
+                
+                val cropped = Bitmap.createBitmap(rawBitmap, (rawBitmap.width - cropW) / 2, (rawBitmap.height - cropH) / 2, cropW, cropH)
+                val scaled = Bitmap.createScaledBitmap(cropped, screenW, screenH, true)
+                
+                // 2. 【Liquid Glass 採樣優化】：保留高清晰度，僅進行極輕微預處理
+                // 這樣 Dock 的 Lens 才能扭曲清晰的邊緣，產生強烈的折射感
+                val blurScale = 0.5f
+                val bw = (screenW * blurScale).toInt().coerceAtLeast(1)
+                val bh = (screenH * blurScale).toInt().coerceAtLeast(1)
+                
+                val small = Bitmap.createScaledBitmap(scaled, bw, bh, true)
+                val blurred = Bitmap.createScaledBitmap(small, screenW, screenH, true)
+                
+                _blurredWallpaper.value = blurred.asImageBitmap()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        sensorManager.unregisterListener(this)
     }
 
     private fun loadSettings() {
@@ -465,6 +547,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // 1. 強制重新載入設定
         loadSettings()
         updateSuggestions()
+        updateBlurredWallpaper() // 更新模糊桌布
         
         val isThemed = _isThemedIconsEnabled.value
         val currentStyle = _iconStyle.value
@@ -821,6 +904,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         loadApps()
     }
 
+    fun setLiquidGlassDockEnabled(enabled: Boolean) {
+        _isLiquidGlassDockEnabled.value = enabled
+        prefs.edit().putBoolean("liquid_glass_dock", enabled).apply()
+        if (enabled) {
+            updateBlurredWallpaper() // 立即開始生成，不需要等待回到主頁
+        }
+    }
+
     fun createFolder(pageIndex: Int, folderName: String) {
         val currentPages = _pages.value.map { it.toMutableList() }.toMutableList()
         val targetPage = if (pageIndex >= 0 && pageIndex < currentPages.size) {
@@ -908,6 +999,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         // 1. 基礎設定
         settings.put("themed_icons", _isThemedIconsEnabled.value)
+        settings.put("liquid_glass_dock", _isLiquidGlassDockEnabled.value)
         settings.put("icon_style", _iconStyle.value.name)
         settings.put("page_size", pageSize)
         settings.put("hidden_password", getPassword())
@@ -975,6 +1067,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             // 恢復基礎設定
             setThemedIconsEnabled(settings.optBoolean("themed_icons", false))
+            setLiquidGlassDockEnabled(settings.optBoolean("liquid_glass_dock", false))
             val savedStyle = settings.optString("icon_style", "STANDARD")
             _iconStyle.value = try { IconStyle.valueOf(savedStyle) } catch(e: Exception) { IconStyle.STANDARD }
             prefs.edit().putString("icon_style", _iconStyle.value.name).apply()

@@ -16,6 +16,11 @@
 
 ### 🎨 Design & Interaction
 *   **Immersive Edge-to-Edge**: Full transparency support that treats your wallpaper as the primary canvas.
+*   **Liquid Glass Dock (New)**: High-performance real-time glassmorphism using the **Backdrop** library. Features:
+    *   **Physical Refraction (Lens)**: Real-time optical displacement that "bends" the background behind the dock.
+    *   **Dynamic Vibrancy**: Boosted saturation and contrast for a crystal-clear, deep liquid aesthetic.
+    *   **Adaptive Blur**: Synchronized wallpaper sampling with high-radius Gaussian blur.
+    *   **3D Bevel Border**: Multi-layered stroke simulating environment light reflection and shadow.
 *   **Icon Styles (New)**: Choose from 4 distinct presets:
     *   **Standard**: The classic look or Material You (M3) dynamic colors.
     *   **Black**: Deep midnight aesthetics. M3 mode features 20% tint backgrounds and neon-like foregrounds.
@@ -80,6 +85,7 @@
 app/src/main/java/com/liferlighdow/iteration/
 ├── MainActivity.kt        # Entry point, Desktop (Pager), Dock, & App Library
 ├── MainViewModel.kt       # State machine, layout logic, and data orchestration
+├── LiquidGlassDock.kt     # NEW: Backdrop-powered real-time glassmorphism engine
 ├── AppRepository.kt      # System package querying and metadata extraction
 ├── AppModel.kt           # Domain models for Apps, Folders, and Widgets
 ├── IconProcessor.kt      # Complex bitmap manipulation & M3 tinting logic
