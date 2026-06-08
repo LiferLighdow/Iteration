@@ -13,7 +13,6 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -38,7 +37,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -48,11 +46,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.clipPath
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.core.app.NotificationManagerCompat
-
 import androidx.activity.enableEdgeToEdge
 
 class SettingsActivity : ComponentActivity() {
@@ -73,7 +67,7 @@ class SettingsActivity : ComponentActivity() {
 }
 
 enum class SettingsPage {
-    MAIN, HIDE_APPS, RENAME_APPS, CHANGE_ICON, APP_LIBRARY, ICON_THEME
+    MAIN, HIDE_APPS, RENAME_APPS, CHANGE_ICON, APP_LIBRARY, ICON_THEME, DOCK, LIQUID_GLASS
 }
 
 @Composable
@@ -92,13 +86,17 @@ fun SettingsNavigation() {
             onNavigateToRenameApps = { currentPage = SettingsPage.RENAME_APPS },
             onNavigateToChangeIcon = { currentPage = SettingsPage.CHANGE_ICON },
             onNavigateToAppLibrary = { currentPage = SettingsPage.APP_LIBRARY },
-            onNavigateToIconTheme = { currentPage = SettingsPage.ICON_THEME }
+            onNavigateToIconTheme = { currentPage = SettingsPage.ICON_THEME },
+            onNavigateToDock = { currentPage = SettingsPage.DOCK },
+            onNavigateToLiquidGlass = { currentPage = SettingsPage.LIQUID_GLASS }
         )
         SettingsPage.HIDE_APPS -> HideAppsScreen(onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.RENAME_APPS -> RenameAppsScreen(onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.CHANGE_ICON -> ChangeIconScreen(onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.APP_LIBRARY -> AppLibrarySettingsScreen(onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.ICON_THEME -> IconThemeScreen(onBack = { currentPage = SettingsPage.MAIN })
+        SettingsPage.DOCK -> DockSettingsScreen(onBack = { currentPage = SettingsPage.MAIN })
+        SettingsPage.LIQUID_GLASS -> LiquidGlassSettingsScreen(onBack = { currentPage = SettingsPage.MAIN })
     }
 }
 
@@ -133,10 +131,11 @@ fun SettingsMainScreen(
     onNavigateToRenameApps: () -> Unit,
     onNavigateToChangeIcon: () -> Unit,
     onNavigateToAppLibrary: () -> Unit,
-    onNavigateToIconTheme: () -> Unit
+    onNavigateToIconTheme: () -> Unit,
+    onNavigateToDock: () -> Unit,
+    onNavigateToLiquidGlass: () -> Unit
 ) {
     val viewModel: MainViewModel = viewModel()
-    val isThemedIconsEnabled by viewModel.isThemedIconsEnabled.collectAsState()
     val context = LocalContext.current
 
     val exportLauncher = rememberLauncherForActivityResult(
@@ -173,10 +172,11 @@ fun SettingsMainScreen(
         }
     }
     
-    // Check if notification permission is granted
     val isNotificationEnabled = remember {
         NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)
     }
+
+    var showRestartDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -197,6 +197,22 @@ fun SettingsMainScreen(
                     supportingContent = { Text("Change the style and color of your app icons") },
                     trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
                     modifier = Modifier.clickable { onNavigateToIconTheme() }
+                )
+            }
+            item {
+                ListItem(
+                    headlineContent = { Text("Liquid Glass") },
+                    supportingContent = { Text("Real-time glassmorphism effects") },
+                    trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
+                    modifier = Modifier.clickable { onNavigateToLiquidGlass() }
+                )
+            }
+            item {
+                ListItem(
+                    headlineContent = { Text("Dock Settings") },
+                    supportingContent = { Text("Manage apps in your home screen dock") },
+                    trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
+                    modifier = Modifier.clickable { onNavigateToDock() }
                 )
             }
             item {
@@ -256,12 +272,18 @@ fun SettingsMainScreen(
 
             item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
             item {
-                Text(
-                    text = stringResource(R.string.settings_backup_restore),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
+                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    Text(
+                        text = stringResource(R.string.settings_backup_restore),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = stringResource(R.string.backup_image_notice),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
             item {
                 ListItem(
@@ -279,7 +301,44 @@ fun SettingsMainScreen(
                     modifier = Modifier.clickable { importLauncher.launch("application/json") }
                 )
             }
+
+            item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.settings_restart_launcher), color = MaterialTheme.colorScheme.error) },
+                    supportingContent = { Text(stringResource(R.string.settings_restart_desc)) },
+                    leadingContent = { Icon(Icons.Default.RestartAlt, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                    modifier = Modifier.clickable { showRestartDialog = true }
+                )
+            }
         }
+    }
+
+    if (showRestartDialog) {
+        AlertDialog(
+            onDismissRequest = { showRestartDialog = false },
+            title = { Text(stringResource(R.string.restart_confirm_title)) },
+            text = { Text(stringResource(R.string.restart_confirm_msg)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+                        val componentName = intent?.component
+                        val mainIntent = Intent.makeRestartActivityTask(componentName)
+                        context.startActivity(mainIntent)
+                        Runtime.getRuntime().exit(0)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text(stringResource(R.string.restart))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRestartDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
     }
 }
 
@@ -288,7 +347,6 @@ fun SettingsMainScreen(
 fun IconThemeScreen(onBack: () -> Unit) {
     val viewModel: MainViewModel = viewModel()
     val isThemedIconsEnabled by viewModel.isThemedIconsEnabled.collectAsState()
-    val isLiquidGlassDockEnabled by viewModel.isLiquidGlassDockEnabled.collectAsState()
     val currentStyle by viewModel.iconStyle.collectAsState()
 
     Scaffold(
@@ -315,20 +373,6 @@ fun IconThemeScreen(onBack: () -> Unit) {
                         )
                     },
                     modifier = Modifier.clickable { viewModel.setThemedIconsEnabled(!isThemedIconsEnabled) }
-                )
-            }
-
-            item {
-                ListItem(
-                    headlineContent = { Text("Liquid Glass Dock") },
-                    supportingContent = { Text("Enable real-time rendered glass effect for the dock") },
-                    trailingContent = {
-                        Switch(
-                            checked = isLiquidGlassDockEnabled,
-                            onCheckedChange = { viewModel.setLiquidGlassDockEnabled(it) }
-                        )
-                    },
-                    modifier = Modifier.clickable { viewModel.setLiquidGlassDockEnabled(!isLiquidGlassDockEnabled) }
                 )
             }
             
@@ -368,19 +412,152 @@ fun IconThemeScreen(onBack: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
+    val viewModel: MainViewModel = viewModel()
+    val isLiquidGlassEnabled by viewModel.isLiquidGlassEnabled.collectAsState()
+    val isLiquidGlassDockEnabled by viewModel.isLiquidGlassDockEnabled.collectAsState()
+    val isLiquidGlassHomeFolderEnabled by viewModel.isLiquidGlassHomeFolderEnabled.collectAsState()
+    val isLiquidGlassAppLibraryFolderEnabled by viewModel.isLiquidGlassAppLibraryFolderEnabled.collectAsState()
+    val isLiquidGlassGlobalSearchEnabled by viewModel.isLiquidGlassGlobalSearchEnabled.collectAsState()
+    val isLiquidGlassAppLibrarySearchEnabled by viewModel.isLiquidGlassAppLibrarySearchEnabled.collectAsState()
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Liquid Glass") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+            item {
+                ListItem(
+                    headlineContent = { Text("Enable Liquid Glass") },
+                    supportingContent = { Text("Master switch for real-time glass effects") },
+                    trailingContent = {
+                        Switch(
+                            checked = isLiquidGlassEnabled,
+                            onCheckedChange = { viewModel.setLiquidGlassEnabled(it) }
+                        )
+                    },
+                    modifier = Modifier.clickable { viewModel.setLiquidGlassEnabled(!isLiquidGlassEnabled) }
+                )
+            }
+
+            if (isLiquidGlassEnabled) {
+                item {
+                    Text(
+                        text = "Home Screen",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                }
+                item {
+                    ListItem(
+                        headlineContent = { Text("Dock") },
+                        supportingContent = { Text("Enable glass effect for the home screen dock") },
+                        trailingContent = {
+                            Switch(
+                                checked = isLiquidGlassDockEnabled,
+                                onCheckedChange = { viewModel.setLiquidGlassDockEnabled(it) }
+                            )
+                        },
+                        modifier = Modifier.clickable { viewModel.setLiquidGlassDockEnabled(!isLiquidGlassDockEnabled) }
+                    )
+                }
+                item {
+                    ListItem(
+                        headlineContent = { Text("Folders") },
+                        supportingContent = { Text("Enable glass effect for home screen folders") },
+                        trailingContent = {
+                            Switch(
+                                checked = isLiquidGlassHomeFolderEnabled,
+                                onCheckedChange = { viewModel.setLiquidGlassHomeFolderEnabled(it) }
+                            )
+                        },
+                        modifier = Modifier.clickable { viewModel.setLiquidGlassHomeFolderEnabled(!isLiquidGlassHomeFolderEnabled) }
+                    )
+                }
+                item {
+                    ListItem(
+                        headlineContent = { Text("Global Search Bar") },
+                        supportingContent = { Text("Enable glass effect for the swipe-down search bar") },
+                        trailingContent = {
+                            Switch(
+                                checked = isLiquidGlassGlobalSearchEnabled,
+                                onCheckedChange = { viewModel.setLiquidGlassGlobalSearchEnabled(it) }
+                            )
+                        },
+                        modifier = Modifier.clickable { viewModel.setLiquidGlassGlobalSearchEnabled(!isLiquidGlassGlobalSearchEnabled) }
+                    )
+                }
+
+                item {
+                    Text(
+                        text = "App Library",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                }
+                item {
+                    ListItem(
+                        headlineContent = { Text("Folders") },
+                        supportingContent = { Text("Enable glass effect for app library folders") },
+                        trailingContent = {
+                            Switch(
+                                checked = isLiquidGlassAppLibraryFolderEnabled,
+                                onCheckedChange = { viewModel.setLiquidGlassAppLibraryFolderEnabled(it) }
+                            )
+                        },
+                        modifier = Modifier.clickable { viewModel.setLiquidGlassAppLibraryFolderEnabled(!isLiquidGlassAppLibraryFolderEnabled) }
+                    )
+                }
+                item {
+                    ListItem(
+                        headlineContent = { Text("Search Bar") },
+                        supportingContent = { Text("Enable glass effect for the app library search bar") },
+                        trailingContent = {
+                            Switch(
+                                checked = isLiquidGlassAppLibrarySearchEnabled,
+                                onCheckedChange = { viewModel.setLiquidGlassAppLibrarySearchEnabled(it) }
+                            )
+                        },
+                        modifier = Modifier.clickable { viewModel.setLiquidGlassAppLibrarySearchEnabled(!isLiquidGlassAppLibrarySearchEnabled) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 fun AppLibrarySettingsScreen(onBack: () -> Unit) {
     val viewModel: MainViewModel = viewModel()
     val allApps by viewModel.allApps.collectAsState()
     val userCategories by viewModel.userCategories.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
     
-    val filteredApps = remember(allApps, searchQuery) {
-        if (searchQuery.isEmpty()) allApps
-        else allApps.filter { it.label.contains(searchQuery, ignoreCase = true) }
+    // 動態計算所有當前存在但未排序的類別
+    val unhandledCategories = remember(allApps, userCategories) {
+        allApps.asSequence()
+            .map { it.displayCategory }
+            .distinct()
+            .filter { it !in userCategories }
+            .toList()
     }
 
     var showAddCategoryDialog by remember { mutableStateOf(false) }
     var newCategoryName by remember { mutableStateOf("") }
+    
+    var categoryToRename by remember { mutableStateOf<String?>(null) }
+    var renameInput by remember { mutableStateOf("") }
     
     var selectingAppForCategory by remember { mutableStateOf<AppModel?>(null) }
 
@@ -401,35 +578,77 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
             )
         }
     ) { innerPadding ->
-        Column(modifier = Modifier.padding(innerPadding)) {
-            // 分類管理區
-            Text(
-                stringResource(R.string.custom_categories), 
-                style = MaterialTheme.typography.titleSmall, 
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                color = MaterialTheme.colorScheme.primary
-            )
+        LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+            item {
+                Text(
+                    "Managed Folders (Ordered)", 
+                    style = MaterialTheme.typography.titleSmall, 
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
             
-            LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
-                itemsIndexed(userCategories) { index, category ->
+            if (userCategories.isEmpty()) {
+                item {
+                    Text(
+                        "No folders managed yet. Default folders are shown at the end of the list.",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(16.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            
+            itemsIndexed(userCategories) { index, category ->
+                ListItem(
+                    headlineContent = { Text(category) },
+                    trailingContent = {
+                        Row {
+                            IconButton(onClick = { categoryToRename = category; renameInput = category }) {
+                                Icon(Icons.Default.Edit, contentDescription = "Rename")
+                            }
+                            IconButton(
+                                enabled = index > 0,
+                                onClick = { viewModel.moveUserCategory(index, index - 1) }
+                            ) {
+                                Icon(Icons.Default.ArrowUpward, contentDescription = "Move Up")
+                            }
+                            IconButton(
+                                enabled = index < userCategories.size - 1,
+                                onClick = { viewModel.moveUserCategory(index, index + 1) }
+                            ) {
+                                Icon(Icons.Default.ArrowDownward, contentDescription = "Move Down")
+                            }
+                            IconButton(onClick = { viewModel.deleteUserCategory(category) }) {
+                                Icon(Icons.Default.Close, contentDescription = "Remove from list")
+                            }
+                        }
+                    }
+                )
+            }
+            
+            if (unhandledCategories.isNotEmpty()) {
+                item {
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    Text(
+                        "Default / Existing Folders", 
+                        style = MaterialTheme.typography.titleSmall, 
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                
+                items(unhandledCategories) { category ->
                     ListItem(
                         headlineContent = { Text(category) },
+                        supportingContent = { Text("App Library folder detected") },
                         trailingContent = {
                             Row {
-                                IconButton(
-                                    enabled = index > 0,
-                                    onClick = { viewModel.moveUserCategory(index, index - 1) }
-                                ) {
-                                    Icon(Icons.Default.ArrowUpward, contentDescription = "Move Up")
+                                IconButton(onClick = { categoryToRename = category; renameInput = category }) {
+                                    Icon(Icons.Default.Edit, contentDescription = "Rename")
                                 }
-                                IconButton(
-                                    enabled = index < userCategories.size - 1,
-                                    onClick = { viewModel.moveUserCategory(index, index + 1) }
-                                ) {
-                                    Icon(Icons.Default.ArrowDownward, contentDescription = "Move Down")
-                                }
-                                IconButton(onClick = { viewModel.deleteUserCategory(category) }) {
-                                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete))
+                                Button(onClick = { viewModel.addUserCategory(category) }) {
+                                    Text("Manage")
                                 }
                             }
                         }
@@ -437,30 +656,31 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
                 }
             }
             
-            HorizontalDivider()
+            item {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                Text(
+                    stringResource(R.string.assign_categories), 
+                    style = MaterialTheme.typography.titleSmall, 
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    color = MaterialTheme.colorScheme.primary
+                )
+                SearchBar(searchQuery) { searchQuery = it }
+            }
             
-            Text(
-                stringResource(R.string.assign_categories), 
-                style = MaterialTheme.typography.titleSmall, 
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                color = MaterialTheme.colorScheme.primary
-            )
+            val filteredApps = if (searchQuery.isEmpty()) allApps
+                              else allApps.filter { it.label.contains(searchQuery, ignoreCase = true) }
 
-            SearchBar(searchQuery) { searchQuery = it }
-            
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(filteredApps, key = { it.packageName }) { app ->
-                    ListItem(
-                        headlineContent = { Text(app.label) },
-                        supportingContent = { Text("Category: ${app.displayCategory}") },
-                        leadingContent = {
-                            if (app.processedIcon != null) {
-                                Image(bitmap = app.processedIcon, contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)).background(Color.White))
-                            }
-                        },
-                        modifier = Modifier.clickable { selectingAppForCategory = app }
-                    )
-                }
+            items(filteredApps, key = { it.packageName }) { app ->
+                ListItem(
+                    headlineContent = { Text(app.label) },
+                    supportingContent = { Text("Folder: ${app.displayCategory}") },
+                    leadingContent = {
+                        if (app.processedIcon != null) {
+                            Image(bitmap = app.processedIcon, contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)).background(Color.White))
+                        }
+                    },
+                    modifier = Modifier.clickable { selectingAppForCategory = app }
+                )
             }
         }
 
@@ -489,7 +709,34 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
             )
         }
 
+        if (categoryToRename != null) {
+            AlertDialog(
+                onDismissRequest = { categoryToRename = null },
+                title = { Text("Rename Folder") },
+                text = {
+                    OutlinedTextField(
+                        value = renameInput,
+                        onValueChange = { renameInput = it },
+                        label = { Text("New Name") },
+                        singleLine = true
+                    )
+                },
+                confirmButton = {
+                    Button(onClick = {
+                        viewModel.renameCategory(categoryToRename!!, renameInput)
+                        categoryToRename = null
+                    }) { Text("Save") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { categoryToRename = null }) { Text("Cancel") }
+                }
+            )
+        }
+
         if (selectingAppForCategory != null) {
+            // 合併所有可用的類別供選取
+            val allAvailableCategories = (userCategories + unhandledCategories).distinct()
+            
             AlertDialog(
                 onDismissRequest = { selectingAppForCategory = null },
                 title = { Text(stringResource(R.string.select_category_for, selectingAppForCategory?.label ?: "")) },
@@ -504,7 +751,7 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
                                 }
                             )
                         }
-                        items(userCategories) { category ->
+                        items(allAvailableCategories) { category ->
                             ListItem(
                                 headlineContent = { Text(category) },
                                 modifier = Modifier.clickable {
@@ -599,136 +846,6 @@ fun ChangeIconScreen(onBack: () -> Unit) {
             )
         }
     }
-}
-
-@Composable
-fun IconCropperDialog(uri: Uri, onDismiss: () -> Unit, onConfirm: (Bitmap) -> Unit) {
-    val context = LocalContext.current
-    var originalBitmap by remember { mutableStateOf<Bitmap?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
-    var containerWidthPx by remember { mutableStateOf(0f) }
-
-    LaunchedEffect(uri) {
-        withContext(Dispatchers.IO) {
-            try {
-                // 優化：inMutable 確保圖片可被 Matrix 處理，減少黑邊可能
-                val options = BitmapFactory.Options().apply { inMutable = true }
-                val bitmap = context.contentResolver.openInputStream(uri)?.use { 
-                    BitmapFactory.decodeStream(it, null, options) 
-                }
-                originalBitmap = bitmap
-            } catch (e: Exception) {
-                e.printStackTrace()
-            } finally {
-                isLoading = false
-            }
-        }
-    }
-
-    var scale by remember { mutableStateOf(1f) }
-    var offset by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.adjust_icon_position)) },
-        text = {
-            Box(
-                modifier = Modifier.fillMaxWidth().height(300.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator()
-                } else if (originalBitmap != null) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(stringResource(R.string.crop_instruction), style = MaterialTheme.typography.bodySmall)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Box(
-                            modifier = Modifier
-                                .size(200.dp)
-                                .onGloballyPositioned { containerWidthPx = it.size.width.toFloat() }
-                                .clip(RoundedCornerShape(44.dp))
-                                .background(Color.Gray.copy(alpha = 0.1f))
-                                .pointerInput(Unit) {
-                                    detectTransformGestures { _, pan, zoom, _ ->
-                                        scale = (scale * zoom).coerceIn(0.5f, 5f)
-                                        offset += pan
-                                    }
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Image(
-                                bitmap = originalBitmap!!.asImageBitmap(),
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .graphicsLayer(
-                                        scaleX = scale,
-                                        scaleY = scale,
-                                        translationX = offset.x,
-                                        translationY = offset.y
-                                    ),
-                                contentScale = ContentScale.Fit
-                            )
-                            
-                            // 遮罩邊框提示
-                            Canvas(modifier = Modifier.fillMaxSize()) {
-                                drawRect(
-                                    color = Color.Black.copy(alpha = 0.1f),
-                                    style = Stroke(width = 2.dp.toPx())
-                                )
-                            }
-                        }
-                    }
-                } else {
-                    Text("Failed to load image")
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                enabled = !isLoading && originalBitmap != null,
-                onClick = {
-                    originalBitmap?.let { bitmap ->
-                        // 提高解析度至 512，讓 Launcher 縮放時更清晰
-                        val outputSize = 512
-                        val cropped = Bitmap.createBitmap(outputSize, outputSize, Bitmap.Config.ARGB_8888)
-                        val canvas = android.graphics.Canvas(cropped)
-                        
-                        // 高品質繪圖參數
-                        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                            isFilterBitmap = true
-                            isDither = true
-                        }
-
-                        val matrix = Matrix()
-                        
-                        // 計算基準比例 (圖片適應 200dp 容器後的比例)
-                        val baseScale = containerWidthPx / Math.max(bitmap.width.toFloat(), bitmap.height.toFloat())
-                        // 計算最終映射到 512px 畫布的總比例
-                        val totalScale = scale * baseScale * (outputSize / containerWidthPx)
-                        
-                        // 1. 先平移到圖片中心
-                        matrix.postTranslate(-bitmap.width / 2f, -bitmap.height / 2f)
-                        // 2. 進行縮放
-                        matrix.postScale(totalScale, totalScale)
-                        // 3. 套用使用者在 UI 上的位移 (需換算座標系)
-                        val userOffsetX = offset.x * (outputSize / containerWidthPx)
-                        val userOffsetY = offset.y * (outputSize / containerWidthPx)
-                        // 4. 平移回輸出畫布中心並加上使用者位移
-                        matrix.postTranslate(outputSize / 2f + userOffsetX, outputSize / 2f + userOffsetY)
-                        
-                        canvas.drawBitmap(bitmap, matrix, paint)
-                        onConfirm(cropped)
-                    }
-                }
-            ) {
-                Text(stringResource(R.string.apply))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
-        }
-    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -882,4 +999,204 @@ fun HideAppsScreen(onBack: () -> Unit) {
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DockSettingsScreen(onBack: () -> Unit) {
+    val viewModel: MainViewModel = viewModel()
+    val allApps by viewModel.allApps.collectAsState()
+    val dockPkgNames by viewModel.dockPackageNames.collectAsState()
+    
+    var showAppPickerForSlot by remember { mutableStateOf<Int?>(null) }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Dock Settings") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        Column(modifier = Modifier.padding(innerPadding).fillMaxSize().padding(16.dp)) {
+            Text(
+                "Customize Dock Apps",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            repeat(4) { index ->
+                val pkgName = dockPkgNames.getOrNull(index) ?: ""
+                val app = allApps.find { it.packageName == pkgName }
+                
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp)
+                        .clickable { showAppPickerForSlot = index },
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    ListItem(
+                        headlineContent = { Text(app?.label ?: "Empty Slot ${index + 1}") },
+                        supportingContent = { Text(if (pkgName.isEmpty()) "Tap to select an app" else pkgName) },
+                        leadingContent = {
+                            if (app?.processedIcon != null) {
+                                Image(
+                                    bitmap = app.processedIcon,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)).background(Color.White)
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier.size(40.dp).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.Add, contentDescription = null)
+                                }
+                            }
+                        },
+                        trailingContent = {
+                            if (pkgName.isNotEmpty()) {
+                                IconButton(onClick = { viewModel.updateDockApp(index, "") }) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Remove")
+                                }
+                            }
+                        }
+                    )
+                }
+            }
+        }
+
+        if (showAppPickerForSlot != null) {
+            val visibleApps = allApps.filter { !it.isHidden }
+            AppPickerDialog(
+                allApps = visibleApps,
+                onDismiss = { showAppPickerForSlot = null },
+                onAppSelected = { pkg ->
+                    viewModel.updateDockApp(showAppPickerForSlot!!, pkg)
+                    showAppPickerForSlot = null
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun IconCropperDialog(uri: Uri, onDismiss: () -> Unit, onConfirm: (Bitmap) -> Unit) {
+    val context = LocalContext.current
+    var originalBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
+    var containerWidthPx by remember { mutableStateOf(0f) }
+
+    LaunchedEffect(uri) {
+        withContext(Dispatchers.IO) {
+            try {
+                val options = BitmapFactory.Options().apply { inMutable = true }
+                val bitmap = context.contentResolver.openInputStream(uri)?.use { 
+                    BitmapFactory.decodeStream(it, null, options) 
+                }
+                originalBitmap = bitmap
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                isLoading = false
+            }
+        }
+    }
+
+    var scale by remember { mutableStateOf(1f) }
+    var offset by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.adjust_icon_position)) },
+        text = {
+            Box(
+                modifier = Modifier.fillMaxWidth().height(300.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator()
+                } else if (originalBitmap != null) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(stringResource(R.string.crop_instruction), style = MaterialTheme.typography.bodySmall)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(200.dp)
+                                .onGloballyPositioned { containerWidthPx = it.size.width.toFloat() }
+                                .clip(RoundedCornerShape(44.dp))
+                                .background(Color.Gray.copy(alpha = 0.1f))
+                                .pointerInput(Unit) {
+                                    detectTransformGestures { _, pan, zoom, _ ->
+                                        scale = (scale * zoom).coerceIn(0.5f, 5f)
+                                        offset += pan
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Image(
+                                bitmap = originalBitmap!!.asImageBitmap(),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .graphicsLayer(
+                                        scaleX = scale,
+                                        scaleY = scale,
+                                        translationX = offset.x,
+                                        translationY = offset.y
+                                    ),
+                                contentScale = ContentScale.Fit
+                            )
+                            
+                            Canvas(modifier = Modifier.fillMaxSize()) {
+                                drawRect(
+                                    color = Color.Black.copy(alpha = 0.1f),
+                                    style = Stroke(width = 2.dp.toPx())
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    Text("Failed to load image")
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = !isLoading && originalBitmap != null,
+                onClick = {
+                    originalBitmap?.let { bitmap ->
+                        val outputSize = 512
+                        val cropped = Bitmap.createBitmap(outputSize, outputSize, Bitmap.Config.ARGB_8888)
+                        val canvas = android.graphics.Canvas(cropped)
+                        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                            isFilterBitmap = true
+                            isDither = true
+                        }
+                        val matrix = Matrix()
+                        val baseScale = containerWidthPx / Math.max(bitmap.width.toFloat(), bitmap.height.toFloat())
+                        val totalScale = scale * baseScale * (outputSize / containerWidthPx)
+                        matrix.postTranslate(-bitmap.width / 2f, -bitmap.height / 2f)
+                        matrix.postScale(totalScale, totalScale)
+                        val userOffsetX = offset.x * (outputSize / containerWidthPx)
+                        val userOffsetY = offset.y * (outputSize / containerWidthPx)
+                        matrix.postTranslate(outputSize / 2f + userOffsetX, outputSize / 2f + userOffsetY)
+                        canvas.drawBitmap(bitmap, matrix, paint)
+                        onConfirm(cropped)
+                    }
+                }
+            ) {
+                Text(stringResource(R.string.apply))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+        }
+    )
 }

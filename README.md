@@ -85,7 +85,7 @@
 app/src/main/java/com/liferlighdow/iteration/
 ├── MainActivity.kt        # Entry point, Desktop (Pager), Dock, & App Library
 ├── MainViewModel.kt       # State machine, layout logic, and data orchestration
-├── LiquidGlassDock.kt     # NEW: Backdrop-powered real-time glassmorphism engine
+├── LiquidGlass.kt         # Backdrop-powered real-time glassmorphism engine
 ├── AppRepository.kt      # System package querying and metadata extraction
 ├── AppModel.kt           # Domain models for Apps, Folders, and Widgets
 ├── IconProcessor.kt      # Complex bitmap manipulation & M3 tinting logic

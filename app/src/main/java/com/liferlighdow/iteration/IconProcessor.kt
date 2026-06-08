@@ -24,12 +24,21 @@ class IconProcessor(private val context: Context) {
         val canvas = Canvas(b)
         
         if (icon != null) {
+            // 檢查是否支援 Material You (Monochrome 模式)
+            val supportsMonochrome = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && icon is AdaptiveIconDrawable) {
+                icon.monochrome != null
+            } else false
+
+            // 如果不支援 Monochrome 且開啟了 Themed 模式，則強制降級為 Standard + 非 Themed
+            val effectiveIsThemed = if (isThemed && !supportsMonochrome) false else isThemed
+            val effectiveStyle = if (isThemed && !supportsMonochrome) IconStyle.STANDARD else style
+
             val scale = 1.4f
             val scaledSize = (sizePx * scale).toInt()
             val offset = (sizePx - scaledSize) / 2
 
             // 提前提取 M3 顏色資訊
-            val m3Colors = if (isThemed && themeColors != null) {
+            val m3Colors = if (effectiveIsThemed && themeColors != null) {
                 val p = themeColors.primary
                 val op = themeColors.onPrimary
                 val m3 = Color.argb(255, (p.red * 255).toInt(), (p.green * 255).toInt(), (p.blue * 255).toInt())
@@ -41,15 +50,15 @@ class IconProcessor(private val context: Context) {
             val m3OnColor = m3Colors?.second
 
             // 1. 決定背景顏色
-            val bgColor = if (isThemed && m3Color != null) {
-                when (style) {
+            val bgColor = if (effectiveIsThemed && m3Color != null) {
+                when (effectiveStyle) {
                     IconStyle.STANDARD -> m3Color
-                    IconStyle.BLACK -> mixColors(Color.BLACK, m3Color, 0.3f) // 30% M3 明度
+                    IconStyle.BLACK -> mixColors(Color.BLACK, m3Color, 0.3f) 
                     IconStyle.WHITE -> mixColors(Color.WHITE, m3Color, 0.5f)
-                    IconStyle.GLASS -> mixColors(Color.argb(100, 255, 255, 255), m3Color, 0.15f) // 玻璃質感底座
+                    IconStyle.GLASS -> mixColors(Color.argb(100, 255, 255, 255), m3Color, 0.15f)
                 }
             } else {
-                when (style) {
+                when (effectiveStyle) {
                     IconStyle.STANDARD -> null 
                     IconStyle.BLACK -> Color.BLACK
                     IconStyle.WHITE -> Color.WHITE
@@ -58,15 +67,15 @@ class IconProcessor(private val context: Context) {
             }
 
             // 2. 決定前景顏色 (ColorFilter)
-            val fgColor = if (isThemed && m3Colors != null) {
-                when (style) {
+            val fgColor = if (effectiveIsThemed && m3Colors != null) {
+                when (effectiveStyle) {
                     IconStyle.STANDARD -> m3OnColor
-                    IconStyle.BLACK -> mixColors(Color.WHITE, m3Color!!, 0.3f) // 30% M3 + 70% 白色
+                    IconStyle.BLACK -> mixColors(Color.WHITE, m3Color!!, 0.3f)
                     IconStyle.WHITE -> Color.BLACK
-                    IconStyle.GLASS -> m3Color // Glass 模式下前景色直接使用 M3 主色
+                    IconStyle.GLASS -> m3Color
                 }
             } else {
-                when (style) {
+                when (effectiveStyle) {
                     IconStyle.STANDARD -> null
                     IconStyle.BLACK -> Color.WHITE
                     IconStyle.WHITE -> Color.BLACK
@@ -108,7 +117,11 @@ class IconProcessor(private val context: Context) {
 
                 if (!drawn) {
                     icon.foreground?.let {
-                        it.colorFilter = filter
+                        // 只有當 effectiveIsThemed 為 true 或是非 Standard 樣式時才套用 filter
+                        // 這裡加上一個保險，確保如果不支援 Monochrome 就不會被強制變色
+                        if (effectiveIsThemed || effectiveStyle != IconStyle.STANDARD) {
+                            it.colorFilter = filter
+                        }
                         it.setBounds(offset, offset, offset + scaledSize, offset + scaledSize)
                         it.draw(canvas)
                         it.colorFilter = null
@@ -119,7 +132,6 @@ class IconProcessor(private val context: Context) {
                 if (bgColor != null) {
                     val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG)
                     bgPaint.color = bgColor
-                    // 繪製一個圓角矩形作為背景，模擬 Adaptive Icon
                     canvas.drawRoundRect(0f, 0f, sizePx.toFloat(), sizePx.toFloat(), sizePx * 0.2f, sizePx * 0.2f, bgPaint)
                 }
                 

@@ -1,5 +1,6 @@
 package com.liferlighdow.iteration
 
+import android.content.ContentUris
 import android.app.WallpaperManager
 import android.content.ComponentName
 import android.content.Intent
@@ -642,39 +643,45 @@ fun WideCalendarWidget(displayMode: WidgetDisplayMode, modifier: Modifier = Modi
                     set(Calendar.HOUR_OF_DAY, 0)
                     set(Calendar.MINUTE, 0)
                     set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
                 }.timeInMillis
                 val endOfDay = Calendar.getInstance().apply {
                     set(Calendar.HOUR_OF_DAY, 23)
                     set(Calendar.MINUTE, 59)
                     set(Calendar.SECOND, 59)
+                    set(Calendar.MILLISECOND, 999)
                 }.timeInMillis
 
+                // 使用 Instances 查詢，這能正確處理重複性行程與跨日行程
+                val builder = CalendarContract.Instances.CONTENT_URI.buildUpon()
+                ContentUris.appendId(builder, startOfDay)
+                ContentUris.appendId(builder, endOfDay)
+
                 val projection = arrayOf(
-                    CalendarContract.Events.TITLE,
-                    CalendarContract.Events.DTSTART,
-                    CalendarContract.Events.DTEND
+                    CalendarContract.Instances.TITLE,
+                    CalendarContract.Instances.BEGIN,
+                    CalendarContract.Instances.END
                 )
-                val selection = "${CalendarContract.Events.DTSTART} >= ? AND ${CalendarContract.Events.DTSTART} <= ?"
-                val selectionArgs = arrayOf(startOfDay.toString(), endOfDay.toString())
 
                 context.contentResolver.query(
-                    CalendarContract.Events.CONTENT_URI,
+                    builder.build(),
                     projection,
-                    selection,
-                    selectionArgs,
-                    "${CalendarContract.Events.DTSTART} ASC"
+                    null,
+                    null,
+                    "${CalendarContract.Instances.BEGIN} ASC"
                 )?.use { cursor ->
-                    val titleIdx = cursor.getColumnIndex(CalendarContract.Events.TITLE)
-                    val startIdx = cursor.getColumnIndex(CalendarContract.Events.DTSTART)
+                    val titleIdx = cursor.getColumnIndex(CalendarContract.Instances.TITLE)
+                    val startIdx = cursor.getColumnIndex(CalendarContract.Instances.BEGIN)
 
                     val list = mutableListOf<CalendarEvent>()
-                    while (cursor.moveToNext()) {
-                        list.add(CalendarEvent(
-                            cursor.getString(titleIdx) ?: "No Title",
-                            cursor.getLong(startIdx),
-                            0L // End time not strictly used here
-                        ))
+                    if (titleIdx != -1 && startIdx != -1) {
+                        while (cursor.moveToNext()) {
+                            val title = cursor.getString(titleIdx) ?: "No Title"
+                            val startTime = cursor.getLong(startIdx)
+                            list.add(CalendarEvent(title, startTime, 0L))
+                        }
                     }
+
                     withContext(Dispatchers.Main) {
                         events.clear()
                         events.addAll(list)
@@ -689,7 +696,7 @@ fun WideCalendarWidget(displayMode: WidgetDisplayMode, modifier: Modifier = Modi
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .fillMaxHeight(),
+            .aspectRatio(2f),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor)
     ) {
@@ -745,7 +752,7 @@ fun WideCalendarWidget(displayMode: WidgetDisplayMode, modifier: Modifier = Modi
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(events) { event ->
+                        items(events, key = { it.title + it.startTime }) { event ->
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(modifier = Modifier.size(4.dp, 16.dp).clip(CircleShape).background(accentColor))
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -1011,7 +1018,12 @@ fun LauncherScreen(
     val dockPkgNames by viewModel.dockPackageNames.collectAsState()
     val isEditMode by viewModel.isEditMode.collectAsState()
     val minusOneWidgets by viewModel.minusOneWidgets.collectAsState()
+    val isLiquidGlassEnabled by viewModel.isLiquidGlassEnabled.collectAsState()
     val isLiquidGlassDockEnabled by viewModel.isLiquidGlassDockEnabled.collectAsState()
+    val isLiquidGlassHomeFolderEnabled by viewModel.isLiquidGlassHomeFolderEnabled.collectAsState()
+    val isLiquidGlassAppLibraryFolderEnabled by viewModel.isLiquidGlassAppLibraryFolderEnabled.collectAsState()
+    val isLiquidGlassGlobalSearchEnabled by viewModel.isLiquidGlassGlobalSearchEnabled.collectAsState()
+    val isLiquidGlassAppLibrarySearchEnabled by viewModel.isLiquidGlassAppLibrarySearchEnabled.collectAsState()
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -1097,6 +1109,13 @@ fun LauncherScreen(
     val pageCount = 1 + desktopPageCount + (if (draggingApp != null) 2 else 1)
     val pagerState = rememberPagerState(initialPage = 1, pageCount = { pageCount })
     val scope = rememberCoroutineScope()
+    
+    // 計算精確的連續分頁位置 (例如 1.1 代表離開第一頁往第二頁滑動了 10%)
+    val continuousPage = pagerState.currentPage + pagerState.currentPageOffsetFraction
+    
+    // 讓 Dock 顯示的條件更嚴苛，只要離開主畫面區域 15% (0.15f) 就開始隱藏
+    // 主畫面分頁範圍是 1 到 desktopPageCount
+    val showDockAndIndicator = continuousPage > 0.85f && continuousPage < (desktopPageCount + 0.15f)
     
     val isMinusOnePage = pagerState.currentPage == 0
     val isAppLibraryPage = pagerState.currentPage == pageCount - 1
@@ -1184,7 +1203,9 @@ fun LauncherScreen(
                                 columns = columns, rows = rows, iconSize = iconSize,
                                 isEditMode = isEditMode,
                                 viewModel = viewModel,
-                                pageOffset = pageOffset, // 傳入偏移量
+                                pageOffset = pageOffset,
+                                isLiquidGlass = isLiquidGlassEnabled && isLiquidGlassHomeFolderEnabled,
+                                backdrop = backdrop,
                                 draggingApp = draggingApp,
                                 confirmedHoveredSlotIdx = if (confirmedHoveredKey?.startsWith("$pageIndex-") == true)
                                     confirmedHoveredKey?.substringAfter("-")?.toInt() else null,
@@ -1257,6 +1278,9 @@ fun LauncherScreen(
                         else -> {
                             AppLibraryPage(
                                 allApps = allAppsFlat,
+                                isLiquidGlass = isLiquidGlassEnabled && isLiquidGlassAppLibraryFolderEnabled,
+                                isSearchLiquidGlass = isLiquidGlassEnabled && isLiquidGlassAppLibrarySearchEnabled,
+                                backdrop = backdrop,
                                 onAppClick = { pkg ->
                                     val app = allAppsFlat.find { it.packageName == pkg }
                                     if (app?.isFolder == true) folderToOpenId = app.uniqueId else onAppClick(pkg)
@@ -1284,7 +1308,7 @@ fun LauncherScreen(
                     scope.launch { pagerState.animateScrollToPage(1) }
                 }
                 AnimatedVisibility(
-                    visible = !isAppLibraryPage && !isMinusOnePage,
+                    visible = showDockAndIndicator,
                     enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
                     exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
                 ) {
@@ -1293,7 +1317,7 @@ fun LauncherScreen(
                         Dock(
                             apps = dockApps, 
                             iconSize = iconSize, 
-                            isLiquidGlass = isLiquidGlassDockEnabled,
+                            isLiquidGlass = isLiquidGlassEnabled && isLiquidGlassDockEnabled,
                             backdrop = backdrop,
                             onAppClick = { pkg -> if (pkg == myPackageName) onSettingsClick() else onAppClick(pkg) }, 
                             onLongClick = { showDockPicker = it }
@@ -1452,7 +1476,17 @@ fun LauncherScreen(
                     val folderPages = remember(folder.folderItems) { folder.folderItems.chunked(itemsPerPage) }
                     val folderPagerState = rememberPagerState { folderPages.size }
                     
-                    Box(modifier = Modifier.size(320.dp).clip(RoundedCornerShape(32.dp)).background(Color.White.copy(alpha = 0.25f)).padding(16.dp), contentAlignment = Alignment.TopCenter) {
+                    Box(
+                        modifier = Modifier
+                            .size(320.dp)
+                            .liquidGlass(
+                                enabled = isLiquidGlassEnabled && isLiquidGlassHomeFolderEnabled,
+                                backdrop = backdrop,
+                                cornerRadius = 32.dp
+                            )
+                            .padding(16.dp), 
+                        contentAlignment = Alignment.TopCenter
+                    ) {
                         HorizontalPager(state = folderPagerState, modifier = Modifier.fillMaxSize()) { pageIdx ->
                             val pageItems = folderPages[pageIdx]
                             Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -1461,7 +1495,14 @@ fun LauncherScreen(
                                         rowItems.forEach { app ->
                                             val lastPos = remember { object { var pos = Offset.Zero } }
                                             Box(modifier = Modifier.weight(1f).onGloballyPositioned { lastPos.pos = it.positionInRoot() }, contentAlignment = Alignment.Center) {
-                                                AppItem(app = app, onAppClick = { onAppClick(app.packageName); folderToOpenId = null }, iconSize = 58.dp, modifier = Modifier.pointerInput(app.uniqueId) { detectDragGesturesAfterLongPress(onDragStart = { offset -> draggingApp = app; touchPosition = lastPos.pos + offset; dragOffset = Offset.Zero; folderToOpenId = null }, onDrag = { _, _ -> }, onDragCancel = {}, onDragEnd = {}) })
+                                                AppItem(
+                                                    app = app, 
+                                                    onAppClick = { onAppClick(app.packageName); folderToOpenId = null }, 
+                                                    iconSize = 58.dp, 
+                                                    isLiquidGlass = isLiquidGlassEnabled && isLiquidGlassHomeFolderEnabled,
+                                                    backdrop = backdrop,
+                                                    modifier = Modifier.pointerInput(app.uniqueId) { detectDragGesturesAfterLongPress(onDragStart = { offset -> draggingApp = app; touchPosition = lastPos.pos + offset; dragOffset = Offset.Zero; folderToOpenId = null }, onDrag = { _, _ -> }, onDragCancel = {}, onDragEnd = {}) }
+                                                )
                                             }
                                         }
                                         repeat(3 - rowItems.size) { Spacer(modifier = Modifier.weight(1f)) }
@@ -1503,7 +1544,15 @@ fun LauncherScreen(
         ) {
             Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp).clickable(enabled = false) { }) {
                 OutlinedTextField(
-                    value = globalSearchQuery, onValueChange = { globalSearchQuery = it }, modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp),
+                    value = globalSearchQuery, onValueChange = { globalSearchQuery = it }, 
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 20.dp)
+                        .liquidGlass(
+                            enabled = isLiquidGlassEnabled && isLiquidGlassGlobalSearchEnabled,
+                            backdrop = backdrop,
+                            cornerRadius = 28.dp
+                        ),
                     placeholder = { Text(stringResource(R.string.search_hint), color = Color.White.copy(alpha = 0.6f)) }, 
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.White) },
                     trailingIcon = {
@@ -1586,7 +1635,9 @@ fun AppGrid(
     draggingApp: AppModel?, 
     isEditMode: Boolean,
     viewModel: MainViewModel,
-    pageOffset: Float = 0f, // 新增
+    pageOffset: Float = 0f,
+    isLiquidGlass: Boolean = false,
+    backdrop: com.kyant.backdrop.Backdrop? = null,
     confirmedHoveredSlotIdx: Int?, confirmedIntent: MainViewModel.DropType,
     onAppClick: (AppModel, Offset) -> Unit, 
     onSlotPositioned: (Int, Rect) -> Unit, 
@@ -1769,7 +1820,11 @@ fun AppGrid(
                         val context = LocalContext.current
                         Box {
                             AppItem(
-                                app = app, iconSize = iconSize, modifier = Modifier.graphicsLayer {
+                                app = app, 
+                                iconSize = iconSize, 
+                                isLiquidGlass = isLiquidGlass,
+                                backdrop = backdrop,
+                                modifier = Modifier.graphicsLayer {
                                     alpha = if (app.uniqueId == draggingUniqueId) 0f else 1f
                                     scaleX = scale; scaleY = scale
                                     if (isEditMode && app.uniqueId != draggingUniqueId) rotationZ = rotation
@@ -1806,7 +1861,15 @@ fun AppGrid(
 }
 
 @Composable
-fun AppItem(app: AppModel, modifier: Modifier = Modifier, showLabel: Boolean = true, iconSize: androidx.compose.ui.unit.Dp = 62.dp, onAppClick: (() -> Unit)? = null) {
+fun AppItem(
+    app: AppModel, 
+    modifier: Modifier = Modifier, 
+    showLabel: Boolean = true, 
+    iconSize: androidx.compose.ui.unit.Dp = 62.dp, 
+    isLiquidGlass: Boolean = false,
+    backdrop: com.kyant.backdrop.Backdrop? = null,
+    onAppClick: (() -> Unit)? = null
+) {
     val notificationCounts by NotificationService.notifications.collectAsState()
     
     // 計算通知數量：若是資料夾，則加總內部所有 App 的數量
@@ -1833,12 +1896,10 @@ fun AppItem(app: AppModel, modifier: Modifier = Modifier, showLabel: Boolean = t
                 Box(
                     modifier = Modifier
                         .size(iconSize)
-                        .clip(RoundedCornerShape(iconSize * 0.238f))
-                        .background(Color.White.copy(alpha = 0.3f))
-                        .border(
-                            width = 0.5.dp,
-                            color = Color.White.copy(alpha = 0.25f),
-                            shape = RoundedCornerShape(iconSize * 0.238f)
+                        .liquidGlass(
+                            enabled = isLiquidGlass,
+                            backdrop = backdrop,
+                            cornerRadius = iconSize * 0.238f
                         )
                         .padding(4.dp),
                     contentAlignment = Alignment.Center
@@ -1936,6 +1997,8 @@ fun Dock(
                 Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                     AppItem(
                         app = app, 
+                        isLiquidGlass = isLiquidGlass,
+                        backdrop = backdrop,
                         modifier = Modifier.combinedClickable(
                             onClick = { onAppClick(app.packageName) }, 
                             onLongClick = { onLongClick(index) }
@@ -2042,7 +2105,16 @@ fun AppPickerDialog(allApps: List<AppModel>, onDismiss: () -> Unit, onAppSelecte
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-fun AppLibraryPage(allApps: List<AppModel>, onAppClick: (String) -> Unit, onDragStart: (AppModel, Offset) -> Unit, onDrag: (Offset) -> Unit, onDragEnd: () -> Unit) {
+fun AppLibraryPage(
+    allApps: List<AppModel>, 
+    isLiquidGlass: Boolean = false,
+    isSearchLiquidGlass: Boolean = false,
+    backdrop: com.kyant.backdrop.Backdrop? = null,
+    onAppClick: (String) -> Unit, 
+    onDragStart: (AppModel, Offset) -> Unit, 
+    onDrag: (Offset) -> Unit, 
+    onDragEnd: () -> Unit
+) {
     var searchQuery by remember { mutableStateOf("") }
     var isSearchFocused by remember { mutableStateOf(false) }
     var selectedCategory by remember { mutableStateOf<String?>(null) }
@@ -2095,7 +2167,14 @@ fun AppLibraryPage(allApps: List<AppModel>, onAppClick: (String) -> Unit, onDrag
             OutlinedTextField(
                 value = searchQuery, 
                 onValueChange = { searchQuery = it }, 
-                modifier = Modifier.weight(1f).onFocusChanged { isSearchFocused = it.isFocused }, 
+                modifier = Modifier
+                    .weight(1f)
+                    .onFocusChanged { isSearchFocused = it.isFocused }
+                    .liquidGlass(
+                        enabled = isSearchLiquidGlass,
+                        backdrop = backdrop,
+                        cornerRadius = 28.dp
+                    ),
                 placeholder = { 
                     Text(
                         if (selectedCategory != null) "Search in $selectedCategory" else stringResource(R.string.library_hint), 
@@ -2224,7 +2303,16 @@ fun AppLibraryPage(allApps: List<AppModel>, onAppClick: (String) -> Unit, onDrag
                     folderList.addAll(categories)
                     if (showHiddenFolder) folderList.add("Hidden Apps" to hiddenApps)
                     items(folderList) { (name, apps) ->
-                        AppLibraryFolder(name = name, apps = apps, isLocked = name == "Hidden Apps" && !isHiddenUnlocked, onAppClick = { if (name == "Hidden Apps" && !isHiddenUnlocked) showPasswordDialog = true else onAppClick(it) }, onMoreClick = { if (name == "Hidden Apps" && !isHiddenUnlocked) showPasswordDialog = true else selectedCategory = name }, onDragStart = onDragStart, onDrag = onDrag, onDragEnd = onDragEnd)
+                        AppLibraryFolder(
+                            name = name, 
+                            apps = apps, 
+                            isLiquidGlass = isLiquidGlass,
+                            backdrop = backdrop,
+                            isLocked = name == "Hidden Apps" && !isHiddenUnlocked, 
+                            onAppClick = { if (name == "Hidden Apps" && !isHiddenUnlocked) showPasswordDialog = true else onAppClick(it) }, 
+                            onMoreClick = { if (name == "Hidden Apps" && !isHiddenUnlocked) showPasswordDialog = true else selectedCategory = name }, 
+                            onDragStart = onDragStart, onDrag = onDrag, onDragEnd = onDragEnd
+                        )
                     }
                 }
             }
@@ -2240,12 +2328,33 @@ fun AppLibraryPage(allApps: List<AppModel>, onAppClick: (String) -> Unit, onDrag
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-fun AppLibraryFolder(name: String, apps: List<AppModel>, onAppClick: (String) -> Unit, onMoreClick: () -> Unit, onDragStart: (AppModel, Offset) -> Unit, onDrag: (Offset) -> Unit, onDragEnd: () -> Unit, modifier: Modifier = Modifier, isLocked: Boolean = false) {
+fun AppLibraryFolder(
+    name: String, 
+    apps: List<AppModel>, 
+    isLiquidGlass: Boolean = false,
+    backdrop: com.kyant.backdrop.Backdrop? = null,
+    onAppClick: (String) -> Unit, 
+    onMoreClick: () -> Unit, 
+    onDragStart: (AppModel, Offset) -> Unit, 
+    onDrag: (Offset) -> Unit, 
+    onDragEnd: () -> Unit, 
+    modifier: Modifier = Modifier, 
+    isLocked: Boolean = false
+) {
     val viewModel: MainViewModel = viewModel()
     val context = LocalContext.current
 
     Column(modifier = modifier) {
-        Box(modifier = Modifier.aspectRatio(1f).background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(24.dp)).padding(12.dp)) {
+        Box(
+            modifier = Modifier
+                .aspectRatio(1f)
+                .liquidGlass(
+                    enabled = isLiquidGlass,
+                    backdrop = backdrop,
+                    cornerRadius = 24.dp
+                )
+                .padding(12.dp)
+        ) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {

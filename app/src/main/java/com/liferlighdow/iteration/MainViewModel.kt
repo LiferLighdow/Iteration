@@ -70,8 +70,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
     private val _isThemedIconsEnabled = MutableStateFlow(prefs.getBoolean("themed_icons", false))
     val isThemedIconsEnabled = _isThemedIconsEnabled.asStateFlow()
 
+    private val _isLiquidGlassEnabled = MutableStateFlow(prefs.getBoolean("liquid_glass_enabled", false))
+    val isLiquidGlassEnabled = _isLiquidGlassEnabled.asStateFlow()
+
     private val _isLiquidGlassDockEnabled = MutableStateFlow(prefs.getBoolean("liquid_glass_dock", false))
     val isLiquidGlassDockEnabled = _isLiquidGlassDockEnabled.asStateFlow()
+
+    private val _isLiquidGlassHomeFolderEnabled = MutableStateFlow(prefs.getBoolean("liquid_glass_home_folder", false))
+    val isLiquidGlassHomeFolderEnabled = _isLiquidGlassHomeFolderEnabled.asStateFlow()
+
+    private val _isLiquidGlassAppLibraryFolderEnabled = MutableStateFlow(prefs.getBoolean("liquid_glass_app_library_folder", false))
+    val isLiquidGlassAppLibraryFolderEnabled = _isLiquidGlassAppLibraryFolderEnabled.asStateFlow()
+
+    private val _isLiquidGlassGlobalSearchEnabled = MutableStateFlow(prefs.getBoolean("liquid_glass_global_search", false))
+    val isLiquidGlassGlobalSearchEnabled = _isLiquidGlassGlobalSearchEnabled.asStateFlow()
+
+    private val _isLiquidGlassAppLibrarySearchEnabled = MutableStateFlow(prefs.getBoolean("liquid_glass_app_library_search", false))
+    val isLiquidGlassAppLibrarySearchEnabled = _isLiquidGlassAppLibrarySearchEnabled.asStateFlow()
 
     private val _iconStyle = MutableStateFlow(
         try { IconStyle.valueOf(prefs.getString("icon_style", "STANDARD") ?: "STANDARD") }
@@ -82,6 +97,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
     private val hiddenPackages = mutableSetOf<String>()
     private val customLabels = mutableMapOf<String, String>()
     private val customCategories = mutableMapOf<String, String>()
+    private val categoryRenames = mutableMapOf<String, String>()
     private val _userCategories = MutableStateFlow<List<String>>(emptyList())
     val userCategories: StateFlow<List<String>> = _userCategories.asStateFlow()
 
@@ -164,19 +180,33 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
         loadCustomLabels()
         loadUserCategories()
         loadCustomCategories()
+        loadCategoryRenames()
         loadWidgets()
         loadDock()
         
-        // 關鍵：重新從 Prefs 讀取樣式設定並偵測變化
+        // 重新讀取所有可能在 SettingsActivity 中改變的設定
         val savedStyleStr = prefs.getString("icon_style", "STANDARD") ?: "STANDARD"
         val newStyle = try { IconStyle.valueOf(savedStyleStr) } catch (e: Exception) { IconStyle.STANDARD }
         val newThemed = prefs.getBoolean("themed_icons", false)
+        val newLiquidEnabled = prefs.getBoolean("liquid_glass_enabled", false)
+        val newLiquidDockEnabled = prefs.getBoolean("liquid_glass_dock", false)
+        val newLiquidHomeFolderEnabled = prefs.getBoolean("liquid_glass_home_folder", false)
+        val newLiquidAppLibraryFolderEnabled = prefs.getBoolean("liquid_glass_app_library_folder", false)
+        val newLiquidGlobalSearchEnabled = prefs.getBoolean("liquid_glass_global_search", false)
+        val newLiquidAppLibrarySearchEnabled = prefs.getBoolean("liquid_glass_app_library_search", false)
 
         if (_iconStyle.value != newStyle || _isThemedIconsEnabled.value != newThemed) {
             _iconStyle.value = newStyle
             _isThemedIconsEnabled.value = newThemed
-            iconCache.evictAll() // 樣式改變，必須清空記憶體快取
+            iconCache.evictAll()
         }
+        
+        _isLiquidGlassEnabled.value = newLiquidEnabled
+        _isLiquidGlassDockEnabled.value = newLiquidDockEnabled
+        _isLiquidGlassHomeFolderEnabled.value = newLiquidHomeFolderEnabled
+        _isLiquidGlassAppLibraryFolderEnabled.value = newLiquidAppLibraryFolderEnabled
+        _isLiquidGlassGlobalSearchEnabled.value = newLiquidGlobalSearchEnabled
+        _isLiquidGlassAppLibrarySearchEnabled.value = newLiquidAppLibrarySearchEnabled
     }
 
     private fun saveLayout() {
@@ -399,8 +429,49 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
     }
 
     private fun loadUserCategories() {
-        val saved = prefs.getString("user_categories_ordered", "Games,Social,Work,Media,Tools")
+        val saved = prefs.getString("user_categories_ordered", null)
         _userCategories.value = saved?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
+    }
+
+    private fun loadCategoryRenames() {
+        val saved = prefs.getString("category_renames_json", null)
+        categoryRenames.clear()
+        if (saved != null) {
+            val json = JSONObject(saved)
+            json.keys().forEach { key ->
+                categoryRenames[key] = json.getString(key)
+            }
+        }
+    }
+
+    fun renameCategory(oldName: String, newName: String) {
+        if (oldName == newName || newName.isBlank()) return
+        
+        // 1. 更新重命名映射
+        categoryRenames[oldName] = newName
+        saveCategoryRenames()
+        
+        // 2. 更新排序清單中的名稱
+        val current = _userCategories.value.toMutableList()
+        val index = current.indexOf(oldName)
+        if (index != -1) {
+            current[index] = newName
+            _userCategories.value = current
+            saveUserCategories(current)
+        }
+        
+        // 3. 更新所有使用了舊名稱的 customCategories
+        val appsToUpdate = customCategories.filter { it.value == oldName }.keys
+        appsToUpdate.forEach { customCategories[it] = newName }
+        if (appsToUpdate.isNotEmpty()) saveCustomCategories()
+        
+        loadApps() // 重新載入以套用顯示名稱
+    }
+
+    private fun saveCategoryRenames() {
+        val json = JSONObject()
+        categoryRenames.forEach { (k, v) -> json.put(k, v) }
+        prefs.edit().putString("category_renames_json", json.toString()).apply()
     }
 
     private fun loadCustomCategories() {
@@ -538,9 +609,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
 
     private fun loadDock() {
         val saved = prefs.getString("dock_packages", null)
-        if (saved != null) {
-            _dockPackageNames.value = saved.split(",").filter { it.isNotBlank() }
+        val list = if (saved != null) {
+            val decoded = saved.split(",").toMutableList()
+            // 確保始終有 4 個位置
+            while (decoded.size < 4) decoded.add("")
+            decoded.take(4)
+        } else {
+            List(4) { "" }
         }
+        _dockPackageNames.value = list
     }
 
     fun loadApps() {
@@ -620,7 +697,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
                             }
                             
                             val appRes = getApplication<Application>()
-                            val displayCategory = customCategories[app.packageName] ?: when (app.category) {
+                            val rawCategory = customCategories[app.packageName] ?: when (app.category) {
                                 0 -> appRes.getString(R.string.cat_games)
                                 1 -> appRes.getString(R.string.cat_audio)
                                 2 -> appRes.getString(R.string.cat_video)
@@ -631,6 +708,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
                                 7 -> appRes.getString(R.string.cat_productivity)
                                 else -> appRes.getString(R.string.cat_other)
                             }
+                            
+                            // 套用全域重命名映射
+                            val displayCategory = categoryRenames[rawCategory] ?: rawCategory
 
                             app.copy(
                                 label = customLabels[app.packageName] ?: app.label,
@@ -668,7 +748,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
                 repaginate(processedApps)
             }
             
-            if (_dockPackageNames.value.isEmpty() && processedApps.isNotEmpty()) {
+            if (_dockPackageNames.value.all { it.isEmpty() } && processedApps.isNotEmpty()) {
                 val defaultDock = processedApps.take(4).map { it.packageName }
                 _dockPackageNames.value = defaultDock
                 prefs.edit().putString("dock_packages", defaultDock.joinToString(",")).apply()
@@ -830,13 +910,33 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
 
     private fun reorganizeAllPages(pages: MutableList<MutableList<AppModel>>) {
         val result = mutableListOf<MutableList<AppModel>>()
-        val remainingItems = pages.flatten().toMutableList()
+        var overflowItems = mutableListOf<AppModel>()
 
-        while (remainingItems.isNotEmpty()) {
+        // 逐頁處理，保留原始分頁結構，僅處理溢出部分
+        for (page in pages) {
+            val combinedItems = (overflowItems + page).toMutableList()
+            overflowItems = mutableListOf()
+            
             val pageItems = mutableListOf<AppModel>()
             var used = 0
-            val iterator = remainingItems.iterator()
+            
+            for (item in combinedItems) {
+                val itemSlots = calculateUsedSlots(listOf(item))
+                if (used + itemSlots <= pageSize) {
+                    pageItems.add(item)
+                    used += itemSlots
+                } else {
+                    overflowItems.add(item)
+                }
+            }
+            result.add(pageItems)
+        }
 
+        // 處理剩餘的溢出物件，放入新頁面
+        while (overflowItems.isNotEmpty()) {
+            val pageItems = mutableListOf<AppModel>()
+            var used = 0
+            val iterator = overflowItems.iterator()
             while (iterator.hasNext()) {
                 val item = iterator.next()
                 val itemSlots = calculateUsedSlots(listOf(item))
@@ -845,12 +945,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
                     used += itemSlots
                     iterator.remove()
                 } else if (pageItems.isEmpty()) {
-                    // 單個物件太大，強行放入避免無限迴圈
+                    // 單個物件太大，強行放入
                     pageItems.add(item)
                     iterator.remove()
                     break
                 } else {
-                    // 這一頁塞不下了，停止這一頁的填充，讓剩餘物件去下一頁
                     break
                 }
             }
@@ -879,11 +978,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
 
     fun updateDockApp(slotIndex: Int, packageName: String) {
         val current = _dockPackageNames.value.toMutableList()
-        if (slotIndex in current.indices) {
-            current[slotIndex] = packageName
-            _dockPackageNames.value = current
-            prefs.edit().putString("dock_packages", current.joinToString(",")).apply()
+        // 確保列表長度足夠
+        while (current.size <= slotIndex) {
+            current.add("")
         }
+        current[slotIndex] = packageName
+        _dockPackageNames.value = current
+        prefs.edit().putString("dock_packages", current.joinToString(",")).apply()
     }
 
     fun setEditMode(enabled: Boolean) {
@@ -904,12 +1005,44 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
         loadApps()
     }
 
+    fun setLiquidGlassEnabled(enabled: Boolean) {
+        _isLiquidGlassEnabled.value = enabled
+        prefs.edit().putBoolean("liquid_glass_enabled", enabled).apply()
+        if (enabled) {
+            updateBlurredWallpaper()
+        }
+    }
+
     fun setLiquidGlassDockEnabled(enabled: Boolean) {
         _isLiquidGlassDockEnabled.value = enabled
         prefs.edit().putBoolean("liquid_glass_dock", enabled).apply()
         if (enabled) {
             updateBlurredWallpaper() // 立即開始生成，不需要等待回到主頁
         }
+    }
+
+    fun setLiquidGlassHomeFolderEnabled(enabled: Boolean) {
+        _isLiquidGlassHomeFolderEnabled.value = enabled
+        prefs.edit().putBoolean("liquid_glass_home_folder", enabled).apply()
+        if (enabled) updateBlurredWallpaper()
+    }
+
+    fun setLiquidGlassAppLibraryFolderEnabled(enabled: Boolean) {
+        _isLiquidGlassAppLibraryFolderEnabled.value = enabled
+        prefs.edit().putBoolean("liquid_glass_app_library_folder", enabled).apply()
+        if (enabled) updateBlurredWallpaper()
+    }
+
+    fun setLiquidGlassGlobalSearchEnabled(enabled: Boolean) {
+        _isLiquidGlassGlobalSearchEnabled.value = enabled
+        prefs.edit().putBoolean("liquid_glass_global_search", enabled).apply()
+        if (enabled) updateBlurredWallpaper()
+    }
+
+    fun setLiquidGlassAppLibrarySearchEnabled(enabled: Boolean) {
+        _isLiquidGlassAppLibrarySearchEnabled.value = enabled
+        prefs.edit().putBoolean("liquid_glass_app_library_search", enabled).apply()
+        if (enabled) updateBlurredWallpaper()
     }
 
     fun createFolder(pageIndex: Int, folderName: String) {
@@ -1000,6 +1133,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
         // 1. 基礎設定
         settings.put("themed_icons", _isThemedIconsEnabled.value)
         settings.put("liquid_glass_dock", _isLiquidGlassDockEnabled.value)
+        settings.put("liquid_glass_home_folder", _isLiquidGlassHomeFolderEnabled.value)
+        settings.put("liquid_glass_app_library_folder", _isLiquidGlassAppLibraryFolderEnabled.value)
+        settings.put("liquid_glass_global_search", _isLiquidGlassGlobalSearchEnabled.value)
+        settings.put("liquid_glass_app_library_search", _isLiquidGlassAppLibrarySearchEnabled.value)
+        settings.put("liquid_glass_enabled", _isLiquidGlassEnabled.value)
         settings.put("icon_style", _iconStyle.value.name)
         settings.put("page_size", pageSize)
         settings.put("hidden_password", getPassword())
@@ -1020,6 +1158,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
         val userCats = JSONArray()
         _userCategories.value.forEach { userCats.put(it) }
         root.put("user_categories", userCats)
+
+        val renames = JSONObject()
+        categoryRenames.forEach { (k, v) -> renames.put(k, v) }
+        root.put("category_renames", renames)
         
         // 3. 佈局
         val pagesArray = JSONArray()
@@ -1068,6 +1210,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
             // 恢復基礎設定
             setThemedIconsEnabled(settings.optBoolean("themed_icons", false))
             setLiquidGlassDockEnabled(settings.optBoolean("liquid_glass_dock", false))
+            setLiquidGlassHomeFolderEnabled(settings.optBoolean("liquid_glass_home_folder", false))
+            setLiquidGlassAppLibraryFolderEnabled(settings.optBoolean("liquid_glass_app_library_folder", false))
+            setLiquidGlassGlobalSearchEnabled(settings.optBoolean("liquid_glass_global_search", false))
+            setLiquidGlassAppLibrarySearchEnabled(settings.optBoolean("liquid_glass_app_library_search", false))
+            setLiquidGlassEnabled(settings.optBoolean("liquid_glass_enabled", false))
             val savedStyle = settings.optString("icon_style", "STANDARD")
             _iconStyle.value = try { IconStyle.valueOf(savedStyle) } catch(e: Exception) { IconStyle.STANDARD }
             prefs.edit().putString("icon_style", _iconStyle.value.name).apply()
@@ -1098,6 +1245,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
             for (i in 0 until userCatsArray.length()) userCats.add(userCatsArray.getString(i))
             _userCategories.value = userCats
             saveUserCategories(userCats)
+
+            categoryRenames.clear()
+            val renames = root.optJSONObject("category_renames")
+            if (renames != null) {
+                renames.keys().forEach { categoryRenames[it] = renames.getString(it) }
+            }
+            saveCategoryRenames()
             
             // 恢復負一屏小工具
             val minusOne = mutableListOf<WidgetModel>()

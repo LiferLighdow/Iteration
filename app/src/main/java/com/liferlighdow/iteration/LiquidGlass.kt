@@ -16,13 +16,13 @@ import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
 
 /**
- * 實現極具物理感的 Liquid Glass
+ * 實現極具物理感的 Liquid Glass (用於 Folder 或 Dock)
  */
-fun Modifier.liquidGlassDock(
-    isLiquidGlass: Boolean,
-    backdrop: Backdrop,
-    cornerRadius: Dp = 42.dp
-): Modifier = if (!isLiquidGlass) {
+fun Modifier.liquidGlass(
+    enabled: Boolean,
+    backdrop: Backdrop?,
+    cornerRadius: Dp
+): Modifier = if (!enabled || backdrop == null) {
     this.drawBehind {
         val cr = cornerRadius.toPx()
         drawRoundRect(
@@ -41,7 +41,6 @@ fun Modifier.liquidGlassDock(
             blur(24f.dp.toPx()) 
 
             // 實施強烈的透鏡折射
-            // 這會讓 Dock 邊緣與主背景對接處產生明顯的「光學位移」，極大增強液態感
             lens(20f.dp.toPx(), 128f.dp.toPx()) 
         },
         onDrawSurface = {
@@ -70,3 +69,9 @@ fun Modifier.liquidGlassDock(
         }
     )
 }
+
+fun Modifier.liquidGlassDock(
+    isLiquidGlass: Boolean,
+    backdrop: Backdrop,
+    cornerRadius: Dp = 42.dp
+): Modifier = this.liquidGlass(isLiquidGlass, backdrop, cornerRadius)

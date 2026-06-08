@@ -10,10 +10,10 @@ android {
 
     defaultConfig {
         applicationId = "com.liferlighdow.iteration"
-        minSdk = 26
+        minSdk = 23
         targetSdk = 35
-        versionCode = 7
-        versionName = "1.6"
+        versionCode = 8
+        versionName = "1.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -34,7 +34,6 @@ android {
         checkReleaseBuilds = false
     }
     buildFeatures {
-        viewBinding = true
         compose = true
     }
     compileOptions {
