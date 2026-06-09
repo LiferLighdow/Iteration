@@ -38,6 +38,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = AppRepository(application)
     private val prefs = application.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
     private val iconProcessor = IconProcessor(application)
+    private val iconPackManager = IconPackManager(application)
     
     private val _blurredWallpaper = MutableStateFlow<ImageBitmap?>(null)
     val blurredWallpaper = _blurredWallpaper.asStateFlow()
@@ -80,6 +81,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _isLiquidGlassAppLibrarySearchEnabled = MutableStateFlow(prefs.getBoolean("liquid_glass_app_library_search", false))
     val isLiquidGlassAppLibrarySearchEnabled = _isLiquidGlassAppLibrarySearchEnabled.asStateFlow()
+
+    private val _iconPackPackage = MutableStateFlow(prefs.getString("icon_pack_package", "") ?: "")
+    val iconPackPackage = _iconPackPackage.asStateFlow()
 
     private val _iconStyle = MutableStateFlow(
         try { IconStyle.valueOf(prefs.getString("icon_style", "STANDARD") ?: "STANDARD") }
@@ -168,10 +172,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val newLiquidAppLibraryFolderEnabled = prefs.getBoolean("liquid_glass_app_library_folder", false)
         val newLiquidGlobalSearchEnabled = prefs.getBoolean("liquid_glass_global_search", false)
         val newLiquidAppLibrarySearchEnabled = prefs.getBoolean("liquid_glass_app_library_search", false)
+        val newIconPackPackage = prefs.getString("icon_pack_package", "") ?: ""
 
-        if (_iconStyle.value != newStyle || _isThemedIconsEnabled.value != newThemed) {
+        if (_iconStyle.value != newStyle || _isThemedIconsEnabled.value != newThemed || _iconPackPackage.value != newIconPackPackage) {
             _iconStyle.value = newStyle
             _isThemedIconsEnabled.value = newThemed
+            _iconPackPackage.value = newIconPackPackage
             iconCache.evictAll()
         }
         
@@ -602,8 +608,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         
         val isThemed = _isThemedIconsEnabled.value
         val currentStyle = _iconStyle.value
+        val currentIconPack = _iconPackPackage.value
 
         viewModelScope.launch {
+            if (currentIconPack.isNotEmpty()) {
+                withContext(Dispatchers.IO) {
+                    iconPackManager.loadIconPack(currentIconPack)
+                }
+            }
+
             val rawApps = withContext(Dispatchers.IO) {
                 repository.getInstalledApps()
             }
@@ -642,7 +655,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             val customIconFile = File(customIconDir, "${app.packageName}.png")
                             
                             // 關鍵：快取檔名現在包含顏色數值，桌布一換，快取即失效
-                            val styleSuffix = "${currentStyle.name}_${if (isThemed) "T_$colorKey" else "N"}"
+                            val styleSuffix = if (currentIconPack.isNotEmpty()) {
+                                "IP_${currentIconPack.hashCode()}"
+                            } else {
+                                "${currentStyle.name}_${if (isThemed) "T_$colorKey" else "N"}"
+                            }
+                            
                             val diskCacheFile = File(processedIconCacheDir, "${app.packageName}_$styleSuffix.png")
                             
                             val cacheKey = "${app.packageName}_$styleSuffix"
@@ -658,13 +676,35 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                     iconCache.put(cacheKey, imageBitmap)
                                     imageBitmap
                                 } else {
-                                    val processed = iconProcessor.processIcon(app.icon, isThemed, themeColors, currentStyle, sizePx)
+                                    val processed = if (currentIconPack.isNotEmpty()) {
+                                        val ipIcon = iconPackManager.getIcon(app.packageName)
+                                        if (ipIcon != null) {
+                                            ipIcon.toBitmap(sizePx, sizePx).asImageBitmap()
+                                        } else {
+                                            // 既然使用者說「有用 icon pack 就沒有造型功能」，
+                                            // 那麼沒配對到的 App 我們就直接給它原始圖示，不做 glass 等處理
+                                            app.icon?.toBitmap(sizePx, sizePx)?.asImageBitmap() 
+                                                ?: iconProcessor.processIcon(app.icon, isThemed, themeColors, currentStyle, sizePx)
+                                        }
+                                    } else {
+                                        iconProcessor.processIcon(app.icon, isThemed, themeColors, currentStyle, sizePx)
+                                    }
                                     saveIconToDisk(processed, diskCacheFile)
                                     iconCache.put(cacheKey, processed)
                                     processed
                                 }
                             } else {
-                                val processedIconBitmap = iconProcessor.processIcon(app.icon, isThemed, themeColors, currentStyle, sizePx)
+                                val processedIconBitmap = if (currentIconPack.isNotEmpty()) {
+                                    val ipIcon = iconPackManager.getIcon(app.packageName)
+                                    if (ipIcon != null) {
+                                        ipIcon.toBitmap(sizePx, sizePx).asImageBitmap()
+                                    } else {
+                                        app.icon?.toBitmap(sizePx, sizePx)?.asImageBitmap() 
+                                            ?: iconProcessor.processIcon(app.icon, isThemed, themeColors, currentStyle, sizePx)
+                                    }
+                                } else {
+                                    iconProcessor.processIcon(app.icon, isThemed, themeColors, currentStyle, sizePx)
+                                }
                                 saveIconToDisk(processedIconBitmap, diskCacheFile)
                                 iconCache.put(cacheKey, processedIconBitmap)
                                 processedIconBitmap
@@ -992,6 +1032,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         iconCache.evictAll()
         loadApps()
     }
+
+    fun setIconPack(packageName: String) {
+        _iconPackPackage.value = packageName
+        prefs.edit().putString("icon_pack_package", packageName).apply()
+        iconCache.evictAll()
+        loadApps()
+    }
+
+    fun getInstalledIconPacks() = iconPackManager.getInstalledIconPacks()
 
     fun setLiquidGlassEnabled(enabled: Boolean) {
         _isLiquidGlassEnabled.value = enabled

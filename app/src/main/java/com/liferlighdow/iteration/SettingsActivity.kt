@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -350,6 +351,9 @@ fun IconThemeScreen(onBack: () -> Unit) {
     val viewModel: MainViewModel = viewModel()
     val isThemedIconsEnabled by viewModel.isThemedIconsEnabled.collectAsState()
     val currentStyle by viewModel.iconStyle.collectAsState()
+    val currentIconPack by viewModel.iconPackPackage.collectAsState()
+    
+    var showIconPackPicker by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -365,16 +369,44 @@ fun IconThemeScreen(onBack: () -> Unit) {
     ) { innerPadding ->
         LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
             item {
+                Text(
+                    text = "Icon Pack",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+            item {
+                val iconPacks = remember { viewModel.getInstalledIconPacks() }
+                val currentPackName = remember(currentIconPack, iconPacks) {
+                    if (currentIconPack.isEmpty()) "Default"
+                    else iconPacks.find { it.packageName == currentIconPack }?.label ?: "Unknown"
+                }
+
+                ListItem(
+                    headlineContent = { Text("Current Pack") },
+                    supportingContent = { Text(currentPackName) },
+                    trailingContent = { Icon(Icons.Default.ChevronRight, null) },
+                    modifier = Modifier.clickable { showIconPackPicker = true }
+                )
+            }
+
+            item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
+
+            item {
                 ListItem(
                     headlineContent = { Text("Themed Icons (M3)") },
                     supportingContent = { Text("Apply dynamic colors from your wallpaper to icons") },
                     trailingContent = {
                         Switch(
+                            enabled = currentIconPack.isEmpty(),
                             checked = isThemedIconsEnabled,
                             onCheckedChange = { viewModel.setThemedIconsEnabled(it) }
                         )
                     },
-                    modifier = Modifier.clickable { viewModel.setThemedIconsEnabled(!isThemedIconsEnabled) }
+                    modifier = Modifier.clickable(enabled = currentIconPack.isEmpty()) { 
+                        viewModel.setThemedIconsEnabled(!isThemedIconsEnabled) 
+                    }
                 )
             }
             
@@ -382,9 +414,9 @@ fun IconThemeScreen(onBack: () -> Unit) {
             
             item {
                 Text(
-                    text = "Icon Style",
+                    text = "Iteration Style",
                     style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = if (currentIconPack.isEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
             }
@@ -401,12 +433,75 @@ fun IconThemeScreen(onBack: () -> Unit) {
                     headlineContent = { Text(label) },
                     trailingContent = {
                         RadioButton(
-                            selected = currentStyle == style,
+                            enabled = currentIconPack.isEmpty(),
+                            selected = currentStyle == style && currentIconPack.isEmpty(),
                             onClick = { viewModel.setIconStyle(style) }
                         )
                     },
-                    modifier = Modifier.clickable { viewModel.setIconStyle(style) }
+                    modifier = Modifier.clickable(enabled = currentIconPack.isEmpty()) { 
+                        viewModel.setIconStyle(style) 
+                    }
                 )
+            }
+
+            if (currentIconPack.isNotEmpty()) {
+                item {
+                    Text(
+                        text = "Note: Iteration styles and Themed Icons are disabled when an Icon Pack is active.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
+            }
+        }
+    }
+
+    if (showIconPackPicker) {
+        IconPackPickerDialog(
+            onDismiss = { showIconPackPicker = false },
+            onPackSelected = { pkg ->
+                viewModel.setIconPack(pkg)
+                showIconPackPicker = false
+            }
+        )
+    }
+}
+
+@Composable
+fun IconPackPickerDialog(onDismiss: () -> Unit, onPackSelected: (String) -> Unit) {
+    val viewModel: MainViewModel = viewModel()
+    val iconPacks = remember { viewModel.getInstalledIconPacks() }
+
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier.fillMaxWidth().fillMaxHeight(0.8f),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Select Icon Pack", style = MaterialTheme.typography.headlineSmall)
+                Spacer(modifier = Modifier.height(16.dp))
+                LazyColumn {
+                    item {
+                        ListItem(
+                            headlineContent = { Text("Default (System + Iteration Style)") },
+                            modifier = Modifier.clickable { onPackSelected("") }
+                        )
+                    }
+                    items(iconPacks) { pack ->
+                        ListItem(
+                            headlineContent = { Text(pack.label) },
+                            leadingContent = {
+                                Image(
+                                    bitmap = pack.icon.toBitmap().asImageBitmap(),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp))
+                                )
+                            },
+                            modifier = Modifier.clickable { onPackSelected(pack.packageName) }
+                        )
+                    }
+                }
             }
         }
     }

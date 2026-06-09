@@ -23,7 +23,12 @@
     *   **3D Bevel Border**: Multi-layered stroke simulating environment light reflection and shadow.
     *   **Wallpaper Parallax (New)**: Gyroscope-based 3D motion effect for the home screen background.
     *   **Readability Layer**: Subtle intelligent overlay to ensure text contrast on any wallpaper.
-*   **Icon Styles (New)**: Choose from 4 distinct presets:
+*   **Icon Pack Support (New)**: Comprehensive support for third-party icon packs. Features:
+    *   **Broad Compatibility**: Compatible with Nova, ADW, and Go Launcher theme formats.
+    *   **AppFilter Parsing**: High-speed XML parsing for precise icon mapping.
+    *   **Smart Fallback**: Automatically falls back to system icons or Iteration styles for unsupported apps.
+    *   **Selective Mode**: Switch between "Icon Pack" and "Iteration Style" (Glass/Material You) for a cleaner UI experience.
+*   **Icon Styles (New)**: Choose from 4 distinct presets (when not using an Icon Pack):
     *   **Standard**: The classic look or Material You (M3) dynamic colors.
     *   **Black**: Deep midnight aesthetics. M3 mode features 20% tint backgrounds and neon-like foregrounds.
     *   **White**: Crisp and clean. White backgrounds with subtle M3 tints.
@@ -73,7 +78,7 @@
 *   **Multi-Layer Icon Processing**: Decouples icon fetching, processing (tinting/masking), and caching.
 *   **Advanced Three-Level Caching**: 
     *   **Memory (LruCache)**: Instant access to recently used `ImageBitmaps`.
-    *   **Color-Aware Disk Cache**: Persistent cache for processed icons. Filenames are keyed by **PackageName + Style + PrimaryColorHex**, ensuring instant updates when wallpaper or styles change.
+    *   **Color-Aware Disk Cache**: Persistent cache for processed icons. Filenames are keyed by **PackageName + Style + PrimaryColorHex** (or **IconPackID**), ensuring instant updates when wallpaper or styles change.
 *   **ProGuard/R8 Optimized**: Custom rules to preserve ViewModel constructors, Data Models, and Enum logic, ensuring a crash-free **Release APK** experience.
 *   **Optimized Recomposition**: Leverages stable `keys` and `remembered` states.
 
@@ -96,7 +101,8 @@ app/src/main/java/com/liferlighdow/iteration/
 ├── AppRepository.kt      # System package querying and metadata extraction
 ├── AppModel.kt           # Domain models for Apps, Folders, and Widgets
 ├── IconProcessor.kt      # Complex bitmap manipulation & M3 tinting logic
-├── IconStyle.kt          # NEW: Style definitions (Standard, Black, White, Glass)
+├── IconPackManager.kt    # NEW: Third-party icon pack parsing and extraction
+├── IconStyle.kt          # Style definitions (Standard, Black, White, Glass)
 ├── SettingsActivity.kt    # Preferences, Customization UI, & Backup Tools
 └── NotificationService.kt # Background listener for real-time app badges
 ```
