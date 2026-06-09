@@ -1,5 +1,7 @@
 package com.liferlighdow.iteration
 
+import android.app.WallpaperManager
+import android.content.ComponentName
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -420,7 +422,6 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
     val isLiquidGlassAppLibraryFolderEnabled by viewModel.isLiquidGlassAppLibraryFolderEnabled.collectAsState()
     val isLiquidGlassGlobalSearchEnabled by viewModel.isLiquidGlassGlobalSearchEnabled.collectAsState()
     val isLiquidGlassAppLibrarySearchEnabled by viewModel.isLiquidGlassAppLibrarySearchEnabled.collectAsState()
-    val isParallaxEnabled by viewModel.isParallaxEnabled.collectAsState()
 
     Scaffold(
         topBar = {
@@ -435,29 +436,6 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
         }
     ) { innerPadding ->
         LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-            item {
-                Text(
-                    text = "Wallpaper Effects",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
-            }
-            item {
-                ListItem(
-                    headlineContent = { Text("Wallpaper Parallax") },
-                    supportingContent = { Text("Move wallpaper based on phone tilt") },
-                    trailingContent = {
-                        Switch(
-                            checked = isParallaxEnabled,
-                            onCheckedChange = { viewModel.setParallaxEnabled(it) }
-                        )
-                    },
-                    modifier = Modifier.clickable { viewModel.setParallaxEnabled(!isParallaxEnabled) }
-                )
-            }
-            item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
-
             item {
                 ListItem(
                     headlineContent = { Text("Enable Liquid Glass") },

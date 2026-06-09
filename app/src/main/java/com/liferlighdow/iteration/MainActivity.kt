@@ -143,7 +143,7 @@ fun calculateOverlap(r1: Rect, r2: Rect): Float {
 
 @Composable
 fun BatteryWidget(displayMode: WidgetDisplayMode, modifier: Modifier = Modifier) {
-    val context = LocalContext.current
+    val mContext = LocalContext.current
     var batteryLevel by remember { mutableStateOf(0) }
     var isCharging by remember { mutableStateOf(false) }
 
@@ -166,8 +166,8 @@ fun BatteryWidget(displayMode: WidgetDisplayMode, modifier: Modifier = Modifier)
                 isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
             }
         }
-        context.registerReceiver(receiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-        onDispose { context.unregisterReceiver(receiver) }
+        mContext.registerReceiver(receiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        onDispose { mContext.unregisterReceiver(receiver) }
     }
 
     Card(
@@ -220,7 +220,7 @@ fun BatteryWidget(displayMode: WidgetDisplayMode, modifier: Modifier = Modifier)
 @Composable
 fun AnalogClockWidget(displayMode: WidgetDisplayMode, modifier: Modifier = Modifier) {
     var time by remember { mutableStateOf(Calendar.getInstance()) }
-    val context = LocalContext.current
+    val mContext = LocalContext.current
 
     val containerColor = when (displayMode) {
         WidgetDisplayMode.GLASS -> Color.White.copy(alpha = 0.2f)
@@ -376,9 +376,9 @@ fun PhotoWidget(widget: WidgetModel, viewModel: MainViewModel, modifier: Modifie
 
 @Composable
 fun ImageCropDialog(uri: Uri, isWide: Boolean, onDismiss: () -> Unit, onConfirm: (Bitmap) -> Unit) {
-    val context = LocalContext.current
+    val mContext = LocalContext.current
     val originalBitmap = remember(uri) {
-        context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
+        mContext.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
     } ?: return
 
     var scale by remember { mutableFloatStateOf(1f) }
@@ -605,14 +605,14 @@ fun StandardCalendarWidget(displayMode: WidgetDisplayMode, modifier: Modifier = 
 
 @Composable
 fun WideCalendarWidget(displayMode: WidgetDisplayMode, modifier: Modifier = Modifier) {
-    val context = LocalContext.current
+    val mContext = LocalContext.current
     val events = remember { mutableStateListOf<CalendarEvent>() }
     
     // 權限狀態追蹤
     var hasPermission by remember {
         mutableStateOf(
             androidx.core.content.ContextCompat.checkSelfPermission(
-                context,
+                mContext,
                 android.Manifest.permission.READ_CALENDAR
             ) == android.content.pm.PackageManager.PERMISSION_GRANTED
         )
@@ -663,7 +663,7 @@ fun WideCalendarWidget(displayMode: WidgetDisplayMode, modifier: Modifier = Modi
                     CalendarContract.Instances.END
                 )
 
-                context.contentResolver.query(
+                mContext.contentResolver.query(
                     builder.build(),
                     projection,
                     null,
@@ -847,7 +847,7 @@ fun MinusOnePage(
     onUpdateWidgetMode: (String, WidgetDisplayMode) -> Unit
 ) {
     var isReorderMode by remember { mutableStateOf(false) }
-    val context = LocalContext.current
+    val mContext = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -906,13 +906,13 @@ fun MinusOnePage(
                                             val intent = Intent(android.provider.AlarmClock.ACTION_SHOW_ALARMS).apply {
                                                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
                                             }
-                                            context.startActivity(intent)
+                                            mContext.startActivity(intent)
                                         } catch (e: Exception) {
                                             try {
-                                                val pm = context.packageManager
+                                                val pm = mContext.packageManager
                                                 val fallbackIntent = pm.getLaunchIntentForPackage("com.google.android.deskclock")
                                                     ?: pm.getLaunchIntentForPackage("com.android.deskclock")
-                                                if (fallbackIntent != null) context.startActivity(fallbackIntent)
+                                                if (fallbackIntent != null) mContext.startActivity(fallbackIntent)
                                             } catch (e2: Exception) {}
                                         }
                                     }
@@ -922,7 +922,7 @@ fun MinusOnePage(
                                                 addCategory(Intent.CATEGORY_APP_CALENDAR)
                                                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
                                             }
-                                            context.startActivity(intent)
+                                            mContext.startActivity(intent)
                                         } catch (e: Exception) {}
                                     }
                                     else -> {}
@@ -993,31 +993,20 @@ fun LauncherScreen(
     val backdrop = rememberLayerBackdrop()
     val blurredWallpaper by viewModel.blurredWallpaper.collectAsState()
     val rawWallpaper by viewModel.rawWallpaper.collectAsState()
-    val gyroOffset by viewModel.gyroOffset.collectAsState()
-    val isParallaxEnabled by viewModel.isParallaxEnabled.collectAsState()
     
     // 背景層級結構
     Box(modifier = Modifier.fillMaxSize()) {
-        // 第一層：基礎桌布（帶有視差效果）
+        // 背景底圖
         rawWallpaper?.let {
             Image(
                 bitmap = it,
                 contentDescription = null,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer {
-                        if (isParallaxEnabled) {
-                            translationX = gyroOffset.x * 15f
-                            translationY = gyroOffset.y * 15f
-                            scaleX = 1.05f
-                            scaleY = 1.05f
-                        }
-                    },
-                contentScale = ContentScale.FillBounds
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
             )
         }
 
-        // 第二層：背景採樣層（用於折射，保持清晰且帶有視差同步）
+        // 背景採樣層（用於折射）
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -1027,23 +1016,13 @@ fun LauncherScreen(
                 Image(
                     bitmap = it,
                     contentDescription = null,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer {
-                            if (isParallaxEnabled) {
-                                translationX = gyroOffset.x * 15f
-                                translationY = gyroOffset.y * 15f
-                                scaleX = 1.05f
-                                scaleY = 1.05f
-                            }
-                            alpha = 0.99f
-                        },
-                    contentScale = ContentScale.FillBounds
+                    modifier = Modifier.fillMaxSize().graphicsLayer(alpha = 0.99f),
+                    contentScale = ContentScale.Crop
                 )
             }
         }
         
-        // 第三層：微光/遮罩層，增加文字可讀性
+        // 微光/遮罩層，增加文字可讀性
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -1063,6 +1042,7 @@ fun LauncherScreen(
     val isLiquidGlassGlobalSearchEnabled by viewModel.isLiquidGlassGlobalSearchEnabled.collectAsState()
     val isLiquidGlassAppLibrarySearchEnabled by viewModel.isLiquidGlassAppLibrarySearchEnabled.collectAsState()
 
+    val mContext = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -1076,12 +1056,11 @@ fun LauncherScreen(
 
     LaunchedEffect(Unit) { viewModel.loadApps() }
 
-    val context = LocalContext.current
-    val myPackageName = context.packageName
+    val myPackageName = mContext.packageName
 
     val isDefaultLauncher = remember(allAppsFlat) {
         val intent = Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_HOME) }
-        val resolveInfo = context.packageManager.resolveActivity(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
+        val resolveInfo = mContext.packageManager.resolveActivity(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
         resolveInfo?.activityInfo?.packageName == myPackageName
     }
 
@@ -1405,13 +1384,13 @@ fun LauncherScreen(
 
                 ListItem(headlineContent = { Text(stringResource(R.string.menu_wallpaper)) }, leadingContent = { Icon(Icons.Default.Image, contentDescription = null) }, modifier = Modifier.clickable {
                     val intent = Intent(Intent.ACTION_SET_WALLPAPER)
-                    context.startActivity(Intent.createChooser(intent, context.getString(R.string.menu_wallpaper)))
+                    mContext.startActivity(Intent.createChooser(intent, mContext.getString(R.string.menu_wallpaper)))
                     showDesktopMenu = false
                 })
                 if (!isDefaultLauncher) {
                     ListItem(headlineContent = { Text(stringResource(R.string.menu_set_default)) }, leadingContent = { Icon(Icons.Default.Home, contentDescription = null) }, modifier = Modifier.clickable {
                         val intent = Intent(android.provider.Settings.ACTION_HOME_SETTINGS)
-                        context.startActivity(intent)
+                        mContext.startActivity(intent)
                         showDesktopMenu = false
                     })
                 }
@@ -1587,12 +1566,13 @@ fun LauncherScreen(
                                                         leadingIcon = { Icon(Icons.Default.DeleteForever, null) }, 
                                                         onClick = { 
                                                             android.util.Log.d("Iteration", "Uninstalling: ${app.packageName}")
+                                                            android.widget.Toast.makeText(mContext, "Uninstalling ${app.label}...", android.widget.Toast.LENGTH_SHORT).show()
                                                             try {
                                                                 val intent = Intent(Intent.ACTION_DELETE).apply { 
                                                                     data = Uri.fromParts("package", app.packageName, null)
                                                                     flags = Intent.FLAG_ACTIVITY_NEW_TASK
                                                                 }
-                                                                context.startActivity(intent)
+                                                                mContext.startActivity(intent)
                                                             } catch (e: Exception) {
                                                                 android.util.Log.e("Iteration", "Uninstall failed", e)
                                                             }
@@ -1690,7 +1670,7 @@ fun LauncherScreen(
                                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                                 modifier = Modifier.clickable {
                                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=${globalSearchQuery}"))
-                                    context.startActivity(intent)
+                                    mContext.startActivity(intent)
                                     showGlobalSearch = false
                                 }
                             )
@@ -1702,7 +1682,7 @@ fun LauncherScreen(
                                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                                 modifier = Modifier.clickable {
                                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse("market://search?q=${globalSearchQuery}"))
-                                    context.startActivity(intent)
+                                    mContext.startActivity(intent)
                                     showGlobalSearch = false
                                 }
                             )
@@ -1714,7 +1694,7 @@ fun LauncherScreen(
                                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                                 modifier = Modifier.clickable {
                                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${globalSearchQuery}"))
-                                    context.startActivity(intent)
+                                    mContext.startActivity(intent)
                                     showGlobalSearch = false
                                 }
                             )
@@ -1914,7 +1894,7 @@ fun AppGrid(
                         }
                     } else {
                         var showContextMenu by remember { mutableStateOf(false) }
-                        val context = LocalContext.current
+                        val mContext = LocalContext.current
                         Box {
                             AppItem(
                                 app = app, 
@@ -1951,13 +1931,13 @@ fun AppGrid(
                                         leadingIcon = { Icon(Icons.Default.DeleteForever, null) }, 
                                         onClick = { 
                                             android.util.Log.d("Iteration", "Uninstalling: ${app.packageName}")
-                                            android.widget.Toast.makeText(context, "Uninstalling ${app.label}...", android.widget.Toast.LENGTH_SHORT).show()
+                                            android.widget.Toast.makeText(mContext, "Uninstalling ${app.label}...", android.widget.Toast.LENGTH_SHORT).show()
                                             try {
                                                 val intent = Intent(Intent.ACTION_DELETE).apply { 
                                                     data = Uri.fromParts("package", app.packageName, null)
                                                     flags = Intent.FLAG_ACTIVITY_NEW_TASK
                                                 }
-                                                context.startActivity(intent)
+                                                mContext.startActivity(intent)
                                             } catch (e: Exception) {
                                                 android.util.Log.e("Iteration", "Uninstall failed", e)
                                             }
@@ -2236,7 +2216,7 @@ fun AppLibraryPage(
     var showPasswordDialog by remember { mutableStateOf(false) }
     val viewModel: MainViewModel = viewModel()
     val focusManager = LocalFocusManager.current
-    val context = LocalContext.current
+    val mContext = LocalContext.current
 
     val suggestedApps by viewModel.suggestedApps.collectAsState()
     val userCategories by viewModel.userCategories.collectAsState()
@@ -2394,7 +2374,7 @@ fun AppLibraryPage(
                                             data = Uri.parse("package:${app.packageName}")
                                             flags = Intent.FLAG_ACTIVITY_NEW_TASK
                                         }
-                                        context.startActivity(intent)
+                                        mContext.startActivity(intent)
                                         showMenu = false
                                     }
                                 )
@@ -2404,13 +2384,13 @@ fun AppLibraryPage(
                                     leadingIcon = { Icon(Icons.Default.Delete, null) },
                                     onClick = {
                                         android.util.Log.d("Iteration", "Uninstalling: ${app.packageName}")
-                                        android.widget.Toast.makeText(context, "Uninstalling ${app.label}...", android.widget.Toast.LENGTH_SHORT).show()
+                                        android.widget.Toast.makeText(mContext, "Uninstalling ${app.label}...", android.widget.Toast.LENGTH_SHORT).show()
                                         try {
                                             val intent = Intent(Intent.ACTION_DELETE).apply { 
                                                 data = Uri.fromParts("package", app.packageName, null)
                                                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
                                             }
-                                            context.startActivity(intent)
+                                            mContext.startActivity(intent)
                                         } catch (e: Exception) {
                                             android.util.Log.e("Iteration", "Uninstall failed", e)
                                         }
@@ -2468,7 +2448,7 @@ fun AppLibraryFolder(
     isLocked: Boolean = false
 ) {
     val viewModel: MainViewModel = viewModel()
-    val context = LocalContext.current
+    val mContext = LocalContext.current
 
     Column(modifier = modifier) {
         Box(
@@ -2528,7 +2508,7 @@ fun LibraryItemWithMenu(
     onDragEnd: () -> Unit
 ) {
     val viewModel: MainViewModel = viewModel()
-    val context = LocalContext.current
+    val mContext = LocalContext.current
     var showMenu by remember { mutableStateOf(false) }
     val lastPos = remember { object { var pos = Offset.Zero } }
     
@@ -2571,7 +2551,7 @@ fun LibraryItemWithMenu(
                         data = Uri.parse("package:${app.packageName}")
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK
                     }
-                    context.startActivity(intent)
+                    mContext.startActivity(intent)
                     showMenu = false
                 }
             )
@@ -2581,13 +2561,13 @@ fun LibraryItemWithMenu(
                 leadingIcon = { Icon(Icons.Default.Delete, null) },
                 onClick = {
                     android.util.Log.d("Iteration", "Uninstalling: ${app.packageName}")
-                    android.widget.Toast.makeText(context, "Uninstalling ${app.label}...", android.widget.Toast.LENGTH_SHORT).show()
+                    android.widget.Toast.makeText(mContext, "Uninstalling ${app.label}...", android.widget.Toast.LENGTH_SHORT).show()
                     try {
                         val intent = Intent(Intent.ACTION_DELETE).apply { 
                             data = Uri.fromParts("package", app.packageName, null)
                             flags = Intent.FLAG_ACTIVITY_NEW_TASK
                         }
-                        context.startActivity(intent)
+                        mContext.startActivity(intent)
                     } catch (e: Exception) {
                         android.util.Log.e("Iteration", "Uninstall failed", e)
                     }

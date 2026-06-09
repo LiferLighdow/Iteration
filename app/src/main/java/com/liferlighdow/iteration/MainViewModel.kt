@@ -10,10 +10,6 @@ import android.graphics.Paint
 import android.graphics.RenderEffect
 import android.graphics.Shader
 import android.graphics.drawable.AdaptiveIconDrawable
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
 import android.util.LruCache
 import androidx.core.graphics.drawable.toBitmap
 import java.io.File
@@ -38,17 +34,11 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
-class MainViewModel(application: Application) : AndroidViewModel(application), SensorEventListener {
+class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = AppRepository(application)
     private val prefs = application.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
     private val iconProcessor = IconProcessor(application)
     
-    private val sensorManager = application.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-    private val gyroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-
-    private val _gyroOffset = MutableStateFlow(Offset.Zero)
-    val gyroOffset = _gyroOffset.asStateFlow()
-
     private val _blurredWallpaper = MutableStateFlow<ImageBitmap?>(null)
     val blurredWallpaper = _blurredWallpaper.asStateFlow()
 
@@ -91,9 +81,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
     private val _isLiquidGlassAppLibrarySearchEnabled = MutableStateFlow(prefs.getBoolean("liquid_glass_app_library_search", false))
     val isLiquidGlassAppLibrarySearchEnabled = _isLiquidGlassAppLibrarySearchEnabled.asStateFlow()
 
-    private val _isParallaxEnabled = MutableStateFlow(prefs.getBoolean("parallax_enabled", true))
-    val isParallaxEnabled = _isParallaxEnabled.asStateFlow()
-
     private val _iconStyle = MutableStateFlow(
         try { IconStyle.valueOf(prefs.getString("icon_style", "STANDARD") ?: "STANDARD") }
         catch (e: Exception) { IconStyle.STANDARD }
@@ -118,26 +105,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
     init {
         loadSettings()
         loadApps()
-        startSensor()
         updateBlurredWallpaper()
     }
-
-    private fun startSensor() {
-        gyroSensor?.let {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
-        }
-    }
-
-    override fun onSensorChanged(event: SensorEvent?) {
-        if (event?.sensor?.type == Sensor.TYPE_ACCELEROMETER) {
-            // 平滑處理加速度計數據，模擬陀螺儀傾斜
-            val x = event.values[0]
-            val y = event.values[1]
-            _gyroOffset.value = Offset(-x, y)
-        }
-    }
-
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 
     fun updateBlurredWallpaper() {
         viewModelScope.launch(Dispatchers.IO) {
@@ -160,8 +129,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
                 val cropped = Bitmap.createBitmap(rawBitmap, (rawBitmap.width - cropW) / 2, (rawBitmap.height - cropH) / 2, cropW, cropH)
                 val scaled = Bitmap.createScaledBitmap(cropped, screenW, screenH, true)
                 
-                // 2. 【Liquid Glass 採樣優化】：保留高清晰度，僅進行極輕微預處理
-                // 這樣 Dock 的 Lens 才能扭曲清晰的邊緣，產生強烈的折射感
+                // 2. 【Liquid Glass 採樣優化】：保留高清晰度
                 val blurScale = 0.5f
                 val bw = (screenW * blurScale).toInt().coerceAtLeast(1)
                 val bh = (screenH * blurScale).toInt().coerceAtLeast(1)
@@ -179,7 +147,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
 
     override fun onCleared() {
         super.onCleared()
-        sensorManager.unregisterListener(this)
     }
 
     private fun loadSettings() {
@@ -201,7 +168,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
         val newLiquidAppLibraryFolderEnabled = prefs.getBoolean("liquid_glass_app_library_folder", false)
         val newLiquidGlobalSearchEnabled = prefs.getBoolean("liquid_glass_global_search", false)
         val newLiquidAppLibrarySearchEnabled = prefs.getBoolean("liquid_glass_app_library_search", false)
-        val newParallaxEnabled = prefs.getBoolean("parallax_enabled", true)
 
         if (_iconStyle.value != newStyle || _isThemedIconsEnabled.value != newThemed) {
             _iconStyle.value = newStyle
@@ -215,7 +181,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
         _isLiquidGlassAppLibraryFolderEnabled.value = newLiquidAppLibraryFolderEnabled
         _isLiquidGlassGlobalSearchEnabled.value = newLiquidGlobalSearchEnabled
         _isLiquidGlassAppLibrarySearchEnabled.value = newLiquidAppLibrarySearchEnabled
-        _isParallaxEnabled.value = newParallaxEnabled
     }
 
     private fun saveLayout() {
@@ -1066,11 +1031,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
         _isLiquidGlassAppLibrarySearchEnabled.value = enabled
         prefs.edit().putBoolean("liquid_glass_app_library_search", enabled).apply()
         if (enabled) updateBlurredWallpaper()
-    }
-
-    fun setParallaxEnabled(enabled: Boolean) {
-        _isParallaxEnabled.value = enabled
-        prefs.edit().putBoolean("parallax_enabled", enabled).apply()
     }
 
     fun createFolder(pageIndex: Int, folderName: String) {
