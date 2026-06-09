@@ -992,25 +992,63 @@ fun LauncherScreen(
 ) {
     val backdrop = rememberLayerBackdrop()
     val blurredWallpaper by viewModel.blurredWallpaper.collectAsState()
+    val rawWallpaper by viewModel.rawWallpaper.collectAsState()
+    val gyroOffset by viewModel.gyroOffset.collectAsState()
+    val isParallaxEnabled by viewModel.isParallaxEnabled.collectAsState()
     
-    // 背景採樣層：提供「清晰」桌布數據給 Backdrop 庫，以產生劇烈折射
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .layerBackdrop(backdrop)
-    ) {
-        blurredWallpaper?.let {
+    // 背景層級結構
+    Box(modifier = Modifier.fillMaxSize()) {
+        // 第一層：基礎桌布（帶有視差效果）
+        rawWallpaper?.let {
             Image(
                 bitmap = it,
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxSize()
-                    // 關鍵：採樣層內部的 Image 保持相對清晰
-                    // 而 LauncherScreen 外部會再套用一次全域模糊，不影響折射
-                    .graphicsLayer(alpha = 0.99f), 
+                    .graphicsLayer {
+                        if (isParallaxEnabled) {
+                            translationX = gyroOffset.x * 15f
+                            translationY = gyroOffset.y * 15f
+                            scaleX = 1.05f
+                            scaleY = 1.05f
+                        }
+                    },
                 contentScale = ContentScale.FillBounds
             )
         }
+
+        // 第二層：背景採樣層（用於折射，保持清晰且帶有視差同步）
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .layerBackdrop(backdrop)
+        ) {
+            rawWallpaper?.let {
+                Image(
+                    bitmap = it,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            if (isParallaxEnabled) {
+                                translationX = gyroOffset.x * 15f
+                                translationY = gyroOffset.y * 15f
+                                scaleX = 1.05f
+                                scaleY = 1.05f
+                            }
+                            alpha = 0.99f
+                        },
+                    contentScale = ContentScale.FillBounds
+                )
+            }
+        }
+        
+        // 第三層：微光/遮罩層，增加文字可讀性
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.05f))
+        )
     }
 
     val pages by viewModel.pages.collectAsState()
@@ -1058,6 +1096,7 @@ fun LauncherScreen(
 
     var showDesktopMenu by remember { mutableStateOf(false) }
     var showCreateFolderDialog by remember { mutableStateOf(false) }
+    var showDeleteFolderConfirm by remember { mutableStateOf(false) }
     var showWidgetPicker by remember { mutableStateOf(false) }
     var widgetTargetPage by remember { mutableStateOf<Int?>(null) }
 
@@ -1393,6 +1432,35 @@ fun LauncherScreen(
         )
     }
 
+    if (showDeleteFolderConfirm) {
+        val folder = openFolder
+        if (folder != null) {
+            AlertDialog(
+                onDismissRequest = { showDeleteFolderConfirm = false },
+                title = { Text(stringResource(R.string.folder_delete_confirm_title)) },
+                text = { Text(stringResource(R.string.folder_delete_confirm_msg)) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        viewModel.deleteFolder(folder.uniqueId, keepIcons = true)
+                        folderToOpenId = null
+                        showDeleteFolderConfirm = false
+                    }) {
+                        Text(stringResource(R.string.folder_delete_keep))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        viewModel.deleteFolder(folder.uniqueId, keepIcons = false)
+                        folderToOpenId = null
+                        showDeleteFolderConfirm = false
+                    }) {
+                        Text(stringResource(R.string.folder_delete_discard))
+                    }
+                }
+            )
+        }
+    }
+
     if (showDockPicker != null) {
         val visibleApps = allAppsFlat.filter { !it.isHidden }
         AppPickerDialog(
@@ -1465,7 +1533,7 @@ fun LauncherScreen(
                                 DropdownMenu(expanded = showMoreMenu, onDismissRequest = { showMoreMenu = false }) {
                                     DropdownMenuItem(text = { Text(stringResource(R.string.rename)) }, leadingIcon = { Icon(Icons.Default.Edit, null) }, onClick = { isEditingName = true; showMoreMenu = false })
                                     DropdownMenuItem(text = { Text(stringResource(R.string.folder_add_app)) }, leadingIcon = { Icon(Icons.Default.Add, null) }, onClick = { showAppPicker = true; showMoreMenu = false })
-                                    DropdownMenuItem(text = { Text(stringResource(R.string.folder_delete)) }, leadingIcon = { Icon(Icons.Default.Delete, null) }, onClick = { viewModel.deleteFolder(folder.uniqueId); folderToOpenId = null; showMoreMenu = false })
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.folder_delete)) }, leadingIcon = { Icon(Icons.Default.Delete, null) }, onClick = { showDeleteFolderConfirm = true; showMoreMenu = false })
                                 }
                             }
                         }
@@ -1494,6 +1562,7 @@ fun LauncherScreen(
                                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                                         rowItems.forEach { app ->
                                             val lastPos = remember { object { var pos = Offset.Zero } }
+                                            var showItemMenu by remember { mutableStateOf(false) }
                                             Box(modifier = Modifier.weight(1f).onGloballyPositioned { lastPos.pos = it.positionInRoot() }, contentAlignment = Alignment.Center) {
                                                 AppItem(
                                                     app = app, 
@@ -1501,8 +1570,36 @@ fun LauncherScreen(
                                                     iconSize = 58.dp, 
                                                     isLiquidGlass = isLiquidGlassEnabled && isLiquidGlassHomeFolderEnabled,
                                                     backdrop = backdrop,
-                                                    modifier = Modifier.pointerInput(app.uniqueId) { detectDragGesturesAfterLongPress(onDragStart = { offset -> draggingApp = app; touchPosition = lastPos.pos + offset; dragOffset = Offset.Zero; folderToOpenId = null }, onDrag = { _, _ -> }, onDragCancel = {}, onDragEnd = {}) }
+                                                    modifier = Modifier.pointerInput(app.uniqueId) {
+                                                        detectTapGestures(
+                                                            onLongPress = { showItemMenu = true }
+                                                        )
+                                                    }
                                                 )
+                                                DropdownMenu(expanded = showItemMenu, onDismissRequest = { showItemMenu = false }) {
+                                                    DropdownMenuItem(
+                                                        text = { Text(stringResource(R.string.menu_delete_home)) }, 
+                                                        leadingIcon = { Icon(Icons.Default.Delete, null) }, 
+                                                        onClick = { viewModel.removeAppFromFolder(folder.uniqueId, app.uniqueId); showItemMenu = false }
+                                                    )
+                                                    DropdownMenuItem(
+                                                        text = { Text(stringResource(R.string.menu_uninstall)) }, 
+                                                        leadingIcon = { Icon(Icons.Default.DeleteForever, null) }, 
+                                                        onClick = { 
+                                                            android.util.Log.d("Iteration", "Uninstalling: ${app.packageName}")
+                                                            try {
+                                                                val intent = Intent(Intent.ACTION_DELETE).apply { 
+                                                                    data = Uri.fromParts("package", app.packageName, null)
+                                                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                                                }
+                                                                context.startActivity(intent)
+                                                            } catch (e: Exception) {
+                                                                android.util.Log.e("Iteration", "Uninstall failed", e)
+                                                            }
+                                                            showItemMenu = false 
+                                                        }
+                                                    )
+                                                }
                                             }
                                         }
                                         repeat(3 - rowItems.size) { Spacer(modifier = Modifier.weight(1f)) }
@@ -1849,7 +1946,24 @@ fun AppGrid(
                             DropdownMenu(expanded = showContextMenu, onDismissRequest = { showContextMenu = false }) {
                                 DropdownMenuItem(text = { Text(stringResource(R.string.menu_delete_home)) }, leadingIcon = { Icon(Icons.Default.Delete, null) }, onClick = { viewModel.removeAppFromHome(app.uniqueId); showContextMenu = false })
                                 if (!app.isFolder) {
-                                    DropdownMenuItem(text = { Text(stringResource(R.string.menu_uninstall)) }, leadingIcon = { Icon(Icons.Default.DeleteForever, null) }, onClick = { val intent = Intent(Intent.ACTION_DELETE).apply { data = Uri.parse("package:${app.packageName}") }; context.startActivity(intent); showContextMenu = false })
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.menu_uninstall)) }, 
+                                        leadingIcon = { Icon(Icons.Default.DeleteForever, null) }, 
+                                        onClick = { 
+                                            android.util.Log.d("Iteration", "Uninstalling: ${app.packageName}")
+                                            android.widget.Toast.makeText(context, "Uninstalling ${app.label}...", android.widget.Toast.LENGTH_SHORT).show()
+                                            try {
+                                                val intent = Intent(Intent.ACTION_DELETE).apply { 
+                                                    data = Uri.fromParts("package", app.packageName, null)
+                                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                                }
+                                                context.startActivity(intent)
+                                            } catch (e: Exception) {
+                                                android.util.Log.e("Iteration", "Uninstall failed", e)
+                                            }
+                                            showContextMenu = false 
+                                        }
+                                    )
                                 }
                             }
                         }
@@ -2253,12 +2367,15 @@ fun AppLibraryPage(
                                 modifier = Modifier.combinedClickable(
                                     onClick = { onAppClick(app.packageName) },
                                     onLongClick = { showMenu = true }
-                                ).pointerInput(app.packageName) {
-                                    if (!app.isHidden) detectDragGesturesAfterLongPress(onDragStart = { onDragStart(app, lastPos.pos + it) }, onDrag = { _, delta -> onDrag(delta) }, onDragCancel = onDragEnd, onDragEnd = onDragEnd)
-                                }
+                                )
                             )
 
                             DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.menu_add_to_home)) },
+                                    leadingIcon = { Icon(Icons.Default.Add, null) },
+                                    onClick = { viewModel.addAppToHome(app.packageName); showMenu = false }
+                                )
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.rename)) },
                                     leadingIcon = { Icon(Icons.Default.Edit, null) },
@@ -2286,8 +2403,17 @@ fun AppLibraryPage(
                                     text = { Text(stringResource(R.string.menu_uninstall)) },
                                     leadingIcon = { Icon(Icons.Default.Delete, null) },
                                     onClick = {
-                                        val intent = Intent(Intent.ACTION_DELETE).apply { data = Uri.parse("package:${app.packageName}") }
-                                        context.startActivity(intent)
+                                        android.util.Log.d("Iteration", "Uninstalling: ${app.packageName}")
+                                        android.widget.Toast.makeText(context, "Uninstalling ${app.label}...", android.widget.Toast.LENGTH_SHORT).show()
+                                        try {
+                                            val intent = Intent(Intent.ACTION_DELETE).apply { 
+                                                data = Uri.fromParts("package", app.packageName, null)
+                                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                            }
+                                            context.startActivity(intent)
+                                        } catch (e: Exception) {
+                                            android.util.Log.e("Iteration", "Uninstall failed", e)
+                                        }
                                         showMenu = false
                                     }
                                 )
@@ -2418,12 +2544,15 @@ fun LibraryItemWithMenu(
             modifier = Modifier.combinedClickable(
                 onClick = { onAppClick(app.packageName) },
                 onLongClick = { if (folderName != "Hidden Apps") showMenu = true }
-            ).pointerInput(app.packageName) {
-                if (folderName != "Hidden Apps") detectDragGesturesAfterLongPress(onDragStart = { onDragStart(app, lastPos.pos + it) }, onDrag = { _, delta -> onDrag(delta) }, onDragCancel = onDragEnd, onDragEnd = onDragEnd)
-            }
+            )
         )
 
         DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.menu_add_to_home)) },
+                leadingIcon = { Icon(Icons.Default.Add, null) },
+                onClick = { viewModel.addAppToHome(app.packageName); showMenu = false }
+            )
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.rename)) },
                 leadingIcon = { Icon(Icons.Default.Edit, null) },
@@ -2451,8 +2580,17 @@ fun LibraryItemWithMenu(
                 text = { Text(stringResource(R.string.menu_uninstall)) },
                 leadingIcon = { Icon(Icons.Default.Delete, null) },
                 onClick = {
-                    val intent = Intent(Intent.ACTION_DELETE).apply { data = Uri.parse("package:${app.packageName}") }
-                    context.startActivity(intent)
+                    android.util.Log.d("Iteration", "Uninstalling: ${app.packageName}")
+                    android.widget.Toast.makeText(context, "Uninstalling ${app.label}...", android.widget.Toast.LENGTH_SHORT).show()
+                    try {
+                        val intent = Intent(Intent.ACTION_DELETE).apply { 
+                            data = Uri.fromParts("package", app.packageName, null)
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        }
+                        context.startActivity(intent)
+                    } catch (e: Exception) {
+                        android.util.Log.e("Iteration", "Uninstall failed", e)
+                    }
                     showMenu = false
                 }
             )

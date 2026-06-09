@@ -25,6 +25,7 @@
     <string name="menu_wallpaper">Wallpaper</string>
     <string name="menu_set_default">Set as Default Launcher</string>
     <string name="menu_delete_home">Delete from Home</string>
+    <string name="menu_add_to_home">Add to Home</string>
     <string name="menu_uninstall">Uninstall</string>
 
     <!-- Folder Dialog -->
@@ -33,6 +34,10 @@
     <string name="folder_name_hint">Folder Name</string>
     <string name="folder_add_app">Add App</string>
     <string name="folder_delete">Delete Folder</string>
+    <string name="folder_delete_confirm_title">Delete Folder?</string>
+    <string name="folder_delete_confirm_msg">Would you like to keep the icons contained in this folder on your home screen?</string>
+    <string name="folder_delete_keep">Keep Icons</string>
+    <string name="folder_delete_discard">Discard Icons</string>
     <string name="folder_menu_desc">Folder Menu</string>
 
     <!-- App Picker -->

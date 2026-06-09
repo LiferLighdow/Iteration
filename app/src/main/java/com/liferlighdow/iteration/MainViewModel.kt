@@ -52,6 +52,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
     private val _blurredWallpaper = MutableStateFlow<ImageBitmap?>(null)
     val blurredWallpaper = _blurredWallpaper.asStateFlow()
 
+    private val _rawWallpaper = MutableStateFlow<ImageBitmap?>(null)
+    val rawWallpaper = _rawWallpaper.asStateFlow()
+
     private val _pages = MutableStateFlow<List<List<AppModel>>>(emptyList())
     val pages: StateFlow<List<List<AppModel>>> = _pages
 
@@ -87,6 +90,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
 
     private val _isLiquidGlassAppLibrarySearchEnabled = MutableStateFlow(prefs.getBoolean("liquid_glass_app_library_search", false))
     val isLiquidGlassAppLibrarySearchEnabled = _isLiquidGlassAppLibrarySearchEnabled.asStateFlow()
+
+    private val _isParallaxEnabled = MutableStateFlow(prefs.getBoolean("parallax_enabled", true))
+    val isParallaxEnabled = _isParallaxEnabled.asStateFlow()
 
     private val _iconStyle = MutableStateFlow(
         try { IconStyle.valueOf(prefs.getString("icon_style", "STANDARD") ?: "STANDARD") }
@@ -163,6 +169,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
                 val small = Bitmap.createScaledBitmap(scaled, bw, bh, true)
                 val blurred = Bitmap.createScaledBitmap(small, screenW, screenH, true)
                 
+                _rawWallpaper.value = scaled.asImageBitmap()
                 _blurredWallpaper.value = blurred.asImageBitmap()
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -194,6 +201,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
         val newLiquidAppLibraryFolderEnabled = prefs.getBoolean("liquid_glass_app_library_folder", false)
         val newLiquidGlobalSearchEnabled = prefs.getBoolean("liquid_glass_global_search", false)
         val newLiquidAppLibrarySearchEnabled = prefs.getBoolean("liquid_glass_app_library_search", false)
+        val newParallaxEnabled = prefs.getBoolean("parallax_enabled", true)
 
         if (_iconStyle.value != newStyle || _isThemedIconsEnabled.value != newThemed) {
             _iconStyle.value = newStyle
@@ -207,6 +215,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
         _isLiquidGlassAppLibraryFolderEnabled.value = newLiquidAppLibraryFolderEnabled
         _isLiquidGlassGlobalSearchEnabled.value = newLiquidGlobalSearchEnabled
         _isLiquidGlassAppLibrarySearchEnabled.value = newLiquidAppLibrarySearchEnabled
+        _isParallaxEnabled.value = newParallaxEnabled
     }
 
     private fun saveLayout() {
@@ -868,6 +877,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
         reorganizeAllPages(currentPages)
     }
 
+    fun addAppToHome(packageName: String) {
+        val baseApp = _allApps.value.find { it.packageName == packageName } ?: return
+        val newItem = baseApp.copy(uniqueId = "${packageName}_${System.currentTimeMillis()}")
+        
+        val currentPages = _pages.value.map { it.toMutableList() }.toMutableList()
+        // 放到最後一頁，reorganizeAllPages 會自動處理分頁
+        if (currentPages.isEmpty()) {
+            currentPages.add(mutableListOf(newItem))
+        } else {
+            currentPages.last().add(newItem)
+        }
+        reorganizeAllPages(currentPages)
+    }
+
 
     private fun insertAtPage(pages: MutableList<MutableList<AppModel>>, index: Int, item: AppModel) {
         val safeIndex = index.coerceIn(0, pages.size)
@@ -1045,6 +1068,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
         if (enabled) updateBlurredWallpaper()
     }
 
+    fun setParallaxEnabled(enabled: Boolean) {
+        _isParallaxEnabled.value = enabled
+        prefs.edit().putBoolean("parallax_enabled", enabled).apply()
+    }
+
     fun createFolder(pageIndex: Int, folderName: String) {
         val currentPages = _pages.value.map { it.toMutableList() }.toMutableList()
         val targetPage = if (pageIndex >= 0 && pageIndex < currentPages.size) {
@@ -1064,14 +1092,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
         reorganizeAllPages(currentPages)
     }
 
-    fun deleteFolder(folderId: String) {
+    fun deleteFolder(folderId: String, keepIcons: Boolean = true) {
         val currentPages = _pages.value.map { it.toMutableList() }.toMutableList()
         outer@for (page in currentPages) {
             val idx = page.indexOfFirst { it.uniqueId == folderId }
             if (idx != -1) {
                 val folder = page.removeAt(idx)
-                // 將資料夾內的 App 釋放回桌面 (可選)
-                page.addAll(idx, folder.folderItems)
+                if (keepIcons) {
+                    // 將資料夾內的 App 釋放回桌面
+                    page.addAll(idx, folder.folderItems)
+                }
                 break@outer
             }
         }
@@ -1111,6 +1141,31 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
         if (removed) {
             reorganizeAllPages(currentPages)
         }
+    }
+
+    fun removeAppFromFolder(folderId: String, appUniqueId: String) {
+        val currentPages = _pages.value.map { it.toMutableList() }.toMutableList()
+        outer@for (page in currentPages) {
+            for (i in page.indices) {
+                val item = page[i]
+                if (item.isFolder && item.uniqueId == folderId) {
+                    val updatedItems = item.folderItems.toMutableList()
+                    val removedIdx = updatedItems.indexOfFirst { it.uniqueId == appUniqueId }
+                    if (removedIdx != -1) {
+                        updatedItems.removeAt(removedIdx)
+                        if (updatedItems.isEmpty()) {
+                            page.removeAt(i)
+                        } else if (updatedItems.size == 1) {
+                            page[i] = updatedItems[0] // 剩下一個則拆解資料夾
+                        } else {
+                            page[i] = item.copy(folderItems = updatedItems)
+                        }
+                        break@outer
+                    }
+                }
+            }
+        }
+        reorganizeAllPages(currentPages)
     }
 
     fun logAppLaunch(packageName: String) {
