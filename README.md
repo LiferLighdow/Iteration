@@ -51,6 +51,15 @@
 *   **Standard Calendar Widget**: A 2x2 widget showcasing the current date and day.
 *   **Wide Calendar Widget (4x2)**: Displays upcoming system calendar events in a detailed list (Requires Permission).
 *   **Interactive Photo Widgets**: Supports **2x2 (Standard)** and **4x2 (Wide)** formats with a built-in cropping tool.
+*   **Real-time Music Widgets (New)**: Standard **2x2** and **4x2 (Wide)** formats. Features:
+    *   **Live Metadata**: Displays track title, artist, and high-quality album art.
+    *   **Integrated Controls**: Play/Pause, Skip, and Previous buttons directly on the desktop.
+    *   **Dynamic Backdrop**: Automatically generates a blurred album art background with adaptive vibrancy.
+    *   **Smart Fallback**: Intelligent detection of active media sessions across all music players (Spotify, YouTube Music, etc.).
+*   **Widget Stacker (New)**: A revolutionary **2x2** container that allows stacking multiple widgets.
+    *   **Vertical Navigation**: Swipe up/down to cycle through your favorite widgets.
+    *   **Unified Management**: Long-press to enter a dedicated management UI to add, remove, or reorder stacked widgets.
+    *   **Contextual Settings**: Individually customize the "Glass" vs "Color" mode or photo sources for each widget within the stack.
 
 ### 🔍 Discovery & Organization
 *   **Usage-based Suggestions**: Intelligently learns and displays your **4 most frequent apps**.

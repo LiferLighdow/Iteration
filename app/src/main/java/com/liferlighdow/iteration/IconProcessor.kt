@@ -18,10 +18,18 @@ class IconProcessor(private val context: Context) {
         isThemed: Boolean,
         themeColors: ColorScheme?,
         style: IconStyle,
-        sizePx: Int
+        sizePx: Int,
+        isIconPack: Boolean = false // 新增：是否為 Icon Pack 圖示
     ): ImageBitmap {
         val b = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(b)
+        
+        // --- 核心修正：強制套用 Iteration 的 Squarcle 造型 ---
+        val path = Path()
+        val cornerRadius = sizePx * 0.238f // 你的專屬比例 105% (0.238f)
+        path.addRoundRect(0f, 0f, sizePx.toFloat(), sizePx.toFloat(), cornerRadius, cornerRadius, Path.Direction.CW)
+        canvas.clipPath(path)
+        // ------------------------------------------------
         
         if (icon != null) {
             // 檢查是否支援 Material You (Monochrome 模式)
@@ -59,7 +67,11 @@ class IconProcessor(private val context: Context) {
                 }
             } else {
                 when (effectiveStyle) {
-                    IconStyle.STANDARD -> null 
+                    // 核心修正：如果是 Icon Pack 圖示，不強制補白底
+                    IconStyle.STANDARD -> {
+                        val isAdaptive = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && icon is AdaptiveIconDrawable
+                        if (!isAdaptive && !isIconPack) Color.WHITE else null
+                    }
                     IconStyle.BLACK -> Color.BLACK
                     IconStyle.WHITE -> Color.WHITE
                     IconStyle.GLASS -> Color.argb(120, 255, 255, 255)
@@ -136,7 +148,18 @@ class IconProcessor(private val context: Context) {
                 }
                 
                 if (fgColor != null) icon.setTint(fgColor)
-                icon.setBounds(0, 0, sizePx, sizePx)
+
+                if (isIconPack) {
+                    // 核心修正：Icon Pack 縮放補償 (放大 1.15 倍)
+                    // 讓帶有透明邊距的 Icon Pack 圖示視覺上能與 Standard 滿版圖示等大
+                    val iconScale = 1.15f
+                    val s = (sizePx * iconScale).toInt()
+                    val o = (sizePx - s) / 2
+                    icon.setBounds(o, o, o + s, o + s)
+                } else {
+                    icon.setBounds(0, 0, sizePx, sizePx)
+                }
+
                 icon.draw(canvas)
             }
         }

@@ -20,7 +20,7 @@ class AppRepository(private val context: Context) {
             AppModel(
                 label = info.loadLabel(pm).toString(),
                 packageName = info.activityInfo.packageName,
-                icon = info.loadIcon(pm),
+                icon = info.activityInfo.loadIcon(pm), // 改用 activityInfo 讀取較原始的圖示
                 category = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                     info.activityInfo.applicationInfo.category
                 } else {

@@ -39,7 +39,9 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -318,6 +320,427 @@ fun AnalogClockWidget(displayMode: WidgetDisplayMode, modifier: Modifier = Modif
             Text("6", modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 18.dp), color = contentColor, style = MaterialTheme.typography.labelSmall)
             Text("3", modifier = Modifier.align(Alignment.CenterEnd).padding(end = 18.dp), color = contentColor, style = MaterialTheme.typography.labelSmall)
             Text("9", modifier = Modifier.align(Alignment.CenterStart).padding(start = 18.dp), color = contentColor, style = MaterialTheme.typography.labelSmall)
+        }
+    }
+}
+
+@Composable
+fun MusicWidget(widget: WidgetModel, displayMode: WidgetDisplayMode, modifier: Modifier = Modifier) {
+    val isWide = (widget.type as? WidgetType.Music)?.isWide ?: false
+    if (isWide) {
+        WideMusicWidget(displayMode, modifier)
+    } else {
+        StandardMusicWidget(displayMode, modifier)
+    }
+}
+
+@Composable
+fun StackWidget(widget: WidgetModel, viewModel: MainViewModel, modifier: Modifier = Modifier) {
+    val stackItems = (widget.type as? WidgetType.Stack)?.children ?: emptyList()
+    val pagerState = rememberPagerState { stackItems.size.coerceAtLeast(1) }
+    
+    Card(
+        modifier = modifier.aspectRatio(1f),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.1f))
+    ) {
+        if (stackItems.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("Empty Stack\nLong press to add", color = Color.White.copy(alpha = 0.6f), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelSmall)
+            }
+        } else {
+            VerticalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize()
+            ) { page ->
+                val item = stackItems[page]
+                Box(modifier = Modifier.fillMaxSize()) {
+                    when (item.type) {
+                        is WidgetType.Battery -> BatteryWidget(displayMode = item.displayMode)
+                        is WidgetType.Clock -> AnalogClockWidget(displayMode = item.displayMode)
+                        is WidgetType.Calendar -> CalendarWidget(widget = item, displayMode = item.displayMode)
+                        is WidgetType.Photo -> PhotoWidget(widget = item, viewModel = viewModel)
+                        is WidgetType.Music -> MusicWidget(widget = item, displayMode = item.displayMode)
+                        else -> {}
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun WidgetStackPickerDialog(
+    currentChildren: List<WidgetModel>,
+    viewModel: MainViewModel,
+    onDismiss: () -> Unit,
+    onConfirm: (List<WidgetModel>) -> Unit
+) {
+    var children by remember { mutableStateOf(currentChildren) }
+    val mContext = LocalContext.current
+    
+    // 用於處理照片選擇的狀態
+    var photoTargetId by remember { mutableStateOf<String?>(null) }
+    var cropUri by remember { mutableStateOf<Uri?>(null) }
+    val photoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        uri?.let { cropUri = it }
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier.fillMaxWidth().fillMaxHeight(0.85f),
+            shape = RoundedCornerShape(28.dp)
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Text(stringResource(R.string.menu_choose_widgets), style = MaterialTheme.typography.headlineSmall)
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    item { Text("Current Stack", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary) }
+                    items(children.size) { index ->
+                        val item = children[index]
+                        var showItemMenu by remember { mutableStateOf(false) }
+
+                        ListItem(
+                            headlineContent = { 
+                                Text(item.label, style = MaterialTheme.typography.bodyLarge)
+                            },
+                            supportingContent = {
+                                if (item.type !is WidgetType.Photo) {
+                                    Text("Mode: ${item.displayMode.name}", style = MaterialTheme.typography.labelSmall)
+                                }
+                            },
+                            trailingContent = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    IconButton(onClick = {
+                                        val list = children.toMutableList()
+                                        val moved = list.removeAt(index)
+                                        list.add((index - 1).coerceAtLeast(0), moved)
+                                        children = list
+                                    }, enabled = index > 0) { Icon(Icons.Default.ArrowUpward, null, modifier = Modifier.size(20.dp)) }
+                                    
+                                    Box {
+                                        IconButton(onClick = { showItemMenu = true }) {
+                                            Icon(Icons.Default.MoreVert, null)
+                                        }
+                                        DropdownMenu(expanded = showItemMenu, onDismissRequest = { showItemMenu = false }) {
+                                            if (item.type !is WidgetType.Photo) {
+                                                DropdownMenuItem(
+                                                    text = { Text(stringResource(R.string.widget_glass_mode)) },
+                                                    onClick = {
+                                                        val newList = children.toMutableList()
+                                                        newList[index] = item.copy(displayMode = WidgetDisplayMode.GLASS)
+                                                        children = newList
+                                                        showItemMenu = false
+                                                    }
+                                                )
+                                                DropdownMenuItem(
+                                                    text = { Text(stringResource(R.string.widget_color_mode)) },
+                                                    onClick = {
+                                                        val newList = children.toMutableList()
+                                                        newList[index] = item.copy(displayMode = WidgetDisplayMode.COLOR)
+                                                        children = newList
+                                                        showItemMenu = false
+                                                    }
+                                                )
+                                            }
+                                            
+                                            if (item.type is WidgetType.Photo) {
+                                                DropdownMenuItem(
+                                                    text = { Text("Choose Picture") },
+                                                    onClick = {
+                                                        photoTargetId = item.id
+                                                        photoLauncher.launch("image/*")
+                                                        showItemMenu = false
+                                                    }
+                                                )
+                                            }
+                                            HorizontalDivider()
+                                            DropdownMenuItem(
+                                                text = { Text("Remove", color = MaterialTheme.colorScheme.error) },
+                                                onClick = {
+                                                    children = children.filterIndexed { i, _ -> i != index }
+                                                    showItemMenu = false
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        )
+                    }
+                    
+                    item { HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp)) }
+                    item { Text("Available Widgets", style = MaterialTheme.typography.labelMedium) }
+                    
+                    val available = listOf(
+                        Triple(WidgetType.Battery, "Battery", Icons.Default.BatteryStd),
+                        Triple(WidgetType.Clock, "Clock", Icons.Default.Schedule),
+                        Triple(WidgetType.Calendar(false), "Calendar", Icons.Default.CalendarMonth),
+                        Triple(WidgetType.Music(false), "Music Player", Icons.Default.MusicNote),
+                        Triple(WidgetType.Photo(false), "Photo", Icons.Default.AddAPhoto)
+                    )
+                    
+                    items(available.size) { idx ->
+                        val (type, label, icon) = available[idx]
+                        val canAdd = when (type) {
+                            is WidgetType.Photo -> true
+                            else -> children.none { it.type::class == type::class }
+                        }
+                        
+                        if (canAdd) {
+                            ListItem(
+                                headlineContent = { Text(label) },
+                                leadingContent = { Icon(icon, null) },
+                                modifier = Modifier.clickable {
+                                    children = children + WidgetModel(type = type, label = label)
+                                }
+                            )
+                        }
+                    }
+                }
+                
+                Row(modifier = Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(onClick = { onConfirm(children); onDismiss() }) { Text(stringResource(R.string.done)) }
+                }
+            }
+        }
+    }
+
+    if (cropUri != null && photoTargetId != null) {
+        ImageCropDialog(
+            uri = cropUri!!,
+            isWide = false,
+            onDismiss = { cropUri = null; photoTargetId = null },
+            onConfirm = { croppedBitmap ->
+                viewModel.saveWidgetPhoto(photoTargetId!!, croppedBitmap)
+                cropUri = null
+                photoTargetId = null
+                // 強制 UI 刷新 (雖然 PhotoWidget 會根據 id 讀取，但這裡列表資訊不變，沒關係)
+            }
+        )
+    }
+}
+
+@Composable
+fun StandardMusicWidget(displayMode: WidgetDisplayMode, modifier: Modifier = Modifier) {
+    val mediaInfo by NotificationService.currentMedia.collectAsState()
+
+    val containerColor = when (displayMode) {
+        WidgetDisplayMode.GLASS -> Color.White.copy(alpha = 0.2f)
+        WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.secondaryContainer
+    }
+    val contentColor = when (displayMode) {
+        WidgetDisplayMode.GLASS -> Color.White
+        WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.onSecondaryContainer
+    }
+
+    Card(
+        modifier = modifier.aspectRatio(1f),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = containerColor)
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Background Album Art
+            mediaInfo?.albumArt?.let {
+                Image(
+                    bitmap = it.asImageBitmap(),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .blur(if (displayMode == WidgetDisplayMode.GLASS) 20.dp else 40.dp)
+                        .graphicsLayer(alpha = 0.3f),
+                    contentScale = ContentScale.Crop
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = mediaInfo?.title ?: "No Music Playing",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = contentColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = mediaInfo?.artist ?: "Unknown Artist",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = contentColor.copy(alpha = 0.7f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .size(60.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(contentColor.copy(alpha = 0.1f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (mediaInfo?.albumArt != null) {
+                        Image(
+                            bitmap = mediaInfo!!.albumArt!!.asImageBitmap(),
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Icon(Icons.Default.MusicNote, contentDescription = null, tint = contentColor.copy(alpha = 0.5f))
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { NotificationService.sendMediaCommand("previous") }) {
+                        Icon(Icons.Default.SkipPrevious, contentDescription = "Previous", tint = contentColor)
+                    }
+                    FilledTonalIconButton(
+                        onClick = { NotificationService.sendMediaCommand("play_pause") },
+                        modifier = Modifier.size(44.dp),
+                        colors = IconButtonDefaults.filledTonalIconButtonColors(
+                            containerColor = if (displayMode == WidgetDisplayMode.GLASS) Color.White.copy(alpha = 0.3f) else MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Icon(
+                            imageVector = if (mediaInfo?.isPlaying == true) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = "Play/Pause",
+                            tint = if (displayMode == WidgetDisplayMode.GLASS) Color.White else MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                    IconButton(onClick = { NotificationService.sendMediaCommand("next") }) {
+                        Icon(Icons.Default.SkipNext, contentDescription = "Next", tint = contentColor)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun WideMusicWidget(displayMode: WidgetDisplayMode, modifier: Modifier = Modifier) {
+    val mediaInfo by NotificationService.currentMedia.collectAsState()
+
+    val containerColor = when (displayMode) {
+        WidgetDisplayMode.GLASS -> Color.White.copy(alpha = 0.2f)
+        WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.secondaryContainer
+    }
+    val contentColor = when (displayMode) {
+        WidgetDisplayMode.GLASS -> Color.White
+        WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.onSecondaryContainer
+    }
+
+    Card(
+        modifier = modifier.aspectRatio(2f),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = containerColor)
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Background Album Art
+            mediaInfo?.albumArt?.let {
+                Image(
+                    bitmap = it.asImageBitmap(),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .blur(if (displayMode == WidgetDisplayMode.GLASS) 20.dp else 40.dp)
+                        .graphicsLayer(alpha = 0.3f),
+                    contentScale = ContentScale.Crop
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Album Art on the left
+                Box(
+                    modifier = Modifier
+                        .size(100.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(contentColor.copy(alpha = 0.1f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (mediaInfo?.albumArt != null) {
+                        Image(
+                            bitmap = mediaInfo!!.albumArt!!.asImageBitmap(),
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Icon(Icons.Default.MusicNote, contentDescription = null, modifier = Modifier.size(48.dp), tint = contentColor.copy(alpha = 0.5f))
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                // Info and Controls on the right
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text(
+                            text = mediaInfo?.title ?: "No Music Playing",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = contentColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = mediaInfo?.artist ?: "Unknown Artist",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = contentColor.copy(alpha = 0.7f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Start,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = { NotificationService.sendMediaCommand("previous") }) {
+                            Icon(Icons.Default.SkipPrevious, contentDescription = "Previous", tint = contentColor, modifier = Modifier.size(32.dp))
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        FilledTonalIconButton(
+                            onClick = { NotificationService.sendMediaCommand("play_pause") },
+                            modifier = Modifier.size(56.dp),
+                            colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                containerColor = if (displayMode == WidgetDisplayMode.GLASS) Color.White.copy(alpha = 0.3f) else MaterialTheme.colorScheme.primary
+                            )
+                        ) {
+                            Icon(
+                                imageVector = if (mediaInfo?.isPlaying == true) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                contentDescription = "Play/Pause",
+                                modifier = Modifier.size(32.dp),
+                                tint = if (displayMode == WidgetDisplayMode.GLASS) Color.White else MaterialTheme.colorScheme.onPrimary
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        IconButton(onClick = { NotificationService.sendMediaCommand("next") }) {
+                            Icon(Icons.Default.SkipNext, contentDescription = "Next", tint = contentColor, modifier = Modifier.size(32.dp))
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -833,6 +1256,30 @@ fun WidgetPickerDialog(onDismiss: () -> Unit, onWidgetSelected: (WidgetType) -> 
                         onDismiss()
                     }
                 )
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.widget_music)) },
+                    leadingContent = { Icon(Icons.Default.MusicNote, contentDescription = null) },
+                    modifier = Modifier.clickable { 
+                        onWidgetSelected(WidgetType.Music(isWide = false))
+                        onDismiss()
+                    }
+                )
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.widget_music_wide)) },
+                    leadingContent = { Icon(Icons.Default.MusicVideo, contentDescription = null) },
+                    modifier = Modifier.clickable { 
+                        onWidgetSelected(WidgetType.Music(isWide = true))
+                        onDismiss()
+                    }
+                )
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.widget_stacker)) },
+                    leadingContent = { Icon(Icons.Default.Layers, contentDescription = null) },
+                    modifier = Modifier.clickable { 
+                        onWidgetSelected(WidgetType.Stack())
+                        onDismiss()
+                    }
+                )
             }
         }
     }
@@ -847,6 +1294,7 @@ fun MinusOnePage(
     onUpdateWidgetMode: (String, WidgetDisplayMode) -> Unit
 ) {
     var isReorderMode by remember { mutableStateOf(false) }
+    var stackToEdit by remember { mutableStateOf<WidgetModel?>(null) }
     val mContext = LocalContext.current
 
     Column(
@@ -890,7 +1338,8 @@ fun MinusOnePage(
         ) {
             items(widgets, key = { it.id }, span = { widget ->
                 val span = if ((widget.type as? WidgetType.Photo)?.isWide == true ||
-                    (widget.type as? WidgetType.Calendar)?.isWide == true) 4 else 2
+                    (widget.type as? WidgetType.Calendar)?.isWide == true ||
+                    (widget.type as? WidgetType.Music)?.isWide == true) 4 else 2
                 GridItemSpan(span)
             }) { widget ->
                 var showContextMenu by remember { mutableStateOf(false) }
@@ -898,7 +1347,13 @@ fun MinusOnePage(
                 Box(
                     modifier = Modifier.pointerInput(widget.type) {
                         detectTapGestures(
-                            onLongPress = { showContextMenu = true },
+                            onLongPress = { 
+                                if (widget.type is WidgetType.Stack) {
+                                    stackToEdit = widget
+                                } else {
+                                    showContextMenu = true
+                                }
+                            },
                             onTap = {
                                 when (widget.type) {
                                     is WidgetType.Clock -> {
@@ -936,6 +1391,8 @@ fun MinusOnePage(
                         is WidgetType.Clock -> AnalogClockWidget(displayMode = widget.displayMode)
                         is WidgetType.Calendar -> CalendarWidget(widget = widget, displayMode = widget.displayMode)
                         is WidgetType.Photo -> PhotoWidget(widget = widget, viewModel = viewModel)
+                        is WidgetType.Music -> MusicWidget(widget = widget, displayMode = widget.displayMode)
+                        is WidgetType.Stack -> StackWidget(widget = widget, viewModel = viewModel)
                     }
                     
                     if (isReorderMode) {
@@ -976,10 +1433,31 @@ fun MinusOnePage(
                                 showContextMenu = false
                             }
                         )
+                        if (widget.type is WidgetType.Stack) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.menu_choose_widgets)) },
+                                leadingIcon = { Icon(Icons.Default.Settings, null) },
+                                onClick = {
+                                    stackToEdit = widget
+                                    showContextMenu = false
+                                }
+                            )
+                        }
                     }
                 }
             }
         }
+    }
+    
+    if (stackToEdit != null) {
+        WidgetStackPickerDialog(
+            currentChildren = (stackToEdit!!.type as WidgetType.Stack).children,
+            viewModel = viewModel,
+            onDismiss = { stackToEdit = null },
+            onConfirm = { newChildren ->
+                viewModel.updateStackChildren(stackToEdit!!.id, newChildren)
+            }
+        )
     }
 }
 
@@ -1725,6 +2203,7 @@ fun AppGrid(
     onBackgroundClick: () -> Unit = {}
 ) {
     val draggingUniqueId = draggingApp?.uniqueId
+    var stackToEdit by remember { mutableStateOf<WidgetModel?>(null) }
 
     val displayApps = remember(apps, confirmedHoveredSlotIdx, draggingUniqueId, confirmedIntent) {
         val list = apps.toMutableList()
@@ -1768,6 +2247,7 @@ fun AppGrid(
                     is WidgetType.Clock -> { w = 2; h = 2 }
                     is WidgetType.Calendar -> { w = if (type.isWide) 4 else 2; h = 2 }
                     is WidgetType.Photo -> { w = if (type.isWide) 4 else 2; h = 2 }
+                    is WidgetType.Music -> { w = if (type.isWide) 4 else 2; h = 2 }
                     else -> { w = 1; h = 1 }
                 }
             } else {
@@ -1867,12 +2347,17 @@ fun AppGrid(
                                 }
                         ) {
                             Box(modifier = Modifier.weight(1f)) {
-                                when (app.widget?.type) {
-                                    is WidgetType.Battery -> BatteryWidget(displayMode = app.widget.displayMode)
-                                    is WidgetType.Clock -> AnalogClockWidget(displayMode = app.widget.displayMode)
-                                    is WidgetType.Calendar -> CalendarWidget(widget = app.widget, displayMode = app.widget.displayMode)
-                                    is WidgetType.Photo -> PhotoWidget(widget = app.widget, viewModel = viewModel)
-                                    else -> {}
+                                val widget = app.widget
+                                if (widget != null) {
+                                    when (widget.type) {
+                                        is WidgetType.Battery -> BatteryWidget(displayMode = widget.displayMode, modifier = Modifier.fillMaxSize())
+                                        is WidgetType.Clock -> AnalogClockWidget(displayMode = widget.displayMode, modifier = Modifier.fillMaxSize())
+                                        is WidgetType.Calendar -> CalendarWidget(widget = widget, displayMode = widget.displayMode, modifier = Modifier.fillMaxSize())
+                                        is WidgetType.Photo -> PhotoWidget(widget = widget, viewModel = viewModel, modifier = Modifier.fillMaxSize())
+                                        is WidgetType.Music -> MusicWidget(widget = widget, displayMode = widget.displayMode, modifier = Modifier.fillMaxSize())
+                                        is WidgetType.Stack -> StackWidget(widget = widget, viewModel = viewModel, modifier = Modifier.fillMaxSize())
+                                        else -> {}
+                                    }
                                 }
                             }
                             
@@ -1888,6 +2373,16 @@ fun AppGrid(
                             DropdownMenu(expanded = showContextMenu, onDismissRequest = { showContextMenu = false }) {
                                 DropdownMenuItem(text = { Text(stringResource(R.string.widget_glass_mode)) }, leadingIcon = { Icon(Icons.Default.BlurOn, null) }, onClick = { app.widget?.let { viewModel.updateWidgetDisplayMode(it.id, WidgetDisplayMode.GLASS) }; showContextMenu = false })
                                 DropdownMenuItem(text = { Text(stringResource(R.string.widget_color_mode)) }, leadingIcon = { Icon(Icons.Default.Palette, null) }, onClick = { app.widget?.let { viewModel.updateWidgetDisplayMode(it.id, WidgetDisplayMode.COLOR) }; showContextMenu = false })
+                                if (app.widget?.type is WidgetType.Stack) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.menu_choose_widgets)) },
+                                        leadingIcon = { Icon(Icons.Default.Settings, null) },
+                                        onClick = {
+                                            stackToEdit = app.widget
+                                            showContextMenu = false
+                                        }
+                                    )
+                                }
                                 HorizontalDivider()
                                 DropdownMenuItem(text = { Text(stringResource(R.string.menu_delete_home)) }, leadingIcon = { Icon(Icons.Default.Delete, null) }, onClick = { viewModel.removeAppFromHome(app.uniqueId); showContextMenu = false })
                             }
@@ -1908,7 +2403,15 @@ fun AppGrid(
                                 }
                                 .pointerInput(app.uniqueId, isEditMode) {
                                     detectTapGestures(
-                                        onLongPress = { if (!isEditMode) showContextMenu = true },
+                                        onLongPress = { 
+                                            if (!isEditMode) {
+                                                if (app.widget?.type is WidgetType.Stack) {
+                                                    stackToEdit = app.widget
+                                                } else {
+                                                    showContextMenu = true
+                                                }
+                                            }
+                                        },
                                         onTap = { onAppClick(app, lastPosition.pos) }
                                     )
                                 }

@@ -215,18 +215,61 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
         
         item.widget?.let { w ->
-            obj.put("widget_id", w.id)
-            obj.put("widget_type", when(w.type) {
-                is WidgetType.Battery -> "Battery"
-                is WidgetType.Clock -> "Clock"
-                is WidgetType.Calendar -> "Calendar"
-                is WidgetType.Photo -> "Photo"
-            })
-            obj.put("widget_mode", w.displayMode.name)
-            if (w.type is WidgetType.Calendar) obj.put("is_wide", w.type.isWide)
-            if (w.type is WidgetType.Photo) obj.put("is_wide", w.type.isWide)
+            obj.put("widget", serializeWidgetModel(w))
         }
         return obj
+    }
+
+    private fun serializeWidgetModel(w: WidgetModel): JSONObject {
+        val obj = JSONObject()
+        obj.put("id", w.id)
+        obj.put("label", w.label)
+        obj.put("displayMode", w.displayMode.name)
+        obj.put("type", when (w.type) {
+            is WidgetType.Battery -> "Battery"
+            is WidgetType.Clock -> "Clock"
+            is WidgetType.Calendar -> "Calendar"
+            is WidgetType.Photo -> "Photo"
+            is WidgetType.Music -> "Music"
+            is WidgetType.Stack -> "Stack"
+        })
+        if (w.type is WidgetType.Calendar) obj.put("is_wide", w.type.isWide)
+        if (w.type is WidgetType.Photo) obj.put("is_wide", w.type.isWide)
+        if (w.type is WidgetType.Music) obj.put("is_wide", w.type.isWide)
+        if (w.type is WidgetType.Stack) {
+            val children = JSONArray()
+            w.type.children.forEach { children.put(serializeWidgetModel(it)) }
+            obj.put("children", children)
+        }
+        return obj
+    }
+
+    private fun deserializeWidgetModel(obj: JSONObject): WidgetModel? {
+        val id = obj.optString("id")
+        val label = obj.optString("label")
+        val mode = try { WidgetDisplayMode.valueOf(obj.optString("displayMode", "GLASS")) } catch (e: Exception) { WidgetDisplayMode.GLASS }
+        val typeStr = obj.optString("type")
+        val isWide = obj.optBoolean("is_wide", false)
+
+        val type: WidgetType = when (typeStr) {
+            "Battery" -> WidgetType.Battery
+            "Clock" -> WidgetType.Clock
+            "Calendar" -> WidgetType.Calendar(isWide)
+            "Photo" -> WidgetType.Photo(isWide)
+            "Music" -> WidgetType.Music(isWide)
+            "Stack" -> {
+                val children = mutableListOf<WidgetModel>()
+                val childrenArr = obj.optJSONArray("children")
+                if (childrenArr != null) {
+                    for (i in 0 until childrenArr.length()) {
+                        deserializeWidgetModel(childrenArr.getJSONObject(i))?.let { children.add(it) }
+                    }
+                }
+                WidgetType.Stack(children)
+            }
+            else -> return null
+        }
+        return WidgetModel(id = id, type = type, label = label, displayMode = mode)
     }
 
     private fun deserializeAppModel(obj: JSONObject, allInstalled: List<AppModel>): AppModel? {
@@ -250,23 +293,33 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 )
             }
             "widget" -> {
-                val wId = obj.optString("widget_id")
-                val wTypeStr = obj.optString("widget_type")
-                val wMode = try { WidgetDisplayMode.valueOf(obj.optString("widget_mode", "GLASS")) } catch(e: Exception) { WidgetDisplayMode.GLASS }
-                val isWide = obj.optBoolean("is_wide", false)
-
-                val wType = when(wTypeStr) {
-                    "Battery" -> WidgetType.Battery
-                    "Clock" -> WidgetType.Clock
-                    "Calendar" -> WidgetType.Calendar(isWide)
-                    "Photo" -> WidgetType.Photo(isWide)
-                    else -> null
-                } ?: return null
+                val widgetObj = obj.optJSONObject("widget")
+                val widget = if (widgetObj != null) {
+                    deserializeWidgetModel(widgetObj)
+                } else {
+                    // 相容舊格式
+                    val wId = obj.optString("widget_id")
+                    val wTypeStr = obj.optString("widget_type")
+                    val wMode = try { WidgetDisplayMode.valueOf(obj.optString("widget_mode", "GLASS")) } catch(e: Exception) { WidgetDisplayMode.GLASS }
+                    val isWide = obj.optBoolean("is_wide", false)
+                    val wType: WidgetType? = when(wTypeStr) {
+                        "Battery" -> WidgetType.Battery
+                        "Clock" -> WidgetType.Clock
+                        "Calendar" -> WidgetType.Calendar(isWide)
+                        "Photo" -> WidgetType.Photo(isWide)
+                        "Music" -> WidgetType.Music(isWide)
+                        else -> null
+                    }
+                    if (wType == null) null
+                    else WidgetModel(id = wId, type = wType, label = obj.optString("label"), displayMode = wMode)
+                }
+                
+                if (widget == null) return null
                 
                 AppModel(
                     label = obj.optString("label"),
                     uniqueId = obj.optString("id"),
-                    widget = WidgetModel(id = wId, type = wType, label = obj.optString("label"), displayMode = wMode)
+                    widget = widget
                 )
             }
             else -> {
@@ -286,23 +339,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val list = mutableListOf<WidgetModel>()
             val array = JSONArray(saved)
             for (i in 0 until array.length()) {
-                val obj = array.getJSONObject(i)
-                val typeStr = obj.getString("type")
-                val type = when (typeStr) {
-                    "Battery" -> WidgetType.Battery
-                    "Clock" -> WidgetType.Clock
-                    "Calendar" -> WidgetType.Calendar(obj.optBoolean("isWide", false))
-                    "Photo" -> WidgetType.Photo(obj.optBoolean("isWide", false))
-                    else -> null
-                }
-                if (type != null) {
-                    list.add(WidgetModel(
-                        id = obj.getString("id"),
-                        type = type,
-                        label = obj.getString("label"),
-                        displayMode = try { WidgetDisplayMode.valueOf(obj.getString("displayMode")) } catch(e: Exception) { WidgetDisplayMode.GLASS }
-                    ))
-                }
+                deserializeWidgetModel(array.getJSONObject(i))?.let { list.add(it) }
             }
             _minusOneWidgets.value = list
         }
@@ -314,6 +351,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             is WidgetType.Clock -> "Clock"
             is WidgetType.Calendar -> "Calendar"
             is WidgetType.Photo -> "Photo"
+            is WidgetType.Music -> "Music"
+            is WidgetType.Stack -> "Stack"
         }
 
         if (pageIndex == -1) {
@@ -365,24 +404,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun saveWidgets(list: List<WidgetModel>) {
         val array = JSONArray()
         list.forEach { widget ->
-            val obj = JSONObject()
-            obj.put("id", widget.id)
-            obj.put("label", widget.label)
-            obj.put("displayMode", widget.displayMode.name)
-            val typeStr = when (widget.type) {
-                is WidgetType.Battery -> "Battery"
-                is WidgetType.Clock -> "Clock"
-                is WidgetType.Calendar -> {
-                    obj.put("isWide", widget.type.isWide)
-                    "Calendar"
-                }
-                is WidgetType.Photo -> {
-                    obj.put("isWide", widget.type.isWide)
-                    "Photo"
-                }
-            }
-            obj.put("type", typeStr)
-            array.put(obj)
+            array.put(serializeWidgetModel(widget))
         }
         prefs.edit().putString("minus_one_widgets", array.toString()).apply()
     }
@@ -655,10 +677,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             val customIconFile = File(customIconDir, "${app.packageName}.png")
                             
                             // 關鍵：快取檔名現在包含顏色數值，桌布一換，快取即失效
+                            // V4: Icon Pack 縮放補償
                             val styleSuffix = if (currentIconPack.isNotEmpty()) {
-                                "IP_${currentIconPack.hashCode()}"
+                                "IP_V4_${currentIconPack.hashCode()}"
                             } else {
-                                "${currentStyle.name}_${if (isThemed) "T_$colorKey" else "N"}"
+                                "V4_${currentStyle.name}_${if (isThemed) "T_$colorKey" else "N"}"
                             }
                             
                             val diskCacheFile = File(processedIconCacheDir, "${app.packageName}_$styleSuffix.png")
@@ -679,12 +702,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                     val processed = if (currentIconPack.isNotEmpty()) {
                                         val ipIcon = iconPackManager.getIcon(app.packageName)
                                         if (ipIcon != null) {
-                                            ipIcon.toBitmap(sizePx, sizePx).asImageBitmap()
+                                            // Icon Pack 內的圖示：維持原始樣式，不套用主題色，且告知是 IconPack 以取消白底
+                                            iconProcessor.processIcon(ipIcon, false, null, IconStyle.STANDARD, sizePx, isIconPack = true)
                                         } else {
-                                            // 既然使用者說「有用 icon pack 就沒有造型功能」，
-                                            // 那麼沒配對到的 App 我們就直接給它原始圖示，不做 glass 等處理
-                                            app.icon?.toBitmap(sizePx, sizePx)?.asImageBitmap() 
-                                                ?: iconProcessor.processIcon(app.icon, isThemed, themeColors, currentStyle, sizePx)
+                                            // Fallback App：套用使用者選定的 Iteration 樣式與主題
+                                            iconProcessor.processIcon(app.icon, isThemed, themeColors, currentStyle, sizePx)
                                         }
                                     } else {
                                         iconProcessor.processIcon(app.icon, isThemed, themeColors, currentStyle, sizePx)
@@ -697,10 +719,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                 val processedIconBitmap = if (currentIconPack.isNotEmpty()) {
                                     val ipIcon = iconPackManager.getIcon(app.packageName)
                                     if (ipIcon != null) {
-                                        ipIcon.toBitmap(sizePx, sizePx).asImageBitmap()
+                                        iconProcessor.processIcon(ipIcon, false, null, IconStyle.STANDARD, sizePx, isIconPack = true)
                                     } else {
-                                        app.icon?.toBitmap(sizePx, sizePx)?.asImageBitmap() 
-                                            ?: iconProcessor.processIcon(app.icon, isThemed, themeColors, currentStyle, sizePx)
+                                        // Fallback App：套用使用者選定的 Iteration 樣式與主題
+                                        iconProcessor.processIcon(app.icon, isThemed, themeColors, currentStyle, sizePx)
                                     }
                                 } else {
                                     iconProcessor.processIcon(app.icon, isThemed, themeColors, currentStyle, sizePx)
@@ -914,6 +936,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     is WidgetType.Clock -> 4
                     is WidgetType.Calendar -> if (type.isWide) 8 else 4
                     is WidgetType.Photo -> if (type.isWide) 8 else 4
+                    is WidgetType.Music -> if (type.isWide) 8 else 4
+                    is WidgetType.Stack -> 4
                     else -> 1
                 }
             } else 1
@@ -1001,6 +1025,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
         _pages.value = currentPages
         saveLayout()
+    }
+
+    fun updateStackChildren(stackId: String, children: List<WidgetModel>) {
+        val currentPages = _pages.value.map { page ->
+            page.map { item ->
+                if (item.widget?.id == stackId) {
+                    item.copy(widget = item.widget.copy(type = WidgetType.Stack(children)))
+                } else item
+            }
+        }
+        _pages.value = currentPages
+        
+        val newMinusOne = _minusOneWidgets.value.map { widget ->
+            if (widget.id == stackId) {
+                widget.copy(type = WidgetType.Stack(children))
+            } else widget
+        }
+        _minusOneWidgets.value = newMinusOne
+        
+        saveLayout()
+        saveWidgets(newMinusOne)
     }
 
 
@@ -1239,19 +1284,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // 4. 負一屏小工具
         val minusOne = JSONArray()
         _minusOneWidgets.value.forEach { widget ->
-            val obj = JSONObject()
-            obj.put("id", widget.id)
-            obj.put("label", widget.label)
-            obj.put("displayMode", widget.displayMode.name)
-            obj.put("type", when(widget.type) {
-                is WidgetType.Battery -> "Battery"
-                is WidgetType.Clock -> "Clock"
-                is WidgetType.Calendar -> "Calendar"
-                is WidgetType.Photo -> "Photo"
-            })
-            if (widget.type is WidgetType.Calendar) obj.put("is_wide", widget.type.isWide)
-            if (widget.type is WidgetType.Photo) obj.put("is_wide", widget.type.isWide)
-            minusOne.put(obj)
+            minusOne.put(serializeWidgetModel(widget))
         }
         root.put("minus_one_widgets", minusOne)
 
@@ -1321,24 +1354,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val minusOne = mutableListOf<WidgetModel>()
             val minusOneArray = root.getJSONArray("minus_one_widgets")
             for (i in 0 until minusOneArray.length()) {
-                val obj = minusOneArray.getJSONObject(i)
-                val typeStr = obj.getString("type")
-                val isWide = obj.optBoolean("is_wide", false)
-                val type = when(typeStr) {
-                    "Battery" -> WidgetType.Battery
-                    "Clock" -> WidgetType.Clock
-                    "Calendar" -> WidgetType.Calendar(isWide)
-                    "Photo" -> WidgetType.Photo(isWide)
-                    else -> null
-                }
-                if (type != null) {
-                    minusOne.add(WidgetModel(
-                        id = obj.getString("id"),
-                        type = type,
-                        label = obj.getString("label"),
-                        displayMode = WidgetDisplayMode.valueOf(obj.getString("displayMode"))
-                    ))
-                }
+                deserializeWidgetModel(minusOneArray.getJSONObject(i))?.let { minusOne.add(it) }
             }
             _minusOneWidgets.value = minusOne
             saveWidgets(minusOne)
