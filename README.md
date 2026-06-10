@@ -21,7 +21,6 @@
     *   **Dynamic Vibrancy**: Boosted saturation and contrast for a crystal-clear, deep liquid aesthetic.
     *   **Adaptive Blur**: Synchronized wallpaper sampling with high-radius Gaussian blur.
     *   **3D Bevel Border**: Multi-layered stroke simulating environment light reflection and shadow.
-    *   **Wallpaper Parallax (New)**: Gyroscope-based 3D motion effect for the home screen background.
     *   **Readability Layer**: Subtle intelligent overlay to ensure text contrast on any wallpaper.
 *   **Icon Pack Support (New)**: Comprehensive support for third-party icon packs. Features:
     *   **Broad Compatibility**: Compatible with Nova, ADW, and Go Launcher theme formats.

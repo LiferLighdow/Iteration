@@ -30,19 +30,22 @@ class IconPackManager(private val context: Context) {
      * 獲取手機上安裝的所有 Icon Pack
      */
     fun getInstalledIconPacks(): List<IconPackInfo> {
-        val iconPacks = mutableSetOf<IconPackInfo>()
+        val iconPacks = mutableMapOf<String, IconPackInfo>()
         for (action in ICON_PACK_ACTIONS) {
             val intent = Intent(action)
             val list = pm.queryIntentActivities(intent, PackageManager.GET_META_DATA)
             for (info in list) {
-                iconPacks.add(IconPackInfo(
-                    packageName = info.activityInfo.packageName,
-                    label = info.loadLabel(pm).toString(),
-                    icon = info.loadIcon(pm)
-                ))
+                val pkgName = info.activityInfo.packageName
+                if (!iconPacks.containsKey(pkgName)) {
+                    iconPacks[pkgName] = IconPackInfo(
+                        packageName = pkgName,
+                        label = info.loadLabel(pm).toString(),
+                        icon = info.loadIcon(pm)
+                    )
+                }
             }
         }
-        return iconPacks.toList().sortedBy { it.label }
+        return iconPacks.values.toList().sortedBy { it.label }
     }
 
     /**
