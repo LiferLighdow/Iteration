@@ -79,7 +79,10 @@ fun SettingsNavigation() {
     val context = LocalContext.current
     
     BackHandler(enabled = currentPage != SettingsPage.MAIN) {
-        currentPage = SettingsPage.MAIN
+        when (currentPage) {
+            SettingsPage.CHANGE_ICON -> currentPage = SettingsPage.ICON_THEME
+            else -> currentPage = SettingsPage.MAIN
+        }
     }
 
     when (currentPage) {
@@ -87,7 +90,6 @@ fun SettingsNavigation() {
             onBack = { (context as? ComponentActivity)?.finish() },
             onNavigateToHideApps = { currentPage = SettingsPage.HIDE_APPS },
             onNavigateToRenameApps = { currentPage = SettingsPage.RENAME_APPS },
-            onNavigateToChangeIcon = { currentPage = SettingsPage.CHANGE_ICON },
             onNavigateToAppLibrary = { currentPage = SettingsPage.APP_LIBRARY },
             onNavigateToIconTheme = { currentPage = SettingsPage.ICON_THEME },
             onNavigateToDock = { currentPage = SettingsPage.DOCK },
@@ -95,9 +97,12 @@ fun SettingsNavigation() {
         )
         SettingsPage.HIDE_APPS -> HideAppsScreen(onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.RENAME_APPS -> RenameAppsScreen(onBack = { currentPage = SettingsPage.MAIN })
-        SettingsPage.CHANGE_ICON -> ChangeIconScreen(onBack = { currentPage = SettingsPage.MAIN })
+        SettingsPage.CHANGE_ICON -> ChangeIconScreen(onBack = { currentPage = SettingsPage.ICON_THEME })
         SettingsPage.APP_LIBRARY -> AppLibrarySettingsScreen(onBack = { currentPage = SettingsPage.MAIN })
-        SettingsPage.ICON_THEME -> IconThemeScreen(onBack = { currentPage = SettingsPage.MAIN })
+        SettingsPage.ICON_THEME -> IconThemeScreen(
+            onBack = { currentPage = SettingsPage.MAIN },
+            onNavigateToChangeIcon = { currentPage = SettingsPage.CHANGE_ICON }
+        )
         SettingsPage.DOCK -> DockSettingsScreen(onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.LIQUID_GLASS -> LiquidGlassSettingsScreen(onBack = { currentPage = SettingsPage.MAIN })
     }
@@ -132,7 +137,6 @@ fun SettingsMainScreen(
     onBack: () -> Unit, 
     onNavigateToHideApps: () -> Unit, 
     onNavigateToRenameApps: () -> Unit,
-    onNavigateToChangeIcon: () -> Unit,
     onNavigateToAppLibrary: () -> Unit,
     onNavigateToIconTheme: () -> Unit,
     onNavigateToDock: () -> Unit,
@@ -180,6 +184,7 @@ fun SettingsMainScreen(
     }
 
     var showRestartDialog by remember { mutableStateOf(false) }
+    var showPasswordGate by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -245,7 +250,13 @@ fun SettingsMainScreen(
                     headlineContent = { Text(stringResource(R.string.settings_hide_apps)) },
                     supportingContent = { Text(stringResource(R.string.settings_hide_apps_desc)) },
                     trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
-                    modifier = Modifier.clickable { onNavigateToHideApps() }
+                    modifier = Modifier.clickable { 
+                        if (viewModel.getPassword().isEmpty()) {
+                            onNavigateToHideApps()
+                        } else {
+                            showPasswordGate = true
+                        }
+                    }
                 )
             }
             item {
@@ -254,14 +265,6 @@ fun SettingsMainScreen(
                     supportingContent = { Text(stringResource(R.string.settings_rename_apps_desc)) },
                     trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
                     modifier = Modifier.clickable { onNavigateToRenameApps() }
-                )
-            }
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.settings_change_icon)) },
-                    supportingContent = { Text(stringResource(R.string.settings_change_icon_desc)) },
-                    trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
-                    modifier = Modifier.clickable { onNavigateToChangeIcon() }
                 )
             }
             item {
@@ -343,11 +346,62 @@ fun SettingsMainScreen(
             }
         )
     }
+
+    if (showPasswordGate) {
+        var input by remember { mutableStateOf("") }
+        var isError by remember { mutableStateOf(false) }
+
+        AlertDialog(
+            onDismissRequest = { showPasswordGate = false },
+            title = { Text(stringResource(R.string.security_section)) },
+            text = {
+                Column {
+                    Text(stringResource(R.string.password_label))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = input,
+                        onValueChange = { 
+                            input = it
+                            isError = false
+                        },
+                        isError = isError,
+                        visualTransformation = PasswordVisualTransformation(),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (isError) {
+                        Text(
+                            text = "Incorrect password",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    if (input == viewModel.getPassword()) {
+                        showPasswordGate = false
+                        onNavigateToHideApps()
+                    } else {
+                        isError = true
+                    }
+                }) {
+                    Text(stringResource(R.string.confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPasswordGate = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun IconThemeScreen(onBack: () -> Unit) {
+fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
     val viewModel: MainViewModel = viewModel()
     val isThemedIconsEnabled by viewModel.isThemedIconsEnabled.collectAsState()
     val currentStyle by viewModel.iconStyle.collectAsState()
@@ -368,6 +422,25 @@ fun IconThemeScreen(onBack: () -> Unit) {
         }
     ) { innerPadding ->
         LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+            item {
+                Text(
+                    text = "Customization",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.settings_change_icon)) },
+                    supportingContent = { Text(stringResource(R.string.settings_change_icon_desc)) },
+                    trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
+                    modifier = Modifier.clickable { onNavigateToChangeIcon() }
+                )
+            }
+
+            item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
+
             item {
                 Text(
                     text = "Icon Pack",
@@ -767,7 +840,7 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
             val filteredApps = if (searchQuery.isEmpty()) allApps
                               else allApps.filter { it.label.contains(searchQuery, ignoreCase = true) }
 
-            items(filteredApps, key = { it.packageName }) { app ->
+            items(filteredApps, key = { it.uniqueId }) { app ->
                 ListItem(
                     headlineContent = { Text(app.label) },
                     supportingContent = { Text("Folder: ${app.displayCategory}") },
@@ -901,7 +974,7 @@ fun ChangeIconScreen(onBack: () -> Unit) {
             SearchBar(searchQuery) { searchQuery = it }
             
             LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(filteredApps, key = { it.packageName }) { app ->
+                items(filteredApps, key = { it.uniqueId }) { app ->
                     ListItem(
                         headlineContent = { Text(app.label) },
                         leadingContent = {
@@ -976,7 +1049,7 @@ fun RenameAppsScreen(onBack: () -> Unit) {
             SearchBar(searchQuery) { searchQuery = it }
             
             LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(filteredApps, key = { it.packageName }) { app ->
+                items(filteredApps, key = { it.uniqueId }) { app ->
                     ListItem(
                         headlineContent = { Text(app.label) },
                         leadingContent = {
@@ -1078,7 +1151,7 @@ fun HideAppsScreen(onBack: () -> Unit) {
                 SearchBar(searchQuery) { searchQuery = it }
             }
 
-            items(filteredApps, key = { it.packageName }) { app ->
+            items(filteredApps, key = { it.uniqueId }) { app ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()

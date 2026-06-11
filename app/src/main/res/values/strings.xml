@@ -14,6 +14,7 @@
     <string name="unlock">Unlock</string>
     <string name="close">Close</string>
     <string name="apply">Apply</string>
+    <string name="confirm">Confirm</string>
 
     <!-- Launcher Context Menu -->
     <string name="menu_edit_mode">Enter Edit Mode</string>

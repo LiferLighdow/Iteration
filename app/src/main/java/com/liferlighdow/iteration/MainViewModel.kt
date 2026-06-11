@@ -582,7 +582,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         loadApps() // Reload to update isHidden status
     }
 
-    fun getPassword(): String = prefs.getString("hidden_password", "1234") ?: "1234"
+    fun getPassword(): String = prefs.getString("hidden_password", "") ?: ""
 
     fun setPassword(password: String) {
         prefs.edit().putString("hidden_password", password).apply()

@@ -17,9 +17,12 @@ class AppRepository(private val context: Context) {
         val myPackageName = context.packageName
 
         return resolveInfos.filter { it.activityInfo.packageName != myPackageName }.map { info ->
+            val pkgName = info.activityInfo.packageName
+            val activityName = info.activityInfo.name
             AppModel(
                 label = info.loadLabel(pm).toString(),
-                packageName = info.activityInfo.packageName,
+                packageName = pkgName,
+                uniqueId = "$pkgName/$activityName",
                 icon = info.activityInfo.loadIcon(pm), // 改用 activityInfo 讀取較原始的圖示
                 category = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                     info.activityInfo.applicationInfo.category

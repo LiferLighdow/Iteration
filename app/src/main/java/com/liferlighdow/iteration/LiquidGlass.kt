@@ -4,8 +4,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -16,15 +18,17 @@ import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
 
 /**
- * 實現極具物理感的 Liquid Glass (用於 Folder 或 Dock)
+ * 滿血版 Liquid Glass 實現，支持物理形變與高級混合模式
  */
 fun Modifier.liquidGlass(
     enabled: Boolean,
     backdrop: Backdrop?,
-    cornerRadius: Dp
+    cornerRadius: Dp,
+    tint: Color = Color.Unspecified
 ): Modifier = if (!enabled || backdrop == null) {
     this.drawBehind {
         val cr = cornerRadius.toPx()
+        // 降低降級方案的感官
         drawRoundRect(
             color = Color.White.copy(alpha = 0.3f),
             cornerRadius = CornerRadius(cr, cr)
@@ -35,37 +39,24 @@ fun Modifier.liquidGlass(
         backdrop = backdrop,
         shape = { RoundedCornerShape(cornerRadius) },
         effects = {
-            vibrancy()
-            
-            // 由於現在採樣源（backdrop）是半清晰的，我們在這裡實施強效模糊
-            blur(24f.dp.toPx()) 
+            // 1. 徹底移除磨砂感，實現清澈的液態扭曲
+            // 這裡不再使用 blur()
 
-            // 實施強烈的透鏡折射
-            lens(20f.dp.toPx(), 128f.dp.toPx()) 
+            // 2. 物理透鏡折射 (Lens Distortion)
+            // 透過重映射背景像素產生形變，這是 Liquid 的靈魂
+            lens(
+                refractionHeight = 24f.dp.toPx(),
+                refractionAmount = 48f.dp.toPx(),
+                depthEffect = false,
+                chromaticAberration = true 
+            )
+            
+            // 3. 增加震盪感
+            vibrancy()
         },
         onDrawSurface = {
-            val cr = cornerRadius.toPx()
-            
-            // 表面通透漸變
-            drawRect(
-                brush = Brush.verticalGradient(
-                    0.0f to Color.White.copy(alpha = 0.2f),
-                    1.0f to Color.Transparent
-                )
-            )
-
-            // 高級三維邊框
-            drawRoundRect(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color.White.copy(alpha = 0.7f),
-                        Color.White.copy(alpha = 0.1f),
-                        Color.Black.copy(alpha = 0.05f)
-                    )
-                ),
-                cornerRadius = CornerRadius(cr, cr),
-                style = Stroke(width = 1.dp.toPx())
-            )
+            // 這裡保持完全清空，不添加任何流光、邊框或色塊填充
+            // 讓視覺效果完全聚焦在物理重映射產生的液態形變上
         }
     )
 }
@@ -74,4 +65,9 @@ fun Modifier.liquidGlassDock(
     isLiquidGlass: Boolean,
     backdrop: Backdrop,
     cornerRadius: Dp = 42.dp
-): Modifier = this.liquidGlass(isLiquidGlass, backdrop, cornerRadius)
+): Modifier = this.liquidGlass(
+    enabled = isLiquidGlass,
+    backdrop = backdrop,
+    cornerRadius = cornerRadius,
+    tint = Color.Unspecified
+)
