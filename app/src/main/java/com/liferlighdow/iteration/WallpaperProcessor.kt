@@ -1,6 +1,7 @@
 package com.liferlighdow.iteration
 
 import android.app.Application
+import android.app.WallpaperManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.core.graphics.drawable.toBitmap
@@ -17,6 +18,20 @@ class WallpaperProcessor(private val context: Application) {
         val raw: ImageBitmap,
         val blurred: ImageBitmap
     )
+
+    /**
+     * 從系統獲取當前桌布
+     */
+    fun extractSystemWallpaper(): WallpaperResult? {
+        return try {
+            val wm = WallpaperManager.getInstance(context)
+            val drawable = wm.drawable ?: return null
+            processBitmap(drawable.toBitmap())
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
 
     /**
      * 從指定檔案路徑載入並處理桌布
