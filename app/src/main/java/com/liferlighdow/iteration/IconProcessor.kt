@@ -8,36 +8,44 @@ import android.os.Build
 import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import java.io.File
-import java.io.FileOutputStream
+import androidx.core.graphics.ColorUtils
 
 class IconProcessor(private val context: Context) {
-    
+    // 使用 ThreadLocal 確保執行緒安全的物件重用，相容 minSdk 23
+    private val threadPaint = object : ThreadLocal<Paint>() {
+        override fun initialValue(): Paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    }
+    private val threadPath = object : ThreadLocal<Path>() {
+        override fun initialValue(): Path = Path()
+    }
+    private val threadMatrixArray = object : ThreadLocal<FloatArray>() {
+        override fun initialValue(): FloatArray = FloatArray(20)
+    }
+
     fun processIcon(
         icon: Drawable?,
         isThemed: Boolean,
         themeColors: ColorScheme?,
         style: IconStyle,
         sizePx: Int,
-        isIconPack: Boolean = false // 新增：是否為 Icon Pack 圖示
+        isIconPack: Boolean = false
     ): ImageBitmap {
         val b = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(b)
         
-        // --- 核心修正：強制套用 Iteration 的 Squarcle 造型 ---
-        val path = Path()
-        val cornerRadius = sizePx * 0.238f // 你的專屬比例 105% (0.238f)
-        path.addRoundRect(0f, 0f, sizePx.toFloat(), sizePx.toFloat(), cornerRadius, cornerRadius, Path.Direction.CW)
+        // 重用 Path 物件並根據目前尺寸更新
+        val path = threadPath.get()!!.apply {
+            reset()
+            val cornerRadius = sizePx * 0.238f
+            addRoundRect(0f, 0f, sizePx.toFloat(), sizePx.toFloat(), cornerRadius, cornerRadius, Path.Direction.CW)
+        }
         canvas.clipPath(path)
-        // ------------------------------------------------
         
         if (icon != null) {
-            // 檢查是否支援 Material You (Monochrome 模式)
             val supportsMonochrome = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && icon is AdaptiveIconDrawable) {
                 icon.monochrome != null
             } else false
 
-            // 如果不支援 Monochrome 且開啟了 Themed 模式，則強制降級為 Standard + 非 Themed
             val effectiveIsThemed = if (isThemed && !supportsMonochrome) false else isThemed
             val effectiveStyle = if (isThemed && !supportsMonochrome) IconStyle.STANDARD else style
 
@@ -45,7 +53,6 @@ class IconProcessor(private val context: Context) {
             val scaledSize = (sizePx * scale).toInt()
             val offset = (sizePx - scaledSize) / 2
 
-            // 提前提取 M3 顏色資訊
             val m3Colors = if (effectiveIsThemed && themeColors != null) {
                 val p = themeColors.primary
                 val op = themeColors.onPrimary
@@ -57,17 +64,16 @@ class IconProcessor(private val context: Context) {
             val m3Color = m3Colors?.first
             val m3OnColor = m3Colors?.second
 
-            // 1. 決定背景顏色
+            // 1. 決定背景顏色 (使用 ColorUtils.blendARGB 優化混合)
             val bgColor = if (effectiveIsThemed && m3Color != null) {
                 when (effectiveStyle) {
                     IconStyle.STANDARD -> m3Color
-                    IconStyle.BLACK -> mixColors(Color.BLACK, m3Color, 0.3f) 
-                    IconStyle.WHITE -> mixColors(Color.WHITE, m3Color, 0.5f)
-                    IconStyle.GLASS -> mixColors(Color.argb(100, 255, 255, 255), m3Color, 0.15f)
+                    IconStyle.BLACK -> ColorUtils.blendARGB(Color.BLACK, m3Color, 0.3f)
+                    IconStyle.WHITE -> ColorUtils.blendARGB(Color.WHITE, m3Color, 0.5f)
+                    IconStyle.GLASS -> ColorUtils.blendARGB(Color.argb(100, 255, 255, 255), m3Color, 0.15f)
                 }
             } else {
                 when (effectiveStyle) {
-                    // 核心修正：如果是 Icon Pack 圖示，不強制補白底
                     IconStyle.STANDARD -> {
                         val isAdaptive = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && icon is AdaptiveIconDrawable
                         if (!isAdaptive && !isIconPack) Color.WHITE else null
@@ -78,11 +84,11 @@ class IconProcessor(private val context: Context) {
                 }
             }
 
-            // 2. 決定前景顏色 (ColorFilter)
+            // 2. 決定前景顏色
             val fgColor = if (effectiveIsThemed && m3Colors != null) {
                 when (effectiveStyle) {
                     IconStyle.STANDARD -> m3OnColor
-                    IconStyle.BLACK -> mixColors(Color.WHITE, m3Color!!, 0.3f)
+                    IconStyle.BLACK -> ColorUtils.blendARGB(Color.WHITE, m3Color!!, 0.3f)
                     IconStyle.WHITE -> Color.BLACK
                     IconStyle.GLASS -> m3Color
                 }
@@ -96,24 +102,24 @@ class IconProcessor(private val context: Context) {
             }
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && icon is AdaptiveIconDrawable) {
-                // 繪製背景
                 if (bgColor != null) {
-                    val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-                    bgPaint.color = bgColor
+                    val bgPaint = threadPaint.get()!!.apply {
+                        color = bgColor
+                        colorFilter = null
+                    }
                     canvas.drawRect(0f, 0f, sizePx.toFloat(), sizePx.toFloat(), bgPaint)
                 } else {
                     icon.background?.setBounds(offset, offset, offset + scaledSize, offset + scaledSize)
                     icon.background?.draw(canvas)
                 }
 
-                // 繪製前景
                 val filter = if (fgColor != null) {
-                    ColorMatrixColorFilter(ColorMatrix(floatArrayOf(
-                        0f, 0f, 0f, 0f, Color.red(fgColor).toFloat(),
-                        0f, 0f, 0f, 0f, Color.green(fgColor).toFloat(),
-                        0f, 0f, 0f, 0f, Color.blue(fgColor).toFloat(),
-                        0f, 0f, 0f, 1f, 0f
-                    )))
+                    val matrixArray = threadMatrixArray.get()!!
+                    matrixArray[0] = 0f; matrixArray[1] = 0f; matrixArray[2] = 0f; matrixArray[3] = 0f; matrixArray[4] = Color.red(fgColor).toFloat()
+                    matrixArray[5] = 0f; matrixArray[6] = 0f; matrixArray[7] = 0f; matrixArray[8] = 0f; matrixArray[9] = Color.green(fgColor).toFloat()
+                    matrixArray[10] = 0f; matrixArray[11] = 0f; matrixArray[12] = 0f; matrixArray[13] = 0f; matrixArray[14] = Color.blue(fgColor).toFloat()
+                    matrixArray[15] = 0f; matrixArray[16] = 0f; matrixArray[17] = 0f; matrixArray[18] = 1f; matrixArray[19] = 0f
+                    ColorMatrixColorFilter(matrixArray)
                 } else null
 
                 var drawn = false
@@ -129,8 +135,6 @@ class IconProcessor(private val context: Context) {
 
                 if (!drawn) {
                     icon.foreground?.let {
-                        // 只有當 effectiveIsThemed 為 true 或是非 Standard 樣式時才套用 filter
-                        // 這裡加上一個保險，確保如果不支援 Monochrome 就不會被強制變色
                         if (effectiveIsThemed || effectiveStyle != IconStyle.STANDARD) {
                             it.colorFilter = filter
                         }
@@ -140,18 +144,17 @@ class IconProcessor(private val context: Context) {
                     }
                 }
             } else {
-                // 非 Adaptive Icon 的處理
                 if (bgColor != null) {
-                    val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-                    bgPaint.color = bgColor
+                    val bgPaint = threadPaint.get()!!.apply {
+                        color = bgColor
+                        colorFilter = null
+                    }
                     canvas.drawRoundRect(0f, 0f, sizePx.toFloat(), sizePx.toFloat(), sizePx * 0.2f, sizePx * 0.2f, bgPaint)
                 }
                 
                 if (fgColor != null) icon.setTint(fgColor)
 
                 if (isIconPack) {
-                    // 核心修正：Icon Pack 縮放補償 (放大 1.15 倍)
-                    // 讓帶有透明邊距的 Icon Pack 圖示視覺上能與 Standard 滿版圖示等大
                     val iconScale = 1.15f
                     val s = (sizePx * iconScale).toInt()
                     val o = (sizePx - s) / 2
@@ -164,13 +167,5 @@ class IconProcessor(private val context: Context) {
             }
         }
         return b.asImageBitmap()
-    }
-
-    private fun mixColors(base: Int, tint: Int, amount: Float): Int {
-        val r = (Color.red(base) * (1 - amount) + Color.red(tint) * amount).toInt()
-        val g = (Color.green(base) * (1 - amount) + Color.green(tint) * amount).toInt()
-        val b = (Color.blue(base) * (1 - amount) + Color.blue(tint) * amount).toInt()
-        val a = Color.alpha(base)
-        return Color.argb(a, r, g, b)
     }
 }

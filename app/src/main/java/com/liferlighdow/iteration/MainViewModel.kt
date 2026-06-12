@@ -5,7 +5,6 @@ import android.app.WallpaperManager
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RenderEffect
 import android.graphics.Shader
@@ -27,8 +26,11 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -39,17 +41,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val prefs = application.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
     private val iconProcessor = IconProcessor(application)
     private val iconPackManager = IconPackManager(application)
+    private val wallpaperProcessor = WallpaperProcessor(application)
+    private val wallpaperFile = File(application.filesDir, "launcher_wallpaper.png")
     
     private val _blurredWallpaper = MutableStateFlow<ImageBitmap?>(null)
     val blurredWallpaper = _blurredWallpaper.asStateFlow()
 
     private val _rawWallpaper = MutableStateFlow<ImageBitmap?>(null)
     val rawWallpaper = _rawWallpaper.asStateFlow()
+    
+    // 用於強制更新 UI 的訊號
+    private val _wallpaperUpdateSignal = MutableStateFlow(0L)
+    val wallpaperUpdateSignal = _wallpaperUpdateSignal.asStateFlow()
 
-    private val _pages = MutableStateFlow<List<List<AppModel>>>(emptyList())
+    internal val _pages = MutableStateFlow<List<List<AppModel>>>(emptyList())
     val pages: StateFlow<List<List<AppModel>>> = _pages
 
-    private val _allApps = MutableStateFlow<List<AppModel>>(emptyList())
+    internal val _allApps = MutableStateFlow<List<AppModel>>(emptyList())
     val allApps: StateFlow<List<AppModel>> = _allApps
 
     private val _dockPackageNames = MutableStateFlow(listOf<String>())
@@ -82,6 +90,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isLiquidGlassAppLibrarySearchEnabled = MutableStateFlow(prefs.getBoolean("liquid_glass_app_library_search", false))
     val isLiquidGlassAppLibrarySearchEnabled = _isLiquidGlassAppLibrarySearchEnabled.asStateFlow()
 
+    private val _isLiquidGlassWidgetsEnabled = MutableStateFlow(prefs.getBoolean("liquid_glass_widgets", false))
+    val isLiquidGlassWidgetsEnabled = _isLiquidGlassWidgetsEnabled.asStateFlow()
+
     private val _iconPackPackage = MutableStateFlow(prefs.getString("icon_pack_package", "") ?: "")
     val iconPackPackage = _iconPackPackage.asStateFlow()
 
@@ -98,13 +109,42 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _userCategories = MutableStateFlow<List<String>>(emptyList())
     val userCategories: StateFlow<List<String>> = _userCategories.asStateFlow()
 
+    // --- 新增：響應式 UI 狀態 ---
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery = _searchQuery.asStateFlow()
+
+    private val _selectedCategory = MutableStateFlow("All")
+    val selectedCategory = _selectedCategory.asStateFlow()
+
+    /**
+     * 自動計算 App Library 的顯示清單 (無損優化)
+     */
+    val filteredLibraryApps = combine(_allApps, _searchQuery, _selectedCategory) { apps, query, category ->
+        apps.asSequence()
+            .filter { app ->
+                val matchesQuery = app.label.contains(query, ignoreCase = true)
+                val matchesCategory = when (category) {
+                    "All" -> true
+                    "Hidden Apps" -> app.isHidden
+                    else -> app.displayCategory == category
+                }
+                matchesQuery && matchesCategory
+            }
+            .sortedBy { it.label.lowercase() }
+            .toList()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun setSearchQuery(query: String) { _searchQuery.value = query }
+    fun setSelectedCategory(category: String) { _selectedCategory.value = category }
+    // --------------------------
+
     private val _suggestedApps = MutableStateFlow<List<AppModel>>(emptyList())
     val suggestedApps = _suggestedApps.asStateFlow()
 
     private val customIconDir = File(application.filesDir, "custom_icons").apply { mkdirs() }
     private val processedIconCacheDir = File(application.cacheDir, "processed_icons").apply { mkdirs() }
-    private var pageSize = 20
-    private var dragBackupPages: List<List<AppModel>>? = null
+    internal var pageSize = 20
+    internal var dragBackupPages: List<List<AppModel>>? = null
 
     init {
         loadSettings()
@@ -114,39 +154,56 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun updateBlurredWallpaper() {
         viewModelScope.launch(Dispatchers.IO) {
+            // 1. 優先從本地儲存載入 (使用者自選)
+            var result = wallpaperProcessor.loadWallpaperFromFile(wallpaperFile)
+            
+            // 2. 如果沒有自選，則嘗試從系統獲取 (降級方案)
+            if (result == null) {
+                result = wallpaperProcessor.extractSystemWallpaper()
+            }
+            
+            if (result != null) {
+                _rawWallpaper.value = result.raw
+                _blurredWallpaper.value = result.blurred
+            }
+        }
+    }
+
+    fun setCustomWallpaper(bitmap: Bitmap, syncToSystem: Boolean = true) {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
-                val wm = WallpaperManager.getInstance(getApplication())
-                val drawable = wm.drawable ?: return@launch
-                val rawBitmap = drawable.toBitmap()
-                
-                val dm = getApplication<Application>().resources.displayMetrics
-                val screenW = dm.widthPixels
-                val screenH = dm.heightPixels
-                
-                // 1. 精確裁剪
-                val wallpaperAspectRatio = rawBitmap.width.toFloat() / rawBitmap.height
-                val screenAspectRatio = screenW.toFloat() / screenH
-                
-                val cropW = if (wallpaperAspectRatio > screenAspectRatio) (rawBitmap.height * screenAspectRatio).toInt() else rawBitmap.width
-                val cropH = if (wallpaperAspectRatio > screenAspectRatio) rawBitmap.height else (rawBitmap.width / screenAspectRatio).toInt()
-                
-                val cropped = Bitmap.createBitmap(rawBitmap, (rawBitmap.width - cropW) / 2, (rawBitmap.height - cropH) / 2, cropW, cropH)
-                val scaled = Bitmap.createScaledBitmap(cropped, screenW, screenH, true)
-                
-                // 2. 【Liquid Glass 採樣優化】：保留高清晰度
-                val blurScale = 0.5f
-                val bw = (screenW * blurScale).toInt().coerceAtLeast(1)
-                val bh = (screenH * blurScale).toInt().coerceAtLeast(1)
-                
-                val small = Bitmap.createScaledBitmap(scaled, bw, bh, true)
-                val blurred = Bitmap.createScaledBitmap(small, screenW, screenH, true)
-                
-                _rawWallpaper.value = scaled.asImageBitmap()
-                _blurredWallpaper.value = blurred.asImageBitmap()
+                if (syncToSystem) {
+                    val wm = WallpaperManager.getInstance(getApplication())
+                    wm.setBitmap(bitmap)
+                }
+                saveWallpaperToLocal(bitmap)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
+    }
+
+    fun grabSystemWallpaper(onFailure: () -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = wallpaperProcessor.extractSystemWallpaper()
+            if (result != null) {
+                // 抓到了！存入本地並更新 UI (不需 syncToSystem 因為它本來就是系統的)
+                saveWallpaperToLocal(result.raw.asAndroidBitmap())
+            } else {
+                withContext(Dispatchers.Main) { onFailure() }
+            }
+        }
+    }
+
+    private fun saveWallpaperToLocal(bitmap: Bitmap) {
+        try {
+            FileOutputStream(wallpaperFile).use { out ->
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+            }
+            // 發出更新訊號
+            _wallpaperUpdateSignal.value = System.currentTimeMillis()
+            updateBlurredWallpaper()
+        } catch (e: Exception) { e.printStackTrace() }
     }
 
     override fun onCleared() {
@@ -172,6 +229,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val newLiquidAppLibraryFolderEnabled = prefs.getBoolean("liquid_glass_app_library_folder", false)
         val newLiquidGlobalSearchEnabled = prefs.getBoolean("liquid_glass_global_search", false)
         val newLiquidAppLibrarySearchEnabled = prefs.getBoolean("liquid_glass_app_library_search", false)
+        val newLiquidWidgetsEnabled = prefs.getBoolean("liquid_glass_widgets", false)
         val newIconPackPackage = prefs.getString("icon_pack_package", "") ?: ""
 
         if (_iconStyle.value != newStyle || _isThemedIconsEnabled.value != newThemed || _iconPackPackage.value != newIconPackPackage) {
@@ -187,150 +245,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _isLiquidGlassAppLibraryFolderEnabled.value = newLiquidAppLibraryFolderEnabled
         _isLiquidGlassGlobalSearchEnabled.value = newLiquidGlobalSearchEnabled
         _isLiquidGlassAppLibrarySearchEnabled.value = newLiquidAppLibrarySearchEnabled
+        _isLiquidGlassWidgetsEnabled.value = newLiquidWidgetsEnabled
     }
 
-    private fun saveLayout() {
+    internal fun saveLayout() {
         val pagesArray = JSONArray()
         _pages.value.forEach { page ->
             val pageArray = JSONArray()
             page.forEach { item ->
-                pageArray.put(serializeAppModel(item))
+                pageArray.put(ConfigSerializer.serializeAppModel(item))
             }
             pagesArray.put(pageArray)
         }
         prefs.edit().putString("launcher_layout_v2", pagesArray.toString()).apply()
-    }
-
-    private fun serializeAppModel(item: AppModel): JSONObject {
-        val obj = JSONObject()
-        obj.put("type", if (item.isFolder) "folder" else if (item.isWidget) "widget" else "app")
-        obj.put("id", item.uniqueId)
-        obj.put("label", item.label)
-        obj.put("pkg", item.packageName)
-        
-        if (item.isFolder) {
-            val children = JSONArray()
-            item.folderItems.forEach { children.put(serializeAppModel(it)) }
-            obj.put("children", children)
-        }
-        
-        item.widget?.let { w ->
-            obj.put("widget", serializeWidgetModel(w))
-        }
-        return obj
-    }
-
-    private fun serializeWidgetModel(w: WidgetModel): JSONObject {
-        val obj = JSONObject()
-        obj.put("id", w.id)
-        obj.put("label", w.label)
-        obj.put("displayMode", w.displayMode.name)
-        obj.put("type", when (w.type) {
-            is WidgetType.Battery -> "Battery"
-            is WidgetType.Clock -> "Clock"
-            is WidgetType.Calendar -> "Calendar"
-            is WidgetType.Photo -> "Photo"
-            is WidgetType.Music -> "Music"
-            is WidgetType.Stack -> "Stack"
-        })
-        if (w.type is WidgetType.Calendar) obj.put("is_wide", w.type.isWide)
-        if (w.type is WidgetType.Photo) obj.put("is_wide", w.type.isWide)
-        if (w.type is WidgetType.Music) obj.put("is_wide", w.type.isWide)
-        if (w.type is WidgetType.Stack) {
-            val children = JSONArray()
-            w.type.children.forEach { children.put(serializeWidgetModel(it)) }
-            obj.put("children", children)
-        }
-        return obj
-    }
-
-    private fun deserializeWidgetModel(obj: JSONObject): WidgetModel? {
-        val id = obj.optString("id")
-        val label = obj.optString("label")
-        val mode = try { WidgetDisplayMode.valueOf(obj.optString("displayMode", "GLASS")) } catch (e: Exception) { WidgetDisplayMode.GLASS }
-        val typeStr = obj.optString("type")
-        val isWide = obj.optBoolean("is_wide", false)
-
-        val type: WidgetType = when (typeStr) {
-            "Battery" -> WidgetType.Battery
-            "Clock" -> WidgetType.Clock
-            "Calendar" -> WidgetType.Calendar(isWide)
-            "Photo" -> WidgetType.Photo(isWide)
-            "Music" -> WidgetType.Music(isWide)
-            "Stack" -> {
-                val children = mutableListOf<WidgetModel>()
-                val childrenArr = obj.optJSONArray("children")
-                if (childrenArr != null) {
-                    for (i in 0 until childrenArr.length()) {
-                        deserializeWidgetModel(childrenArr.getJSONObject(i))?.let { children.add(it) }
-                    }
-                }
-                WidgetType.Stack(children)
-            }
-            else -> return null
-        }
-        return WidgetModel(id = id, type = type, label = label, displayMode = mode)
-    }
-
-    private fun deserializeAppModel(obj: JSONObject, allInstalled: List<AppModel>): AppModel? {
-        val type = obj.optString("type", "app")
-        val pkg = obj.optString("pkg", "")
-        
-        return when (type) {
-            "folder" -> {
-                val children = mutableListOf<AppModel>()
-                val childrenArray = obj.optJSONArray("children")
-                if (childrenArray != null) {
-                    for (i in 0 until childrenArray.length()) {
-                        deserializeAppModel(childrenArray.getJSONObject(i), allInstalled)?.let { children.add(it) }
-                    }
-                }
-                AppModel(
-                    label = obj.optString("label", "Folder"),
-                    isFolder = true,
-                    uniqueId = obj.optString("id", "folder_${System.currentTimeMillis()}"),
-                    folderItems = children
-                )
-            }
-            "widget" -> {
-                val widgetObj = obj.optJSONObject("widget")
-                val widget = if (widgetObj != null) {
-                    deserializeWidgetModel(widgetObj)
-                } else {
-                    // 相容舊格式
-                    val wId = obj.optString("widget_id")
-                    val wTypeStr = obj.optString("widget_type")
-                    val wMode = try { WidgetDisplayMode.valueOf(obj.optString("widget_mode", "GLASS")) } catch(e: Exception) { WidgetDisplayMode.GLASS }
-                    val isWide = obj.optBoolean("is_wide", false)
-                    val wType: WidgetType? = when(wTypeStr) {
-                        "Battery" -> WidgetType.Battery
-                        "Clock" -> WidgetType.Clock
-                        "Calendar" -> WidgetType.Calendar(isWide)
-                        "Photo" -> WidgetType.Photo(isWide)
-                        "Music" -> WidgetType.Music(isWide)
-                        else -> null
-                    }
-                    if (wType == null) null
-                    else WidgetModel(id = wId, type = wType, label = obj.optString("label"), displayMode = wMode)
-                }
-                
-                if (widget == null) return null
-                
-                AppModel(
-                    label = obj.optString("label"),
-                    uniqueId = obj.optString("id"),
-                    widget = widget
-                )
-            }
-            else -> {
-                val baseApp = allInstalled.find { it.packageName == pkg } ?: return null
-                baseApp.copy(
-                    uniqueId = obj.optString("id", pkg),
-                    label = customLabels[pkg] ?: baseApp.label,
-                    isHidden = hiddenPackages.contains(pkg)
-                )
-            }
-        }
     }
 
     private fun loadWidgets() {
@@ -339,7 +266,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val list = mutableListOf<WidgetModel>()
             val array = JSONArray(saved)
             for (i in 0 until array.length()) {
-                deserializeWidgetModel(array.getJSONObject(i))?.let { list.add(it) }
+                ConfigSerializer.deserializeWidgetModel(array.getJSONObject(i))?.let { list.add(it) }
             }
             _minusOneWidgets.value = list
         }
@@ -404,14 +331,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun saveWidgets(list: List<WidgetModel>) {
         val array = JSONArray()
         list.forEach { widget ->
-            array.put(serializeWidgetModel(widget))
+            array.put(ConfigSerializer.serializeWidgetModel(widget))
         }
         prefs.edit().putString("minus_one_widgets", array.toString()).apply()
     }
 
-    fun prepareForDrag() {
-        dragBackupPages = _pages.value
-    }
+    // 佈局處理邏輯已移至 MainViewModelLayout.kt
 
     private fun loadHiddenPackages() {
         val saved = prefs.getStringSet("hidden_apps", emptySet()) ?: emptySet()
@@ -772,7 +697,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         val pageArray = pagesArray.getJSONArray(i)
                         val pageItems = mutableListOf<AppModel>()
                         for (j in 0 until pageArray.length()) {
-                            deserializeAppModel(pageArray.getJSONObject(j), processedApps)?.let { pageItems.add(it) }
+                            ConfigSerializer.deserializeAppModel(
+                                pageArray.getJSONObject(j), 
+                                processedApps,
+                                customLabels,
+                                hiddenPackages
+                            )?.let { pageItems.add(it) }
                         }
                         restoredPages.add(pageItems)
                     }
@@ -802,230 +732,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * 處理 App 放置邏輯：包含推擠換位與資料夾建立
+     * App 相關設定
      */
-    fun handleAppDrop(
-        fromId: String,
-        targetId: String?,
-        targetPageIndex: Int,
-        isFromLibrary: Boolean,
-        dropType: DropType
-    ) {
-        // 使用備份作為基準，如果沒有備份則使用當前狀態
-        val basePages = dragBackupPages ?: _pages.value
-        val currentPages = basePages.map { it.toMutableList() }.toMutableList()
-        dragBackupPages = null // 清除備份
-        
-        var movingItem: AppModel? = null
-
-        // 1. 取得移動物件 (包含從資料夾內抓取)
-        if (isFromLibrary) {
-            val baseApp = _allApps.value.find { it.packageName == fromId }
-            movingItem = baseApp?.copy(uniqueId = "${fromId}_${System.currentTimeMillis()}")
-        } else {
-            // 遞迴尋找：檢查頁面與資料夾
-            outer@for (pIdx in currentPages.indices) {
-                val page = currentPages[pIdx]
-                // 檢查頂層
-                val topIdx = page.indexOfFirst { it.uniqueId == fromId }
-                if (topIdx != -1) {
-                    movingItem = page.removeAt(topIdx)
-                    break@outer
-                }
-                // 檢查資料夾內
-                for (i in page.indices) {
-                    val item = page[i]
-                    if (item.isFolder) {
-                        val fIdx = item.folderItems.indexOfFirst { it.uniqueId == fromId }
-                        if (fIdx != -1) {
-                            val mutableFolderItems = item.folderItems.toMutableList()
-                            movingItem = mutableFolderItems.removeAt(fIdx)
-                            // 更新資料夾
-                            if (mutableFolderItems.isEmpty()) {
-                                page.removeAt(i)
-                            } else if (mutableFolderItems.size == 1) {
-                                page[i] = mutableFolderItems[0] // 剩一個則拆解資料夾
-                            } else {
-                                page[i] = item.copy(folderItems = mutableFolderItems)
-                            }
-                            break@outer
-                        }
-                    }
-                }
-            }
-        }
-        
-        val item = movingItem ?: return
-
-        // 2. 處理落點 (其餘邏輯保持不變)
-        when (dropType) {
-            DropType.FOLDER -> {
-                if (targetId != null) {
-                    var success = false
-                    for (page in currentPages) {
-                        val tIdx = page.indexOfFirst { it.uniqueId == targetId }
-                        if (tIdx != -1) {
-                            val targetItem = page[tIdx]
-                            if (targetItem.isFolder) {
-                                page[tIdx] = targetItem.copy(folderItems = targetItem.folderItems + item)
-                            } else {
-                                page[tIdx] = AppModel(
-                                    label = getApplication<Application>().getString(R.string.folder_default_name),
-                                    isFolder = true,
-                                    folderItems = listOf(targetItem, item),
-                                    uniqueId = "folder_${System.currentTimeMillis()}"
-                                )
-                            }
-                            success = true
-                            break
-                        }
-                    }
-                    if (!success) insertAtPage(currentPages, targetPageIndex, item)
-                }
-            }
-            DropType.REORDER -> {
-                if (targetId != null) {
-                    var success = false
-                    for (page in currentPages) {
-                        val tIdx = page.indexOfFirst { it.uniqueId == targetId }
-                        if (tIdx != -1) {
-                            page.add(tIdx, item)
-                            success = true
-                            break
-                        }
-                    }
-                    if (!success) insertAtPage(currentPages, targetPageIndex, item)
-                } else {
-                    insertAtPage(currentPages, targetPageIndex, item)
-                }
-            }
-        }
-
-        reorganizeAllPages(currentPages)
-    }
-
-    fun addAppToHome(packageName: String) {
-        val baseApp = _allApps.value.find { it.packageName == packageName } ?: return
-        val newItem = baseApp.copy(uniqueId = "${packageName}_${System.currentTimeMillis()}")
-        
-        val currentPages = _pages.value.map { it.toMutableList() }.toMutableList()
-        // 放到最後一頁，reorganizeAllPages 會自動處理分頁
-        if (currentPages.isEmpty()) {
-            currentPages.add(mutableListOf(newItem))
-        } else {
-            currentPages.last().add(newItem)
-        }
-        reorganizeAllPages(currentPages)
-    }
-
-
-    private fun insertAtPage(pages: MutableList<MutableList<AppModel>>, index: Int, item: AppModel) {
-        val safeIndex = index.coerceIn(0, pages.size)
-        if (safeIndex < pages.size) {
-            pages[safeIndex].add(item)
-        } else {
-            pages.add(mutableListOf(item))
-        }
-    }
-
-    private fun calculateUsedSlots(items: List<AppModel>): Int {
-        return items.sumOf { item ->
-            if (item.isWidget) {
-                when (val type = item.widget?.type) {
-                    is WidgetType.Battery -> 4
-                    is WidgetType.Clock -> 4
-                    is WidgetType.Calendar -> if (type.isWide) 8 else 4
-                    is WidgetType.Photo -> if (type.isWide) 8 else 4
-                    is WidgetType.Music -> if (type.isWide) 8 else 4
-                    is WidgetType.Stack -> 4
-                    else -> 1
-                }
-            } else 1
-        }
-    }
-
-    fun addEmptyPage() {
-        val currentPages = _pages.value.map { it.toMutableList() }.toMutableList()
-        currentPages.add(mutableListOf())
-        _pages.value = currentPages
-        saveLayout()
-    }
-
-    fun deletePage(index: Int) {
-        val currentPages = _pages.value.map { it.toMutableList() }.toMutableList()
-        if (index in currentPages.indices) {
-            currentPages.removeAt(index)
-            // 刪除後進行重整，確保不會留下連續空白頁
-            reorganizeAllPages(currentPages)
-        }
-    }
-
-    private fun reorganizeAllPages(pages: MutableList<MutableList<AppModel>>) {
-        val result = mutableListOf<MutableList<AppModel>>()
-        var overflowItems = mutableListOf<AppModel>()
-
-        // 逐頁處理，保留原始分頁結構，僅處理溢出部分
-        for (page in pages) {
-            val combinedItems = (overflowItems + page).toMutableList()
-            overflowItems = mutableListOf()
-            
-            val pageItems = mutableListOf<AppModel>()
-            var used = 0
-            
-            for (item in combinedItems) {
-                val itemSlots = calculateUsedSlots(listOf(item))
-                if (used + itemSlots <= pageSize) {
-                    pageItems.add(item)
-                    used += itemSlots
-                } else {
-                    overflowItems.add(item)
-                }
-            }
-            result.add(pageItems)
-        }
-
-        // 處理剩餘的溢出物件，放入新頁面
-        while (overflowItems.isNotEmpty()) {
-            val pageItems = mutableListOf<AppModel>()
-            var used = 0
-            val iterator = overflowItems.iterator()
-            while (iterator.hasNext()) {
-                val item = iterator.next()
-                val itemSlots = calculateUsedSlots(listOf(item))
-                if (used + itemSlots <= pageSize) {
-                    pageItems.add(item)
-                    used += itemSlots
-                    iterator.remove()
-                } else if (pageItems.isEmpty()) {
-                    // 單個物件太大，強行放入
-                    pageItems.add(item)
-                    iterator.remove()
-                    break
-                } else {
-                    break
-                }
-            }
-            result.add(pageItems)
-        }
-
-        // 至少保留一頁
-        if (result.isEmpty()) result.add(mutableListOf())
-
-        _pages.value = result
-        saveLayout()
-    }
 
     enum class DropType { REORDER, FOLDER }
-
-    fun updateFolderName(folderId: String, newName: String) {
-        val currentPages = _pages.value.map { page ->
-            page.map { item ->
-                if (item.uniqueId == folderId) item.copy(label = newName) else item
-            }
-        }
-        _pages.value = currentPages
-        saveLayout()
-    }
 
     fun updateStackChildren(stackId: String, children: List<WidgetModel>) {
         val currentPages = _pages.value.map { page ->
@@ -1127,99 +837,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (enabled) updateBlurredWallpaper()
     }
 
-    fun createFolder(pageIndex: Int, folderName: String) {
-        val currentPages = _pages.value.map { it.toMutableList() }.toMutableList()
-        val targetPage = if (pageIndex >= 0 && pageIndex < currentPages.size) {
-            currentPages[pageIndex]
-        } else if (currentPages.isNotEmpty()) {
-            currentPages.last()
-        } else {
-            mutableListOf<AppModel>().also { currentPages.add(it) }
-        }
-        
-        val newFolder = AppModel(
-            label = folderName.ifBlank { getApplication<Application>().getString(R.string.folder_default_name) },
-            isFolder = true,
-            uniqueId = "folder_${System.currentTimeMillis()}"
-        )
-        targetPage.add(newFolder)
-        reorganizeAllPages(currentPages)
-    }
-
-    fun deleteFolder(folderId: String, keepIcons: Boolean = true) {
-        val currentPages = _pages.value.map { it.toMutableList() }.toMutableList()
-        outer@for (page in currentPages) {
-            val idx = page.indexOfFirst { it.uniqueId == folderId }
-            if (idx != -1) {
-                val folder = page.removeAt(idx)
-                if (keepIcons) {
-                    // 將資料夾內的 App 釋放回桌面
-                    page.addAll(idx, folder.folderItems)
-                }
-                break@outer
-            }
-        }
-        reorganizeAllPages(currentPages)
-    }
-
-    fun addAppsToFolder(folderId: String, packageNames: List<String>) {
-        val currentPages = _pages.value.map { page ->
-            page.map { item ->
-                if (item.uniqueId == folderId) {
-                    val updatedItems = item.folderItems.toMutableList()
-                    packageNames.forEach { pkg ->
-                        val appToAdd = _allApps.value.find { it.packageName == pkg }
-                        if (appToAdd != null) {
-                            updatedItems.add(appToAdd.copy(uniqueId = "${pkg}_${System.currentTimeMillis()}"))
-                        }
-                    }
-                    item.copy(folderItems = updatedItems)
-                } else item
-            }
-        }
-        _pages.value = currentPages.map { it.toMutableList() }
-        saveLayout()
-    }
-
-    fun removeAppFromHome(uniqueId: String) {
-        val currentPages = _pages.value.map { it.toMutableList() }.toMutableList()
-        var removed = false
-        for (page in currentPages) {
-            val index = page.indexOfFirst { it.uniqueId == uniqueId }
-            if (index != -1) {
-                page.removeAt(index)
-                removed = true
-                break
-            }
-        }
-        if (removed) {
-            reorganizeAllPages(currentPages)
-        }
-    }
-
-    fun removeAppFromFolder(folderId: String, appUniqueId: String) {
-        val currentPages = _pages.value.map { it.toMutableList() }.toMutableList()
-        outer@for (page in currentPages) {
-            for (i in page.indices) {
-                val item = page[i]
-                if (item.isFolder && item.uniqueId == folderId) {
-                    val updatedItems = item.folderItems.toMutableList()
-                    val removedIdx = updatedItems.indexOfFirst { it.uniqueId == appUniqueId }
-                    if (removedIdx != -1) {
-                        updatedItems.removeAt(removedIdx)
-                        if (updatedItems.isEmpty()) {
-                            page.removeAt(i)
-                        } else if (updatedItems.size == 1) {
-                            page[i] = updatedItems[0] // 剩下一個則拆解資料夾
-                        } else {
-                            page[i] = item.copy(folderItems = updatedItems)
-                        }
-                        break@outer
-                    }
-                }
-            }
-        }
-        reorganizeAllPages(currentPages)
+    fun setLiquidGlassWidgetsEnabled(enabled: Boolean) {
+        _isLiquidGlassWidgetsEnabled.value = enabled
+        prefs.edit().putBoolean("liquid_glass_widgets", enabled).apply()
+        if (enabled) updateBlurredWallpaper()
     }
 
     fun logAppLaunch(packageName: String) {
@@ -1236,67 +857,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun exportConfig(): String {
-        val root = JSONObject()
-        val settings = JSONObject()
-
-        // 1. 基礎設定
-        settings.put("themed_icons", _isThemedIconsEnabled.value)
-        settings.put("liquid_glass_dock", _isLiquidGlassDockEnabled.value)
-        settings.put("liquid_glass_home_folder", _isLiquidGlassHomeFolderEnabled.value)
-        settings.put("liquid_glass_app_library_folder", _isLiquidGlassAppLibraryFolderEnabled.value)
-        settings.put("liquid_glass_global_search", _isLiquidGlassGlobalSearchEnabled.value)
-        settings.put("liquid_glass_app_library_search", _isLiquidGlassAppLibrarySearchEnabled.value)
-        settings.put("liquid_glass_enabled", _isLiquidGlassEnabled.value)
-        settings.put("icon_style", _iconStyle.value.name)
-        settings.put("page_size", pageSize)
-        settings.put("hidden_password", getPassword())
-
-        // 2. App 相關
-        val hidden = JSONArray()
-        hiddenPackages.forEach { hidden.put(it) }
-        root.put("hidden_apps", hidden)
-
-        val labels = JSONObject()
-        customLabels.forEach { (k, v) -> labels.put(k, v) }
-        root.put("custom_labels", labels)
-
-        val categories = JSONObject()
-        customCategories.forEach { (k, v) -> categories.put(k, v) }
-        root.put("custom_categories", categories)
-
-        val userCats = JSONArray()
-        _userCategories.value.forEach { userCats.put(it) }
-        root.put("user_categories", userCats)
-
-        val renames = JSONObject()
-        categoryRenames.forEach { (k, v) -> renames.put(k, v) }
-        root.put("category_renames", renames)
-        
-        // 3. 佈局
-        val pagesArray = JSONArray()
-        _pages.value.forEach { page ->
-            val pageArray = JSONArray()
-            page.forEach { pageArray.put(serializeAppModel(it)) }
-            pagesArray.put(pageArray)
-        }
-        root.put("layout", pagesArray)
-        
-        // 4. 負一屏小工具
-        val minusOne = JSONArray()
-        _minusOneWidgets.value.forEach { widget ->
-            minusOne.put(serializeWidgetModel(widget))
-        }
-        root.put("minus_one_widgets", minusOne)
-
-        // 5. Dock & Stats
-        root.put("dock", JSONArray(_dockPackageNames.value))
-        root.put("launch_counts", prefs.getString("launch_counts", ""))
-
-        root.put("settings", settings)
-        root.put("version", 1)
-        root.put("timestamp", System.currentTimeMillis())
-
-        return root.toString(4)
+        return ConfigSerializer.exportConfig(
+            themedIcons = _isThemedIconsEnabled.value,
+            liquidGlassDock = _isLiquidGlassDockEnabled.value,
+            liquidGlassHomeFolder = _isLiquidGlassHomeFolderEnabled.value,
+            liquidGlassAppLibraryFolder = _isLiquidGlassAppLibraryFolderEnabled.value,
+            liquidGlassGlobalSearch = _isLiquidGlassGlobalSearchEnabled.value,
+            liquidGlassAppLibrarySearch = _isLiquidGlassAppLibrarySearchEnabled.value,
+            liquidGlassWidgets = _isLiquidGlassWidgetsEnabled.value,
+            liquidGlassEnabled = _isLiquidGlassEnabled.value,
+            iconStyle = _iconStyle.value.name,
+            pageSize = pageSize,
+            password = getPassword(),
+            hiddenPackages = hiddenPackages,
+            customLabels = customLabels,
+            customCategories = customCategories,
+            userCategories = _userCategories.value,
+            categoryRenames = categoryRenames,
+            pages = _pages.value,
+            minusOneWidgets = _minusOneWidgets.value,
+            dockPackageNames = _dockPackageNames.value,
+            launchCounts = prefs.getString("launch_counts", "")
+        )
     }
 
     fun importConfig(jsonString: String): Boolean {
@@ -1304,14 +886,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val root = JSONObject(jsonString)
             val settings = root.getJSONObject("settings")
 
-            // 恢復基礎設定
+            // 1. 恢復基礎設定
             setThemedIconsEnabled(settings.optBoolean("themed_icons", false))
             setLiquidGlassDockEnabled(settings.optBoolean("liquid_glass_dock", false))
             setLiquidGlassHomeFolderEnabled(settings.optBoolean("liquid_glass_home_folder", false))
             setLiquidGlassAppLibraryFolderEnabled(settings.optBoolean("liquid_glass_app_library_folder", false))
             setLiquidGlassGlobalSearchEnabled(settings.optBoolean("liquid_glass_global_search", false))
             setLiquidGlassAppLibrarySearchEnabled(settings.optBoolean("liquid_glass_app_library_search", false))
+            setLiquidGlassWidgetsEnabled(settings.optBoolean("liquid_glass_widgets", false))
             setLiquidGlassEnabled(settings.optBoolean("liquid_glass_enabled", false))
+            
             val savedStyle = settings.optString("icon_style", "STANDARD")
             _iconStyle.value = try { IconStyle.valueOf(savedStyle) } catch(e: Exception) { IconStyle.STANDARD }
             prefs.edit().putString("icon_style", _iconStyle.value.name).apply()
@@ -1319,7 +903,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             pageSize = settings.optInt("page_size", 20)
             setPassword(settings.optString("hidden_password", "1234"))
             
-            // 恢復 App 設定
+            // 2. 恢復 App 設定
             hiddenPackages.clear()
             val hidden = root.getJSONArray("hidden_apps")
             for (i in 0 until hidden.length()) hiddenPackages.add(hidden.getString(i))
@@ -1350,20 +934,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
             saveCategoryRenames()
             
-            // 恢復負一屏小工具
+            // 3. 恢復負一屏小工具
             val minusOne = mutableListOf<WidgetModel>()
             val minusOneArray = root.getJSONArray("minus_one_widgets")
             for (i in 0 until minusOneArray.length()) {
-                deserializeWidgetModel(minusOneArray.getJSONObject(i))?.let { minusOne.add(it) }
+                ConfigSerializer.deserializeWidgetModel(minusOneArray.getJSONObject(i))?.let { minusOne.add(it) }
             }
             _minusOneWidgets.value = minusOne
             saveWidgets(minusOne)
             
-            // 恢復佈局 (需要等待 allApps 加載完成，所以這裡直接存入 prefs)
+            // 4. 恢復佈局 (需要等待 allApps 加載完成，所以這裡直接存入 prefs)
             val layout = root.getJSONArray("layout")
             prefs.edit().putString("launcher_layout_v2", layout.toString()).apply()
 
-            // 恢復 Dock & Stats
+            // 5. 恢復 Dock & Stats
             val dock = root.optJSONArray("dock")
             if (dock != null) {
                 val dockList = mutableListOf<String>()

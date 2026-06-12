@@ -1,6 +1,5 @@
 package com.liferlighdow.iteration
 
-import android.app.WallpaperManager
 import android.content.ComponentName
 import android.content.Intent
 import android.graphics.Bitmap
@@ -590,6 +589,7 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
     val isLiquidGlassAppLibraryFolderEnabled by viewModel.isLiquidGlassAppLibraryFolderEnabled.collectAsState()
     val isLiquidGlassGlobalSearchEnabled by viewModel.isLiquidGlassGlobalSearchEnabled.collectAsState()
     val isLiquidGlassAppLibrarySearchEnabled by viewModel.isLiquidGlassAppLibrarySearchEnabled.collectAsState()
+    val isLiquidGlassWidgetsEnabled by viewModel.isLiquidGlassWidgetsEnabled.collectAsState()
 
     Scaffold(
         topBar = {
@@ -664,6 +664,19 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
                             )
                         },
                         modifier = Modifier.clickable { viewModel.setLiquidGlassGlobalSearchEnabled(!isLiquidGlassGlobalSearchEnabled) }
+                    )
+                }
+                item {
+                    ListItem(
+                        headlineContent = { Text("Widgets") },
+                        supportingContent = { Text("Enable glass effect for home screen widgets in Glass mode") },
+                        trailingContent = {
+                            Switch(
+                                checked = isLiquidGlassWidgetsEnabled,
+                                onCheckedChange = { viewModel.setLiquidGlassWidgetsEnabled(it) }
+                            )
+                        },
+                        modifier = Modifier.clickable { viewModel.setLiquidGlassWidgetsEnabled(!isLiquidGlassWidgetsEnabled) }
                     )
                 }
 

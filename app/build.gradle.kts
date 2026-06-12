@@ -1,19 +1,18 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlinAndroid)
     alias(libs.plugins.kotlinCompose)
 }
 
 android {
     namespace = "com.liferlighdow.iteration"
-    compileSdk = 35 // Stick to 35 for now to match AGP 8.7.2 recommendation
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.liferlighdow.iteration"
         minSdk = 23
-        targetSdk = 35
-        versionCode = 12
-        versionName = "1.8.1"
+        targetSdk = 37
+        versionCode = 13
+        versionName = "2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -48,9 +47,10 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "17"
-    }
+}
+
+kotlin {
+    jvmToolchain(17)
 }
 
 dependencies {
@@ -71,7 +71,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.coil.compose)
     implementation(libs.materialColorUtils)
-    implementation("io.github.kyant0:backdrop:1.0.0-rc02")
+    implementation("io.github.kyant0:backdrop:2.0.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.espresso.core)
