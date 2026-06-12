@@ -183,18 +183,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun grabSystemWallpaper(onFailure: () -> Unit) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val result = wallpaperProcessor.extractSystemWallpaper()
-            if (result != null) {
-                // 抓到了！存入本地並更新 UI (不需 syncToSystem 因為它本來就是系統的)
-                saveWallpaperToLocal(result.raw.asAndroidBitmap())
-            } else {
-                withContext(Dispatchers.Main) { onFailure() }
-            }
-        }
-    }
-
     private fun saveWallpaperToLocal(bitmap: Bitmap) {
         try {
             FileOutputStream(wallpaperFile).use { out ->

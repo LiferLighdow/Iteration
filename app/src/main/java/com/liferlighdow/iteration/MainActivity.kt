@@ -12,7 +12,6 @@ import android.os.BatteryManager
 import android.os.Bundle
 import android.provider.AlarmClock
 import android.provider.CalendarContract
-import android.widget.Toast
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -748,18 +747,6 @@ fun LauncherScreen(
                     wallpaperLauncher.launch("image/*")
                     showDesktopMenu = false
                 })
-                
-                ListItem(
-                    headlineContent = { Text("Sync System Wallpaper") }, 
-                    supportingContent = { Text("Use phone's current default wallpaper") },
-                    leadingContent = { Icon(Icons.Default.CloudSync, contentDescription = null) }, 
-                    modifier = Modifier.clickable {
-                        viewModel.grabSystemWallpaper {
-                            Toast.makeText(mContext, "Android restriction: Please manually select the wallpaper file.", Toast.LENGTH_LONG).show()
-                        }
-                        showDesktopMenu = false
-                    }
-                )
                 if (!isDefaultLauncher) {
                     ListItem(headlineContent = { Text(stringResource(R.string.menu_set_default)) }, leadingContent = { Icon(Icons.Default.Home, contentDescription = null) }, modifier = Modifier.clickable {
                         val intent = Intent(android.provider.Settings.ACTION_HOME_SETTINGS)

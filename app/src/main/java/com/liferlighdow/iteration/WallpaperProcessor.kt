@@ -1,7 +1,6 @@
 package com.liferlighdow.iteration
 
 import android.app.Application
-import android.app.WallpaperManager as AndroidWallpaperManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.core.graphics.drawable.toBitmap
@@ -18,36 +17,6 @@ class WallpaperProcessor(private val context: Application) {
         val raw: ImageBitmap,
         val blurred: ImageBitmap
     )
-
-    /**
-     * 嘗試從系統獲取桌布 (在預設 Launcher 模式下成功率較高)
-     */
-    fun extractSystemWallpaper(): WallpaperResult? {
-        return try {
-            val wm = AndroidWallpaperManager.getInstance(context)
-            // 優先嘗試獲取目前 Drawable
-            var drawable = wm.drawable
-            
-            // 如果拿到的是 null (Android 13+ 限制)，嘗試 peek
-            if (drawable == null) {
-                drawable = wm.peekDrawable()
-            }
-            
-            // 如果還是 null，嘗試獲取系統內建預設圖 (最後手段)
-            if (drawable == null && android.os.Build.VERSION.SDK_INT < 33) {
-                drawable = wm.getBuiltInDrawable()
-            }
-
-            if (drawable != null) {
-                processBitmap(drawable.toBitmap())
-            } else {
-                null
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
 
     /**
      * 從指定檔案路徑載入並處理桌布
