@@ -168,6 +168,8 @@ object ConfigSerializer {
         liquidGlassWidgets: Boolean,
         liquidGlassEnabled: Boolean,
         iconStyle: String,
+        iconShape: String,
+        libraryShape: String,
         pageSize: Int,
         password: String,
         hiddenPackages: Set<String>,
@@ -193,6 +195,8 @@ object ConfigSerializer {
         settings.put("liquid_glass_widgets", liquidGlassWidgets)
         settings.put("liquid_glass_enabled", liquidGlassEnabled)
         settings.put("icon_style", iconStyle)
+        settings.put("icon_shape", iconShape)
+        settings.put("library_shape", libraryShape)
         settings.put("page_size", pageSize)
         settings.put("hidden_password", password)
 

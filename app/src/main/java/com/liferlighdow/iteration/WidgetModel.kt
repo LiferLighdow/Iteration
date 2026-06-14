@@ -97,8 +97,14 @@ fun BatteryWidget(
     backdrop: com.kyant.backdrop.Backdrop? = null
 ) {
     val viewModel: MainViewModel = viewModel()
+    val isLiquidGlassEnabled by viewModel.isLiquidGlassEnabled.collectAsState()
     val isLiquidWidgetsEnabled by viewModel.isLiquidGlassWidgetsEnabled.collectAsState()
-    val useLiquid = displayMode == WidgetDisplayMode.GLASS && isLiquidWidgetsEnabled && backdrop != null
+    val blurRadius by viewModel.liquidGlassBlur.collectAsState()
+    val refractionHeight by viewModel.liquidGlassRefractionHeight.collectAsState()
+    val refractionAmount by viewModel.liquidGlassRefractionAmount.collectAsState()
+    val chromaticAberration by viewModel.liquidGlassChromaticAberration.collectAsState()
+
+    val useLiquid = displayMode == WidgetDisplayMode.GLASS && isLiquidGlassEnabled && isLiquidWidgetsEnabled && backdrop != null
 
     val mContext = LocalContext.current
     var batteryLevel by remember { mutableStateOf(0) }
@@ -131,7 +137,15 @@ fun BatteryWidget(
         modifier = modifier
             .fillMaxWidth()
             .aspectRatio(1f)
-            .then(if (useLiquid) Modifier.liquidGlass(true, backdrop, 24.dp) else Modifier),
+            .then(if (useLiquid) Modifier.liquidGlass(
+                enabled = true,
+                backdrop = backdrop,
+                cornerRadius = 24.dp,
+                blurRadius = blurRadius,
+                refractionHeight = refractionHeight,
+                refractionAmount = refractionAmount,
+                chromaticAberration = chromaticAberration
+            ) else Modifier),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = if (useLiquid) Color.Transparent else containerColor)
     ) {
@@ -182,8 +196,14 @@ fun AnalogClockWidget(
     backdrop: com.kyant.backdrop.Backdrop? = null
 ) {
     val viewModel: MainViewModel = viewModel()
+    val isLiquidGlassEnabled by viewModel.isLiquidGlassEnabled.collectAsState()
     val isLiquidWidgetsEnabled by viewModel.isLiquidGlassWidgetsEnabled.collectAsState()
-    val useLiquid = displayMode == WidgetDisplayMode.GLASS && isLiquidWidgetsEnabled && backdrop != null
+    val blurRadius by viewModel.liquidGlassBlur.collectAsState()
+    val refractionHeight by viewModel.liquidGlassRefractionHeight.collectAsState()
+    val refractionAmount by viewModel.liquidGlassRefractionAmount.collectAsState()
+    val chromaticAberration by viewModel.liquidGlassChromaticAberration.collectAsState()
+
+    val useLiquid = displayMode == WidgetDisplayMode.GLASS && isLiquidGlassEnabled && isLiquidWidgetsEnabled && backdrop != null
 
     var time by remember { mutableStateOf(Calendar.getInstance()) }
     val mContext = LocalContext.current
@@ -209,7 +229,15 @@ fun AnalogClockWidget(
         modifier = modifier
             .fillMaxWidth()
             .aspectRatio(1f)
-            .then(if (useLiquid) Modifier.liquidGlass(true, backdrop, 24.dp) else Modifier),
+            .then(if (useLiquid) Modifier.liquidGlass(
+                enabled = true,
+                backdrop = backdrop,
+                cornerRadius = 24.dp,
+                blurRadius = blurRadius,
+                refractionHeight = refractionHeight,
+                refractionAmount = refractionAmount,
+                chromaticAberration = chromaticAberration
+            ) else Modifier),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = if (useLiquid) Color.Transparent else containerColor)
     ) {
@@ -506,8 +534,14 @@ fun StandardMusicWidget(
     backdrop: com.kyant.backdrop.Backdrop? = null
 ) {
     val viewModel: MainViewModel = viewModel()
+    val isLiquidGlassEnabled by viewModel.isLiquidGlassEnabled.collectAsState()
     val isLiquidWidgetsEnabled by viewModel.isLiquidGlassWidgetsEnabled.collectAsState()
-    val useLiquid = displayMode == WidgetDisplayMode.GLASS && isLiquidWidgetsEnabled && backdrop != null
+    val blurRadius by viewModel.liquidGlassBlur.collectAsState()
+    val refractionHeight by viewModel.liquidGlassRefractionHeight.collectAsState()
+    val refractionAmount by viewModel.liquidGlassRefractionAmount.collectAsState()
+    val chromaticAberration by viewModel.liquidGlassChromaticAberration.collectAsState()
+
+    val useLiquid = displayMode == WidgetDisplayMode.GLASS && isLiquidGlassEnabled && isLiquidWidgetsEnabled && backdrop != null
 
     val mediaInfo by NotificationService.currentMedia.collectAsState()
 
@@ -523,7 +557,15 @@ fun StandardMusicWidget(
     Card(
         modifier = modifier
             .aspectRatio(1f)
-            .then(if (useLiquid) Modifier.liquidGlass(true, backdrop, 24.dp) else Modifier),
+            .then(if (useLiquid) Modifier.liquidGlass(
+                enabled = true,
+                backdrop = backdrop,
+                cornerRadius = 24.dp,
+                blurRadius = blurRadius,
+                refractionHeight = refractionHeight,
+                refractionAmount = refractionAmount,
+                chromaticAberration = chromaticAberration
+            ) else Modifier),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = if (useLiquid) Color.Transparent else containerColor)
     ) {
@@ -621,8 +663,14 @@ fun WideMusicWidget(
     backdrop: com.kyant.backdrop.Backdrop? = null
 ) {
     val viewModel: MainViewModel = viewModel()
+    val isLiquidGlassEnabled by viewModel.isLiquidGlassEnabled.collectAsState()
     val isLiquidWidgetsEnabled by viewModel.isLiquidGlassWidgetsEnabled.collectAsState()
-    val useLiquid = displayMode == WidgetDisplayMode.GLASS && isLiquidWidgetsEnabled && backdrop != null
+    val blurRadius by viewModel.liquidGlassBlur.collectAsState()
+    val refractionHeight by viewModel.liquidGlassRefractionHeight.collectAsState()
+    val refractionAmount by viewModel.liquidGlassRefractionAmount.collectAsState()
+    val chromaticAberration by viewModel.liquidGlassChromaticAberration.collectAsState()
+
+    val useLiquid = displayMode == WidgetDisplayMode.GLASS && isLiquidGlassEnabled && isLiquidWidgetsEnabled && backdrop != null
 
     val mediaInfo by NotificationService.currentMedia.collectAsState()
 
@@ -638,7 +686,15 @@ fun WideMusicWidget(
     Card(
         modifier = modifier
             .aspectRatio(2f)
-            .then(if (useLiquid) Modifier.liquidGlass(true, backdrop, 24.dp) else Modifier),
+            .then(if (useLiquid) Modifier.liquidGlass(
+                enabled = true,
+                backdrop = backdrop,
+                cornerRadius = 24.dp,
+                blurRadius = blurRadius,
+                refractionHeight = refractionHeight,
+                refractionAmount = refractionAmount,
+                chromaticAberration = chromaticAberration
+            ) else Modifier),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = if (useLiquid) Color.Transparent else containerColor)
     ) {
@@ -958,8 +1014,14 @@ fun StandardCalendarWidget(
     backdrop: com.kyant.backdrop.Backdrop? = null
 ) {
     val viewModel: MainViewModel = viewModel()
+    val isLiquidGlassEnabled by viewModel.isLiquidGlassEnabled.collectAsState()
     val isLiquidWidgetsEnabled by viewModel.isLiquidGlassWidgetsEnabled.collectAsState()
-    val useLiquid = displayMode == WidgetDisplayMode.GLASS && isLiquidWidgetsEnabled && backdrop != null
+    val blurRadius by viewModel.liquidGlassBlur.collectAsState()
+    val refractionHeight by viewModel.liquidGlassRefractionHeight.collectAsState()
+    val refractionAmount by viewModel.liquidGlassRefractionAmount.collectAsState()
+    val chromaticAberration by viewModel.liquidGlassChromaticAberration.collectAsState()
+
+    val useLiquid = displayMode == WidgetDisplayMode.GLASS && isLiquidGlassEnabled && isLiquidWidgetsEnabled && backdrop != null
 
     val calendar = Calendar.getInstance()
     val dayOfMonth = calendar.get(Calendar.DAY_OF_MONTH)
@@ -1003,7 +1065,15 @@ fun StandardCalendarWidget(
         modifier = modifier
             .fillMaxWidth()
             .aspectRatio(1f)
-            .then(if (useLiquid) Modifier.liquidGlass(true, backdrop, 24.dp) else Modifier),
+            .then(if (useLiquid) Modifier.liquidGlass(
+                enabled = true,
+                backdrop = backdrop,
+                cornerRadius = 24.dp,
+                blurRadius = blurRadius,
+                refractionHeight = refractionHeight,
+                refractionAmount = refractionAmount,
+                chromaticAberration = chromaticAberration
+            ) else Modifier),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = if (useLiquid) Color.Transparent else containerColor)
     ) {
@@ -1042,8 +1112,14 @@ fun WideCalendarWidget(
     backdrop: com.kyant.backdrop.Backdrop? = null
 ) {
     val viewModel: MainViewModel = viewModel()
+    val isLiquidGlassEnabled by viewModel.isLiquidGlassEnabled.collectAsState()
     val isLiquidWidgetsEnabled by viewModel.isLiquidGlassWidgetsEnabled.collectAsState()
-    val useLiquid = displayMode == WidgetDisplayMode.GLASS && isLiquidWidgetsEnabled && backdrop != null
+    val blurRadius by viewModel.liquidGlassBlur.collectAsState()
+    val refractionHeight by viewModel.liquidGlassRefractionHeight.collectAsState()
+    val refractionAmount by viewModel.liquidGlassRefractionAmount.collectAsState()
+    val chromaticAberration by viewModel.liquidGlassChromaticAberration.collectAsState()
+
+    val useLiquid = displayMode == WidgetDisplayMode.GLASS && isLiquidGlassEnabled && isLiquidWidgetsEnabled && backdrop != null
 
     val mContext = LocalContext.current
     val events = remember { mutableStateListOf<CalendarEvent>() }
@@ -1137,7 +1213,15 @@ fun WideCalendarWidget(
         modifier = modifier
             .fillMaxWidth()
             .aspectRatio(2f)
-            .then(if (useLiquid) Modifier.liquidGlass(true, backdrop, 24.dp) else Modifier),
+            .then(if (useLiquid) Modifier.liquidGlass(
+                enabled = true,
+                backdrop = backdrop,
+                cornerRadius = 24.dp,
+                blurRadius = blurRadius,
+                refractionHeight = refractionHeight,
+                refractionAmount = refractionAmount,
+                chromaticAberration = chromaticAberration
+            ) else Modifier),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = if (useLiquid) Color.Transparent else containerColor)
     ) {

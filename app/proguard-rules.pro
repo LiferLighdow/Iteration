@@ -41,3 +41,6 @@
 # 9. Backdrop 庫規則 (避免 R8 過度優化致效能下降或崩潰)
 -keep class com.kyant.backdrop.** { *; }
 -dontwarn com.kyant.backdrop.**
+
+# 10. Device Admin
+-keep class com.liferlighdow.iteration.AdminReceiver { *; }

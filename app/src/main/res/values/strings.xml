@@ -147,4 +147,33 @@
     <string name="restart_confirm_title">Restart Launcher?</string>
     <string name="restart_confirm_msg">Are you sure you want to restart the launcher? This will reload all components.</string>
     <string name="restart">Restart</string>
+
+    <!-- Gestures -->
+    <string name="settings_gestures">Gestures</string>
+    <string name="settings_gestures_desc">Customizing touch gestures on the home screen</string>
+    <string name="gesture_double_tap">Double Tap</string>
+    <string name="gesture_swipe_up">Swipe Up</string>
+    <string name="gesture_swipe_down">Swipe Down</string>
+    <string name="gesture_two_finger_swipe_up">Two Finger Swipe Up</string>
+    <string name="gesture_two_finger_swipe_down">Two Finger Swipe Down</string>
+    <string name="gesture_long_press">Long Press</string>
+    <string name="gesture_action_none">None</string>
+    <string name="gesture_action_lock">Lock Screen</string>
+    <string name="gesture_action_settings">Launcher Settings</string>
+    <string name="gesture_action_open_settings">Open System Settings</string>
+    <string name="gesture_action_launch_app">Launch App</string>
+    <string name="gesture_action_open_global_search">Open Global Search</string>
+    <string name="gesture_action_open_desktop_menu">Open Desktop Menu</string>
+    <string name="gesture_action_open_notifications">Open Notifications</string>
+    <string name="gesture_double_tap_dialog_title">Double Tap Action</string>
+    <string name="gesture_swipe_up_dialog_title">Swipe Up Action</string>
+    <string name="gesture_swipe_down_dialog_title">Swipe Down Action</string>
+    <string name="gesture_long_press_dialog_title">Long Press Action</string>
+    <string name="gesture_two_finger_swipe_up_dialog_title">Two Finger Swipe Up Action</string>
+    <string name="gesture_two_finger_swipe_down_dialog_title">Two Finger Swipe Down Action</string>
+    <string name="gesture_reset">Reset</string>
+    <string name="gesture_suggestions">Suggestions</string>
+    <string name="need_accessibility">This action requires Accessibility Service permission.</string>
+    <string name="accessibility_label">Iteration Launcher Gestures</string>
+    <string name="accessibility_description">Enable this to allow double-tap to lock screen gesture.</string>
 </resources>

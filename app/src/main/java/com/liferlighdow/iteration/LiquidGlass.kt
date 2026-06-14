@@ -23,6 +23,10 @@ fun Modifier.liquidGlass(
     enabled: Boolean,
     backdrop: Backdrop?,
     cornerRadius: Dp,
+    blurRadius: Float = 0f,
+    refractionHeight: Float = 24f,
+    refractionAmount: Float = 48f,
+    chromaticAberration: Boolean = true,
     tint: Color = Color.Unspecified
 ): Modifier = if (!enabled || backdrop == null) {
     this.drawBehind {
@@ -38,16 +42,18 @@ fun Modifier.liquidGlass(
         backdrop = backdrop,
         shape = { RoundedCornerShape(cornerRadius) },
         effects = {
-            // 1. 徹底移除磨砂感，實現清澈的液態扭曲
-            // 這裡不再使用 blur()
+            // 1. 磨砂感 (Blur)
+            if (blurRadius > 0f) {
+                blur(radius = blurRadius.dp.toPx())
+            }
 
             // 2. 物理透鏡折射 (Lens Distortion)
             // 透過重映射背景像素產生形變，這是 Liquid 的靈魂
             lens(
-                refractionHeight = 24f.dp.toPx(),
-                refractionAmount = 48f.dp.toPx(),
+                refractionHeight = refractionHeight.dp.toPx(),
+                refractionAmount = refractionAmount.dp.toPx(),
                 depthEffect = false,
-                chromaticAberration = true 
+                chromaticAberration = chromaticAberration
             )
             
             // 3. 增加震盪感
@@ -63,10 +69,18 @@ fun Modifier.liquidGlass(
 fun Modifier.liquidGlassDock(
     isLiquidGlass: Boolean,
     backdrop: Backdrop,
-    cornerRadius: Dp = 42.dp
+    cornerRadius: Dp = 42.dp,
+    blurRadius: Float = 0f,
+    refractionHeight: Float = 24f,
+    refractionAmount: Float = 48f,
+    chromaticAberration: Boolean = true
 ): Modifier = this.liquidGlass(
     enabled = isLiquidGlass,
     backdrop = backdrop,
     cornerRadius = cornerRadius,
+    blurRadius = blurRadius,
+    refractionHeight = refractionHeight,
+    refractionAmount = refractionAmount,
+    chromaticAberration = chromaticAberration,
     tint = Color.Unspecified
 )

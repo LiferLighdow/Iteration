@@ -27,6 +27,7 @@ class IconProcessor(private val context: Context) {
         isThemed: Boolean,
         themeColors: ColorScheme?,
         style: IconStyle,
+        shape: IconShape,
         sizePx: Int,
         isIconPack: Boolean = false
     ): ImageBitmap {
@@ -36,8 +37,12 @@ class IconProcessor(private val context: Context) {
         // 重用 Path 物件並根據目前尺寸更新
         val path = threadPath.get()!!.apply {
             reset()
-            val cornerRadius = sizePx * 0.238f
-            addRoundRect(0f, 0f, sizePx.toFloat(), sizePx.toFloat(), cornerRadius, cornerRadius, Path.Direction.CW)
+            if (shape == IconShape.CIRCLE) {
+                addCircle(sizePx / 2f, sizePx / 2f, sizePx / 2f, Path.Direction.CW)
+            } else {
+                val cornerRadius = sizePx * 0.238f
+                addRoundRect(0f, 0f, sizePx.toFloat(), sizePx.toFloat(), cornerRadius, cornerRadius, Path.Direction.CW)
+            }
         }
         canvas.clipPath(path)
         

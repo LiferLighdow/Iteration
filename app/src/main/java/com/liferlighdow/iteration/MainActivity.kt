@@ -2,6 +2,7 @@ package com.liferlighdow.iteration
 
 import android.app.WallpaperManager
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.Bitmap
@@ -27,6 +28,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -356,7 +358,77 @@ fun LauncherScreen(
     val isLiquidGlassGlobalSearchEnabled by viewModel.isLiquidGlassGlobalSearchEnabled.collectAsState()
     val isLiquidGlassAppLibrarySearchEnabled by viewModel.isLiquidGlassAppLibrarySearchEnabled.collectAsState()
 
+    val iconShape by viewModel.iconShape.collectAsState()
+    val libraryShape by viewModel.libraryShape.collectAsState()
+    val blurRadius by viewModel.liquidGlassBlur.collectAsState()
+    val refractionHeight by viewModel.liquidGlassRefractionHeight.collectAsState()
+    val refractionAmount by viewModel.liquidGlassRefractionAmount.collectAsState()
+    val chromaticAberration by viewModel.liquidGlassChromaticAberration.collectAsState()
+    val doubleTapAction by viewModel.doubleTapAction.collectAsState()
+    val swipeUpAction by viewModel.swipeUpAction.collectAsState()
+    val doubleTapApp by viewModel.doubleTapApp.collectAsState()
+    val swipeUpApp by viewModel.swipeUpApp.collectAsState()
+    val swipeDownAction by viewModel.swipeDownAction.collectAsState()
+    val longPressAction by viewModel.longPressAction.collectAsState()
+    val swipeDownApp by viewModel.swipeDownApp.collectAsState()
+    val longPressApp by viewModel.longPressApp.collectAsState()
+    val twoFingerSwipeUpAction by viewModel.twoFingerSwipeUpAction.collectAsState()
+    val twoFingerSwipeDownAction by viewModel.twoFingerSwipeDownAction.collectAsState()
+    val twoFingerSwipeUpApp by viewModel.twoFingerSwipeUpApp.collectAsState()
+    val twoFingerSwipeDownApp by viewModel.twoFingerSwipeDownApp.collectAsState()
+
+    var showDesktopMenu by remember { mutableStateOf(false) }
+    var showGlobalSearch by remember { mutableStateOf(false) }
+    var globalSearchQuery by remember { mutableStateOf("") }
+
     val mContext = LocalContext.current
+    
+    fun performGestureAction(action: GestureAction, pkg: String) {
+        when (action) {
+            GestureAction.LOCK_SCREEN -> {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                    val service = IterationAccessibilityService.instance
+                    if (service != null) {
+                        service.lockScreen()
+                    } else {
+                        android.widget.Toast.makeText(mContext, mContext.getString(R.string.need_accessibility), android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            GestureAction.LAUNCHER_SETTINGS -> onSettingsClick()
+            GestureAction.OPEN_SYSTEM_SETTINGS -> {
+                try {
+                    mContext.startActivity(android.content.Intent(android.provider.Settings.ACTION_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                } catch (e: Exception) {
+                    android.widget.Toast.makeText(mContext, "Failed to open settings", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
+            GestureAction.LAUNCH_APP -> {
+                if (pkg.isNotEmpty()) {
+                    val intent = mContext.packageManager.getLaunchIntentForPackage(pkg)
+                    if (intent != null) {
+                        mContext.startActivity(intent)
+                    }
+                }
+            }
+            GestureAction.OPEN_GLOBAL_SEARCH -> {
+                showGlobalSearch = true
+            }
+            GestureAction.OPEN_DESKTOP_MENU -> {
+                showDesktopMenu = true
+            }
+            GestureAction.OPEN_NOTIFICATIONS -> {
+                val service = IterationAccessibilityService.instance
+                if (service != null) {
+                    service.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS)
+                } else {
+                    android.widget.Toast.makeText(mContext, mContext.getString(R.string.need_accessibility), android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
+            GestureAction.NONE -> {}
+        }
+    }
+
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -387,7 +459,6 @@ fun LauncherScreen(
     }
     var folderIconPosition by remember { mutableStateOf(Offset.Zero) }
 
-    var showDesktopMenu by remember { mutableStateOf(false) }
     var showCreateFolderDialog by remember { mutableStateOf(false) }
     var showDeleteFolderConfirm by remember { mutableStateOf(false) }
     var showWidgetPicker by remember { mutableStateOf(false) }
@@ -415,9 +486,6 @@ fun LauncherScreen(
                 ?: AppModel(label = "", packageName = "", uniqueId = "empty_dock_$index")
         }
     }
-
-    var showGlobalSearch by remember { mutableStateOf(false) }
-    var globalSearchQuery by remember { mutableStateOf("") }
 
     // iOS 感的主畫面聯動動畫
     val launcherScale by animateFloatAsState(
@@ -539,12 +607,6 @@ fun LauncherScreen(
                                 }
                             }
                         }
-                        .pointerInput(Unit) {
-                            detectTapGestures(
-                                onLongPress = { if (!isLibrary && !isMinusOne && !isEditMode) showDesktopMenu = true },
-                                onTap = { if (isEditMode) viewModel.setEditMode(false) }
-                            )
-                        }
                 ) {
                     when {
                         isMinusOne -> {
@@ -567,6 +629,11 @@ fun LauncherScreen(
                                 pageOffset = pageOffset,
                                 isLiquidGlass = isLiquidGlassEnabled && isLiquidGlassHomeFolderEnabled,
                                 backdrop = backdrop,
+                                iconShape = iconShape,
+                                blurRadius = blurRadius,
+                                refractionHeight = refractionHeight,
+                                refractionAmount = refractionAmount,
+                                chromaticAberration = chromaticAberration,
                                 draggingApp = draggingApp,
                                 confirmedHoveredSlotIdx = if (confirmedHoveredKey?.startsWith("$pageIndex-") == true)
                                     confirmedHoveredKey?.substringAfter("-")?.toInt() else null,
@@ -629,30 +696,53 @@ fun LauncherScreen(
                                     draggingApp = null; rawHoveredKey = null; confirmedHoveredKey = null
                                 },
                                 onBackgroundLongPress = {
-                                    if (!isEditMode) showDesktopMenu = true
+                                    if (!isEditMode) {
+                                        performGestureAction(longPressAction, longPressApp)
+                                    }
                                 },
                                 onBackgroundClick = {
                                     if (isEditMode) viewModel.setEditMode(false)
+                                },
+                                onBackgroundDoubleTap = {
+                                    performGestureAction(doubleTapAction, doubleTapApp)
+                                },
+                                onBackgroundSwipeUp = {
+                                    performGestureAction(swipeUpAction, swipeUpApp)
+                                },
+                                onBackgroundSwipeDown = {
+                                    performGestureAction(swipeDownAction, swipeDownApp)
+                                },
+                                onBackgroundTwoFingerSwipeUp = {
+                                    performGestureAction(twoFingerSwipeUpAction, twoFingerSwipeUpApp)
+                                },
+                                onBackgroundTwoFingerSwipeDown = {
+                                    performGestureAction(twoFingerSwipeDownAction, twoFingerSwipeDownApp)
                                 }
                             )
                         }
                         else -> {
-                            AppLibraryPage(
-                                allApps = allAppsFlat,
-                                isLiquidGlass = isLiquidGlassEnabled && isLiquidGlassAppLibraryFolderEnabled,
-                                isSearchLiquidGlass = isLiquidGlassEnabled && isLiquidGlassAppLibrarySearchEnabled,
-                                backdrop = backdrop,
-                                onAppClick = { pkg ->
-                                    val app = allAppsFlat.find { it.packageName == pkg }
-                                    if (app?.isFolder == true) folderToOpenId = app.uniqueId else onAppClick(pkg)
-                                },
-                                onDragStart = { app, offset -> draggingApp = app; touchPosition = offset; dragOffset = Offset.Zero },
-                                onDrag = { delta -> dragOffset += delta },
-                                onDragEnd = {
-                                    if (draggingApp != null) viewModel.handleAppDrop(draggingApp!!.packageName, null, pagerState.currentPage - 1, true, MainViewModel.DropType.REORDER)
-                                    draggingApp = null; rawHoveredKey = null; confirmedHoveredKey = null
-                                }
-                            )
+                AppLibraryPage(
+                    allAppsFlat,
+                    isLiquidGlass = isLiquidGlassEnabled && isLiquidGlassAppLibraryFolderEnabled,
+                    isSearchLiquidGlass = isLiquidGlassEnabled && isLiquidGlassAppLibrarySearchEnabled,
+                    backdrop = backdrop,
+                    iconShape = iconShape,
+                    libraryShape = libraryShape,
+                    blurRadius = blurRadius,
+                    refractionHeight = refractionHeight,
+                    refractionAmount = refractionAmount,
+                    chromaticAberration = chromaticAberration,
+                    onAppClick = { pkg ->
+                        val app = allAppsFlat.find { it.packageName == pkg }
+                        if (app?.isFolder == true) folderToOpenId = app.uniqueId else onAppClick(pkg)
+                    },
+                    onDragStart = { app, offset -> draggingApp = app; touchPosition = offset; dragOffset = Offset.Zero },
+                    onDrag = { delta -> dragOffset += delta },
+                    onDragEnd = {
+                        if (draggingApp != null) viewModel.handleAppDrop(draggingApp!!.packageName, null, pagerState.currentPage - 1, true, MainViewModel.DropType.REORDER)
+                        draggingApp = null; rawHoveredKey = null; confirmedHoveredKey = null
+                    }
+                )
                         }
                     }
                 }
@@ -680,6 +770,11 @@ fun LauncherScreen(
                             iconSize = iconSize,
                             isLiquidGlass = isLiquidGlassEnabled && isLiquidGlassDockEnabled,
                             backdrop = backdrop,
+                            iconShape = iconShape,
+                            blurRadius = blurRadius,
+                            refractionHeight = refractionHeight,
+                            refractionAmount = refractionAmount,
+                            chromaticAberration = chromaticAberration,
                             onAppClick = { pkg -> if (pkg == myPackageName) onSettingsClick() else onAppClick(pkg) },
                             onLongClick = { showDockPicker = it }
                         )
@@ -804,6 +899,7 @@ fun LauncherScreen(
         val visibleApps = allAppsFlat.filter { !it.isHidden }
         AppPickerDialog(
             allApps = visibleApps,
+            iconShape = iconShape,
             onDismiss = { showDockPicker = null },
             onAppSelected = { pkg -> viewModel.updateDockApp(showDockPicker!!, pkg); showDockPicker = null }
         )
@@ -827,6 +923,7 @@ fun LauncherScreen(
         QuickEditDialog(
             app = appToEdit!!,
             viewModel = viewModel,
+            iconShape = iconShape,
             onDismiss = { appToEdit = null }
         )
     }
@@ -890,7 +987,11 @@ fun LauncherScreen(
                             .liquidGlass(
                                 enabled = isLiquidGlassEnabled && isLiquidGlassHomeFolderEnabled,
                                 backdrop = backdrop,
-                                cornerRadius = 32.dp
+                                cornerRadius = 32.dp,
+                                blurRadius = blurRadius,
+                                refractionHeight = refractionHeight,
+                                refractionAmount = refractionAmount,
+                                chromaticAberration = chromaticAberration
                             )
                             .padding(16.dp),
                         contentAlignment = Alignment.TopCenter
@@ -910,6 +1011,11 @@ fun LauncherScreen(
                                                     iconSize = 64.dp,
                                                     isLiquidGlass = isLiquidGlassEnabled && isLiquidGlassHomeFolderEnabled,
                                                     backdrop = backdrop,
+                                                    iconShape = iconShape,
+                                                    blurRadius = blurRadius,
+                                                    refractionHeight = refractionHeight,
+                                                    refractionAmount = refractionAmount,
+                                                    chromaticAberration = chromaticAberration,
                                                     modifier = Modifier.pointerInput(app.uniqueId) {
                                                         detectTapGestures(
                                                             onLongPress = { showItemMenu = true }
@@ -957,7 +1063,7 @@ fun LauncherScreen(
             }
 
             if (showAppPicker) {
-                MultiAppPickerDialog(allApps = allAppsFlat, onDismiss = { showAppPicker = false }, onAppsSelected = { viewModel.addAppsToFolder(folder.uniqueId, it); showAppPicker = false })
+                MultiAppPickerDialog(allApps = allAppsFlat, iconShape = iconShape, onDismiss = { showAppPicker = false }, onAppsSelected = { viewModel.addAppsToFolder(folder.uniqueId, it); showAppPicker = false })
             }
         }
     }
@@ -989,7 +1095,11 @@ fun LauncherScreen(
                         .liquidGlass(
                             enabled = isLiquidGlassEnabled && isLiquidGlassGlobalSearchEnabled,
                             backdrop = backdrop,
-                            cornerRadius = 28.dp
+                            cornerRadius = 28.dp,
+                            blurRadius = blurRadius,
+                            refractionHeight = refractionHeight,
+                            refractionAmount = refractionAmount,
+                            chromaticAberration = chromaticAberration
                         ),
                     placeholder = { Text(stringResource(R.string.search_hint), color = Color.White.copy(alpha = 0.6f)) }, 
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.White) },
@@ -1014,8 +1124,15 @@ fun LauncherScreen(
                     }
                     items(filteredResults, key = { it.uniqueId }) { app ->
                         ListItem(
-                            headlineContent = { Text(app.label, color = Color.White) }, leadingContent = { if (app.processedIcon != null) Image(bitmap = app.processedIcon, contentDescription = null, modifier = Modifier.size(48.dp).clip(RoundedCornerShape(10.8.dp)).background(Color.White)) },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent), modifier = Modifier.clickable { onAppClick(app.packageName); showGlobalSearch = false }
+                            headlineContent = { Text(app.label, color = Color.White) }, 
+                            leadingContent = { 
+                                if (app.processedIcon != null) {
+                                    val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(48.dp * 0.238f)
+                                    Image(bitmap = app.processedIcon, contentDescription = null, modifier = Modifier.size(48.dp).clip(shape).background(Color.White)) 
+                                }
+                            },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent), 
+                            modifier = Modifier.clickable { onAppClick(app.packageName); showGlobalSearch = false }
                         )
                     }
 
@@ -1076,6 +1193,12 @@ fun AppGrid(
     pageOffset: Float = 0f,
     isLiquidGlass: Boolean = false,
     backdrop: com.kyant.backdrop.Backdrop? = null,
+    iconShape: IconShape = IconShape.DEFAULT,
+    libraryShape: IconShape = IconShape.DEFAULT,
+    blurRadius: Float = 0f,
+    refractionHeight: Float = 24f,
+    refractionAmount: Float = 48f,
+    chromaticAberration: Boolean = true,
     confirmedHoveredSlotIdx: Int?, confirmedIntent: MainViewModel.DropType,
     onAppClick: (AppModel, Offset) -> Unit,
     onSlotPositioned: (Int, Rect) -> Unit,
@@ -1083,7 +1206,12 @@ fun AppGrid(
     onDrag: (Offset) -> Unit,
     onDragEnd: () -> Unit,
     onBackgroundLongPress: () -> Unit = {},
-    onBackgroundClick: () -> Unit = {}
+    onBackgroundClick: () -> Unit = {},
+    onBackgroundDoubleTap: () -> Unit = {},
+    onBackgroundSwipeUp: () -> Unit = {},
+    onBackgroundSwipeDown: () -> Unit = {},
+    onBackgroundTwoFingerSwipeUp: () -> Unit = {},
+    onBackgroundTwoFingerSwipeDown: () -> Unit = {}
 ) {
     val draggingUniqueId = draggingApp?.uniqueId
     var stackToEdit by remember { mutableStateOf<WidgetModel?>(null) }
@@ -1110,7 +1238,60 @@ fun AppGrid(
             .fillMaxSize()
             .padding(horizontal = 16.dp)
             .pointerInput(isEditMode) {
+                if (!isEditMode) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            awaitFirstDown(requireUnconsumed = false)
+                            var hasTriggered = false
+                            var totalDragY = 0f
+                            var totalDragX = 0f
+
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val dragEvent = event.changes.firstOrNull() ?: break
+                                if (!dragEvent.pressed) break 
+
+                                totalDragY += (dragEvent.position.y - dragEvent.previousPosition.y)
+                                totalDragX += (dragEvent.position.x - dragEvent.previousPosition.x)
+
+                                if (!hasTriggered) {
+                                    // 加入方向判定：垂直位移必須是水平位移的 2 倍以上，防止換頁誤觸
+                                    val isVertical = kotlin.math.abs(totalDragY) > kotlin.math.abs(totalDragX) * 2f
+                                    val pointerCount = event.changes.size
+                                    
+                                    if (isVertical) {
+                                        if (pointerCount == 2) {
+                                            if (totalDragY < -150f) {
+                                                onBackgroundTwoFingerSwipeUp()
+                                                hasTriggered = true
+                                            } else if (totalDragY > 150f) {
+                                                onBackgroundTwoFingerSwipeDown()
+                                                hasTriggered = true
+                                            }
+                                        } else if (pointerCount == 1) {
+                                            // 單指門檻提高到 200f
+                                            if (totalDragY < -200f) {
+                                                onBackgroundSwipeUp()
+                                                hasTriggered = true
+                                            } else if (totalDragY > 200f) {
+                                                onBackgroundSwipeDown()
+                                                hasTriggered = true
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                if (hasTriggered) {
+                                    event.changes.forEach { it.consume() }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .pointerInput(isEditMode) {
                 detectTapGestures(
+                    onDoubleTap = { onBackgroundDoubleTap() },
                     onLongPress = { onBackgroundLongPress() },
                     onTap = { onBackgroundClick() }
                 )
@@ -1285,6 +1466,11 @@ fun AppGrid(
                                 iconSize = iconSize,
                                 isLiquidGlass = isLiquidGlass,
                                 backdrop = backdrop,
+                                iconShape = iconShape,
+                                blurRadius = blurRadius,
+                                refractionHeight = refractionHeight,
+                                refractionAmount = refractionAmount,
+                                chromaticAberration = chromaticAberration,
                                 modifier = Modifier.graphicsLayer {
                                     alpha = if (app.uniqueId == draggingUniqueId) 0f else 1f
                                     scaleX = scale; scaleY = scale
@@ -1341,6 +1527,12 @@ fun AppItem(
     iconSize: androidx.compose.ui.unit.Dp = 62.dp,
     isLiquidGlass: Boolean = false,
     backdrop: com.kyant.backdrop.Backdrop? = null,
+    iconShape: IconShape = IconShape.DEFAULT,
+    libraryShape: IconShape = IconShape.DEFAULT,
+    blurRadius: Float = 0f,
+    refractionHeight: Float = 24f,
+    refractionAmount: Float = 48f,
+    chromaticAberration: Boolean = true,
     onAppClick: (() -> Unit)? = null
 ) {
     val notificationCounts by NotificationService.notifications.collectAsState()
@@ -1352,6 +1544,8 @@ fun AppItem(
         notificationCounts[app.packageName] ?: 0
     }
 
+    val currentShape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(iconSize * 0.238f)
+
     Column(modifier = modifier.padding(vertical = if (showLabel) 4.dp else 0.dp).then(if (onAppClick != null) Modifier.clickable { onAppClick() } else Modifier), horizontalAlignment = Alignment.CenterHorizontally) {
         Box(contentAlignment = Alignment.TopEnd) {
             if (app.packageName.isEmpty() && !app.isFolder) {
@@ -1359,7 +1553,7 @@ fun AppItem(
                 Box(
                     modifier = Modifier
                         .size(iconSize)
-                        .clip(RoundedCornerShape(iconSize * 0.238f))
+                        .clip(currentShape)
                         .background(Color.White.copy(alpha = 0.2f)),
                     contentAlignment = Alignment.Center
                 ) {
@@ -1372,14 +1566,18 @@ fun AppItem(
                         .liquidGlass(
                             enabled = isLiquidGlass,
                             backdrop = backdrop,
-                            cornerRadius = iconSize * 0.238f
+                            cornerRadius = if (libraryShape == IconShape.CIRCLE) iconSize / 2f else iconSize * 0.238f,
+                            blurRadius = blurRadius,
+                            refractionHeight = refractionHeight,
+                            refractionAmount = refractionAmount,
+                            chromaticAberration = chromaticAberration
                         )
                         .padding(4.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { FolderPreviewIcon(app.folderItems.getOrNull(0), iconSize / 2.5f); FolderPreviewIcon(app.folderItems.getOrNull(1), iconSize / 2.5f) }
-                        Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { FolderPreviewIcon(app.folderItems.getOrNull(2), iconSize / 2.5f); FolderPreviewIcon(app.folderItems.getOrNull(3), iconSize / 2.5f) }
+                        Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { FolderPreviewIcon(app.folderItems.getOrNull(0), iconSize / 2.5f, iconShape); FolderPreviewIcon(app.folderItems.getOrNull(1), iconSize / 2.5f, iconShape) }
+                        Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { FolderPreviewIcon(app.folderItems.getOrNull(2), iconSize / 2.5f, iconShape); FolderPreviewIcon(app.folderItems.getOrNull(3), iconSize / 2.5f, iconShape) }
                     }
                 }
             } else if (app.processedIcon != null) {
@@ -1388,11 +1586,11 @@ fun AppItem(
                     contentDescription = null,
                     modifier = Modifier
                         .size(iconSize)
-                        .clip(RoundedCornerShape(iconSize * 0.238f))
+                        .clip(currentShape)
                         .border(
                             width = 0.5.dp,
                             color = Color.White.copy(alpha = 0.3f),
-                            shape = RoundedCornerShape(iconSize * 0.238f)
+                            shape = currentShape
                         ),
                     contentScale = ContentScale.FillBounds
                 )
@@ -1408,15 +1606,17 @@ fun AppItem(
 }
 
 @Composable
-fun FolderPreviewIcon(app: AppModel?, size: androidx.compose.ui.unit.Dp) {
-    if (app?.processedIcon != null) Image(bitmap = app.processedIcon, contentDescription = null, modifier = Modifier.size(size).clip(RoundedCornerShape(size * 0.238f)).background(Color.White))
+fun FolderPreviewIcon(app: AppModel?, size: androidx.compose.ui.unit.Dp, iconShape: IconShape = IconShape.DEFAULT) {
+    val currentShape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(size * 0.238f)
+    if (app?.processedIcon != null) Image(bitmap = app.processedIcon, contentDescription = null, modifier = Modifier.size(size).clip(currentShape).background(Color.White))
     else Spacer(modifier = Modifier.size(size))
 }
 
 @Composable
-fun MultiAppPickerDialog(allApps: List<AppModel>, onDismiss: () -> Unit, onAppsSelected: (List<String>) -> Unit) {
+fun MultiAppPickerDialog(allApps: List<AppModel>, iconShape: IconShape = IconShape.DEFAULT, onDismiss: () -> Unit, onAppsSelected: (List<String>) -> Unit) {
     val visibleApps = remember(allApps) { allApps.filter { !it.isHidden } }
     val selectedPackages = remember { mutableStateListOf<String>() }
+    val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp)
     Dialog(onDismissRequest = onDismiss) {
         Card(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.8f), shape = RoundedCornerShape(16.dp)) {
             Column(modifier = Modifier.padding(16.dp)) {
@@ -1427,7 +1627,7 @@ fun MultiAppPickerDialog(allApps: List<AppModel>, onDismiss: () -> Unit, onAppsS
                 Spacer(modifier = Modifier.height(16.dp))
                 LazyColumn {
                     items(visibleApps, key = { it.uniqueId }) { app ->
-                        ListItem(headlineContent = { Text(app.label) }, leadingContent = { val icon = app.processedIcon ?: app.icon?.toBitmap()?.asImageBitmap(); if (icon != null) Image(bitmap = icon, contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.4.dp)).background(Color.White)) }, trailingContent = { Checkbox(checked = selectedPackages.contains(app.packageName), onCheckedChange = { if (it) selectedPackages.add(app.packageName) else selectedPackages.remove(app.packageName) }) }, modifier = Modifier.clickable { if (selectedPackages.contains(app.packageName)) selectedPackages.remove(app.packageName) else selectedPackages.add(app.packageName) })
+                        ListItem(headlineContent = { Text(app.label) }, leadingContent = { val icon = app.processedIcon ?: app.icon?.toBitmap()?.asImageBitmap(); if (icon != null) Image(bitmap = icon, contentDescription = null, modifier = Modifier.size(40.dp).clip(shape).background(Color.White)) }, trailingContent = { Checkbox(checked = selectedPackages.contains(app.packageName), onCheckedChange = { if (it) selectedPackages.add(app.packageName) else selectedPackages.remove(app.packageName) }) }, modifier = Modifier.clickable { if (selectedPackages.contains(app.packageName)) selectedPackages.remove(app.packageName) else selectedPackages.add(app.packageName) })
                     }
                 }
             }
@@ -1442,6 +1642,12 @@ fun Dock(
     iconSize: androidx.compose.ui.unit.Dp,
     isLiquidGlass: Boolean = false,
     backdrop: com.kyant.backdrop.Backdrop,
+    iconShape: IconShape = IconShape.DEFAULT,
+    libraryShape: IconShape = IconShape.DEFAULT,
+    blurRadius: Float = 0f,
+    refractionHeight: Float = 24f,
+    refractionAmount: Float = 48f,
+    chromaticAberration: Boolean = true,
     onAppClick: (String) -> Unit,
     onLongClick: (Int) -> Unit
 ) {
@@ -1454,7 +1660,11 @@ fun Dock(
             .liquidGlassDock(
                 isLiquidGlass = isLiquidGlass,
                 backdrop = backdrop,
-                cornerRadius = 42.dp
+                cornerRadius = 42.dp,
+                blurRadius = blurRadius,
+                refractionHeight = refractionHeight,
+                refractionAmount = refractionAmount,
+                chromaticAberration = chromaticAberration
             ),
         contentAlignment = Alignment.Center
     ) {
@@ -1472,6 +1682,11 @@ fun Dock(
                         app = app,
                         isLiquidGlass = isLiquidGlass,
                         backdrop = backdrop,
+                        iconShape = iconShape,
+                        blurRadius = blurRadius,
+                        refractionHeight = refractionHeight,
+                        refractionAmount = refractionAmount,
+                        chromaticAberration = chromaticAberration,
                         modifier = Modifier.combinedClickable(
                             onClick = { onAppClick(app.packageName) },
                             onLongClick = { onLongClick(index) }
@@ -1496,9 +1711,10 @@ fun PageIndicator(pageCount: Int, currentPage: Int) {
 }
 
 @Composable
-fun QuickEditDialog(app: AppModel, viewModel: MainViewModel, onDismiss: () -> Unit) {
+fun QuickEditDialog(app: AppModel, viewModel: MainViewModel, iconShape: IconShape = IconShape.DEFAULT, onDismiss: () -> Unit) {
     var labelText by remember { mutableStateOf(app.label) }
     var pickedImageUri by remember { mutableStateOf<Uri?>(null) }
+    val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(18.dp)
 
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         pickedImageUri = uri
@@ -1512,7 +1728,7 @@ fun QuickEditDialog(app: AppModel, viewModel: MainViewModel, onDismiss: () -> Un
                 Box(
                     modifier = Modifier
                         .size(80.dp)
-                        .clip(RoundedCornerShape(18.dp))
+                        .clip(shape)
                         .background(Color.Gray.copy(alpha = 0.1f))
                         .clickable { launcher.launch("image/*") },
                     contentAlignment = Alignment.Center
@@ -1561,14 +1777,15 @@ fun QuickEditDialog(app: AppModel, viewModel: MainViewModel, onDismiss: () -> Un
 }
 
 @Composable
-fun AppPickerDialog(allApps: List<AppModel>, onDismiss: () -> Unit, onAppSelected: (String) -> Unit) {
+fun AppPickerDialog(allApps: List<AppModel>, iconShape: IconShape = IconShape.DEFAULT, onDismiss: () -> Unit, onAppSelected: (String) -> Unit) {
+    val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp)
     Dialog(onDismissRequest = onDismiss) {
         Card(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.8f), shape = RoundedCornerShape(16.dp)) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(stringResource(R.string.select_app), style = MaterialTheme.typography.headlineSmall); Spacer(modifier = Modifier.height(16.dp))
                 LazyColumn {
                     items(allApps, key = { it.uniqueId }) { app ->
-                        ListItem(headlineContent = { Text(app.label) }, leadingContent = { val icon = app.processedIcon ?: app.icon?.toBitmap()?.asImageBitmap(); if (icon != null) Image(bitmap = icon, contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.7.dp)).background(Color.White)) }, modifier = Modifier.clickable { onAppSelected(app.packageName) })
+                        ListItem(headlineContent = { Text(app.label) }, leadingContent = { val icon = app.processedIcon ?: app.icon?.toBitmap()?.asImageBitmap(); if (icon != null) Image(bitmap = icon, contentDescription = null, modifier = Modifier.size(40.dp).clip(shape).background(Color.White)) }, modifier = Modifier.clickable { onAppSelected(app.packageName) })
                     }
                 }
             }
@@ -1583,6 +1800,12 @@ fun AppLibraryPage(
     isLiquidGlass: Boolean = false,
     isSearchLiquidGlass: Boolean = false,
     backdrop: com.kyant.backdrop.Backdrop? = null,
+    iconShape: IconShape = IconShape.DEFAULT,
+    libraryShape: IconShape = IconShape.DEFAULT,
+    blurRadius: Float = 0f,
+    refractionHeight: Float = 24f,
+    refractionAmount: Float = 48f,
+    chromaticAberration: Boolean = true,
     onAppClick: (String) -> Unit,
     onDragStart: (AppModel, Offset) -> Unit,
     onDrag: (Offset) -> Unit,
@@ -1645,7 +1868,11 @@ fun AppLibraryPage(
                     .liquidGlass(
                         enabled = isSearchLiquidGlass,
                         backdrop = backdrop,
-                        cornerRadius = 28.dp
+                        cornerRadius = 28.dp,
+                        blurRadius = blurRadius,
+                        refractionHeight = refractionHeight,
+                        refractionAmount = refractionAmount,
+                        chromaticAberration = chromaticAberration
                     ),
                 placeholder = {
                     Text(
@@ -1714,7 +1941,8 @@ fun AppLibraryPage(
                                 headlineContent = { Text(app.label, color = Color.White) },
                                 leadingContent = {
                                     if (app.processedIcon != null) {
-                                        Image(bitmap = app.processedIcon, contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(9.7.dp)).background(Color.White))
+                                        val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(40.dp * 0.238f)
+                                        Image(bitmap = app.processedIcon, contentDescription = null, modifier = Modifier.size(40.dp).clip(shape).background(Color.White))
                                     }
                                 },
                                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
@@ -1788,6 +2016,12 @@ fun AppLibraryPage(
                             apps = apps,
                             isLiquidGlass = isLiquidGlass,
                             backdrop = backdrop,
+                            iconShape = iconShape,
+                            libraryShape = libraryShape,
+                            blurRadius = blurRadius,
+                            refractionHeight = refractionHeight,
+                            refractionAmount = refractionAmount,
+                            chromaticAberration = chromaticAberration,
                             isLocked = name == "Hidden Apps" && !isHiddenUnlocked,
                             onAppClick = { if (name == "Hidden Apps" && !isHiddenUnlocked) showPasswordDialog = true else onAppClick(it) },
                             onMoreClick = { if (name == "Hidden Apps" && !isHiddenUnlocked) showPasswordDialog = true else viewModel.setSelectedCategory(name) },
@@ -1813,6 +2047,12 @@ fun AppLibraryFolder(
     apps: List<AppModel>,
     isLiquidGlass: Boolean = false,
     backdrop: com.kyant.backdrop.Backdrop? = null,
+    iconShape: IconShape = IconShape.DEFAULT,
+    libraryShape: IconShape = IconShape.DEFAULT,
+    blurRadius: Float = 0f,
+    refractionHeight: Float = 24f,
+    refractionAmount: Float = 48f,
+    chromaticAberration: Boolean = true,
     onAppClick: (String) -> Unit,
     onMoreClick: () -> Unit,
     onDragStart: (AppModel, Offset) -> Unit,
@@ -1823,45 +2063,70 @@ fun AppLibraryFolder(
 ) {
     val viewModel: MainViewModel = viewModel()
     val mContext = LocalContext.current
+    
+    // 根據形狀決定裁切方式：只有圓形才強制裁切（防止脫框），Default 則不裁切（確保 72dp 圖示角角完整）
+    val folderShape = if (libraryShape == IconShape.CIRCLE) CircleShape else null
+    val folderPadding = if (libraryShape == IconShape.CIRCLE) 20.dp else 12.dp
+    val internalIconSize = 72.dp
 
-    Column(modifier = modifier) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             modifier = Modifier
                 .aspectRatio(1f)
-                .liquidGlass(
-                    enabled = isLiquidGlass,
-                    backdrop = backdrop,
-                    cornerRadius = 24.dp
-                )
-                .padding(12.dp)
+                .then(if (folderShape != null) Modifier.clip(folderShape) else Modifier)
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // 背景層
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .liquidGlass(
+                        enabled = isLiquidGlass,
+                        backdrop = backdrop,
+                        cornerRadius = if (libraryShape == IconShape.CIRCLE) 80.dp else 24.dp,
+                        blurRadius = blurRadius,
+                        refractionHeight = refractionHeight,
+                        refractionAmount = refractionAmount,
+                        chromaticAberration = chromaticAberration
+                    )
+            )
+            
+            // 內容層
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(folderPadding),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        if (isLocked) Box(modifier = Modifier.size(72.dp).background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(15.1.dp)).clickable { onMoreClick() })
+                        val lockShape = if (libraryShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(15.1.dp)
+                        if (isLocked) Box(modifier = Modifier.size(internalIconSize).background(Color.White.copy(alpha = 0.3f), lockShape).clickable { onMoreClick() })
                         else apps.getOrNull(0)?.let { app ->
-                            LibraryItemWithMenu(app, name, onAppClick, onDragStart, onDrag, onDragEnd)
+                            LibraryItemWithMenu(app, name, iconShape, libraryShape, internalIconSize, onAppClick, onDragStart, onDrag, onDragEnd)
                         }
                     }
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        if (isLocked) Box(modifier = Modifier.size(72.dp).background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(15.1.dp)).clickable { onMoreClick() })
+                        val lockShape = if (libraryShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(15.1.dp)
+                        if (isLocked) Box(modifier = Modifier.size(internalIconSize).background(Color.White.copy(alpha = 0.3f), lockShape).clickable { onMoreClick() })
                         else apps.getOrNull(1)?.let { app ->
-                            LibraryItemWithMenu(app, name, onAppClick, onDragStart, onDrag, onDragEnd)
+                            LibraryItemWithMenu(app, name, iconShape, libraryShape, internalIconSize, onAppClick, onDragStart, onDrag, onDragEnd)
                         }
                     }
                 }
                 Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        if (isLocked) Box(modifier = Modifier.size(72.dp).background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(15.1.dp)).clickable { onMoreClick() })
+                        val lockShape = if (libraryShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(15.1.dp)
+                        if (isLocked) Box(modifier = Modifier.size(internalIconSize).background(Color.White.copy(alpha = 0.3f), lockShape).clickable { onMoreClick() })
                         else apps.getOrNull(2)?.let { app ->
-                            LibraryItemWithMenu(app, name, onAppClick, onDragStart, onDrag, onDragEnd)
+                            LibraryItemWithMenu(app, name, iconShape, libraryShape, internalIconSize, onAppClick, onDragStart, onDrag, onDragEnd)
                         }
                     }
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        if (isLocked) Box(modifier = Modifier.size(72.dp).background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(15.1.dp)).clickable { onMoreClick() })
-                        else if (apps.size > 4) Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.2f), RoundedCornerShape(15.1.dp)).clickable { onMoreClick() }, contentAlignment = Alignment.Center) { Text("+${apps.size - 3}", color = Color.White, style = MaterialTheme.typography.headlineSmall) }
+                        val lockShape = if (libraryShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(15.1.dp)
+                        if (isLocked) Box(modifier = Modifier.size(internalIconSize).background(Color.White.copy(alpha = 0.3f), lockShape).clickable { onMoreClick() })
+                        else if (apps.size > 4) Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.2f), lockShape).clickable { onMoreClick() }, contentAlignment = Alignment.Center) { Text("+${apps.size - 3}", color = Color.White, style = MaterialTheme.typography.headlineSmall) }
                         else apps.getOrNull(3)?.let { app ->
-                            LibraryItemWithMenu(app, name, onAppClick, onDragStart, onDrag, onDragEnd)
+                            LibraryItemWithMenu(app, name, iconShape, libraryShape, internalIconSize, onAppClick, onDragStart, onDrag, onDragEnd)
                         }
                     }
                 }
@@ -1876,6 +2141,9 @@ fun AppLibraryFolder(
 fun LibraryItemWithMenu(
     app: AppModel,
     folderName: String,
+    iconShape: IconShape = IconShape.DEFAULT,
+    libraryShape: IconShape = IconShape.DEFAULT,
+    iconSize: androidx.compose.ui.unit.Dp = 72.dp,
     onAppClick: (String) -> Unit,
     onDragStart: (AppModel, Offset) -> Unit,
     onDrag: (Offset) -> Unit,
@@ -1892,9 +2160,10 @@ fun LibraryItemWithMenu(
 
     Box(modifier = Modifier.onGloballyPositioned { lastPos.pos = it.positionInRoot() }) {
         AppItem(
-            app,
+            app = app,
             showLabel = false,
-            iconSize = 72.dp,
+            iconSize = iconSize,
+            iconShape = iconShape,
             modifier = Modifier.combinedClickable(
                 onClick = { onAppClick(app.packageName) },
                 onLongClick = { if (folderName != "Hidden Apps") showMenu = true }

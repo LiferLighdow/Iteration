@@ -93,6 +93,90 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isLiquidGlassWidgetsEnabled = MutableStateFlow(prefs.getBoolean("liquid_glass_widgets", false))
     val isLiquidGlassWidgetsEnabled = _isLiquidGlassWidgetsEnabled.asStateFlow()
 
+    private val _liquidGlassBlur = MutableStateFlow(prefs.getFloat("liquid_glass_blur", 0f))
+    val liquidGlassBlur = _liquidGlassBlur.asStateFlow()
+
+    private val _liquidGlassRefractionHeight = MutableStateFlow(prefs.getFloat("liquid_glass_refraction_height", 24f))
+    val liquidGlassRefractionHeight = _liquidGlassRefractionHeight.asStateFlow()
+
+    private val _liquidGlassRefractionAmount = MutableStateFlow(prefs.getFloat("liquid_glass_refraction_amount", 48f))
+    val liquidGlassRefractionAmount = _liquidGlassRefractionAmount.asStateFlow()
+
+    private val _liquidGlassChromaticAberration = MutableStateFlow(prefs.getBoolean("liquid_glass_chromatic_aberration", true))
+    val liquidGlassChromaticAberration = _liquidGlassChromaticAberration.asStateFlow()
+
+    private val _doubleTapAction = MutableStateFlow(
+        try {
+            GestureAction.valueOf(prefs.getString("double_tap_action", "NONE") ?: "NONE")
+        } catch (e: Exception) {
+            GestureAction.NONE
+        }
+    )
+    val doubleTapAction = _doubleTapAction.asStateFlow()
+
+    private val _swipeUpAction = MutableStateFlow(
+        try {
+            GestureAction.valueOf(prefs.getString("swipe_up_action", "NONE") ?: "NONE")
+        } catch (e: Exception) {
+            GestureAction.NONE
+        }
+    )
+    val swipeUpAction = _swipeUpAction.asStateFlow()
+
+    private val _doubleTapApp = MutableStateFlow(prefs.getString("double_tap_app", "") ?: "")
+    val doubleTapApp = _doubleTapApp.asStateFlow()
+
+    private val _swipeUpApp = MutableStateFlow(prefs.getString("swipe_up_app", "") ?: "")
+    val swipeUpApp = _swipeUpApp.asStateFlow()
+
+    private val _swipeDownAction = MutableStateFlow(
+        try {
+            GestureAction.valueOf(prefs.getString("swipe_down_action", "OPEN_GLOBAL_SEARCH") ?: "OPEN_GLOBAL_SEARCH")
+        } catch (e: Exception) {
+            GestureAction.OPEN_GLOBAL_SEARCH
+        }
+    )
+    val swipeDownAction = _swipeDownAction.asStateFlow()
+
+    private val _longPressAction = MutableStateFlow(
+        try {
+            GestureAction.valueOf(prefs.getString("long_press_action", "OPEN_DESKTOP_MENU") ?: "OPEN_DESKTOP_MENU")
+        } catch (e: Exception) {
+            GestureAction.OPEN_DESKTOP_MENU
+        }
+    )
+    val longPressAction = _longPressAction.asStateFlow()
+
+    private val _swipeDownApp = MutableStateFlow(prefs.getString("swipe_down_app", "") ?: "")
+    val swipeDownApp = _swipeDownApp.asStateFlow()
+
+    private val _longPressApp = MutableStateFlow(prefs.getString("long_press_app", "") ?: "")
+    val longPressApp = _longPressApp.asStateFlow()
+
+    private val _twoFingerSwipeUpAction = MutableStateFlow(
+        try {
+            GestureAction.valueOf(prefs.getString("two_finger_swipe_up_action", "NONE") ?: "NONE")
+        } catch (e: Exception) {
+            GestureAction.NONE
+        }
+    )
+    val twoFingerSwipeUpAction = _twoFingerSwipeUpAction.asStateFlow()
+
+    private val _twoFingerSwipeDownAction = MutableStateFlow(
+        try {
+            GestureAction.valueOf(prefs.getString("two_finger_swipe_down_action", "OPEN_NOTIFICATIONS") ?: "OPEN_NOTIFICATIONS")
+        } catch (e: Exception) {
+            GestureAction.OPEN_NOTIFICATIONS
+        }
+    )
+    val twoFingerSwipeDownAction = _twoFingerSwipeDownAction.asStateFlow()
+
+    private val _twoFingerSwipeUpApp = MutableStateFlow(prefs.getString("two_finger_swipe_up_app", "") ?: "")
+    val twoFingerSwipeUpApp = _twoFingerSwipeUpApp.asStateFlow()
+
+    private val _twoFingerSwipeDownApp = MutableStateFlow(prefs.getString("two_finger_swipe_down_app", "") ?: "")
+    val twoFingerSwipeDownApp = _twoFingerSwipeDownApp.asStateFlow()
+
     private val _iconPackPackage = MutableStateFlow(prefs.getString("icon_pack_package", "") ?: "")
     val iconPackPackage = _iconPackPackage.asStateFlow()
 
@@ -101,6 +185,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         catch (e: Exception) { IconStyle.STANDARD }
     )
     val iconStyle = _iconStyle.asStateFlow()
+
+    private val _iconShape = MutableStateFlow(
+        try { IconShape.valueOf(prefs.getString("icon_shape", "DEFAULT") ?: "DEFAULT") }
+        catch (e: Exception) { IconShape.DEFAULT }
+    )
+    val iconShape = _iconShape.asStateFlow()
+
+    private val _libraryShape = MutableStateFlow(
+        try { IconShape.valueOf(prefs.getString("library_shape", "DEFAULT") ?: "DEFAULT") }
+        catch (e: Exception) { IconShape.DEFAULT }
+    )
+    val libraryShape = _libraryShape.asStateFlow()
 
     private val hiddenPackages = mutableSetOf<String>()
     private val customLabels = mutableMapOf<String, String>()
@@ -210,6 +306,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // 重新讀取所有可能在 SettingsActivity 中改變的設定
         val savedStyleStr = prefs.getString("icon_style", "STANDARD") ?: "STANDARD"
         val newStyle = try { IconStyle.valueOf(savedStyleStr) } catch (e: Exception) { IconStyle.STANDARD }
+        val savedShapeStr = prefs.getString("icon_shape", "DEFAULT") ?: "DEFAULT"
+        val newShape = try { IconShape.valueOf(savedShapeStr) } catch (e: Exception) { IconShape.DEFAULT }
+        val savedLibShapeStr = prefs.getString("library_shape", "DEFAULT") ?: "DEFAULT"
+        val newLibShape = try { IconShape.valueOf(savedLibShapeStr) } catch (e: Exception) { IconShape.DEFAULT }
         val newThemed = prefs.getBoolean("themed_icons", false)
         val newLiquidEnabled = prefs.getBoolean("liquid_glass_enabled", false)
         val newLiquidDockEnabled = prefs.getBoolean("liquid_glass_dock", false)
@@ -218,10 +318,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val newLiquidGlobalSearchEnabled = prefs.getBoolean("liquid_glass_global_search", false)
         val newLiquidAppLibrarySearchEnabled = prefs.getBoolean("liquid_glass_app_library_search", false)
         val newLiquidWidgetsEnabled = prefs.getBoolean("liquid_glass_widgets", false)
+        val newLiquidBlur = prefs.getFloat("liquid_glass_blur", 0f)
+        val newLiquidRefractionHeight = prefs.getFloat("liquid_glass_refraction_height", 24f)
+        val newLiquidRefractionAmount = prefs.getFloat("liquid_glass_refraction_amount", 48f)
+        val newLiquidChromaticAberration = prefs.getBoolean("liquid_glass_chromatic_aberration", true)
+        val newDoubleTapActionStr = prefs.getString("double_tap_action", "NONE") ?: "NONE"
+        val newDoubleTapAction = try { GestureAction.valueOf(newDoubleTapActionStr) } catch (e: Exception) { GestureAction.NONE }
         val newIconPackPackage = prefs.getString("icon_pack_package", "") ?: ""
 
-        if (_iconStyle.value != newStyle || _isThemedIconsEnabled.value != newThemed || _iconPackPackage.value != newIconPackPackage) {
+        if (_iconStyle.value != newStyle || _isThemedIconsEnabled.value != newThemed || _iconPackPackage.value != newIconPackPackage || _iconShape.value != newShape || _libraryShape.value != newLibShape) {
             _iconStyle.value = newStyle
+            _iconShape.value = newShape
+            _libraryShape.value = newLibShape
             _isThemedIconsEnabled.value = newThemed
             _iconPackPackage.value = newIconPackPackage
             iconCache.evictAll()
@@ -234,6 +342,43 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _isLiquidGlassGlobalSearchEnabled.value = newLiquidGlobalSearchEnabled
         _isLiquidGlassAppLibrarySearchEnabled.value = newLiquidAppLibrarySearchEnabled
         _isLiquidGlassWidgetsEnabled.value = newLiquidWidgetsEnabled
+        _liquidGlassBlur.value = newLiquidBlur
+        _liquidGlassRefractionHeight.value = newLiquidRefractionHeight
+        _liquidGlassRefractionAmount.value = newLiquidRefractionAmount
+        _liquidGlassChromaticAberration.value = newLiquidChromaticAberration
+        _doubleTapAction.value = newDoubleTapAction
+
+        _swipeUpAction.value = try {
+            GestureAction.valueOf(prefs.getString("swipe_up_action", "NONE") ?: "NONE")
+        } catch (e: Exception) {
+            GestureAction.NONE
+        }
+        _doubleTapApp.value = prefs.getString("double_tap_app", "") ?: ""
+        _swipeUpApp.value = prefs.getString("swipe_up_app", "") ?: ""
+        _swipeDownAction.value = try {
+            GestureAction.valueOf(prefs.getString("swipe_down_action", "OPEN_GLOBAL_SEARCH") ?: "OPEN_GLOBAL_SEARCH")
+        } catch (e: Exception) {
+            GestureAction.OPEN_GLOBAL_SEARCH
+        }
+        _longPressAction.value = try {
+            GestureAction.valueOf(prefs.getString("long_press_action", "OPEN_DESKTOP_MENU") ?: "OPEN_DESKTOP_MENU")
+        } catch (e: Exception) {
+            GestureAction.OPEN_DESKTOP_MENU
+        }
+        _swipeDownApp.value = prefs.getString("swipe_down_app", "") ?: ""
+        _longPressApp.value = prefs.getString("long_press_app", "") ?: ""
+        _twoFingerSwipeUpAction.value = try {
+            GestureAction.valueOf(prefs.getString("two_finger_swipe_up_action", "NONE") ?: "NONE")
+        } catch (e: Exception) {
+            GestureAction.NONE
+        }
+        _twoFingerSwipeDownAction.value = try {
+            GestureAction.valueOf(prefs.getString("two_finger_swipe_down_action", "OPEN_NOTIFICATIONS") ?: "OPEN_NOTIFICATIONS")
+        } catch (e: Exception) {
+            GestureAction.OPEN_NOTIFICATIONS
+        }
+        _twoFingerSwipeUpApp.value = prefs.getString("two_finger_swipe_up_app", "") ?: ""
+        _twoFingerSwipeDownApp.value = prefs.getString("two_finger_swipe_down_app", "") ?: ""
     }
 
     internal fun saveLayout() {
@@ -543,6 +688,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         
         val isThemed = _isThemedIconsEnabled.value
         val currentStyle = _iconStyle.value
+        val currentShape = _iconShape.value
         val currentIconPack = _iconPackPackage.value
 
         viewModelScope.launch {
@@ -590,11 +736,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             val customIconFile = File(customIconDir, "${app.packageName}.png")
                             
                             // 關鍵：快取檔名現在包含顏色數值，桌布一換，快取即失效
-                            // V4: Icon Pack 縮放補償
+                            // V6: 完整參數快取，確保形狀、風格與圖標包變更時立即生效
                             val styleSuffix = if (currentIconPack.isNotEmpty()) {
-                                "IP_V4_${currentIconPack.hashCode()}"
+                                "IP_V6_${currentIconPack.hashCode()}_${currentShape.name}_${currentStyle.name}_${if (isThemed) "T_$colorKey" else "N"}"
                             } else {
-                                "V4_${currentStyle.name}_${if (isThemed) "T_$colorKey" else "N"}"
+                                "V5_${currentStyle.name}_${currentShape.name}_${if (isThemed) "T_$colorKey" else "N"}"
                             }
                             
                             val diskCacheFile = File(processedIconCacheDir, "${app.packageName}_$styleSuffix.png")
@@ -604,7 +750,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                             val processedIcon: ImageBitmap = if (customIconFile.exists()) {
                                 BitmapFactory.decodeFile(customIconFile.absolutePath)?.asImageBitmap() 
-                                    ?: iconProcessor.processIcon(app.icon, isThemed, themeColors, currentStyle, sizePx)
+                                    ?: iconProcessor.processIcon(app.icon, isThemed, themeColors, currentStyle, currentShape, sizePx)
                             } else cachedIcon ?: if (diskCacheFile.exists()) {
                                 val bitmap = BitmapFactory.decodeFile(diskCacheFile.absolutePath)
                                 if (bitmap != null) {
@@ -616,13 +762,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                         val ipIcon = iconPackManager.getIcon(app.packageName)
                                         if (ipIcon != null) {
                                             // Icon Pack 內的圖示：維持原始樣式，不套用主題色，且告知是 IconPack 以取消白底
-                                            iconProcessor.processIcon(ipIcon, false, null, IconStyle.STANDARD, sizePx, isIconPack = true)
+                                            iconProcessor.processIcon(ipIcon, false, null, IconStyle.STANDARD, currentShape, sizePx, isIconPack = true)
                                         } else {
                                             // Fallback App：套用使用者選定的 Iteration 樣式與主題
-                                            iconProcessor.processIcon(app.icon, isThemed, themeColors, currentStyle, sizePx)
+                                            iconProcessor.processIcon(app.icon, isThemed, themeColors, currentStyle, currentShape, sizePx)
                                         }
                                     } else {
-                                        iconProcessor.processIcon(app.icon, isThemed, themeColors, currentStyle, sizePx)
+                                        iconProcessor.processIcon(app.icon, isThemed, themeColors, currentStyle, currentShape, sizePx)
                                     }
                                     saveIconToDisk(processed, diskCacheFile)
                                     iconCache.put(cacheKey, processed)
@@ -632,13 +778,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                 val processedIconBitmap = if (currentIconPack.isNotEmpty()) {
                                     val ipIcon = iconPackManager.getIcon(app.packageName)
                                     if (ipIcon != null) {
-                                        iconProcessor.processIcon(ipIcon, false, null, IconStyle.STANDARD, sizePx, isIconPack = true)
+                                        iconProcessor.processIcon(ipIcon, false, null, IconStyle.STANDARD, currentShape, sizePx, isIconPack = true)
                                     } else {
                                         // Fallback App：套用使用者選定的 Iteration 樣式與主題
-                                        iconProcessor.processIcon(app.icon, isThemed, themeColors, currentStyle, sizePx)
+                                        iconProcessor.processIcon(app.icon, isThemed, themeColors, currentStyle, currentShape, sizePx)
                                     }
                                 } else {
-                                    iconProcessor.processIcon(app.icon, isThemed, themeColors, currentStyle, sizePx)
+                                    iconProcessor.processIcon(app.icon, isThemed, themeColors, currentStyle, currentShape, sizePx)
                                 }
                                 saveIconToDisk(processedIconBitmap, diskCacheFile)
                                 iconCache.put(cacheKey, processedIconBitmap)
@@ -762,6 +908,84 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _isEditMode.value = enabled
     }
 
+    fun setDoubleTapAction(action: GestureAction) {
+        _doubleTapAction.value = action
+        prefs.edit().putString("double_tap_action", action.name).apply()
+    }
+
+    fun setSwipeUpAction(action: GestureAction) {
+        _swipeUpAction.value = action
+        prefs.edit().putString("swipe_up_action", action.name).apply()
+    }
+
+    fun setDoubleTapApp(packageName: String) {
+        _doubleTapApp.value = packageName
+        prefs.edit().putString("double_tap_app", packageName).apply()
+    }
+
+    fun setSwipeUpApp(packageName: String) {
+        _swipeUpApp.value = packageName
+        prefs.edit().putString("swipe_up_app", packageName).apply()
+    }
+
+    fun setSwipeDownAction(action: GestureAction) {
+        _swipeDownAction.value = action
+        prefs.edit().putString("swipe_down_action", action.name).apply()
+    }
+
+    fun setLongPressAction(action: GestureAction) {
+        _longPressAction.value = action
+        prefs.edit().putString("long_press_action", action.name).apply()
+    }
+
+    fun setSwipeDownApp(packageName: String) {
+        _swipeDownApp.value = packageName
+        prefs.edit().putString("swipe_down_app", packageName).apply()
+    }
+
+    fun setLongPressApp(packageName: String) {
+        _longPressApp.value = packageName
+        prefs.edit().putString("long_press_app", packageName).apply()
+    }
+
+    fun setTwoFingerSwipeUpAction(action: GestureAction) {
+        _twoFingerSwipeUpAction.value = action
+        prefs.edit().putString("two_finger_swipe_up_action", action.name).apply()
+    }
+
+    fun setTwoFingerSwipeDownAction(action: GestureAction) {
+        _twoFingerSwipeDownAction.value = action
+        prefs.edit().putString("two_finger_swipe_down_action", action.name).apply()
+    }
+
+    fun resetGestures() {
+        setDoubleTapAction(GestureAction.NONE)
+        setSwipeUpAction(GestureAction.NONE)
+        setSwipeDownAction(GestureAction.OPEN_GLOBAL_SEARCH)
+        setLongPressAction(GestureAction.OPEN_DESKTOP_MENU)
+        setTwoFingerSwipeUpAction(GestureAction.NONE)
+        setTwoFingerSwipeDownAction(GestureAction.NONE)
+    }
+
+    fun applySuggestedGestures() {
+        setDoubleTapAction(GestureAction.LOCK_SCREEN)
+        setSwipeUpAction(GestureAction.OPEN_SYSTEM_SETTINGS)
+        setSwipeDownAction(GestureAction.OPEN_GLOBAL_SEARCH)
+        setLongPressAction(GestureAction.OPEN_DESKTOP_MENU)
+        setTwoFingerSwipeUpAction(GestureAction.NONE)
+        setTwoFingerSwipeDownAction(GestureAction.OPEN_NOTIFICATIONS)
+    }
+
+    fun setTwoFingerSwipeUpApp(packageName: String) {
+        _twoFingerSwipeUpApp.value = packageName
+        prefs.edit().putString("two_finger_swipe_up_app", packageName).apply()
+    }
+
+    fun setTwoFingerSwipeDownApp(packageName: String) {
+        _twoFingerSwipeDownApp.value = packageName
+        prefs.edit().putString("two_finger_swipe_down_app", packageName).apply()
+    }
+
     fun setThemedIconsEnabled(enabled: Boolean) {
         _isThemedIconsEnabled.value = enabled
         prefs.edit().putBoolean("themed_icons", enabled).apply()
@@ -776,10 +1000,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         loadApps()
     }
 
+    fun setIconShape(shape: IconShape) {
+        _iconShape.value = shape
+        prefs.edit().putString("icon_shape", shape.name).apply()
+        iconCache.evictAll()
+        loadApps()
+    }
+
+    fun setLibraryShape(shape: IconShape) {
+        _libraryShape.value = shape
+        prefs.edit().putString("library_shape", shape.name).apply()
+    }
+
     fun setIconPack(packageName: String) {
+        if (packageName.isNotEmpty()) {
+            _isThemedIconsEnabled.value = false
+            prefs.edit().putBoolean("themed_icons", false).apply()
+        }
         _iconPackPackage.value = packageName
         prefs.edit().putString("icon_pack_package", packageName).apply()
         iconCache.evictAll()
+        // 強制重新載入所有 App 以應用新的圖標包與形狀裁切
         loadApps()
     }
 
@@ -831,6 +1072,33 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (enabled) updateBlurredWallpaper()
     }
 
+    fun setLiquidGlassBlur(value: Float) {
+        _liquidGlassBlur.value = value
+        prefs.edit().putFloat("liquid_glass_blur", value).apply()
+    }
+
+    fun setLiquidGlassRefractionHeight(value: Float) {
+        _liquidGlassRefractionHeight.value = value
+        prefs.edit().putFloat("liquid_glass_refraction_height", value).apply()
+    }
+
+    fun setLiquidGlassRefractionAmount(value: Float) {
+        _liquidGlassRefractionAmount.value = value
+        prefs.edit().putFloat("liquid_glass_refraction_amount", value).apply()
+    }
+
+    fun setLiquidGlassChromaticAberration(enabled: Boolean) {
+        _liquidGlassChromaticAberration.value = enabled
+        prefs.edit().putBoolean("liquid_glass_chromatic_aberration", enabled).apply()
+    }
+
+    fun resetLiquidGlassParams() {
+        setLiquidGlassBlur(0f)
+        setLiquidGlassRefractionHeight(24f)
+        setLiquidGlassRefractionAmount(48f)
+        setLiquidGlassChromaticAberration(true)
+    }
+
     fun logAppLaunch(packageName: String) {
         val launchCounts = prefs.getString("launch_counts", "") ?: ""
         val countsMap = launchCounts.split(",").filter { it.contains("|") }.associate {
@@ -855,6 +1123,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             liquidGlassWidgets = _isLiquidGlassWidgetsEnabled.value,
             liquidGlassEnabled = _isLiquidGlassEnabled.value,
             iconStyle = _iconStyle.value.name,
+            iconShape = _iconShape.value.name,
+            libraryShape = _libraryShape.value.name,
             pageSize = pageSize,
             password = getPassword(),
             hiddenPackages = hiddenPackages,
@@ -887,6 +1157,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val savedStyle = settings.optString("icon_style", "STANDARD")
             _iconStyle.value = try { IconStyle.valueOf(savedStyle) } catch(e: Exception) { IconStyle.STANDARD }
             prefs.edit().putString("icon_style", _iconStyle.value.name).apply()
+
+            val savedShape = settings.optString("icon_shape", "DEFAULT")
+            _iconShape.value = try { IconShape.valueOf(savedShape) } catch(e: Exception) { IconShape.DEFAULT }
+            prefs.edit().putString("icon_shape", _iconShape.value.name).apply()
+
+            val savedLibShape = settings.optString("library_shape", "DEFAULT")
+            _libraryShape.value = try { IconShape.valueOf(savedLibShape) } catch(e: Exception) { IconShape.DEFAULT }
+            prefs.edit().putString("library_shape", _libraryShape.value.name).apply()
 
             pageSize = settings.optInt("page_size", 20)
             setPassword(settings.optString("hidden_password", "1234"))

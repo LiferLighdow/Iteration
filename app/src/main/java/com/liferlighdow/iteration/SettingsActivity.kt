@@ -1,6 +1,7 @@
 package com.liferlighdow.iteration
 
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -22,6 +23,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -47,9 +49,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.core.app.NotificationManagerCompat
 import androidx.activity.enableEdgeToEdge
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import kotlin.math.roundToInt
 
 class SettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -69,7 +75,7 @@ class SettingsActivity : ComponentActivity() {
 }
 
 enum class SettingsPage {
-    MAIN, HIDE_APPS, RENAME_APPS, CHANGE_ICON, APP_LIBRARY, ICON_THEME, DOCK, LIQUID_GLASS
+    MAIN, HIDE_APPS, RENAME_APPS, CHANGE_ICON, APP_LIBRARY, ICON_THEME, DOCK, LIQUID_GLASS, GESTURES
 }
 
 @Composable
@@ -92,7 +98,8 @@ fun SettingsNavigation() {
             onNavigateToAppLibrary = { currentPage = SettingsPage.APP_LIBRARY },
             onNavigateToIconTheme = { currentPage = SettingsPage.ICON_THEME },
             onNavigateToDock = { currentPage = SettingsPage.DOCK },
-            onNavigateToLiquidGlass = { currentPage = SettingsPage.LIQUID_GLASS }
+            onNavigateToLiquidGlass = { currentPage = SettingsPage.LIQUID_GLASS },
+            onNavigateToGestures = { currentPage = SettingsPage.GESTURES }
         )
         SettingsPage.HIDE_APPS -> HideAppsScreen(onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.RENAME_APPS -> RenameAppsScreen(onBack = { currentPage = SettingsPage.MAIN })
@@ -104,6 +111,7 @@ fun SettingsNavigation() {
         )
         SettingsPage.DOCK -> DockSettingsScreen(onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.LIQUID_GLASS -> LiquidGlassSettingsScreen(onBack = { currentPage = SettingsPage.MAIN })
+        SettingsPage.GESTURES -> GesturesSettingsScreen(onBack = { currentPage = SettingsPage.MAIN })
     }
 }
 
@@ -139,7 +147,8 @@ fun SettingsMainScreen(
     onNavigateToAppLibrary: () -> Unit,
     onNavigateToIconTheme: () -> Unit,
     onNavigateToDock: () -> Unit,
-    onNavigateToLiquidGlass: () -> Unit
+    onNavigateToLiquidGlass: () -> Unit,
+    onNavigateToGestures: () -> Unit
 ) {
     val viewModel: MainViewModel = viewModel()
     val context = LocalContext.current
@@ -193,7 +202,8 @@ fun SettingsMainScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
-                }
+                },
+                actions = {}
             )
         }
     ) { innerPadding ->
@@ -220,6 +230,14 @@ fun SettingsMainScreen(
                     supportingContent = { Text("Manage apps in your home screen dock") },
                     trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
                     modifier = Modifier.clickable { onNavigateToDock() }
+                )
+            }
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.settings_gestures)) },
+                    supportingContent = { Text(stringResource(R.string.settings_gestures_desc)) },
+                    trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
+                    modifier = Modifier.clickable { onNavigateToGestures() }
                 )
             }
             item {
@@ -404,6 +422,7 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
     val viewModel: MainViewModel = viewModel()
     val isThemedIconsEnabled by viewModel.isThemedIconsEnabled.collectAsState()
     val currentStyle by viewModel.iconStyle.collectAsState()
+    val currentShape by viewModel.iconShape.collectAsState()
     val currentIconPack by viewModel.iconPackPackage.collectAsState()
     
     var showIconPackPicker by remember { mutableStateOf(false) }
@@ -416,7 +435,8 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
-                }
+                },
+                actions = {}
             )
         }
     ) { innerPadding ->
@@ -435,6 +455,32 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
                     supportingContent = { Text(stringResource(R.string.settings_change_icon_desc)) },
                     trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
                     modifier = Modifier.clickable { onNavigateToChangeIcon() }
+                )
+            }
+
+            item {
+                var expanded by remember { mutableStateOf(false) }
+                ListItem(
+                    headlineContent = { Text("Change Icon Shape") },
+                    supportingContent = { Text(if (currentShape == IconShape.CIRCLE) "Circle" else "Default") },
+                    trailingContent = {
+                        Box {
+                            IconButton(onClick = { expanded = true }) {
+                                Icon(Icons.Default.MoreVert, contentDescription = null)
+                            }
+                            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                                DropdownMenuItem(
+                                    text = { Text("Default") },
+                                    onClick = { viewModel.setIconShape(IconShape.DEFAULT); expanded = false }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Circle") },
+                                    onClick = { viewModel.setIconShape(IconShape.CIRCLE); expanded = false }
+                                )
+                            }
+                        }
+                    },
+                    modifier = Modifier.clickable { expanded = true }
                 )
             }
 
@@ -544,6 +590,8 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
 fun IconPackPickerDialog(onDismiss: () -> Unit, onPackSelected: (String) -> Unit) {
     val viewModel: MainViewModel = viewModel()
     val iconPacks = remember { viewModel.getInstalledIconPacks() }
+    val currentShape by viewModel.iconShape.collectAsState()
+    val shape = if (currentShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp)
 
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -567,7 +615,7 @@ fun IconPackPickerDialog(onDismiss: () -> Unit, onPackSelected: (String) -> Unit
                                 Image(
                                     bitmap = pack.icon.toBitmap().asImageBitmap(),
                                     contentDescription = null,
-                                    modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp))
+                                    modifier = Modifier.size(40.dp).clip(shape)
                                 )
                             },
                             modifier = Modifier.clickable { onPackSelected(pack.packageName) }
@@ -591,6 +639,17 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
     val isLiquidGlassAppLibrarySearchEnabled by viewModel.isLiquidGlassAppLibrarySearchEnabled.collectAsState()
     val isLiquidGlassWidgetsEnabled by viewModel.isLiquidGlassWidgetsEnabled.collectAsState()
 
+    val blurRadius by viewModel.liquidGlassBlur.collectAsState()
+    val refractionHeight by viewModel.liquidGlassRefractionHeight.collectAsState()
+    val refractionAmount by viewModel.liquidGlassRefractionAmount.collectAsState()
+    val chromaticAberration by viewModel.liquidGlassChromaticAberration.collectAsState()
+    
+    val rawWallpaper by viewModel.rawWallpaper.collectAsState()
+    val backdrop = rememberLayerBackdrop()
+
+    // 拖動狀態
+    var glassOffset by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -599,11 +658,137 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
+                },
+                actions = {
+                    TextButton(onClick = { 
+                        viewModel.resetLiquidGlassParams()
+                        glassOffset = androidx.compose.ui.geometry.Offset.Zero
+                    }) {
+                        Text("Reset", color = MaterialTheme.colorScheme.primary)
+                    }
                 }
             )
         }
     ) { innerPadding ->
         LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+            item {
+                // Preview Area
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(300.dp)
+                        .padding(16.dp)
+                        .clip(RoundedCornerShape(24.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    // Background: Wallpaper
+                    if (rawWallpaper != null) {
+                        Image(
+                            bitmap = rawWallpaper!!,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .layerBackdrop(backdrop)
+                        )
+                    } else {
+                        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant))
+                    }
+
+                    // Liquid Glass Preview Box (Free Dragging)
+                    Box(
+                        modifier = Modifier
+                            .offset { 
+                                androidx.compose.ui.unit.IntOffset(
+                                    glassOffset.x.roundToInt(),
+                                    glassOffset.y.roundToInt()
+                                ) 
+                            }
+                            .size(150.dp)
+                            .pointerInput(Unit) {
+                                detectDragGestures { change, dragAmount ->
+                                    change.consume()
+                                    glassOffset += dragAmount
+                                }
+                            }
+                            .liquidGlass(
+                                enabled = true,
+                                backdrop = backdrop,
+                                cornerRadius = 32.dp,
+                                blurRadius = blurRadius,
+                                refractionHeight = refractionHeight,
+                                refractionAmount = refractionAmount,
+                                chromaticAberration = chromaticAberration
+                            )
+                    )
+                    
+                    // 指引文字
+                    Text(
+                        "Drag the glass to preview",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White.copy(alpha = 0.5f),
+                        modifier = Modifier.align(Alignment.BottomCenter).padding(8.dp)
+                    )
+                }
+            }
+
+            item {
+                Text(
+                    text = "Visual Effects",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+
+            item {
+                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    Text("Blur radius: ${blurRadius.toInt()}")
+                    Slider(
+                        value = blurRadius,
+                        onValueChange = { viewModel.setLiquidGlassBlur(it) },
+                        valueRange = 0f..100f
+                    )
+                }
+            }
+
+            item {
+                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    Text("Refraction height: ${refractionHeight.toInt()}")
+                    Slider(
+                        value = refractionHeight,
+                        onValueChange = { viewModel.setLiquidGlassRefractionHeight(it) },
+                        valueRange = 0f..100f
+                    )
+                }
+            }
+
+            item {
+                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    Text("Refraction amount: ${refractionAmount.toInt()}")
+                    Slider(
+                        value = refractionAmount,
+                        onValueChange = { viewModel.setLiquidGlassRefractionAmount(it) },
+                        valueRange = 0f..100f
+                    )
+                }
+            }
+
+            item {
+                ListItem(
+                    headlineContent = { Text("Chromatic aberration") },
+                    trailingContent = {
+                        Switch(
+                            checked = chromaticAberration,
+                            onCheckedChange = { viewModel.setLiquidGlassChromaticAberration(it) }
+                        )
+                    },
+                    modifier = Modifier.clickable { viewModel.setLiquidGlassChromaticAberration(!chromaticAberration) }
+                )
+            }
+
+            item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
+
             item {
                 ListItem(
                     headlineContent = { Text("Enable Liquid Glass") },
@@ -621,7 +806,7 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
             if (isLiquidGlassEnabled) {
                 item {
                     Text(
-                        text = "Home Screen",
+                        text = "Apply to",
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -725,6 +910,9 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
     val viewModel: MainViewModel = viewModel()
     val allApps by viewModel.allApps.collectAsState()
     val userCategories by viewModel.userCategories.collectAsState()
+    val iconShape by viewModel.iconShape.collectAsState()
+    val libraryShape by viewModel.libraryShape.collectAsState()
+    val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp)
     var searchQuery by remember { mutableStateOf("") }
     
     // 動態計算所有當前存在但未排序的類別
@@ -763,6 +951,41 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
     ) { innerPadding ->
         LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
             item {
+                Text(
+                    "Appearance",
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            item {
+                var expanded by remember { mutableStateOf(false) }
+                ListItem(
+                    headlineContent = { Text("Folder Shape") },
+                    supportingContent = { Text(if (libraryShape == IconShape.CIRCLE) "Circle" else "Default") },
+                    trailingContent = {
+                        Box {
+                            IconButton(onClick = { expanded = true }) {
+                                Icon(Icons.Default.MoreVert, contentDescription = null)
+                            }
+                            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                                DropdownMenuItem(
+                                    text = { Text("Default") },
+                                    onClick = { viewModel.setLibraryShape(IconShape.DEFAULT); expanded = false }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Circle") },
+                                    onClick = { viewModel.setLibraryShape(IconShape.CIRCLE); expanded = false }
+                                )
+                            }
+                        }
+                    },
+                    modifier = Modifier.clickable { expanded = true }
+                )
+            }
+
+            item {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 Text(
                     "Managed Folders (Ordered)", 
                     style = MaterialTheme.typography.titleSmall, 
@@ -859,7 +1082,7 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
                     supportingContent = { Text("Folder: ${app.displayCategory}") },
                     leadingContent = {
                         if (app.processedIcon != null) {
-                            Image(bitmap = app.processedIcon, contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)).background(Color.White))
+                            Image(bitmap = app.processedIcon, contentDescription = null, modifier = Modifier.size(40.dp).clip(shape).background(Color.White))
                         }
                     },
                     modifier = Modifier.clickable { selectingAppForCategory = app }
@@ -957,6 +1180,8 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
 fun ChangeIconScreen(onBack: () -> Unit) {
     val viewModel: MainViewModel = viewModel()
     val allApps by viewModel.allApps.collectAsState()
+    val iconShape by viewModel.iconShape.collectAsState()
+    val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp)
     var searchQuery by remember { mutableStateOf("") }
     
     val filteredApps = remember(allApps, searchQuery) {
@@ -979,7 +1204,8 @@ fun ChangeIconScreen(onBack: () -> Unit) {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
-                }
+                },
+                actions = {}
             )
         }
     ) { innerPadding ->
@@ -995,7 +1221,7 @@ fun ChangeIconScreen(onBack: () -> Unit) {
                                 Image(
                                     bitmap = app.processedIcon,
                                     contentDescription = null,
-                                    modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)).background(Color.White)
+                                    modifier = Modifier.size(40.dp).clip(shape).background(Color.White)
                                 )
                             }
                         },
@@ -1036,6 +1262,8 @@ fun ChangeIconScreen(onBack: () -> Unit) {
 fun RenameAppsScreen(onBack: () -> Unit) {
     val viewModel: MainViewModel = viewModel()
     val allApps by viewModel.allApps.collectAsState()
+    val iconShape by viewModel.iconShape.collectAsState()
+    val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp)
     var searchQuery by remember { mutableStateOf("") }
     
     val filteredApps = remember(allApps, searchQuery) {
@@ -1054,7 +1282,8 @@ fun RenameAppsScreen(onBack: () -> Unit) {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
-                }
+                },
+                actions = {}
             )
         }
     ) { innerPadding ->
@@ -1067,7 +1296,7 @@ fun RenameAppsScreen(onBack: () -> Unit) {
                         headlineContent = { Text(app.label) },
                         leadingContent = {
                             if (app.processedIcon != null) {
-                                Image(bitmap = app.processedIcon, contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)).background(Color.White))
+                                Image(bitmap = app.processedIcon, contentDescription = null, modifier = Modifier.size(40.dp).clip(shape).background(Color.White))
                             }
                         },
                         trailingContent = {
@@ -1124,7 +1353,8 @@ fun HideAppsScreen(onBack: () -> Unit) {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
-                }
+                },
+                actions = {}
             )
         }
     ) { innerPadding ->
@@ -1190,6 +1420,8 @@ fun DockSettingsScreen(onBack: () -> Unit) {
     val viewModel: MainViewModel = viewModel()
     val allApps by viewModel.allApps.collectAsState()
     val dockPkgNames by viewModel.dockPackageNames.collectAsState()
+    val iconShape by viewModel.iconShape.collectAsState()
+    val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp)
     
     var showAppPickerForSlot by remember { mutableStateOf<Int?>(null) }
 
@@ -1201,7 +1433,8 @@ fun DockSettingsScreen(onBack: () -> Unit) {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
-                }
+                },
+                actions = {}
             )
         }
     ) { innerPadding ->
@@ -1232,11 +1465,11 @@ fun DockSettingsScreen(onBack: () -> Unit) {
                                 Image(
                                     bitmap = app.processedIcon,
                                     contentDescription = null,
-                                    modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)).background(Color.White)
+                                    modifier = Modifier.size(40.dp).clip(shape).background(Color.White)
                                 )
                             } else {
                                 Box(
-                                    modifier = Modifier.size(40.dp).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp)),
+                                    modifier = Modifier.size(40.dp).background(MaterialTheme.colorScheme.surfaceVariant, shape),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(Icons.Default.Add, contentDescription = null)
@@ -1267,6 +1500,317 @@ fun DockSettingsScreen(onBack: () -> Unit) {
             )
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun GesturesSettingsScreen(onBack: () -> Unit) {
+    val viewModel: MainViewModel = viewModel()
+    val doubleTapAction by viewModel.doubleTapAction.collectAsState()
+    val swipeUpAction by viewModel.swipeUpAction.collectAsState()
+    val swipeDownAction by viewModel.swipeDownAction.collectAsState()
+    val longPressAction by viewModel.longPressAction.collectAsState()
+    val twoFingerSwipeUpAction by viewModel.twoFingerSwipeUpAction.collectAsState()
+    val twoFingerSwipeDownAction by viewModel.twoFingerSwipeDownAction.collectAsState()
+    val doubleTapApp by viewModel.doubleTapApp.collectAsState()
+    val swipeUpApp by viewModel.swipeUpApp.collectAsState()
+    val swipeDownApp by viewModel.swipeDownApp.collectAsState()
+    val longPressApp by viewModel.longPressApp.collectAsState()
+    val twoFingerSwipeUpApp by viewModel.twoFingerSwipeUpApp.collectAsState()
+    val twoFingerSwipeDownApp by viewModel.twoFingerSwipeDownApp.collectAsState()
+    val allApps by viewModel.allApps.collectAsState()
+
+    var showDoubleTapDialog by remember { mutableStateOf(false) }
+    var showSwipeUpDialog by remember { mutableStateOf(false) }
+    var showSwipeDownDialog by remember { mutableStateOf(false) }
+    var showLongPressDialog by remember { mutableStateOf(false) }
+    var showTwoFingerSwipeUpDialog by remember { mutableStateOf(false) }
+    var showTwoFingerSwipeDownDialog by remember { mutableStateOf(false) }
+    
+    var showAppPickerForDoubleTap by remember { mutableStateOf(false) }
+    var showAppPickerForSwipeUp by remember { mutableStateOf(false) }
+    var showAppPickerForSwipeDown by remember { mutableStateOf(false) }
+    var showAppPickerForLongPress by remember { mutableStateOf(false) }
+    var showAppPickerForTwoFingerSwipeUp by remember { mutableStateOf(false) }
+    var showAppPickerForTwoFingerSwipeDown by remember { mutableStateOf(false) }
+    
+    val context = LocalContext.current
+    
+    val isAccessibilityEnabled = {
+        val expectedComponentName = ComponentName(context, IterationAccessibilityService::class.java).flattenToString()
+        val enabledServices = Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
+        enabledServices?.contains(expectedComponentName) == true
+    }
+    
+    var isServiceActive by remember { mutableStateOf(isAccessibilityEnabled()) }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.settings_gestures)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                    }
+                },
+                actions = {
+                    TextButton(onClick = { viewModel.resetGestures() }) {
+                        Text(stringResource(R.string.gesture_reset))
+                    }
+                    TextButton(onClick = { viewModel.applySuggestedGestures() }) {
+                        Text(stringResource(R.string.gesture_suggestions))
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+            item {
+                GestureItem(
+                    title = stringResource(R.string.gesture_double_tap),
+                    action = doubleTapAction,
+                    packageName = doubleTapApp,
+                    allApps = allApps,
+                    onClick = { showDoubleTapDialog = true }
+                )
+            }
+            item {
+                GestureItem(
+                    title = stringResource(R.string.gesture_swipe_up),
+                    action = swipeUpAction,
+                    packageName = swipeUpApp,
+                    allApps = allApps,
+                    onClick = { showSwipeUpDialog = true }
+                )
+            }
+            item {
+                GestureItem(
+                    title = stringResource(R.string.gesture_swipe_down),
+                    action = swipeDownAction,
+                    packageName = swipeDownApp,
+                    allApps = allApps,
+                    onClick = { showSwipeDownDialog = true }
+                )
+            }
+            item {
+                GestureItem(
+                    title = stringResource(R.string.gesture_long_press),
+                    action = longPressAction,
+                    packageName = longPressApp,
+                    allApps = allApps,
+                    onClick = { showLongPressDialog = true }
+                )
+            }
+            item {
+                GestureItem(
+                    title = stringResource(R.string.gesture_two_finger_swipe_up),
+                    action = twoFingerSwipeUpAction,
+                    packageName = twoFingerSwipeUpApp,
+                    allApps = allApps,
+                    onClick = { showTwoFingerSwipeUpDialog = true }
+                )
+            }
+            item {
+                GestureItem(
+                    title = stringResource(R.string.gesture_two_finger_swipe_down),
+                    action = twoFingerSwipeDownAction,
+                    packageName = twoFingerSwipeDownApp,
+                    allApps = allApps,
+                    onClick = { showTwoFingerSwipeDownDialog = true }
+                )
+            }
+            
+            val needsAccessibility = listOf(doubleTapAction, swipeUpAction, swipeDownAction, longPressAction, twoFingerSwipeUpAction, twoFingerSwipeDownAction).any { 
+                it == GestureAction.LOCK_SCREEN || it == GestureAction.OPEN_NOTIFICATIONS 
+            }
+
+            if (needsAccessibility) {
+                item {
+                    val toggleService = {
+                        val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                        context.startActivity(intent)
+                        Toast.makeText(context, "Find 'Iteration Gestures' and enable it", Toast.LENGTH_LONG).show()
+                    }
+
+                    ListItem(
+                        headlineContent = { Text("Accessibility Service") },
+                        supportingContent = { Text(if (isServiceActive) "Activated" else "Deactivated (Tap to configure)") },
+                        trailingContent = {
+                            Switch(
+                                checked = isServiceActive,
+                                onCheckedChange = { toggleService() }
+                            )
+                        },
+                        modifier = Modifier.clickable { toggleService() }
+                    )
+                }
+            }
+        }
+    }
+    
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                isServiceActive = isAccessibilityEnabled()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    if (showDoubleTapDialog) {
+        GestureActionPicker(
+            title = stringResource(R.string.gesture_double_tap_dialog_title),
+            currentAction = doubleTapAction,
+            onDismiss = { showDoubleTapDialog = false },
+            onActionSelected = { action ->
+                viewModel.setDoubleTapAction(action)
+                if (action == GestureAction.LAUNCH_APP) showAppPickerForDoubleTap = true
+                showDoubleTapDialog = false
+            }
+        )
+    }
+
+    if (showSwipeUpDialog) {
+        GestureActionPicker(
+            title = stringResource(R.string.gesture_swipe_up_dialog_title),
+            currentAction = swipeUpAction,
+            onDismiss = { showSwipeUpDialog = false },
+            onActionSelected = { action ->
+                viewModel.setSwipeUpAction(action)
+                if (action == GestureAction.LAUNCH_APP) showAppPickerForSwipeUp = true
+                showSwipeUpDialog = false
+            }
+        )
+    }
+
+    if (showSwipeDownDialog) {
+        GestureActionPicker(
+            title = stringResource(R.string.gesture_swipe_down_dialog_title),
+            currentAction = swipeDownAction,
+            onDismiss = { showSwipeDownDialog = false },
+            onActionSelected = { action ->
+                viewModel.setSwipeDownAction(action)
+                if (action == GestureAction.LAUNCH_APP) showAppPickerForSwipeDown = true
+                showSwipeDownDialog = false
+            }
+        )
+    }
+
+    if (showLongPressDialog) {
+        GestureActionPicker(
+            title = stringResource(R.string.gesture_long_press_dialog_title),
+            currentAction = longPressAction,
+            onDismiss = { showLongPressDialog = false },
+            onActionSelected = { action ->
+                viewModel.setLongPressAction(action)
+                if (action == GestureAction.LAUNCH_APP) showAppPickerForLongPress = true
+                showLongPressDialog = false
+            }
+        )
+    }
+
+    if (showTwoFingerSwipeUpDialog) {
+        GestureActionPicker(
+            title = stringResource(R.string.gesture_two_finger_swipe_up_dialog_title),
+            currentAction = twoFingerSwipeUpAction,
+            onDismiss = { showTwoFingerSwipeUpDialog = false },
+            onActionSelected = { action ->
+                viewModel.setTwoFingerSwipeUpAction(action)
+                if (action == GestureAction.LAUNCH_APP) showAppPickerForTwoFingerSwipeUp = true
+                showTwoFingerSwipeUpDialog = false
+            }
+        )
+    }
+
+    if (showTwoFingerSwipeDownDialog) {
+        GestureActionPicker(
+            title = stringResource(R.string.gesture_two_finger_swipe_down_dialog_title),
+            currentAction = twoFingerSwipeDownAction,
+            onDismiss = { showTwoFingerSwipeDownDialog = false },
+            onActionSelected = { action ->
+                viewModel.setTwoFingerSwipeDownAction(action)
+                if (action == GestureAction.LAUNCH_APP) showAppPickerForTwoFingerSwipeDown = true
+                showTwoFingerSwipeDownDialog = false
+            }
+        )
+    }
+
+    if (showAppPickerForDoubleTap) {
+        AppPickerDialog(allApps.filter { !it.isHidden }, onDismiss = { showAppPickerForDoubleTap = false }, onAppSelected = { viewModel.setDoubleTapApp(it); showAppPickerForDoubleTap = false })
+    }
+    if (showAppPickerForSwipeUp) {
+        AppPickerDialog(allApps.filter { !it.isHidden }, onDismiss = { showAppPickerForSwipeUp = false }, onAppSelected = { viewModel.setSwipeUpApp(it); showAppPickerForSwipeUp = false })
+    }
+    if (showAppPickerForSwipeDown) {
+        AppPickerDialog(allApps.filter { !it.isHidden }, onDismiss = { showAppPickerForSwipeDown = false }, onAppSelected = { viewModel.setSwipeDownApp(it); showAppPickerForSwipeDown = false })
+    }
+    if (showAppPickerForLongPress) {
+        AppPickerDialog(allApps.filter { !it.isHidden }, onDismiss = { showAppPickerForLongPress = false }, onAppSelected = { viewModel.setLongPressApp(it); showAppPickerForLongPress = false })
+    }
+    if (showAppPickerForTwoFingerSwipeUp) {
+        AppPickerDialog(allApps.filter { !it.isHidden }, onDismiss = { showAppPickerForTwoFingerSwipeUp = false }, onAppSelected = { viewModel.setTwoFingerSwipeUpApp(it); showAppPickerForTwoFingerSwipeUp = false })
+    }
+    if (showAppPickerForTwoFingerSwipeDown) {
+        AppPickerDialog(allApps.filter { !it.isHidden }, onDismiss = { showAppPickerForTwoFingerSwipeDown = false }, onAppSelected = { viewModel.setTwoFingerSwipeDownApp(it); showAppPickerForTwoFingerSwipeDown = false })
+    }
+}
+
+@Composable
+fun GestureItem(title: String, action: GestureAction, packageName: String, allApps: List<AppModel>, onClick: () -> Unit) {
+    ListItem(
+        headlineContent = { Text(title) },
+        supportingContent = {
+            val actionText = when (action) {
+                GestureAction.NONE -> stringResource(R.string.gesture_action_none)
+                GestureAction.LOCK_SCREEN -> stringResource(R.string.gesture_action_lock)
+                GestureAction.LAUNCHER_SETTINGS -> stringResource(R.string.gesture_action_settings)
+                GestureAction.OPEN_SYSTEM_SETTINGS -> stringResource(R.string.gesture_action_open_settings)
+                GestureAction.OPEN_GLOBAL_SEARCH -> stringResource(R.string.gesture_action_open_global_search)
+                GestureAction.OPEN_DESKTOP_MENU -> stringResource(R.string.gesture_action_open_desktop_menu)
+                GestureAction.OPEN_NOTIFICATIONS -> stringResource(R.string.gesture_action_open_notifications)
+                GestureAction.LAUNCH_APP -> {
+                    val app = allApps.find { it.packageName == packageName }
+                    val appName = app?.label ?: packageName
+                    if (packageName.isNotEmpty()) "${stringResource(R.string.gesture_action_launch_app)}: $appName"
+                    else stringResource(R.string.gesture_action_launch_app)
+                }
+            }
+            Text(actionText)
+        },
+        modifier = Modifier.clickable { onClick() }
+    )
+}
+
+@Composable
+fun GestureActionPicker(title: String, currentAction: GestureAction, onDismiss: () -> Unit, onActionSelected: (GestureAction) -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column {
+                GestureAction.entries.forEach { action ->
+                    val label = when (action) {
+                        GestureAction.NONE -> stringResource(R.string.gesture_action_none)
+                        GestureAction.LOCK_SCREEN -> stringResource(R.string.gesture_action_lock)
+                        GestureAction.LAUNCHER_SETTINGS -> stringResource(R.string.gesture_action_settings)
+                        GestureAction.OPEN_SYSTEM_SETTINGS -> stringResource(R.string.gesture_action_open_settings)
+                        GestureAction.OPEN_GLOBAL_SEARCH -> stringResource(R.string.gesture_action_open_global_search)
+                        GestureAction.OPEN_DESKTOP_MENU -> stringResource(R.string.gesture_action_open_desktop_menu)
+                        GestureAction.OPEN_NOTIFICATIONS -> stringResource(R.string.gesture_action_open_notifications)
+                        GestureAction.LAUNCH_APP -> stringResource(R.string.gesture_action_launch_app)
+                    }
+                    ListItem(
+                        headlineContent = { Text(label) },
+                        leadingContent = { RadioButton(selected = (action == currentAction), onClick = null) },
+                        modifier = Modifier.clickable { onActionSelected(action) }
+                    )
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
+    )
 }
 
 @Composable

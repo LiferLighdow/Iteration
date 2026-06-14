@@ -8,7 +8,7 @@
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Android](https://img.shields.io/badge/Android-17_Ready-3DDC84?logo=android&logoColor=white)](https://developer.android.com/)
 
-**Iteration** is a high-performance, minimalist Android launcher built from the ground up using **Jetpack Compose**. It bridges the gap between fluid, intuitive UI patterns and the robust flexibility of the Android ecosystem. Optimized for the latest **Android 17 (API 37)** and **AGP 9.2.1** standards.
+**Iteration** is a high-performance, minimalist Android launcher built from the ground up using **Jetpack Compose**. It bridges the gap between fluid, intuitive UI patterns and the robust flexibility of the Android ecosystem. Optimized for the latest **Android 15 (API 35)** through **Android 17 (API 37)**.
 
 ---
 
@@ -17,56 +17,54 @@
 ### 🎨 Design & Interaction
 *   **Immersive Edge-to-Edge**: Full transparency support that treats your wallpaper as the primary canvas.
 *   **Liquid Glass Engine (Enhanced)**: High-performance real-time glassmorphism using the **Backdrop** library.
-    *   **Physical Refraction (Lens)**: Real-time optical displacement that "bends" the background.
-    *   **Dynamic Vibrancy**: Adaptive saturation and contrast for a crystal-clear liquid aesthetic.
-    *   **Optimized Sampling**: Intelligent wallpaper processing for maximum smoothness.
-    *   **3D Bevel Border**: Multi-layered stroke simulating environment light reflection and shadow.
-*   **Modern Wallpaper Management**: Unified selection system.
-    *   **Long-Press Selection**: Set your launcher wallpaper directly from the home screen.
-    *   **Direct Sync**: Changes in Iteration automatically update your system wallpaper.
-    *   **Privacy First**: Fully compliant with Android 13+ privacy restrictions (No system-level wallpaper reading needed).
-*   **Icon Pack Support**: Comprehensive support for Nova, ADW, and Go Launcher formats.
-    *   **High-Speed Parsing**: Optimized XML mapping for near-instant icon loading.
-    *   **Smart Fallback**: Seamlessly blends icon packs with Iteration's native styles.
-*   **Icon Styles**: 4 distinct presets with Material You (M3) integration:
-    *   **Standard / Black / White / Glass**: Premium frosting effects with adaptive M3 color blending.
-*   **Themed Icons**: Standard-compliant dynamic icon tinting with high-quality fallback for older Android versions.
-*   **Fluid Pagination**: Smooth transitions using `HorizontalPager` with physics-based drag-and-drop.
-*   **Jiggle Mode**: Intuitively edit your layout with animated jiggling icons.
-*   **Refined Motion**: UI elements like the Dock feature **Spring-physics** animations.
+    *   **Applied Everywhere**: Dock, Home Folders, App Library Categories, Search Bars, and Widgets.
+    *   **Customizable Effects**: Adjustable blur radius, physical refraction height, refraction amount, and chromatic aberration.
+*   **Modern Wallpaper Management**: Unified selection system with direct system sync and privacy-first local caching.
+*   **Icon Customization & Styling**:
+    *   **Iteration Styles**: Standard, Black, White, and Glass presets with adaptive Material You blending.
+    *   **Third-Party Icon Packs**: Support for Nova, ADW, and Go Launcher formats.
+    *   **Individual Icon Edit**: Change specific app icons using your own images with a built-in cropping tool.
+    *   **Custom Labels**: Rename any app on your home screen or library.
+*   **Fluid Pagination & Jiggle Mode**: Smooth physics-based drag-and-drop with animated icon transitions.
+
+### 🖖 Advanced Gesture System
+*   **Rich Gesture Set**:
+    *   **Single Finger**: Double Tap, Swipe Up, Swipe Down, Long Press.
+    *   **Multi-Finger**: Two-finger Swipe Up, Two-finger Swipe Down.
+*   **Versatile Actions**:
+    *   **System Controls**: Lock Screen (via Accessibility), Open Notifications, Open System Settings.
+    *   **Launcher Actions**: Global Search, Desktop Menu, Launcher Settings.
+    *   **App Launching**: Map any gesture to launch a specific application.
+*   **Accessibility Integration**: Optimized Accessibility Service for seamless "Double-tap to Lock" and notification management.
 
 ### 🧩 Widgets & Extensions (Minus One Page)
 *   **Interactive Stack Stacker**: A vertical container for cycling through multiple widgets with simple swipes.
 *   **Real-time Music Widgets**: Live metadata and integrated controls for all active media sessions (Spotify, YouTube, etc.).
-*   **Smart Battery & Clock**: Minimalist monitoring widgets with dynamic M3 coloring.
-*   **Detailed Calendar (4x2)**: Detailed list of upcoming system events.
-*   **Interactive Photo Widgets**: Precision cropping tool with built-in `Matrix` transformations.
+*   **Smart Productivity**: Minimalist Battery, Clock, and Calendar (4x2) monitoring widgets.
+*   **Interactive Photo Widgets**: Precision cropping and placement for personal images.
 
 ### 🔍 Discovery & Organization
-*   **Responsive App Library (Optimized)**:
-    *   **ViewModel Filtering**: Search, filtering, and sorting are now handled reactively in the background for zero-lag UI.
-    *   **Smart Categorization**: Automatic grouping based on system metadata.
-    *   **Custom Management**: Create, rename, and reorder categories to fit your workflow.
-*   **Global Search Hub**: Unified interface (swipe-down) for local apps and web results.
-*   **Usage-based Suggestions**: Learns and displays your 4 most frequent apps.
+*   **Responsive App Library**:
+    *   **Reactive Filtering**: Search and categorization handled in the background for zero-lag interaction.
+    *   **Folder Management**: Add, delete, rename, and reorder app library categories.
+    *   **App Reassignment**: Manually assign apps to custom or default categories.
+*   **Privacy & Security**:
+    *   **Hide Apps**: Hide sensitive applications from the library and home screen.
+    *   **Password Protection**: Secure your hidden apps list with a custom password gate.
 
 ---
 
 ## 🛠️ Technical Showcase
 
-### High-Performance Rendering & Memory
-*   **Reactive UI Filtering**: Leveraging `combine` and `StateFlow` to move heavy computation out of the Composition loop, drastically reducing frame drops during search.
-*   **Object Reuse (IconProcessor)**: Uses `ThreadLocal` for `Paint`, `Path`, and `Matrix` arrays to eliminate memory churn and GC pressure during batch icon processing.
-*   **Advanced Caching**: Triple-layer caching strategy (LruCache, Disk, and Metadata) with color-aware invalidation.
-*   **ProGuard/R8 Optimized**: Custom rules ensuring a crash-free **Release APK** experience.
+### High-Performance Rendering
+*   **Advanced Gesture Engine**: Custom-built `awaitPointerEventScope` logic that distinguishes between single-finger and multi-finger vertical drags with pixel-perfect precision.
+*   **Reactive UI Streams**: Leveraging `combine` and `StateFlow` to ensure heavy computations (like search or wallpaper blurring) never block the UI thread.
+*   **Object Reuse**: Optimized `IconProcessor` using `ThreadLocal` storage to minimize GC pressure during real-time icon styling.
 
-### Modern Architecture (Refactored)
-*   **Modular ViewModel**: De-bloated `MainViewModel` through strategic logic separation:
-    *   `ConfigSerializer.kt`: Dedicated JSON serialization and Backup/Restore logic.
-    *   `MainViewModelLayout.kt`: Extension-based layout and drag-and-drop orchestration.
-    *   `WallpaperProcessor.kt`: High-efficiency bitmap manipulation and sampling.
-*   **User-Level Compliance**: Converted from a "System App" requirement to a standard "User App," ensuring full compatibility with Google Play.
-*   **Android 17 & AGP 9.2.1 Ready**: Utilizing the latest Gradle features and Kotlin 2.4.0 standards.
+### Reliability & Maintenance
+*   **Config Backup/Restore**: Full layout and settings serialization to JSON, allowing users to export/import their perfect setup.
+*   **Modern Architecture**: Decoupled ViewModel design separating layout logic, configuration, and image processing for maximum stability.
+*   **Android 15+ Optimized**: Full support for Enhanced Confirmation Mode and new Accessibility Tool declarations.
 
 ---
 
@@ -74,26 +72,24 @@
 
 ```text
 app/src/main/java/com/liferlighdow/iteration/
-├── MainActivity.kt           # UI Entry, Desktop, Dock, & Reactive App Library
-├── MainViewModel.kt          # Core state orchestration & responsive streams
-├── MainViewModelLayout.kt    # Desktop layout, folders, and drag-and-drop logic
-├── WallpaperProcessor.kt     # High-speed wallpaper sampling & Liquid Glass source
-├── ConfigSerializer.kt       # JSON Serialization for Layouts & Backup/Restore
+├── MainActivity.kt           # UI Entry, Gesture Engine, & Desktop Layout
+├── MainViewModel.kt          # Core state orchestration & Persistent Settings
+├── MainViewModelLayout.kt    # Folder logic and drag-and-drop orchestration
+├── SettingsActivity.kt       # Multi-page settings hub (Gestures, Theme, Library)
+├── IterationAccessibilityService.kt # Global actions (Lock screen, Notifications)
 ├── LiquidGlass.kt            # Backdrop-powered real-time glassmorphism engine
-├── IconProcessor.kt          # Optimized icon masking & M3 tinting (Object Reuse)
-├── AppRepository.kt         # Efficient system package querying
-├── IconPackManager.kt       # Third-party icon pack parsing
-└── NotificationService.kt    # Media sessions & real-time notification badges
+├── IconProcessor.kt          # Optimized icon masking & M3 tinting
+├── ConfigSerializer.kt       # JSON Serialization for Backup/Restore
+└── NotificationService.kt    # Media metadata & real-time badge counts
 ```
 
 ---
 
-## 🔑 Permissions & Requirements
-*   **Standard User Permission**: Does not require `READ_WALLPAPER_INTERNAL`.
-*   **Query All Packages**: List and launch apps.
-*   **Notification Listener**: Real-time badges and music widget data.
-*   **Set Wallpaper**: Unified sync between Iteration and Android System.
-*   **Read Media Images**: Required for custom icons and photo widgets.
+## 🔑 Permissions
+*   **Accessibility Service**: Powering gestures like Lock Screen and Notifications.
+*   **Query All Packages**: Listing and launching installed apps.
+*   **Notification Listener**: Real-time notification badges and music metadata.
+*   **Media Access**: Required for custom icons, photo widgets, and wallpaper selection.
 
 ---
 
