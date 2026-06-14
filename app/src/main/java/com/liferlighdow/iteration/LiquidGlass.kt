@@ -69,6 +69,7 @@ fun Modifier.liquidGlass(
 fun Modifier.liquidGlassDock(
     isLiquidGlass: Boolean,
     backdrop: Backdrop,
+    dockStyle: DockStyle = DockStyle.MODERN,
     cornerRadius: Dp = 42.dp,
     blurRadius: Float = 0f,
     refractionHeight: Float = 24f,
@@ -77,7 +78,7 @@ fun Modifier.liquidGlassDock(
 ): Modifier = this.liquidGlass(
     enabled = isLiquidGlass,
     backdrop = backdrop,
-    cornerRadius = cornerRadius,
+    cornerRadius = if (dockStyle == DockStyle.CLASSIC) 0.dp else cornerRadius,
     blurRadius = blurRadius,
     refractionHeight = refractionHeight,
     refractionAmount = refractionAmount,

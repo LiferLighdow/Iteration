@@ -45,6 +45,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -109,7 +110,7 @@ fun SettingsNavigation() {
             onBack = { currentPage = SettingsPage.MAIN },
             onNavigateToChangeIcon = { currentPage = SettingsPage.CHANGE_ICON }
         )
-        SettingsPage.DOCK -> DockSettingsScreen(onBack = { currentPage = SettingsPage.MAIN })
+        SettingsPage.DOCK -> DesktopSettingsScreen(onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.LIQUID_GLASS -> LiquidGlassSettingsScreen(onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.GESTURES -> GesturesSettingsScreen(onBack = { currentPage = SettingsPage.MAIN })
     }
@@ -226,8 +227,8 @@ fun SettingsMainScreen(
             }
             item {
                 ListItem(
-                    headlineContent = { Text("Dock Settings") },
-                    supportingContent = { Text("Manage apps in your home screen dock") },
+                    headlineContent = { Text("Desktop Settings") },
+                    supportingContent = { Text("Layout, Dock, and icon grid configuration") },
                     trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
                     modifier = Modifier.clickable { onNavigateToDock() }
                 )
@@ -539,6 +540,30 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
                 )
             }
 
+            if (currentIconPack.isEmpty()) {
+                item {
+                    var showExclusionPicker by remember { mutableStateOf(false) }
+                    val excludedApps by viewModel.excludedThemedPackages.collectAsState()
+                    
+                    ListItem(
+                        headlineContent = { Text("Custom Exclusions") },
+                        supportingContent = { Text("${excludedApps.size} apps will never apply styles") },
+                        trailingContent = { Icon(Icons.Default.Settings, null) },
+                        modifier = Modifier.clickable { showExclusionPicker = true }
+                    )
+                    
+                    if (showExclusionPicker) {
+                        val allApps by viewModel.allApps.collectAsState()
+                        MultiAppExclusionPickerDialog(
+                            allApps = allApps,
+                            excludedPackages = excludedApps,
+                            onDismiss = { showExclusionPicker = false },
+                            onToggle = { viewModel.toggleExcludedThemedApp(it) }
+                        )
+                    }
+                }
+            }
+
             val styles = listOf(
                 IconStyle.STANDARD to "Standard",
                 IconStyle.BLACK to "Black",
@@ -745,9 +770,9 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
                 Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                     Text("Blur radius: ${blurRadius.toInt()}")
                     Slider(
-                        value = blurRadius,
+                        value = blurRadius.coerceIn(0f, 40f),
                         onValueChange = { viewModel.setLiquidGlassBlur(it) },
-                        valueRange = 0f..100f
+                        valueRange = 0f..40f
                     )
                 }
             }
@@ -1416,11 +1441,13 @@ fun HideAppsScreen(onBack: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DockSettingsScreen(onBack: () -> Unit) {
+fun DesktopSettingsScreen(onBack: () -> Unit) {
     val viewModel: MainViewModel = viewModel()
     val allApps by viewModel.allApps.collectAsState()
     val dockPkgNames by viewModel.dockPackageNames.collectAsState()
     val iconShape by viewModel.iconShape.collectAsState()
+    val desktopRows by viewModel.desktopRows.collectAsState()
+    val dockStyle by viewModel.dockStyle.collectAsState()
     val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp)
     
     var showAppPickerForSlot by remember { mutableStateOf<Int?>(null) }
@@ -1428,7 +1455,7 @@ fun DockSettingsScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Dock Settings") },
+                title = { Text("Desktop Settings") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
@@ -1438,15 +1465,88 @@ fun DockSettingsScreen(onBack: () -> Unit) {
             )
         }
     ) { innerPadding ->
-        Column(modifier = Modifier.padding(innerPadding).fillMaxSize().padding(16.dp)) {
-            Text(
-                "Customize Dock Apps",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
+        LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize().padding(16.dp)) {
+            item {
+                Text(
+                    "Layout Settings",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+            }
 
-            repeat(4) { index ->
+            item {
+                var expanded by remember { mutableStateOf(false) }
+                val options = listOf(0 to "Auto (Adaptive)", 5 to "4 x 5", 6 to "4 x 6", 7 to "4 x 7")
+                val currentLabel = options.find { it.first == desktopRows }?.second ?: "Auto (Adaptive)"
+
+                ListItem(
+                    headlineContent = { Text("Layout Rows") },
+                    supportingContent = { Text("Current: $currentLabel") },
+                    trailingContent = {
+                        Box {
+                            TextButton(onClick = { expanded = true }) {
+                                Text("Change")
+                                Icon(Icons.Default.ArrowDropDown, null)
+                            }
+                            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                                options.forEach { (value, label) ->
+                                    DropdownMenuItem(
+                                        text = { Text(label) },
+                                        onClick = {
+                                            viewModel.setDesktopRows(value)
+                                            expanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                )
+            }
+
+            item {
+                var expandedStyle by remember { mutableStateOf(false) }
+                val styleOptions = listOf(DockStyle.MODERN to "Modern (Floating)", DockStyle.CLASSIC to "Classic (Full Width)")
+                val currentStyleLabel = styleOptions.find { it.first == dockStyle }?.second ?: "Modern"
+
+                ListItem(
+                    headlineContent = { Text("Dock Style") },
+                    supportingContent = { Text("Current: $currentStyleLabel") },
+                    trailingContent = {
+                        Box {
+                            TextButton(onClick = { expandedStyle = true }) {
+                                Text("Change")
+                                Icon(Icons.Default.ArrowDropDown, null)
+                            }
+                            DropdownMenu(expanded = expandedStyle, onDismissRequest = { expandedStyle = false }) {
+                                styleOptions.forEach { (style, label) ->
+                                    DropdownMenuItem(
+                                        text = { Text(label) },
+                                        onClick = {
+                                            viewModel.setDockStyle(style)
+                                            expandedStyle = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                )
+            }
+
+            item { HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp)) }
+
+            item {
+                Text(
+                    "Dock Apps",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+            }
+
+            items(4) { index ->
                 val pkgName = dockPkgNames.getOrNull(index) ?: ""
                 val app = allApps.find { it.packageName == pkgName }
                 
@@ -1781,6 +1881,80 @@ fun GestureItem(title: String, action: GestureAction, packageName: String, allAp
         },
         modifier = Modifier.clickable { onClick() }
     )
+}
+
+@Composable
+fun MultiAppExclusionPickerDialog(
+    allApps: List<AppModel>,
+    excludedPackages: Set<String>,
+    onDismiss: () -> Unit,
+    onToggle: (String) -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.85f),
+            shape = RoundedCornerShape(24.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "Style Exclusions",
+                        style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(onClick = onDismiss) { Text("Done") }
+                }
+                Text(
+                    "Selected apps will always use their original colorful icons.",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                
+                var searchQuery by remember { mutableStateOf("") }
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                    placeholder = { Text("Search apps...") },
+                    leadingIcon = { Icon(Icons.Default.Search, null) },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp)
+                )
+
+                val filteredApps = remember(allApps, searchQuery) {
+                    allApps.filter { it.label.contains(searchQuery, ignoreCase = true) }
+                        .sortedBy { it.label.lowercase() }
+                }
+
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    items(filteredApps, key = { it.uniqueId }) { app ->
+                        ListItem(
+                            headlineContent = { Text(app.label) },
+                            leadingContent = {
+                                val icon = app.processedIcon
+                                if (icon != null) {
+                                    Image(
+                                        bitmap = icon,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(40.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.1f))
+                                    )
+                                }
+                            },
+                            trailingContent = {
+                                Switch(
+                                    checked = excludedPackages.contains(app.packageName),
+                                    onCheckedChange = { onToggle(app.packageName) }
+                                )
+                            },
+                            modifier = Modifier.clickable { onToggle(app.packageName) }
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable

@@ -376,6 +376,7 @@ fun LauncherScreen(
     val twoFingerSwipeDownAction by viewModel.twoFingerSwipeDownAction.collectAsState()
     val twoFingerSwipeUpApp by viewModel.twoFingerSwipeUpApp.collectAsState()
     val twoFingerSwipeDownApp by viewModel.twoFingerSwipeDownApp.collectAsState()
+    val dockStyle by viewModel.dockStyle.collectAsState()
 
     var showDesktopMenu by remember { mutableStateOf(false) }
     var showGlobalSearch by remember { mutableStateOf(false) }
@@ -510,6 +511,22 @@ fun LauncherScreen(
     val pagerState = rememberPagerState(initialPage = 1, pageCount = { pageCount })
     val scope = rememberCoroutineScope()
     
+    // 控制 Search Pill 與分頁點切換的邏輯
+    var isUserInteracting by remember { mutableStateOf(false) }
+    var showPillTemporarily by remember { mutableStateOf(true) }
+
+    LaunchedEffect(pagerState.isScrollInProgress, draggingApp) {
+        if (pagerState.isScrollInProgress || draggingApp != null) {
+            isUserInteracting = true
+            showPillTemporarily = false
+        } else {
+            // 停止滑動後等待 1 秒變回 Search Pill
+            delay(1000)
+            isUserInteracting = false
+            showPillTemporarily = true
+        }
+    }
+    
     // 計算精確的連續分頁位置 (例如 1.1 代表離開第一頁往第二頁滑動了 10%)
     val continuousPage = pagerState.currentPage + pagerState.currentPageOffsetFraction
 
@@ -528,7 +545,10 @@ fun LauncherScreen(
         val iconSize = 62.dp
         val iconSizePx = with(density) { iconSize.toPx() }
         val columns = 4
-        val rows = if (maxHeight / maxWidth < 2.0f) 5 else 6
+        
+        val userRows by viewModel.desktopRows.collectAsState()
+        val rows = if (userRows > 0) userRows else (if (maxHeight / maxWidth < 2.0f) 5 else 6)
+
         LaunchedEffect(columns * rows) { viewModel.setPageSize(columns * rows) }
 
         LaunchedEffect(draggingApp) {
@@ -588,21 +608,32 @@ fun LauncherScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .statusBarsPadding()
-                        .padding(bottom = if (isLibrary || isMinusOne) 0.dp else 140.dp)
+                        .padding(bottom = if (isLibrary || isMinusOne) 0.dp else 158.dp)
                         .pointerInput(draggingApp, isEditMode, isLibrary, isMinusOne) {
                             if (draggingApp == null && !isEditMode && !isLibrary && !isMinusOne) {
-                                var totalDrag = 0f
-                                detectVerticalDragGestures(
-                                    onDragStart = { totalDrag = 0f },
-                                    onDragCancel = { totalDrag = 0f },
-                                    onDragEnd = { totalDrag = 0f }
-                                ) { _, dragAmount ->
-                                    totalDrag += dragAmount
-                                    // 提高觸發閾值，且確保是明顯的向下滑動 (正值)
-                                    // 50dp 左右的位移才觸發，避免誤觸
-                                    if (totalDrag > 150f) {
-                                        showGlobalSearch = true
-                                        totalDrag = 0f
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        val down = awaitFirstDown(requireUnconsumed = false)
+                                        var totalDrag = 0f
+                                        while (true) {
+                                            val event = awaitPointerEvent()
+                                            // 如果子元件（如 Widget）已經消費了事件，我們就放棄此次手勢
+                                            if (event.changes.any { it.isConsumed }) break
+                                            
+                                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                                            if (!change.pressed) break
+                                            
+                                            val dragAmount = change.position.y - change.previousPosition.y
+                                            totalDrag += dragAmount
+                                            
+                                            // 提高觸發閾值，且確保是明顯的向下滑動 (正值)
+                                            if (totalDrag > 150f) {
+                                                showGlobalSearch = true
+                                                // 消費此事件，防止進一步觸發
+                                                event.changes.forEach { it.consume() }
+                                                break
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -754,7 +785,7 @@ fun LauncherScreen(
                 }
             }
 
-            Box(modifier = Modifier.fillMaxSize().navigationBarsPadding(), contentAlignment = Alignment.BottomCenter) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
                 BackHandler(enabled = (isAppLibraryPage || isMinusOnePage) && !showGlobalSearch) {
                     scope.launch { pagerState.animateScrollToPage(1) }
                 }
@@ -764,12 +795,37 @@ fun LauncherScreen(
                     exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        PageIndicator(pageCount = desktopPageCount, currentPage = pagerState.currentPage - 1)
+                        Box(contentAlignment = Alignment.Center) {
+                            androidx.compose.animation.AnimatedContent(
+                                targetState = showPillTemporarily,
+                                transitionSpec = {
+                                    (fadeIn() + scaleIn(initialScale = 0.8f)).togetherWith(fadeOut() + scaleOut(targetScale = 0.8f))
+                                },
+                                label = "PillVsDots"
+                            ) { isPill ->
+                                if (isPill) {
+                                    SearchPill(
+                                        isLiquidGlass = isLiquidGlassEnabled && isLiquidGlassDockEnabled,
+                                        backdrop = backdrop,
+                                        blurRadius = blurRadius,
+                                        refractionHeight = refractionHeight,
+                                        refractionAmount = refractionAmount,
+                                        chromaticAberration = chromaticAberration,
+                                        onClick = { showGlobalSearch = true }
+                                    )
+                                } else {
+                                    PageIndicator(pageCount = desktopPageCount, currentPage = pagerState.currentPage - 1)
+                                }
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(10.dp)) // 增加點點與 Dock 之間的間距
                         Dock(
                             apps = dockApps,
                             iconSize = iconSize,
                             isLiquidGlass = isLiquidGlassEnabled && isLiquidGlassDockEnabled,
                             backdrop = backdrop,
+                            dockStyle = dockStyle,
                             iconShape = iconShape,
                             blurRadius = blurRadius,
                             refractionHeight = refractionHeight,
@@ -778,7 +834,10 @@ fun LauncherScreen(
                             onAppClick = { pkg -> if (pkg == myPackageName) onSettingsClick() else onAppClick(pkg) },
                             onLongClick = { showDockPicker = it }
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        // 在 Classic 模式下不需要額外的底部 Spacer，因為 Dock 已經填滿底部
+                        if (dockStyle == DockStyle.MODERN) {
+                            Spacer(modifier = Modifier.height(2.dp))
+                        }
                     }
                 }
             }
@@ -1248,6 +1307,9 @@ fun AppGrid(
 
                             while (true) {
                                 val event = awaitPointerEvent()
+                                // 優先讓子元件（如 Stack Widget 或 Wide Calendar）處理手勢
+                                if (event.changes.any { it.isConsumed }) break
+
                                 val dragEvent = event.changes.firstOrNull() ?: break
                                 if (!dragEvent.pressed) break 
 
@@ -1642,6 +1704,7 @@ fun Dock(
     iconSize: androidx.compose.ui.unit.Dp,
     isLiquidGlass: Boolean = false,
     backdrop: com.kyant.backdrop.Backdrop,
+    dockStyle: DockStyle = DockStyle.MODERN,
     iconShape: IconShape = IconShape.DEFAULT,
     libraryShape: IconShape = IconShape.DEFAULT,
     blurRadius: Float = 0f,
@@ -1651,15 +1714,24 @@ fun Dock(
     onAppClick: (String) -> Unit,
     onLongClick: (Int) -> Unit
 ) {
+    // 獲取導覽列（小白條）的高度
+    val navPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp)
-            .height(105.dp)
+            .then(
+                if (dockStyle == DockStyle.MODERN) 
+                    Modifier.padding(start = 12.dp, end = 12.dp, bottom = 4.dp + navPadding) 
+                else 
+                    Modifier // Classic 模式下背景直接貼底
+            )
+            .height(if (dockStyle == DockStyle.CLASSIC) 94.dp + navPadding else 100.dp)
             // 關鍵：將所有背景、模糊、折射邏輯統一交給 liquidGlassDock
             .liquidGlassDock(
                 isLiquidGlass = isLiquidGlass,
                 backdrop = backdrop,
+                dockStyle = dockStyle,
                 cornerRadius = 42.dp,
                 blurRadius = blurRadius,
                 refractionHeight = refractionHeight,
@@ -1672,6 +1744,7 @@ fun Dock(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .then(if (dockStyle == DockStyle.CLASSIC) Modifier.padding(bottom = navPadding) else Modifier)
                 .padding(horizontal = 12.dp),
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
@@ -1696,6 +1769,50 @@ fun Dock(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun SearchPill(
+    isLiquidGlass: Boolean,
+    backdrop: com.kyant.backdrop.Backdrop?,
+    blurRadius: Float,
+    refractionHeight: Float,
+    refractionAmount: Float,
+    chromaticAberration: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .width(72.dp)
+            .height(26.dp)
+            .liquidGlass(
+                enabled = isLiquidGlass,
+                backdrop = backdrop,
+                cornerRadius = 13.dp,
+                blurRadius = blurRadius,
+                refractionHeight = refractionHeight,
+                refractionAmount = refractionAmount,
+                chromaticAberration = chromaticAberration
+            )
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = Color.White.copy(alpha = 0.8f)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = stringResource(R.string.search_hint_short), // "Search"
+                style = MaterialTheme.typography.labelSmall,
+                fontSize = 11.sp,
+                color = Color.White.copy(alpha = 0.8f)
+            )
         }
     }
 }

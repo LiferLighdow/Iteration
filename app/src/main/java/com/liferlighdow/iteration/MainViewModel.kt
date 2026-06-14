@@ -192,6 +192,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     )
     val iconShape = _iconShape.asStateFlow()
 
+    private val _desktopRows = MutableStateFlow(prefs.getInt("desktop_rows", 0)) // 0 means auto
+    val desktopRows = _desktopRows.asStateFlow()
+
+    private val _dockStyle = MutableStateFlow(
+        try { DockStyle.valueOf(prefs.getString("dock_style", "MODERN") ?: "MODERN") }
+        catch (e: Exception) { DockStyle.MODERN }
+    )
+    val dockStyle = _dockStyle.asStateFlow()
+
+    private val _excludedThemedPackages = MutableStateFlow(prefs.getStringSet("excluded_themed_packages", emptySet()) ?: emptySet())
+    val excludedThemedPackages = _excludedThemedPackages.asStateFlow()
+
     private val _libraryShape = MutableStateFlow(
         try { IconShape.valueOf(prefs.getString("library_shape", "DEFAULT") ?: "DEFAULT") }
         catch (e: Exception) { IconShape.DEFAULT }
@@ -325,13 +337,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val newDoubleTapActionStr = prefs.getString("double_tap_action", "NONE") ?: "NONE"
         val newDoubleTapAction = try { GestureAction.valueOf(newDoubleTapActionStr) } catch (e: Exception) { GestureAction.NONE }
         val newIconPackPackage = prefs.getString("icon_pack_package", "") ?: ""
+        val newExcluded = prefs.getStringSet("excluded_themed_packages", emptySet()) ?: emptySet()
+        val newRows = prefs.getInt("desktop_rows", 0)
+        val newDockStyle = try { DockStyle.valueOf(prefs.getString("dock_style", "MODERN") ?: "MODERN") }
+        catch (e: Exception) { DockStyle.MODERN }
 
-        if (_iconStyle.value != newStyle || _isThemedIconsEnabled.value != newThemed || _iconPackPackage.value != newIconPackPackage || _iconShape.value != newShape || _libraryShape.value != newLibShape) {
+        if (_iconStyle.value != newStyle || _isThemedIconsEnabled.value != newThemed || _iconPackPackage.value != newIconPackPackage || _iconShape.value != newShape || _libraryShape.value != newLibShape || _excludedThemedPackages.value != newExcluded || _desktopRows.value != newRows || _dockStyle.value != newDockStyle) {
             _iconStyle.value = newStyle
             _iconShape.value = newShape
             _libraryShape.value = newLibShape
             _isThemedIconsEnabled.value = newThemed
             _iconPackPackage.value = newIconPackPackage
+            _excludedThemedPackages.value = newExcluded
+            _desktopRows.value = newRows
+            _dockStyle.value = newDockStyle
             iconCache.evictAll()
         }
         
@@ -736,11 +755,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             val customIconFile = File(customIconDir, "${app.packageName}.png")
                             
                             // 關鍵：快取檔名現在包含顏色數值，桌布一換，快取即失效
-                            // V6: 完整參數快取，確保形狀、風格與圖標包變更時立即生效
+                            // V7: 移除智慧篩選後的強更新版本
+                            val excludedKey = if (excludedThemedPackages.value.contains(app.packageName)) "EX" else "IN"
                             val styleSuffix = if (currentIconPack.isNotEmpty()) {
-                                "IP_V6_${currentIconPack.hashCode()}_${currentShape.name}_${currentStyle.name}_${if (isThemed) "T_$colorKey" else "N"}"
+                                "IP_V7_${currentIconPack.hashCode()}_${currentShape.name}_${currentStyle.name}_${if (isThemed) "T_$colorKey" else "N"}_$excludedKey"
                             } else {
-                                "V5_${currentStyle.name}_${currentShape.name}_${if (isThemed) "T_$colorKey" else "N"}"
+                                "V6_${currentStyle.name}_${currentShape.name}_${if (isThemed) "T_$colorKey" else "N"}_$excludedKey"
                             }
                             
                             val diskCacheFile = File(processedIconCacheDir, "${app.packageName}_$styleSuffix.png")
@@ -748,9 +768,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             val cacheKey = "${app.packageName}_$styleSuffix"
                             val cachedIcon = iconCache[cacheKey]
 
+                            val isExcluded = excludedThemedPackages.value.contains(app.packageName)
+
                             val processedIcon: ImageBitmap = if (customIconFile.exists()) {
                                 BitmapFactory.decodeFile(customIconFile.absolutePath)?.asImageBitmap() 
-                                    ?: iconProcessor.processIcon(app.icon, isThemed, themeColors, currentStyle, currentShape, sizePx)
+                                    ?: iconProcessor.processIcon(app.icon, isThemed && !isExcluded, themeColors, if (isExcluded) IconStyle.STANDARD else currentStyle, currentShape, sizePx)
                             } else cachedIcon ?: if (diskCacheFile.exists()) {
                                 val bitmap = BitmapFactory.decodeFile(diskCacheFile.absolutePath)
                                 if (bitmap != null) {
@@ -765,10 +787,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                             iconProcessor.processIcon(ipIcon, false, null, IconStyle.STANDARD, currentShape, sizePx, isIconPack = true)
                                         } else {
                                             // Fallback App：套用使用者選定的 Iteration 樣式與主題
-                                            iconProcessor.processIcon(app.icon, isThemed, themeColors, currentStyle, currentShape, sizePx)
+                                            iconProcessor.processIcon(app.icon, isThemed && !isExcluded, themeColors, if (isExcluded) IconStyle.STANDARD else currentStyle, currentShape, sizePx)
                                         }
                                     } else {
-                                        iconProcessor.processIcon(app.icon, isThemed, themeColors, currentStyle, currentShape, sizePx)
+                                        iconProcessor.processIcon(app.icon, isThemed && !isExcluded, themeColors, if (isExcluded) IconStyle.STANDARD else currentStyle, currentShape, sizePx)
                                     }
                                     saveIconToDisk(processed, diskCacheFile)
                                     iconCache.put(cacheKey, processed)
@@ -781,10 +803,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                         iconProcessor.processIcon(ipIcon, false, null, IconStyle.STANDARD, currentShape, sizePx, isIconPack = true)
                                     } else {
                                         // Fallback App：套用使用者選定的 Iteration 樣式與主題
-                                        iconProcessor.processIcon(app.icon, isThemed, themeColors, currentStyle, currentShape, sizePx)
+                                        iconProcessor.processIcon(app.icon, isThemed && !isExcluded, themeColors, if (isExcluded) IconStyle.STANDARD else currentStyle, currentShape, sizePx)
                                     }
                                 } else {
-                                    iconProcessor.processIcon(app.icon, isThemed, themeColors, currentStyle, currentShape, sizePx)
+                                    iconProcessor.processIcon(app.icon, isThemed && !isExcluded, themeColors, if (isExcluded) IconStyle.STANDARD else currentStyle, currentShape, sizePx)
                                 }
                                 saveIconToDisk(processedIconBitmap, diskCacheFile)
                                 iconCache.put(cacheKey, processedIconBitmap)
@@ -972,7 +994,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         setSwipeUpAction(GestureAction.OPEN_SYSTEM_SETTINGS)
         setSwipeDownAction(GestureAction.OPEN_GLOBAL_SEARCH)
         setLongPressAction(GestureAction.OPEN_DESKTOP_MENU)
-        setTwoFingerSwipeUpAction(GestureAction.NONE)
+        setTwoFingerSwipeUpAction(GestureAction.LAUNCHER_SETTINGS)
         setTwoFingerSwipeDownAction(GestureAction.OPEN_NOTIFICATIONS)
     }
 
@@ -1021,6 +1043,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         prefs.edit().putString("icon_pack_package", packageName).apply()
         iconCache.evictAll()
         // 強制重新載入所有 App 以應用新的圖標包與形狀裁切
+        loadApps()
+    }
+
+    fun toggleExcludedThemedApp(packageName: String) {
+        val current = _excludedThemedPackages.value.toMutableSet()
+        if (current.contains(packageName)) {
+            current.remove(packageName)
+        } else {
+            current.add(packageName)
+        }
+        _excludedThemedPackages.value = current
+        prefs.edit().putStringSet("excluded_themed_packages", current).apply()
+        iconCache.evictAll()
         loadApps()
     }
 
@@ -1090,6 +1125,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setLiquidGlassChromaticAberration(enabled: Boolean) {
         _liquidGlassChromaticAberration.value = enabled
         prefs.edit().putBoolean("liquid_glass_chromatic_aberration", enabled).apply()
+    }
+
+    fun setDesktopRows(rows: Int) {
+        _desktopRows.value = rows
+        prefs.edit().putInt("desktop_rows", rows).apply()
+        loadApps() // Trigger relayout
+    }
+
+    fun setDockStyle(style: DockStyle) {
+        _dockStyle.value = style
+        prefs.edit().putString("dock_style", style.name).apply()
     }
 
     fun resetLiquidGlassParams() {

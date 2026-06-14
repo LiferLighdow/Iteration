@@ -47,12 +47,13 @@ class IconProcessor(private val context: Context) {
         canvas.clipPath(path)
         
         if (icon != null) {
+            // 移除智慧篩選邏輯：無論是否支援單色層，只要 isThemed 為 true 就套用
+            val effectiveIsThemed = isThemed
+            val effectiveStyle = style
+
             val supportsMonochrome = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && icon is AdaptiveIconDrawable) {
                 icon.monochrome != null
             } else false
-
-            val effectiveIsThemed = if (isThemed && !supportsMonochrome) false else isThemed
-            val effectiveStyle = if (isThemed && !supportsMonochrome) IconStyle.STANDARD else style
 
             val scale = 1.4f
             val scaledSize = (sizePx * scale).toInt()
