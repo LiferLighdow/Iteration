@@ -29,7 +29,11 @@ class IconProcessor(private val context: Context) {
         style: IconStyle,
         shape: IconShape,
         sizePx: Int,
-        isIconPack: Boolean = false
+        isIconPack: Boolean = false,
+        customBgColor: Int = 0,
+        customFgColor: Int = 0,
+        customUseOriginal: Boolean = false,
+        customUseOriginalBg: Boolean = false
     ): ImageBitmap {
         val b = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(b)
@@ -71,12 +75,15 @@ class IconProcessor(private val context: Context) {
             val m3OnColor = m3Colors?.second
 
             // 1. 決定背景顏色 (使用 ColorUtils.blendARGB 優化混合)
-            val bgColor = if (effectiveIsThemed && m3Color != null) {
+            val bgColor = if (effectiveStyle == IconStyle.CUSTOM) {
+                if (customUseOriginalBg) null else customBgColor
+            } else if (effectiveIsThemed && m3Color != null) {
                 when (effectiveStyle) {
                     IconStyle.STANDARD -> m3Color
                     IconStyle.BLACK -> ColorUtils.blendARGB(Color.BLACK, m3Color, 0.3f)
                     IconStyle.WHITE -> ColorUtils.blendARGB(Color.WHITE, m3Color, 0.5f)
                     IconStyle.GLASS -> ColorUtils.blendARGB(Color.argb(100, 255, 255, 255), m3Color, 0.15f)
+                    else -> null
                 }
             } else {
                 when (effectiveStyle) {
@@ -87,16 +94,20 @@ class IconProcessor(private val context: Context) {
                     IconStyle.BLACK -> Color.BLACK
                     IconStyle.WHITE -> Color.WHITE
                     IconStyle.GLASS -> Color.argb(120, 255, 255, 255)
+                    else -> null
                 }
             }
 
             // 2. 決定前景顏色
-            val fgColor = if (effectiveIsThemed && m3Colors != null) {
+            val fgColor = if (effectiveStyle == IconStyle.CUSTOM) {
+                if (customUseOriginal) null else customFgColor
+            } else if (effectiveIsThemed && m3Colors != null) {
                 when (effectiveStyle) {
                     IconStyle.STANDARD -> m3OnColor
                     IconStyle.BLACK -> ColorUtils.blendARGB(Color.WHITE, m3Color!!, 0.3f)
                     IconStyle.WHITE -> Color.BLACK
                     IconStyle.GLASS -> m3Color
+                    else -> null
                 }
             } else {
                 when (effectiveStyle) {
@@ -104,6 +115,7 @@ class IconProcessor(private val context: Context) {
                     IconStyle.BLACK -> Color.WHITE
                     IconStyle.WHITE -> Color.BLACK
                     IconStyle.GLASS -> Color.WHITE
+                    else -> null
                 }
             }
 
@@ -129,7 +141,8 @@ class IconProcessor(private val context: Context) {
                 } else null
 
                 var drawn = false
-                if (filter != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                // Custom 且 UseOriginal 時，不嘗試畫 Monochrome
+                if (filter != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !(effectiveStyle == IconStyle.CUSTOM && customUseOriginal)) {
                     icon.monochrome?.let { mono ->
                         mono.colorFilter = filter
                         mono.setBounds(offset, offset, offset + scaledSize, offset + scaledSize)
@@ -141,8 +154,10 @@ class IconProcessor(private val context: Context) {
 
                 if (!drawn) {
                     icon.foreground?.let {
-                        if (effectiveIsThemed || effectiveStyle != IconStyle.STANDARD) {
+                        if (fgColor != null || (effectiveStyle != IconStyle.STANDARD && effectiveStyle != IconStyle.CUSTOM)) {
                             it.colorFilter = filter
+                        } else if (effectiveStyle == IconStyle.CUSTOM && !customUseOriginal) {
+                             it.colorFilter = filter
                         }
                         it.setBounds(offset, offset, offset + scaledSize, offset + scaledSize)
                         it.draw(canvas)
@@ -174,4 +189,5 @@ class IconProcessor(private val context: Context) {
         }
         return b.asImageBitmap()
     }
+
 }

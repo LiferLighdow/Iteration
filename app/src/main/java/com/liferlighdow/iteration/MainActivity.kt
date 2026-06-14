@@ -831,8 +831,20 @@ fun LauncherScreen(
                             refractionHeight = refractionHeight,
                             refractionAmount = refractionAmount,
                             chromaticAberration = chromaticAberration,
+                            isEditMode = isEditMode,
                             onAppClick = { pkg -> if (pkg == myPackageName) onSettingsClick() else onAppClick(pkg) },
-                            onLongClick = { showDockPicker = it }
+                            onLongClick = { showDockPicker = it },
+                            onDeleteClick = { app ->
+                                try {
+                                    val intent = Intent(Intent.ACTION_DELETE).apply {
+                                        data = Uri.fromParts("package", app.packageName, null)
+                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    }
+                                    mContext.startActivity(intent)
+                                } catch (e: Exception) {
+                                    android.util.Log.e("Iteration", "Uninstall failed", e)
+                                }
+                            }
                         )
                         // 在 Classic 模式下不需要額外的底部 Spacer，因為 Dock 已經填滿底部
                         if (dockStyle == DockStyle.MODERN) {
@@ -1064,6 +1076,11 @@ fun LauncherScreen(
                                             val lastPos = remember { object { var pos = Offset.Zero } }
                                             var showItemMenu by remember { mutableStateOf(false) }
                                             Box(modifier = Modifier.weight(1f).onGloballyPositioned { lastPos.pos = it.positionInRoot() }, contentAlignment = Alignment.Center) {
+                                                val infiniteTransition = rememberInfiniteTransition(label = "jiggle")
+                                                val rotation by infiniteTransition.animateFloat(
+                                                    initialValue = -2.5f, targetValue = 2.5f,
+                                                    animationSpec = infiniteRepeatable(animation = tween(120, easing = LinearEasing), repeatMode = RepeatMode.Reverse), label = "jiggle"
+                                                )
                                                 AppItem(
                                                     app = app,
                                                     onAppClick = { onAppClick(app.packageName); folderToOpenId = null },
@@ -1075,7 +1092,21 @@ fun LauncherScreen(
                                                     refractionHeight = refractionHeight,
                                                     refractionAmount = refractionAmount,
                                                     chromaticAberration = chromaticAberration,
-                                                    modifier = Modifier.pointerInput(app.uniqueId) {
+                                                    isEditMode = isEditMode,
+                                                    onDeleteClick = {
+                                                        try {
+                                                            val intent = Intent(Intent.ACTION_DELETE).apply {
+                                                                data = Uri.fromParts("package", app.packageName, null)
+                                                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                                            }
+                                                            mContext.startActivity(intent)
+                                                        } catch (e: Exception) {
+                                                            android.util.Log.e("Iteration", "Uninstall failed", e)
+                                                        }
+                                                    },
+                                                    modifier = Modifier.graphicsLayer {
+                                                        if (isEditMode) rotationZ = rotation
+                                                    }.pointerInput(app.uniqueId) {
                                                         detectTapGestures(
                                                             onLongPress = { showItemMenu = true }
                                                         )
@@ -1533,6 +1564,22 @@ fun AppGrid(
                                 refractionHeight = refractionHeight,
                                 refractionAmount = refractionAmount,
                                 chromaticAberration = chromaticAberration,
+                                isEditMode = isEditMode,
+                                onDeleteClick = {
+                                    if (app.isFolder) {
+                                        viewModel.removeAppFromHome(app.uniqueId)
+                                    } else {
+                                        try {
+                                            val intent = Intent(Intent.ACTION_DELETE).apply {
+                                                data = Uri.fromParts("package", app.packageName, null)
+                                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                            }
+                                            mContext.startActivity(intent)
+                                        } catch (e: Exception) {
+                                            android.util.Log.e("Iteration", "Uninstall failed", e)
+                                        }
+                                    }
+                                },
                                 modifier = Modifier.graphicsLayer {
                                     alpha = if (app.uniqueId == draggingUniqueId) 0f else 1f
                                     scaleX = scale; scaleY = scale
@@ -1595,7 +1642,9 @@ fun AppItem(
     refractionHeight: Float = 24f,
     refractionAmount: Float = 48f,
     chromaticAberration: Boolean = true,
-    onAppClick: (() -> Unit)? = null
+    isEditMode: Boolean = false,
+    onAppClick: (() -> Unit)? = null,
+    onDeleteClick: (() -> Unit)? = null
 ) {
     val notificationCounts by NotificationService.notifications.collectAsState()
 
@@ -1657,6 +1706,27 @@ fun AppItem(
                     contentScale = ContentScale.FillBounds
                 )
             }
+
+            // 編輯模式下的叉叉按鈕
+            if (isEditMode && (app.packageName.isNotEmpty() || app.isFolder)) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .offset(x = (-6).dp, y = (-6).dp)
+                        .size(24.dp)
+                        .background(Color.Gray.copy(alpha = 0.9f), CircleShape)
+                        .clickable { onDeleteClick?.invoke() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Delete",
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+
             if (count > 0) {
                 Box(modifier = Modifier.offset(x = 4.dp, y = (-4).dp).size(20.dp).background(Color.Red, CircleShape), contentAlignment = Alignment.Center) {
                     Text(text = if (count > 99) "99+" else count.toString(), color = Color.White, style = MaterialTheme.typography.labelSmall, fontSize = if (count > 9) 9.sp else 11.sp)
@@ -1666,6 +1736,7 @@ fun AppItem(
         if (showLabel) Text(text = app.label, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp), color = Color.White)
     }
 }
+
 
 @Composable
 fun FolderPreviewIcon(app: AppModel?, size: androidx.compose.ui.unit.Dp, iconShape: IconShape = IconShape.DEFAULT) {
@@ -1711,8 +1782,10 @@ fun Dock(
     refractionHeight: Float = 24f,
     refractionAmount: Float = 48f,
     chromaticAberration: Boolean = true,
+    isEditMode: Boolean = false,
     onAppClick: (String) -> Unit,
-    onLongClick: (Int) -> Unit
+    onLongClick: (Int) -> Unit,
+    onDeleteClick: ((AppModel) -> Unit)? = null
 ) {
     // 獲取導覽列（小白條）的高度
     val navPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -1751,6 +1824,11 @@ fun Dock(
         ) {
             apps.forEachIndexed { index, app ->
                 Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    val infiniteTransition = rememberInfiniteTransition(label = "jiggle")
+                    val rotation by infiniteTransition.animateFloat(
+                        initialValue = -2.5f, targetValue = 2.5f,
+                        animationSpec = infiniteRepeatable(animation = tween(120, easing = LinearEasing), repeatMode = RepeatMode.Reverse), label = "jiggle"
+                    )
                     AppItem(
                         app = app,
                         isLiquidGlass = isLiquidGlass,
@@ -1760,8 +1838,12 @@ fun Dock(
                         refractionHeight = refractionHeight,
                         refractionAmount = refractionAmount,
                         chromaticAberration = chromaticAberration,
-                        modifier = Modifier.combinedClickable(
-                            onClick = { onAppClick(app.packageName) },
+                        isEditMode = isEditMode,
+                        onDeleteClick = { onDeleteClick?.invoke(app) },
+                        modifier = Modifier.graphicsLayer {
+                            if (isEditMode) rotationZ = rotation
+                        }.combinedClickable(
+                            onClick = { if (app.packageName.isNotEmpty()) onAppClick(app.packageName) else onLongClick(index) },
                             onLongClick = { onLongClick(index) }
                         ),
                         showLabel = false,

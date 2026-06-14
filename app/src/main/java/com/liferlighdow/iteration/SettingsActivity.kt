@@ -17,6 +17,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
@@ -45,6 +46,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.Dispatchers
@@ -142,8 +144,8 @@ fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsMainScreen(
-    onBack: () -> Unit, 
-    onNavigateToHideApps: () -> Unit, 
+    onBack: () -> Unit,
+    onNavigateToHideApps: () -> Unit,
     onNavigateToRenameApps: () -> Unit,
     onNavigateToAppLibrary: () -> Unit,
     onNavigateToIconTheme: () -> Unit,
@@ -187,13 +189,14 @@ fun SettingsMainScreen(
             }
         }
     }
-    
+
     val isNotificationEnabled = remember {
         NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)
     }
 
     var showRestartDialog by remember { mutableStateOf(false) }
     var showPasswordGate by remember { mutableStateOf(false) }
+    var showApiWarningDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -222,7 +225,13 @@ fun SettingsMainScreen(
                     headlineContent = { Text("Liquid Glass") },
                     supportingContent = { Text("Real-time glassmorphism effects") },
                     trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
-                    modifier = Modifier.clickable { onNavigateToLiquidGlass() }
+                    modifier = Modifier.clickable { 
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                            onNavigateToLiquidGlass() 
+                        } else {
+                            showApiWarningDialog = true
+                        }
+                    }
                 )
             }
             item {
@@ -244,10 +253,10 @@ fun SettingsMainScreen(
             item {
                 ListItem(
                     headlineContent = { Text(stringResource(R.string.settings_notifications)) },
-                    supportingContent = { 
-                        Text(if (isNotificationEnabled) "Enabled" else stringResource(R.string.settings_notifications_desc)) 
+                    supportingContent = {
+                        Text(if (isNotificationEnabled) "Enabled" else stringResource(R.string.settings_notifications_desc))
                     },
-                    trailingContent = { 
+                    trailingContent = {
                         if (!isNotificationEnabled) {
                             TextButton(onClick = {
                                 context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
@@ -258,7 +267,7 @@ fun SettingsMainScreen(
                             Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         }
                     },
-                    modifier = Modifier.clickable { 
+                    modifier = Modifier.clickable {
                         context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
                     }
                 )
@@ -268,7 +277,7 @@ fun SettingsMainScreen(
                     headlineContent = { Text(stringResource(R.string.settings_hide_apps)) },
                     supportingContent = { Text(stringResource(R.string.settings_hide_apps_desc)) },
                     trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
-                    modifier = Modifier.clickable { 
+                    modifier = Modifier.clickable {
                         if (viewModel.getPassword().isEmpty()) {
                             onNavigateToHideApps()
                         } else {
@@ -365,6 +374,22 @@ fun SettingsMainScreen(
         )
     }
 
+    if (showApiWarningDialog) {
+        AlertDialog(
+            onDismissRequest = { showApiWarningDialog = false },
+            icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text("Compatibility Warning") },
+            text = { 
+                Text("Liquid Glass effects rely on system APIs introduced in Android 12.\n\nYour current device (API ${android.os.Build.VERSION.SDK_INT}) does not support these advanced rendering features.") 
+            },
+            confirmButton = {
+                TextButton(onClick = { showApiWarningDialog = false }) {
+                    Text("I Understand")
+                }
+            }
+        )
+    }
+
     if (showPasswordGate) {
         var input by remember { mutableStateOf("") }
         var isError by remember { mutableStateOf(false) }
@@ -378,7 +403,7 @@ fun SettingsMainScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
                         value = input,
-                        onValueChange = { 
+                        onValueChange = {
                             input = it
                             isError = false
                         },
@@ -427,6 +452,7 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
     val currentIconPack by viewModel.iconPackPackage.collectAsState()
     
     var showIconPackPicker by remember { mutableStateOf(false) }
+    var showStyleInfoDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -532,12 +558,28 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
             item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
             
             item {
-                Text(
-                    text = "Iteration Style",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = if (currentIconPack.isEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Iteration Style",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = if (currentIconPack.isEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(
+                        onClick = { showStyleInfoDialog = true },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Info, 
+                            contentDescription = "Compatibility Info",
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
             }
 
             if (currentIconPack.isEmpty()) {
@@ -568,23 +610,41 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
                 IconStyle.STANDARD to "Standard",
                 IconStyle.BLACK to "Black",
                 IconStyle.WHITE to "White",
-                IconStyle.GLASS to "Glass"
+                IconStyle.GLASS to "Glass",
+                IconStyle.CUSTOM to "Custom"
             )
 
             items(styles) { (style, label) ->
+                var showCustomPicker by remember { mutableStateOf(false) }
+                
                 ListItem(
                     headlineContent = { Text(label) },
                     trailingContent = {
-                        RadioButton(
-                            enabled = currentIconPack.isEmpty(),
-                            selected = currentStyle == style && currentIconPack.isEmpty(),
-                            onClick = { viewModel.setIconStyle(style) }
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (style == IconStyle.CUSTOM && currentStyle == IconStyle.CUSTOM && currentIconPack.isEmpty()) {
+                                IconButton(onClick = { showCustomPicker = true }) {
+                                    Icon(Icons.Default.ColorLens, null)
+                                }
+                            }
+                            RadioButton(
+                                enabled = currentIconPack.isEmpty(),
+                                selected = currentStyle == style && currentIconPack.isEmpty(),
+                                onClick = { viewModel.setIconStyle(style) }
+                            )
+                        }
                     },
                     modifier = Modifier.clickable(enabled = currentIconPack.isEmpty()) { 
                         viewModel.setIconStyle(style) 
+                        if (style == IconStyle.CUSTOM) showCustomPicker = true
                     }
                 )
+
+                if (showCustomPicker) {
+                    CustomIconStylePickerDialog(
+                        viewModel = viewModel,
+                        onDismiss = { showCustomPicker = false }
+                    )
+                }
             }
 
             if (currentIconPack.isNotEmpty()) {
@@ -598,6 +658,32 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
                 }
             }
         }
+    }
+
+    if (showStyleInfoDialog) {
+        AlertDialog(
+            onDismissRequest = { showStyleInfoDialog = false },
+            icon = { Icon(Icons.Default.Info, contentDescription = null) },
+            title = { Text("Iteration Style Compatibility") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val sdk = android.os.Build.VERSION.SDK_INT
+                    Text("Different Android versions provide varying levels of icon precision:", style = MaterialTheme.typography.bodyMedium)
+                    
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    
+                    CompatibilityRow("Android 13+", "Perfect", "Native monochrome layer support (finest detail).", sdk >= 33)
+                    CompatibilityRow("Android 12", "High", "Adaptive layer filtering with native system colors.", sdk == 31 || sdk == 32)
+                    CompatibilityRow("Android 8-11", "Good", "Adaptive layer filtering with manual color analysis.", sdk in 26..30)
+                    CompatibilityRow("Android 6-7", "Basic", "Legacy whole-icon tinting.", sdk in 23..25)
+                    
+                    Text("\nNote: Iteration presets (Black, White, Glass, Custom) work on all supported versions.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showStyleInfoDialog = false }) { Text("Got it") }
+            }
+        )
     }
 
     if (showIconPackPicker) {
@@ -685,7 +771,7 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
                     }
                 },
                 actions = {
-                    TextButton(onClick = { 
+                    TextButton(onClick = {
                         viewModel.resetLiquidGlassParams()
                         glassOffset = androidx.compose.ui.geometry.Offset.Zero
                     }) {
@@ -723,11 +809,11 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
                     // Liquid Glass Preview Box (Free Dragging)
                     Box(
                         modifier = Modifier
-                            .offset { 
+                            .offset {
                                 androidx.compose.ui.unit.IntOffset(
                                     glassOffset.x.roundToInt(),
                                     glassOffset.y.roundToInt()
-                                ) 
+                                )
                             }
                             .size(150.dp)
                             .pointerInput(Unit) {
@@ -746,7 +832,7 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
                                 chromaticAberration = chromaticAberration
                             )
                     )
-                    
+
                     // 指引文字
                     Text(
                         "Drag the glass to preview",
@@ -939,7 +1025,7 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
     val libraryShape by viewModel.libraryShape.collectAsState()
     val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp)
     var searchQuery by remember { mutableStateOf("") }
-    
+
     // 動態計算所有當前存在但未排序的類別
     val unhandledCategories = remember(allApps, userCategories) {
         allApps.asSequence()
@@ -951,10 +1037,10 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
 
     var showAddCategoryDialog by remember { mutableStateOf(false) }
     var newCategoryName by remember { mutableStateOf("") }
-    
+
     var categoryToRename by remember { mutableStateOf<String?>(null) }
     var renameInput by remember { mutableStateOf("") }
-    
+
     var selectingAppForCategory by remember { mutableStateOf<AppModel?>(null) }
 
     Scaffold(
@@ -1167,7 +1253,7 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
         if (selectingAppForCategory != null) {
             // 合併所有可用的類別供選取
             val allAvailableCategories = (userCategories + unhandledCategories).distinct()
-            
+
             AlertDialog(
                 onDismissRequest = { selectingAppForCategory = null },
                 title = { Text(stringResource(R.string.select_category_for, selectingAppForCategory?.label ?: "")) },
@@ -1208,12 +1294,12 @@ fun ChangeIconScreen(onBack: () -> Unit) {
     val iconShape by viewModel.iconShape.collectAsState()
     val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp)
     var searchQuery by remember { mutableStateOf("") }
-    
+
     val filteredApps = remember(allApps, searchQuery) {
         if (searchQuery.isEmpty()) allApps
         else allApps.filter { it.label.contains(searchQuery, ignoreCase = true) }
     }
-    
+
     var selectedApp by remember { mutableStateOf<AppModel?>(null) }
     var pickedImageUri by remember { mutableStateOf<Uri?>(null) }
     
@@ -1255,7 +1341,7 @@ fun ChangeIconScreen(onBack: () -> Unit) {
                                 IconButton(onClick = { viewModel.resetCustomIcon(app.packageName) }) {
                                     Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.restore_default))
                                 }
-                                IconButton(onClick = { 
+                                IconButton(onClick = {
                                     selectedApp = app
                                     launcher.launch("image/*")
                                 }) {
@@ -1290,12 +1376,12 @@ fun RenameAppsScreen(onBack: () -> Unit) {
     val iconShape by viewModel.iconShape.collectAsState()
     val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp)
     var searchQuery by remember { mutableStateOf("") }
-    
+
     val filteredApps = remember(allApps, searchQuery) {
         if (searchQuery.isEmpty()) allApps
         else allApps.filter { it.label.contains(searchQuery, ignoreCase = true) }
     }
-    
+
     var editingApp by remember { mutableStateOf<AppModel?>(null) }
     var newLabel by remember { mutableStateOf("") }
 
@@ -1361,7 +1447,7 @@ fun HideAppsScreen(onBack: () -> Unit) {
     val viewModel: MainViewModel = viewModel()
     val allApps by viewModel.allApps.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
-    
+
     val filteredApps = remember(allApps, searchQuery) {
         if (searchQuery.isEmpty()) allApps
         else allApps.filter { it.label.contains(searchQuery, ignoreCase = true) }
@@ -1384,7 +1470,7 @@ fun HideAppsScreen(onBack: () -> Unit) {
         }
     ) { innerPadding ->
         LazyColumn(
-            modifier = Modifier.padding(innerPadding).fillMaxSize().padding(horizontal = 16.dp), 
+            modifier = Modifier.padding(innerPadding).fillMaxSize().padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
@@ -1394,7 +1480,7 @@ fun HideAppsScreen(onBack: () -> Unit) {
             item {
                 OutlinedTextField(
                     value = currentPassword,
-                    onValueChange = { 
+                    onValueChange = {
                         currentPassword = it
                         viewModel.setPassword(it)
                     },
@@ -1425,7 +1511,7 @@ fun HideAppsScreen(onBack: () -> Unit) {
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
                         .clickable { viewModel.toggleHiddenApp(app.packageName) }
-                        .padding(vertical = 4.dp), 
+                        .padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (app.processedIcon != null) {
@@ -1449,7 +1535,7 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
     val desktopRows by viewModel.desktopRows.collectAsState()
     val dockStyle by viewModel.dockStyle.collectAsState()
     val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp)
-    
+
     var showAppPickerForSlot by remember { mutableStateOf<Int?>(null) }
 
     Scaffold(
@@ -1549,7 +1635,7 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
             items(4) { index ->
                 val pkgName = dockPkgNames.getOrNull(index) ?: ""
                 val app = allApps.find { it.packageName == pkgName }
-                
+
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1626,16 +1712,16 @@ fun GesturesSettingsScreen(onBack: () -> Unit) {
     var showLongPressDialog by remember { mutableStateOf(false) }
     var showTwoFingerSwipeUpDialog by remember { mutableStateOf(false) }
     var showTwoFingerSwipeDownDialog by remember { mutableStateOf(false) }
-    
+
     var showAppPickerForDoubleTap by remember { mutableStateOf(false) }
     var showAppPickerForSwipeUp by remember { mutableStateOf(false) }
     var showAppPickerForSwipeDown by remember { mutableStateOf(false) }
     var showAppPickerForLongPress by remember { mutableStateOf(false) }
     var showAppPickerForTwoFingerSwipeUp by remember { mutableStateOf(false) }
     var showAppPickerForTwoFingerSwipeDown by remember { mutableStateOf(false) }
-    
+
     val context = LocalContext.current
-    
+
     val isAccessibilityEnabled = {
         val expectedComponentName = ComponentName(context, IterationAccessibilityService::class.java).flattenToString()
         val enabledServices = Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
@@ -1719,9 +1805,9 @@ fun GesturesSettingsScreen(onBack: () -> Unit) {
                     onClick = { showTwoFingerSwipeDownDialog = true }
                 )
             }
-            
-            val needsAccessibility = listOf(doubleTapAction, swipeUpAction, swipeDownAction, longPressAction, twoFingerSwipeUpAction, twoFingerSwipeDownAction).any { 
-                it == GestureAction.LOCK_SCREEN || it == GestureAction.OPEN_NOTIFICATIONS 
+
+            val needsAccessibility = listOf(doubleTapAction, swipeUpAction, swipeDownAction, longPressAction, twoFingerSwipeUpAction, twoFingerSwipeDownAction).any {
+                it == GestureAction.LOCK_SCREEN || it == GestureAction.OPEN_NOTIFICATIONS
             }
 
             if (needsAccessibility) {
@@ -1911,7 +1997,7 @@ fun MultiAppExclusionPickerDialog(
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
-                
+
                 var searchQuery by remember { mutableStateOf("") }
                 OutlinedTextField(
                     value = searchQuery,
@@ -1998,8 +2084,8 @@ fun IconCropperDialog(uri: Uri, onDismiss: () -> Unit, onConfirm: (Bitmap) -> Un
         withContext(Dispatchers.IO) {
             try {
                 val options = BitmapFactory.Options().apply { inMutable = true }
-                val bitmap = context.contentResolver.openInputStream(uri)?.use { 
-                    BitmapFactory.decodeStream(it, null, options) 
+                val bitmap = context.contentResolver.openInputStream(uri)?.use {
+                    BitmapFactory.decodeStream(it, null, options)
                 }
                 originalBitmap = bitmap
             } catch (e: Exception) {
@@ -2054,7 +2140,7 @@ fun IconCropperDialog(uri: Uri, onDismiss: () -> Unit, onConfirm: (Bitmap) -> Un
                                     ),
                                 contentScale = ContentScale.Fit
                             )
-                            
+
                             Canvas(modifier = Modifier.fillMaxSize()) {
                                 drawRect(
                                     color = Color.Black.copy(alpha = 0.1f),
@@ -2100,4 +2186,199 @@ fun IconCropperDialog(uri: Uri, onDismiss: () -> Unit, onConfirm: (Bitmap) -> Un
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         }
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CustomIconStylePickerDialog(
+    viewModel: MainViewModel,
+    onDismiss: () -> Unit
+) {
+    val bgColor by viewModel.customIconBgColor.collectAsState()
+    val fgColor by viewModel.customIconFgColor.collectAsState()
+    val useOriginal by viewModel.customIconUseOriginal.collectAsState()
+    val useOriginalBg by viewModel.customIconUseOriginalBg.collectAsState()
+    val iconShape by viewModel.iconShape.collectAsState()
+    
+    // 預覽用的虛擬 AppModel
+    val context = LocalContext.current
+    val previewIcon = remember { context.packageManager.getApplicationIcon(context.packageName) }
+    
+    val previewBitmap = remember(bgColor, fgColor, useOriginal, useOriginalBg, iconShape) {
+        val processor = IconProcessor(context)
+        val density = context.resources.displayMetrics.density
+        processor.processIcon(
+            icon = previewIcon,
+            isThemed = false,
+            themeColors = null,
+            style = IconStyle.CUSTOM,
+            shape = iconShape,
+            sizePx = (64 * density).toInt(),
+            customBgColor = bgColor,
+            customFgColor = fgColor,
+            customUseOriginal = useOriginal,
+            customUseOriginalBg = useOriginalBg
+        )
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { 
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Custom Style", modifier = Modifier.weight(1f))
+                Image(
+                    bitmap = previewBitmap,
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp).clip(if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(12.dp)).background(Color.White.copy(alpha = 0.1f))
+                )
+            }
+        },
+        text = {
+            LazyColumn {
+                item {
+                    Text("Background Settings", style = MaterialTheme.typography.titleSmall)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Use Original Background", modifier = Modifier.weight(1f))
+                        Switch(checked = useOriginalBg, onCheckedChange = { viewModel.setCustomIconUseOriginalBg(it) })
+                    }
+                    if (!useOriginalBg) {
+                        ColorPicker(
+                            initialColor = bgColor,
+                            onColorChanged = { viewModel.setCustomIconBgColor(it) }
+                        )
+                    } else {
+                        Text("Background color disabled while using original background", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(vertical = 8.dp))
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Text("Foreground Settings", style = MaterialTheme.typography.titleSmall, color = if (useOriginal) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Use Original Icon (Color)", modifier = Modifier.weight(1f))
+                        Switch(checked = useOriginal, onCheckedChange = { viewModel.setCustomIconUseOriginal(it) })
+                    }
+                    if (!useOriginal) {
+                        ColorPicker(
+                            initialColor = fgColor,
+                            onColorChanged = { viewModel.setCustomIconFgColor(it) }
+                        )
+                    } else {
+                        Text("Foreground color disabled while using original icon", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(vertical = 8.dp))
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Done") }
+        }
+    )
+}
+
+
+@Composable
+fun CompatibilityRow(version: String, level: String, desc: String, isCurrentDevice: Boolean = false) {
+    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(version, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.width(90.dp))
+            Surface(
+                color = when(level) {
+                    "Perfect" -> Color(0xFF4CAF50).copy(alpha = 0.2f)
+                    "High" -> Color(0xFF2196F3).copy(alpha = 0.2f)
+                    "Good" -> Color(0xFFFF9800).copy(alpha = 0.2f)
+                    else -> Color.Gray.copy(alpha = 0.2f)
+                },
+                shape = RoundedCornerShape(4.dp)
+            ) {
+                Text(
+                    text = level, 
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = when(level) {
+                        "Perfect" -> Color(0xFF2E7D32)
+                        "High" -> Color(0xFF1565C0)
+                        "Good" -> Color(0xFFE65100)
+                        else -> Color.DarkGray
+                    }
+                )
+            }
+            
+            if (isCurrentDevice) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Surface(
+                    color = Color.White,
+                    shape = CircleShape,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                ) {
+                    Text(
+                        "Your Device",
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.Black,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                    )
+                }
+            }
+        }
+        Text(desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+fun ColorPicker(
+    initialColor: Int,
+    onColorChanged: (Int) -> Unit
+) {
+    var hexText by remember(initialColor) { mutableStateOf(String.format("%08X", initialColor)) }
+    val hsv = remember(initialColor) {
+        val res = FloatArray(3)
+        android.graphics.Color.colorToHSV(initialColor, res)
+        res
+    }
+    var h by remember(initialColor) { mutableFloatStateOf(hsv[0]) }
+    var s by remember(initialColor) { mutableFloatStateOf(hsv[1]) }
+    var v by remember(initialColor) { mutableFloatStateOf(hsv[2]) }
+    var a by remember(initialColor) { mutableFloatStateOf(android.graphics.Color.alpha(initialColor) / 255f) }
+
+    Column {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(40.dp)
+                .background(androidx.compose.ui.graphics.Color(initialColor), RoundedCornerShape(8.dp))
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+        )
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        OutlinedTextField(
+            value = hexText,
+            onValueChange = {
+                hexText = it
+                if (it.length == 8) {
+                    try {
+                        val color = android.graphics.Color.parseColor("#$it")
+                        onColorChanged(color)
+                    } catch (e: Exception) {}
+                }
+            },
+            label = { Text("Hex (AARRGGBB)") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp)
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text("Hue: ${h.toInt()}", style = MaterialTheme.typography.labelSmall)
+        Slider(value = h, onValueChange = { h = it; onColorChanged(android.graphics.Color.HSVToColor((a * 255).toInt(), floatArrayOf(h, s, v))) }, valueRange = 0f..360f)
+        
+        Text("Saturation: ${(s * 100).toInt()}%", style = MaterialTheme.typography.labelSmall)
+        Slider(value = s, onValueChange = { s = it; onColorChanged(android.graphics.Color.HSVToColor((a * 255).toInt(), floatArrayOf(h, s, v))) }, valueRange = 0f..1f)
+        
+        Text("Brightness: ${(v * 100).toInt()}%", style = MaterialTheme.typography.labelSmall)
+        Slider(value = v, onValueChange = { v = it; onColorChanged(android.graphics.Color.HSVToColor((a * 255).toInt(), floatArrayOf(h, s, v))) }, valueRange = 0f..1f)
+        
+        Text("Alpha: ${(a * 100).toInt()}%", style = MaterialTheme.typography.labelSmall)
+        Slider(value = a, onValueChange = { a = it; onColorChanged(android.graphics.Color.HSVToColor((a * 255).toInt(), floatArrayOf(h, s, v))) }, valueRange = 0f..1f)
+    }
 }

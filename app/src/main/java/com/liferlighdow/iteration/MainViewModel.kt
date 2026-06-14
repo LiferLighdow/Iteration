@@ -186,6 +186,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     )
     val iconStyle = _iconStyle.asStateFlow()
 
+    private val _customIconBgColor = MutableStateFlow(prefs.getInt("custom_icon_bg_color", 0xFF2196F3.toInt()))
+    val customIconBgColor = _customIconBgColor.asStateFlow()
+
+    private val _customIconFgColor = MutableStateFlow(prefs.getInt("custom_icon_fg_color", 0xFFFFFFFF.toInt()))
+    val customIconFgColor = _customIconFgColor.asStateFlow()
+
+    private val _customIconUseOriginal = MutableStateFlow(prefs.getBoolean("custom_icon_use_original", false))
+    val customIconUseOriginal = _customIconUseOriginal.asStateFlow()
+
+    private val _customIconUseOriginalBg = MutableStateFlow(prefs.getBoolean("custom_icon_use_original_bg", false))
+    val customIconUseOriginalBg = _customIconUseOriginalBg.asStateFlow()
+
     private val _iconShape = MutableStateFlow(
         try { IconShape.valueOf(prefs.getString("icon_shape", "DEFAULT") ?: "DEFAULT") }
         catch (e: Exception) { IconShape.DEFAULT }
@@ -682,9 +694,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private val iconCache = object : LruCache<String, ImageBitmap>(50) {
+    private val iconCache = object : LruCache<String, ImageBitmap>(100) {
         override fun sizeOf(key: String, value: ImageBitmap): Int = 1
     }
+
+    private var loadAppsJob: kotlinx.coroutines.Job? = null
+    private var cachedRawApps: List<AppModel>? = null
 
     private fun loadDock() {
         val saved = prefs.getString("dock_packages", null)
@@ -700,6 +715,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun loadApps() {
+        loadAppsJob?.cancel()
+        
         // 1. 強制重新載入設定
         loadSettings()
         updateSuggestions()
@@ -710,15 +727,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val currentShape = _iconShape.value
         val currentIconPack = _iconPackPackage.value
 
-        viewModelScope.launch {
+        loadAppsJob = viewModelScope.launch {
+            // 如果是 Custom 風格且正在頻繁調整，稍微延遲一下以避免過度運算
+            if (currentStyle == IconStyle.CUSTOM) {
+                kotlinx.coroutines.delay(100)
+            }
             if (currentIconPack.isNotEmpty()) {
                 withContext(Dispatchers.IO) {
                     iconPackManager.loadIconPack(currentIconPack)
                 }
             }
 
-            val rawApps = withContext(Dispatchers.IO) {
-                repository.getInstalledApps()
+            val rawApps = cachedRawApps ?: withContext(Dispatchers.IO) {
+                repository.getInstalledApps().also { cachedRawApps = it }
             }
             
             // 2. 獲取主題色
@@ -755,12 +776,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             val customIconFile = File(customIconDir, "${app.packageName}.png")
                             
                             // 關鍵：快取檔名現在包含顏色數值，桌布一換，快取即失效
-                            // V7: 移除智慧篩選後的強更新版本
+                            // V8: 加入自定義顏色支援
                             val excludedKey = if (excludedThemedPackages.value.contains(app.packageName)) "EX" else "IN"
+                            val customBg = _customIconBgColor.value
+                            val customFg = _customIconFgColor.value
+                            val customOriginal = _customIconUseOriginal.value
+                            val customOriginalBg = _customIconUseOriginalBg.value
+                            val customKey = if (currentStyle == IconStyle.CUSTOM) {
+                                "C_${customBg.toString(16)}_${customFg.toString(16)}_${if (customOriginal) "O" else "M"}_${if (customOriginalBg) "OB" else "CB"}"
+                            } else "N"
+
                             val styleSuffix = if (currentIconPack.isNotEmpty()) {
-                                "IP_V7_${currentIconPack.hashCode()}_${currentShape.name}_${currentStyle.name}_${if (isThemed) "T_$colorKey" else "N"}_$excludedKey"
+                                "IP_V10_${currentIconPack.hashCode()}_${currentShape.name}_${currentStyle.name}_${if (isThemed) "T_$colorKey" else "N"}_${excludedKey}_$customKey"
                             } else {
-                                "V6_${currentStyle.name}_${currentShape.name}_${if (isThemed) "T_$colorKey" else "N"}_$excludedKey"
+                                "V9_${currentStyle.name}_${currentShape.name}_${if (isThemed) "T_$colorKey" else "N"}_${excludedKey}_$customKey"
                             }
                             
                             val diskCacheFile = File(processedIconCacheDir, "${app.packageName}_$styleSuffix.png")
@@ -772,7 +801,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                             val processedIcon: ImageBitmap = if (customIconFile.exists()) {
                                 BitmapFactory.decodeFile(customIconFile.absolutePath)?.asImageBitmap() 
-                                    ?: iconProcessor.processIcon(app.icon, isThemed && !isExcluded, themeColors, if (isExcluded) IconStyle.STANDARD else currentStyle, currentShape, sizePx)
+                                    ?: iconProcessor.processIcon(app.icon, isThemed && !isExcluded, themeColors, if (isExcluded) IconStyle.STANDARD else currentStyle, currentShape, sizePx, customBgColor = customBg, customFgColor = customFg, customUseOriginal = customOriginal, customUseOriginalBg = customOriginalBg)
                             } else cachedIcon ?: if (diskCacheFile.exists()) {
                                 val bitmap = BitmapFactory.decodeFile(diskCacheFile.absolutePath)
                                 if (bitmap != null) {
@@ -787,10 +816,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                             iconProcessor.processIcon(ipIcon, false, null, IconStyle.STANDARD, currentShape, sizePx, isIconPack = true)
                                         } else {
                                             // Fallback App：套用使用者選定的 Iteration 樣式與主題
-                                            iconProcessor.processIcon(app.icon, isThemed && !isExcluded, themeColors, if (isExcluded) IconStyle.STANDARD else currentStyle, currentShape, sizePx)
+                                            iconProcessor.processIcon(app.icon, isThemed && !isExcluded, themeColors, if (isExcluded) IconStyle.STANDARD else currentStyle, currentShape, sizePx, customBgColor = customBg, customFgColor = customFg, customUseOriginal = customOriginal, customUseOriginalBg = customOriginalBg)
                                         }
                                     } else {
-                                        iconProcessor.processIcon(app.icon, isThemed && !isExcluded, themeColors, if (isExcluded) IconStyle.STANDARD else currentStyle, currentShape, sizePx)
+                                        iconProcessor.processIcon(app.icon, isThemed && !isExcluded, themeColors, if (isExcluded) IconStyle.STANDARD else currentStyle, currentShape, sizePx, customBgColor = customBg, customFgColor = customFg, customUseOriginal = customOriginal, customUseOriginalBg = customOriginalBg)
                                     }
                                     saveIconToDisk(processed, diskCacheFile)
                                     iconCache.put(cacheKey, processed)
@@ -803,10 +832,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                         iconProcessor.processIcon(ipIcon, false, null, IconStyle.STANDARD, currentShape, sizePx, isIconPack = true)
                                     } else {
                                         // Fallback App：套用使用者選定的 Iteration 樣式與主題
-                                        iconProcessor.processIcon(app.icon, isThemed && !isExcluded, themeColors, if (isExcluded) IconStyle.STANDARD else currentStyle, currentShape, sizePx)
+                                        iconProcessor.processIcon(app.icon, isThemed && !isExcluded, themeColors, if (isExcluded) IconStyle.STANDARD else currentStyle, currentShape, sizePx, customBgColor = customBg, customFgColor = customFg, customUseOriginal = customOriginal, customUseOriginalBg = customOriginalBg)
                                     }
                                 } else {
-                                    iconProcessor.processIcon(app.icon, isThemed && !isExcluded, themeColors, if (isExcluded) IconStyle.STANDARD else currentStyle, currentShape, sizePx)
+                                    iconProcessor.processIcon(app.icon, isThemed && !isExcluded, themeColors, if (isExcluded) IconStyle.STANDARD else currentStyle, currentShape, sizePx, customBgColor = customBg, customFgColor = customFg, customUseOriginal = customOriginal, customUseOriginalBg = customOriginalBg)
                                 }
                                 saveIconToDisk(processedIconBitmap, diskCacheFile)
                                 iconCache.put(cacheKey, processedIconBitmap)
@@ -1018,6 +1047,34 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setIconStyle(style: IconStyle) {
         _iconStyle.value = style
         prefs.edit().putString("icon_style", style.name).apply()
+        iconCache.evictAll()
+        loadApps()
+    }
+
+    fun setCustomIconBgColor(color: Int) {
+        _customIconBgColor.value = color
+        prefs.edit().putInt("custom_icon_bg_color", color).apply()
+        iconCache.evictAll()
+        loadApps()
+    }
+
+    fun setCustomIconFgColor(color: Int) {
+        _customIconFgColor.value = color
+        prefs.edit().putInt("custom_icon_fg_color", color).apply()
+        iconCache.evictAll()
+        loadApps()
+    }
+
+    fun setCustomIconUseOriginal(useOriginal: Boolean) {
+        _customIconUseOriginal.value = useOriginal
+        prefs.edit().putBoolean("custom_icon_use_original", useOriginal).apply()
+        iconCache.evictAll()
+        loadApps()
+    }
+
+    fun setCustomIconUseOriginalBg(useOriginalBg: Boolean) {
+        _customIconUseOriginalBg.value = useOriginalBg
+        prefs.edit().putBoolean("custom_icon_use_original_bg", useOriginalBg).apply()
         iconCache.evictAll()
         loadApps()
     }
