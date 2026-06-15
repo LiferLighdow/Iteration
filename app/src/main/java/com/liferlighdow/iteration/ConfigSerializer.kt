@@ -38,12 +38,18 @@ object ConfigSerializer {
             is WidgetType.Calendar -> "Calendar"
             is WidgetType.Photo -> "Photo"
             is WidgetType.Music -> "Music"
+            is WidgetType.Note -> "Note"
             is WidgetType.Stack -> "Stack"
         })
         if (w.type is WidgetType.Calendar) obj.put("is_wide", w.type.isWide)
         if (w.type is WidgetType.Photo) obj.put("is_wide", w.type.isWide)
         if (w.type is WidgetType.Music) obj.put("is_wide", w.type.isWide)
+        if (w.type is WidgetType.Note) {
+            obj.put("is_wide", w.type.isWide)
+            obj.put("note_text", w.type.text)
+        }
         if (w.type is WidgetType.Stack) {
+            obj.put("is_wide", w.type.isWide)
             val children = JSONArray()
             w.type.children.forEach { children.put(serializeWidgetModel(it)) }
             obj.put("children", children)
@@ -68,6 +74,7 @@ object ConfigSerializer {
             "Calendar" -> WidgetType.Calendar(isWide)
             "Photo" -> WidgetType.Photo(isWide)
             "Music" -> WidgetType.Music(isWide)
+            "Note" -> WidgetType.Note(text = obj.optString("note_text", ""), isWide = isWide)
             "Stack" -> {
                 val children = mutableListOf<WidgetModel>()
                 val childrenArr = obj.optJSONArray("children")
@@ -76,7 +83,7 @@ object ConfigSerializer {
                         deserializeWidgetModel(childrenArr.getJSONObject(i))?.let { children.add(it) }
                     }
                 }
-                WidgetType.Stack(children)
+                WidgetType.Stack(children, isWide)
             }
             else -> return null
         }
@@ -130,6 +137,7 @@ object ConfigSerializer {
                         "Calendar" -> WidgetType.Calendar(isWide)
                         "Photo" -> WidgetType.Photo(isWide)
                         "Music" -> WidgetType.Music(isWide)
+                        "Note" -> WidgetType.Note(text = obj.optString("note_text", ""), isWide = isWide)
                         else -> null
                     }
                     if (wType == null) null

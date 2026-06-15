@@ -10,10 +10,12 @@ import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.net.Uri
 import android.os.BatteryManager
+import android.os.Build
 import android.os.Bundle
 import android.provider.AlarmClock
 import android.provider.CalendarContract
 import android.view.WindowManager
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -33,6 +35,7 @@ import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -52,6 +55,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
@@ -63,6 +67,7 @@ import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -72,9 +77,12 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -105,6 +113,9 @@ import androidx.compose.ui.util.fastCoerceAtMost
 import androidx.compose.ui.util.lerp
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.vibrancy
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import java.util.Calendar
 import kotlin.math.*
@@ -154,12 +165,15 @@ fun MinusOnePage(
     widgets: List<WidgetModel>,
     viewModel: MainViewModel,
     backdrop: com.kyant.backdrop.Backdrop? = null,
+    isEditMode: Boolean = false,
     onAddClick: () -> Unit,
     onRemoveWidget: (String) -> Unit,
     onUpdateWidgetMode: (String, WidgetDisplayMode) -> Unit
 ) {
     var isReorderMode by remember { mutableStateOf(false) }
+    val effectiveEditMode = isEditMode || isReorderMode
     var stackToEdit by remember { mutableStateOf<WidgetModel?>(null) }
+    var noteToEdit by remember { mutableStateOf<WidgetModel?>(null) }
     val mContext = LocalContext.current
 
     Column(
@@ -204,7 +218,9 @@ fun MinusOnePage(
             items(widgets, key = { it.id }, span = { widget ->
                 val span = if ((widget.type as? WidgetType.Photo)?.isWide == true ||
                     (widget.type as? WidgetType.Calendar)?.isWide == true ||
-                    (widget.type as? WidgetType.Music)?.isWide == true) 4 else 2
+                    (widget.type as? WidgetType.Music)?.isWide == true ||
+                    (widget.type as? WidgetType.Note)?.isWide == true ||
+                    (widget.type as? WidgetType.Stack)?.isWide == true) 4 else 2
                 GridItemSpan(span)
             }) { widget ->
                 var showContextMenu by remember { mutableStateOf(false) }
@@ -257,17 +273,19 @@ fun MinusOnePage(
                         is WidgetType.Calendar -> CalendarWidget(widget = widget, displayMode = widget.displayMode, backdrop = backdrop)
                         is WidgetType.Photo -> PhotoWidget(widget = widget, viewModel = viewModel)
                         is WidgetType.Music -> MusicWidget(widget = widget, displayMode = widget.displayMode, backdrop = backdrop)
+                        is WidgetType.Note -> NoteWidget(widget = widget, displayMode = widget.displayMode, backdrop = backdrop)
                         is WidgetType.Stack -> StackWidget(widget = widget, viewModel = viewModel, backdrop = backdrop)
                     }
 
-                    if (isReorderMode) {
-                        IconButton(
-                            onClick = { onRemoveWidget(widget.id) },
+                    if (effectiveEditMode) {
+                        Box(
                             modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(4.dp)
-                                .background(Color.Black.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                                .align(Alignment.TopStart)
+                                .offset(x = (-6).dp, y = (-6).dp)
                                 .size(24.dp)
+                                .background(Color.Gray.copy(alpha = 0.9f), CircleShape)
+                                .clickable { onRemoveWidget(widget.id) },
+                            contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 Icons.Default.Close,
@@ -282,28 +300,40 @@ fun MinusOnePage(
                         expanded = showContextMenu,
                         onDismissRequest = { showContextMenu = false }
                     ) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.widget_glass_mode)) },
-                            leadingIcon = { Icon(Icons.Default.BlurOn, null) },
-                            onClick = {
-                                onUpdateWidgetMode(widget.id, WidgetDisplayMode.GLASS)
-                                showContextMenu = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.widget_color_mode)) },
-                            leadingIcon = { Icon(Icons.Default.Palette, null) },
-                            onClick = {
-                                onUpdateWidgetMode(widget.id, WidgetDisplayMode.COLOR)
-                                showContextMenu = false
-                            }
-                        )
+                        if (widget.type !is WidgetType.Stack) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.widget_glass_mode)) },
+                                leadingIcon = { Icon(Icons.Default.BlurOn, null) },
+                                onClick = {
+                                    onUpdateWidgetMode(widget.id, WidgetDisplayMode.GLASS)
+                                    showContextMenu = false
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.widget_color_mode)) },
+                                leadingIcon = { Icon(Icons.Default.Palette, null) },
+                                onClick = {
+                                    onUpdateWidgetMode(widget.id, WidgetDisplayMode.COLOR)
+                                    showContextMenu = false
+                                }
+                            )
+                        }
                         if (widget.type is WidgetType.Stack) {
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.menu_choose_widgets)) },
                                 leadingIcon = { Icon(Icons.Default.Settings, null) },
                                 onClick = {
                                     stackToEdit = widget
+                                    showContextMenu = false
+                                }
+                            )
+                        }
+                        if (widget.type is WidgetType.Note) {
+                            DropdownMenuItem(
+                                text = { Text("Edit Note") },
+                                leadingIcon = { Icon(Icons.Default.Edit, null) },
+                                onClick = {
+                                    noteToEdit = widget
                                     showContextMenu = false
                                 }
                             )
@@ -317,11 +347,21 @@ fun MinusOnePage(
     if (stackToEdit != null) {
         WidgetStackPickerDialog(
             currentChildren = (stackToEdit!!.type as WidgetType.Stack).children,
+            isWide = (stackToEdit!!.type as WidgetType.Stack).isWide,
             viewModel = viewModel,
             onDismiss = { stackToEdit = null },
             onConfirm = { newChildren ->
                 viewModel.updateStackChildren(stackToEdit!!.id, newChildren)
             }
+        )
+    }
+
+    if (noteToEdit != null) {
+        NoteEditDialog(
+            widgetId = noteToEdit!!.id,
+            initialText = (noteToEdit!!.type as WidgetType.Note).text,
+            viewModel = viewModel,
+            onDismiss = { noteToEdit = null }
         )
     }
 }
@@ -380,7 +420,6 @@ fun LauncherScreen(
 
     var showDesktopMenu by remember { mutableStateOf(false) }
     var showGlobalSearch by remember { mutableStateOf(false) }
-    var globalSearchQuery by remember { mutableStateOf("") }
 
     val mContext = LocalContext.current
     
@@ -392,7 +431,7 @@ fun LauncherScreen(
                     if (service != null) {
                         service.lockScreen()
                     } else {
-                        android.widget.Toast.makeText(mContext, mContext.getString(R.string.need_accessibility), android.widget.Toast.LENGTH_SHORT).show()
+                        Toast.makeText(mContext, mContext.getString(R.string.need_accessibility), Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -401,7 +440,7 @@ fun LauncherScreen(
                 try {
                     mContext.startActivity(android.content.Intent(android.provider.Settings.ACTION_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
                 } catch (e: Exception) {
-                    android.widget.Toast.makeText(mContext, "Failed to open settings", android.widget.Toast.LENGTH_SHORT).show()
+                    Toast.makeText(mContext, "Failed to open settings", Toast.LENGTH_SHORT).show()
                 }
             }
             GestureAction.LAUNCH_APP -> {
@@ -423,7 +462,7 @@ fun LauncherScreen(
                 if (service != null) {
                     service.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS)
                 } else {
-                    android.widget.Toast.makeText(mContext, mContext.getString(R.string.need_accessibility), android.widget.Toast.LENGTH_SHORT).show()
+                    Toast.makeText(mContext, mContext.getString(R.string.need_accessibility), Toast.LENGTH_SHORT).show()
                 }
             }
             GestureAction.NONE -> {}
@@ -502,7 +541,7 @@ fun LauncherScreen(
         label = "launcherBlur"
     )
     
-    if (showGlobalSearch) BackHandler { showGlobalSearch = false; globalSearchQuery = "" }
+    if (showGlobalSearch) BackHandler { showGlobalSearch = false }
 
     if (isEditMode) BackHandler { viewModel.setEditMode(false) }
 
@@ -567,35 +606,67 @@ fun LauncherScreen(
             }
         }
 
-        // 1. 唯一的、真實的桌布背景層 (採樣源)
-        // 將其作為 UI 的一部分繪製，確保 Backdrop 庫能捕獲到高清像素進行扭曲。
-        rawWallpaper?.let {
-            Image(
-                bitmap = it,
-                contentDescription = null,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .layerBackdrop(backdrop),
-                contentScale = ContentScale.Crop
-            )
-        }
-
-        // 2. 桌面內容層 (Pager, Icons, Widgets)
+        // 1. 桌面底層 (包含桌布與內容)
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .blur(launcherBlur)
+                .then(
+                    // 只有 Android 12+ 才對整個內容層進行系統級模糊
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        Modifier.blur(launcherBlur)
+                    } else Modifier
+                )
                 .graphicsLayer {
                     scaleX = launcherScale
                     scaleY = launcherScale
                 }
         ) {
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier.fillMaxSize(),
-                userScrollEnabled = draggingApp == null,
-                beyondViewportPageCount = 1
-            ) { pageIndex ->
+            // 1.1 桌布層
+            Box(modifier = Modifier.fillMaxSize()) {
+                rawWallpaper?.let {
+                    Image(
+                        bitmap = it,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .layerBackdrop(backdrop),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+                
+                // Android 12 以下的「高清模糊」替代方案
+                // 透過淡入預先處理好的模糊桌布，避免即時採樣產生的重影
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                    blurredWallpaper?.let {
+                        Image(
+                            bitmap = it,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .alpha((launcherBlur.value / 20f).coerceIn(0f, 1f)),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                }
+            }
+
+            // 1.2 桌面內容 (Pager, Icons, Widgets)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(
+                        // Android 12 以下：透過降低透明度讓內容「融入」模糊背景，模擬模糊感
+                        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                            Modifier.alpha(1f - (launcherBlur.value / 30f).coerceIn(0f, 0.6f))
+                        } else Modifier
+                    )
+            ) {
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize(),
+                    userScrollEnabled = draggingApp == null,
+                    beyondViewportPageCount = 1
+                ) { pageIndex ->
                 // 計算頁面偏移量 (-1.0 到 1.0)
                 val pageOffset = ((pagerState.currentPage - pageIndex) + pagerState.currentPageOffsetFraction)
 
@@ -609,35 +680,6 @@ fun LauncherScreen(
                         .fillMaxSize()
                         .statusBarsPadding()
                         .padding(bottom = if (isLibrary || isMinusOne) 0.dp else 158.dp)
-                        .pointerInput(draggingApp, isEditMode, isLibrary, isMinusOne) {
-                            if (draggingApp == null && !isEditMode && !isLibrary && !isMinusOne) {
-                                awaitPointerEventScope {
-                                    while (true) {
-                                        val down = awaitFirstDown(requireUnconsumed = false)
-                                        var totalDrag = 0f
-                                        while (true) {
-                                            val event = awaitPointerEvent()
-                                            // 如果子元件（如 Widget）已經消費了事件，我們就放棄此次手勢
-                                            if (event.changes.any { it.isConsumed }) break
-                                            
-                                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                                            if (!change.pressed) break
-                                            
-                                            val dragAmount = change.position.y - change.previousPosition.y
-                                            totalDrag += dragAmount
-                                            
-                                            // 提高觸發閾值，且確保是明顯的向下滑動 (正值)
-                                            if (totalDrag > 150f) {
-                                                showGlobalSearch = true
-                                                // 消費此事件，防止進一步觸發
-                                                event.changes.forEach { it.consume() }
-                                                break
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
                 ) {
                     when {
                         isMinusOne -> {
@@ -645,6 +687,7 @@ fun LauncherScreen(
                                 widgets = minusOneWidgets,
                                 viewModel = viewModel,
                                 backdrop = backdrop,
+                                isEditMode = isEditMode,
                                 onAddClick = { showWidgetPicker = true },
                                 onRemoveWidget = { viewModel.removeWidget(it) },
                                 onUpdateWidgetMode = { id, mode -> viewModel.updateWidgetDisplayMode(id, mode) }
@@ -733,6 +776,7 @@ fun LauncherScreen(
                                 },
                                 onBackgroundClick = {
                                     if (isEditMode) viewModel.setEditMode(false)
+                                    else showGlobalSearch = true
                                 },
                                 onBackgroundDoubleTap = {
                                     performGestureAction(doubleTapAction, doubleTapApp)
@@ -752,108 +796,122 @@ fun LauncherScreen(
                             )
                         }
                         else -> {
-                AppLibraryPage(
-                    allAppsFlat,
-                    isLiquidGlass = isLiquidGlassEnabled && isLiquidGlassAppLibraryFolderEnabled,
-                    isSearchLiquidGlass = isLiquidGlassEnabled && isLiquidGlassAppLibrarySearchEnabled,
-                    backdrop = backdrop,
-                    iconShape = iconShape,
-                    libraryShape = libraryShape,
-                    blurRadius = blurRadius,
-                    refractionHeight = refractionHeight,
-                    refractionAmount = refractionAmount,
-                    chromaticAberration = chromaticAberration,
-                    onAppClick = { pkg ->
-                        val app = allAppsFlat.find { it.packageName == pkg }
-                        if (app?.isFolder == true) folderToOpenId = app.uniqueId else onAppClick(pkg)
-                    },
-                    onDragStart = { app, offset -> draggingApp = app; touchPosition = offset; dragOffset = Offset.Zero },
-                    onDrag = { delta -> dragOffset += delta },
-                    onDragEnd = {
-                        if (draggingApp != null) viewModel.handleAppDrop(draggingApp!!.packageName, null, pagerState.currentPage - 1, true, MainViewModel.DropType.REORDER)
-                        draggingApp = null; rawHoveredKey = null; confirmedHoveredKey = null
-                    }
-                )
-                        }
-                    }
-                }
-            }
-
-            AnimatedVisibility(visible = isEditMode, enter = fadeIn() + slideInVertically(), exit = fadeOut() + slideOutVertically()) {
-                Box(modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(16.dp), contentAlignment = Alignment.TopEnd) {
-                    Button(onClick = { viewModel.setEditMode(false) }) { Text(stringResource(R.string.done)) }
-                }
-            }
-
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
-                BackHandler(enabled = (isAppLibraryPage || isMinusOnePage) && !showGlobalSearch) {
-                    scope.launch { pagerState.animateScrollToPage(1) }
-                }
-                AnimatedVisibility(
-                    visible = showDockAndIndicator,
-                    enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                    exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(contentAlignment = Alignment.Center) {
-                            androidx.compose.animation.AnimatedContent(
-                                targetState = showPillTemporarily,
-                                transitionSpec = {
-                                    (fadeIn() + scaleIn(initialScale = 0.8f)).togetherWith(fadeOut() + scaleOut(targetScale = 0.8f))
+                            AppLibraryPage(
+                                allAppsFlat,
+                                isLiquidGlass = isLiquidGlassEnabled && isLiquidGlassAppLibraryFolderEnabled,
+                                isSearchLiquidGlass = isLiquidGlassEnabled && isLiquidGlassAppLibrarySearchEnabled,
+                                backdrop = backdrop,
+                                iconShape = iconShape,
+                                libraryShape = libraryShape,
+                                blurRadius = blurRadius,
+                                refractionHeight = refractionHeight,
+                                refractionAmount = refractionAmount,
+                                chromaticAberration = chromaticAberration,
+                                onAppClick = { pkg ->
+                                    val app = allAppsFlat.find { it.packageName == pkg }
+                                    if (app?.isFolder == true) folderToOpenId = app.uniqueId else onAppClick(pkg)
                                 },
-                                label = "PillVsDots"
-                            ) { isPill ->
-                                if (isPill) {
-                                    SearchPill(
-                                        isLiquidGlass = isLiquidGlassEnabled && isLiquidGlassDockEnabled,
-                                        backdrop = backdrop,
-                                        blurRadius = blurRadius,
-                                        refractionHeight = refractionHeight,
-                                        refractionAmount = refractionAmount,
-                                        chromaticAberration = chromaticAberration,
-                                        onClick = { showGlobalSearch = true }
-                                    )
-                                } else {
-                                    PageIndicator(pageCount = desktopPageCount, currentPage = pagerState.currentPage - 1)
+                                onDragStart = { app, offset -> draggingApp = app; touchPosition = offset; dragOffset = Offset.Zero },
+                                onDrag = { delta -> dragOffset += delta },
+                                onDragEnd = {
+                                    if (draggingApp != null) viewModel.handleAppDrop(draggingApp!!.packageName, null, pagerState.currentPage - 1, true, MainViewModel.DropType.REORDER)
+                                    draggingApp = null; rawHoveredKey = null; confirmedHoveredKey = null
                                 }
-                            }
-                        }
-                        
-                        Spacer(modifier = Modifier.height(10.dp)) // 增加點點與 Dock 之間的間距
-                        Dock(
-                            apps = dockApps,
-                            iconSize = iconSize,
-                            isLiquidGlass = isLiquidGlassEnabled && isLiquidGlassDockEnabled,
-                            backdrop = backdrop,
-                            dockStyle = dockStyle,
-                            iconShape = iconShape,
-                            blurRadius = blurRadius,
-                            refractionHeight = refractionHeight,
-                            refractionAmount = refractionAmount,
-                            chromaticAberration = chromaticAberration,
-                            isEditMode = isEditMode,
-                            onAppClick = { pkg -> if (pkg == myPackageName) onSettingsClick() else onAppClick(pkg) },
-                            onLongClick = { showDockPicker = it },
-                            onDeleteClick = { app ->
-                                try {
-                                    val intent = Intent(Intent.ACTION_DELETE).apply {
-                                        data = Uri.fromParts("package", app.packageName, null)
-                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                    }
-                                    mContext.startActivity(intent)
-                                } catch (e: Exception) {
-                                    android.util.Log.e("Iteration", "Uninstall failed", e)
-                                }
-                            }
-                        )
-                        // 在 Classic 模式下不需要額外的底部 Spacer，因為 Dock 已經填滿底部
-                        if (dockStyle == DockStyle.MODERN) {
-                            Spacer(modifier = Modifier.height(2.dp))
+                            )
                         }
                     }
                 }
             }
         }
+
+        AnimatedVisibility(
+            visible = isEditMode,
+            enter = fadeIn() + slideInVertically(),
+            exit = fadeOut() + slideOutVertically()
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(16.dp),
+                contentAlignment = Alignment.TopEnd
+            ) {
+                        Button(onClick = { viewModel.setEditMode(false) }) { Text(stringResource(R.string.done)) }
+                    }
+                }
+
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.BottomCenter
+                ) {
+                    BackHandler(enabled = (isAppLibraryPage || isMinusOnePage) && !showGlobalSearch) {
+                        scope.launch { pagerState.animateScrollToPage(1) }
+                    }
+                    AnimatedVisibility(
+                        visible = showDockAndIndicator,
+                        enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                        exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(contentAlignment = Alignment.Center) {
+                                androidx.compose.animation.AnimatedContent(
+                                    targetState = showPillTemporarily,
+                                    transitionSpec = {
+                                        (fadeIn() + scaleIn(initialScale = 0.8f)).togetherWith(fadeOut() + scaleOut(targetScale = 0.8f))
+                                    },
+                                    label = "PillVsDots"
+                                ) { isPill ->
+                                    if (isPill) {
+                                        SearchPill(
+                                            isLiquidGlass = isLiquidGlassEnabled && isLiquidGlassDockEnabled,
+                                            backdrop = backdrop,
+                                            blurRadius = blurRadius,
+                                            refractionHeight = refractionHeight,
+                                            refractionAmount = refractionAmount,
+                                            chromaticAberration = chromaticAberration,
+                                            onClick = { showGlobalSearch = true }
+                                        )
+                                    } else {
+                                        PageIndicator(pageCount = desktopPageCount, currentPage = pagerState.currentPage - 1)
+                                    }
+                                }
+                            }
+                            
+                            Spacer(modifier = Modifier.height(10.dp)) // 增加點點與 Dock 之間的間距
+                            Dock(
+                                apps = dockApps,
+                                iconSize = iconSize,
+                                isLiquidGlass = isLiquidGlassEnabled && isLiquidGlassDockEnabled,
+                                backdrop = backdrop,
+                                dockStyle = dockStyle,
+                                iconShape = iconShape,
+                                blurRadius = blurRadius,
+                                refractionHeight = refractionHeight,
+                                refractionAmount = refractionAmount,
+                                chromaticAberration = chromaticAberration,
+                                isEditMode = isEditMode,
+                                onAppClick = { pkg -> if (pkg == myPackageName) onSettingsClick() else onAppClick(pkg) },
+                                onLongClick = { showDockPicker = it },
+                                onDeleteClick = { app ->
+                                    try {
+                                        val intent = Intent(Intent.ACTION_DELETE).apply {
+                                            data = Uri.fromParts("package", app.packageName, null)
+                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                        }
+                                        mContext.startActivity(intent)
+                                    } catch (e: Exception) {
+                                        android.util.Log.e("Iteration", "Uninstall failed", e)
+                                    }
+                                }
+                            )
+                            // 在 Classic 模式下不需要額外的底部 Spacer，因為 Dock 已經填滿底部
+                            if (dockStyle == DockStyle.MODERN) {
+                                Spacer(modifier = Modifier.height(2.dp))
+                            }
+                        }
+                    }
+                }
+            }
 
         draggingApp?.let { app ->
             Box(
@@ -863,9 +921,25 @@ fun LauncherScreen(
                     .graphicsLayer(alpha = 0.8f, scaleX = 1.15f, scaleY = 1.15f)
             ) { AppItem(app = app, iconSize = iconSize) }
         }
+
+        GlobalSearchOverlay(
+            isVisible = showGlobalSearch,
+            onDismiss = { showGlobalSearch = false },
+            allApps = allAppsFlat,
+            suggestedApps = viewModel.suggestedApps.collectAsState().value,
+            onAppClick = onAppClick,
+            iconShape = iconShape,
+            isLiquidGlassEnabled = isLiquidGlassEnabled,
+            isLiquidGlassGlobalSearchEnabled = isLiquidGlassGlobalSearchEnabled,
+            backdrop = backdrop,
+            blurRadius = blurRadius,
+            refractionHeight = refractionHeight,
+            refractionAmount = refractionAmount,
+            chromaticAberration = chromaticAberration
+        )
     }
 
-    val wallpaperLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    val wallpaperLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
             val context = mContext
             scope.launch(Dispatchers.IO) {
@@ -1010,6 +1084,14 @@ fun LauncherScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .then(
+                    // Android 12 以下棄用 drawBackdrop 以修復重影問題
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        Modifier // 12+ 已經由底層 Box 統一模糊
+                    } else {
+                        Modifier.background(Color.Black.copy(alpha = 0.2f))
+                    }
+                )
                 .background(Color.Black.copy(alpha = 0.2f))
                 .clickable { folderToOpenId = null },
             contentAlignment = Alignment.Center
@@ -1123,7 +1205,7 @@ fun LauncherScreen(
                                                         leadingIcon = { Icon(Icons.Default.DeleteForever, null) },
                                                         onClick = {
                                                             android.util.Log.d("Iteration", "Uninstalling: ${app.packageName}")
-                                                            android.widget.Toast.makeText(mContext, "Uninstalling ${app.label}...", android.widget.Toast.LENGTH_SHORT).show()
+                                                            Toast.makeText(mContext, "Uninstalling ${app.label}...", Toast.LENGTH_SHORT).show()
                                                             try {
                                                                 val intent = Intent(Intent.ACTION_DELETE).apply {
                                                                     data = Uri.fromParts("package", app.packageName, null)
@@ -1158,120 +1240,6 @@ fun LauncherScreen(
         }
     }
 
-    AnimatedVisibility(
-        visible = showGlobalSearch,
-        enter = slideInVertically(
-            initialOffsetY = { -it },
-            animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-        ) + fadeIn(),
-        exit = slideOutVertically(
-            targetOffsetY = { -it },
-            animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
-        ) + fadeOut()
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.3f)) // 降低遮罩濃度，讓模糊後的顏色透出來
-                .clickable { showGlobalSearch = false; globalSearchQuery = "" }
-                .statusBarsPadding()
-        ) {
-            Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp).clickable(enabled = false) { }) {
-                OutlinedTextField(
-                    value = globalSearchQuery, onValueChange = { globalSearchQuery = it }, 
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 20.dp)
-                        .liquidGlass(
-                            enabled = isLiquidGlassEnabled && isLiquidGlassGlobalSearchEnabled,
-                            backdrop = backdrop,
-                            cornerRadius = 28.dp,
-                            blurRadius = blurRadius,
-                            refractionHeight = refractionHeight,
-                            refractionAmount = refractionAmount,
-                            chromaticAberration = chromaticAberration
-                        ),
-                    placeholder = { Text(stringResource(R.string.search_hint), color = Color.White.copy(alpha = 0.6f)) }, 
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.White) },
-                    trailingIcon = {
-                        if (globalSearchQuery.isNotEmpty()) {
-                            IconButton(onClick = { globalSearchQuery = "" }) {
-                                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.clear), tint = Color.White)
-                            }
-                        }
-                    },
-                    shape = RoundedCornerShape(28.dp), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedContainerColor = Color.White.copy(alpha = 0.2f), unfocusedContainerColor = Color.White.copy(alpha = 0.2f), focusedBorderColor = Color.White.copy(alpha = 0.5f), unfocusedBorderColor = Color.Transparent),
-                    singleLine = true
-                )
-                val filteredResults = remember(globalSearchQuery, allAppsFlat) {
-                    val base = allAppsFlat.filter { !it.isHidden }
-                    if (globalSearchQuery.isBlank()) base.take(8)
-                    else base.filter { it.label.contains(globalSearchQuery, ignoreCase = true) }
-                }
-                LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (globalSearchQuery.isBlank() && filteredResults.isNotEmpty()) {
-                        item { Text(stringResource(R.string.app_suggestions), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(vertical = 8.dp)) }
-                    }
-                    items(filteredResults, key = { it.uniqueId }) { app ->
-                        ListItem(
-                            headlineContent = { Text(app.label, color = Color.White) }, 
-                            leadingContent = { 
-                                if (app.processedIcon != null) {
-                                    val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(48.dp * 0.238f)
-                                    Image(bitmap = app.processedIcon, contentDescription = null, modifier = Modifier.size(48.dp).clip(shape).background(Color.White)) 
-                                }
-                            },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent), 
-                            modifier = Modifier.clickable { onAppClick(app.packageName); showGlobalSearch = false }
-                        )
-                    }
-
-                    if (globalSearchQuery.isNotBlank()) {
-                        item {
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color.White.copy(alpha = 0.2f))
-                            Text(stringResource(R.string.more_searches), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(bottom = 8.dp))
-                        }
-                        item {
-                            ListItem(
-                                headlineContent = { Text(stringResource(R.string.search_web), color = Color.White) },
-                                leadingContent = { Icon(Icons.Default.Language, contentDescription = null, tint = Color.White) },
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                modifier = Modifier.clickable {
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=${globalSearchQuery}"))
-                                    mContext.startActivity(intent)
-                                    showGlobalSearch = false
-                                }
-                            )
-                        }
-                        item {
-                            ListItem(
-                                headlineContent = { Text(stringResource(R.string.search_store), color = Color.White) },
-                                leadingContent = { Icon(Icons.Default.Shop, contentDescription = null, tint = Color.White) },
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                modifier = Modifier.clickable {
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("market://search?q=${globalSearchQuery}"))
-                                    mContext.startActivity(intent)
-                                    showGlobalSearch = false
-                                }
-                            )
-                        }
-                        item {
-                            ListItem(
-                                headlineContent = { Text(stringResource(R.string.search_maps), color = Color.White) },
-                                leadingContent = { Icon(Icons.Default.Place, contentDescription = null, tint = Color.White) },
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                modifier = Modifier.clickable {
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${globalSearchQuery}"))
-                                    mContext.startActivity(intent)
-                                    showGlobalSearch = false
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
 }
 
 @Composable
@@ -1305,6 +1273,7 @@ fun AppGrid(
 ) {
     val draggingUniqueId = draggingApp?.uniqueId
     var stackToEdit by remember { mutableStateOf<WidgetModel?>(null) }
+    var noteToEdit by remember { mutableStateOf<WidgetModel?>(null) }
 
     val displayApps = remember(apps, confirmedHoveredSlotIdx, draggingUniqueId, confirmedIntent) {
         val list = apps.toMutableList()
@@ -1362,11 +1331,11 @@ fun AppGrid(
                                                 hasTriggered = true
                                             }
                                         } else if (pointerCount == 1) {
-                                            // 單指門檻提高到 200f
-                                            if (totalDragY < -200f) {
+                                            // 單指門檻提高
+                                            if (totalDragY < -360f) {
                                                 onBackgroundSwipeUp()
                                                 hasTriggered = true
-                                            } else if (totalDragY > 200f) {
+                                            } else if (totalDragY > 360f) {
                                                 onBackgroundSwipeDown()
                                                 hasTriggered = true
                                             }
@@ -1405,7 +1374,8 @@ fun AppGrid(
                     is WidgetType.Calendar -> { w = if (type.isWide) 4 else 2; h = 2 }
                     is WidgetType.Photo -> { w = if (type.isWide) 4 else 2; h = 2 }
                     is WidgetType.Music -> { w = if (type.isWide) 4 else 2; h = 2 }
-                    is WidgetType.Stack -> { w = 2; h = 2 }
+                    is WidgetType.Note -> { w = if (type.isWide) 4 else 2; h = 2 }
+                    is WidgetType.Stack -> { w = if (type.isWide) 4 else 2; h = 2 }
                     else -> { w = 1; h = 1 }
                 }
             } else {
@@ -1490,11 +1460,7 @@ fun AppGrid(
                             } else {
                                 detectTapGestures(
                                     onLongPress = {
-                                        if (app.widget?.type is WidgetType.Stack) {
-                                            stackToEdit = app.widget
-                                        } else {
-                                            showContextMenu = true
-                                        }
+                                        showContextMenu = true
                                     },
                                     onTap = { if (!app.isWidget) onAppClick(app, lastPosition.pos) }
                                 )
@@ -1519,8 +1485,29 @@ fun AppGrid(
                                         is WidgetType.Calendar -> CalendarWidget(widget = widget, displayMode = widget.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop)
                                         is WidgetType.Photo -> PhotoWidget(widget = widget, viewModel = viewModel, modifier = Modifier.fillMaxSize())
                                         is WidgetType.Music -> MusicWidget(widget = widget, displayMode = widget.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop)
+                                        is WidgetType.Note -> NoteWidget(widget = widget, displayMode = widget.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop)
                                         is WidgetType.Stack -> StackWidget(widget = widget, viewModel = viewModel, modifier = Modifier.fillMaxSize(), backdrop = backdrop)
                                         else -> {}
+                                    }
+                                }
+
+                                // 編輯模式下的叉叉按鈕 (Widget)
+                                if (isEditMode) {
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.TopStart)
+                                            .offset(x = (-8).dp, y = (-8).dp)
+                                            .size(24.dp)
+                                            .background(Color.Gray.copy(alpha = 0.9f), CircleShape)
+                                            .clickable { viewModel.removeAppFromHome(app.uniqueId) },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Close,
+                                            contentDescription = "Remove",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(16.dp)
+                                        )
                                     }
                                 }
                             }
@@ -1535,14 +1522,26 @@ fun AppGrid(
                             )
 
                             DropdownMenu(expanded = showContextMenu, onDismissRequest = { showContextMenu = false }) {
-                                DropdownMenuItem(text = { Text(stringResource(R.string.widget_glass_mode)) }, leadingIcon = { Icon(Icons.Default.BlurOn, null) }, onClick = { app.widget?.let { viewModel.updateWidgetDisplayMode(it.id, WidgetDisplayMode.GLASS) }; showContextMenu = false })
-                                DropdownMenuItem(text = { Text(stringResource(R.string.widget_color_mode)) }, leadingIcon = { Icon(Icons.Default.Palette, null) }, onClick = { app.widget?.let { viewModel.updateWidgetDisplayMode(it.id, WidgetDisplayMode.COLOR) }; showContextMenu = false })
+                                if (app.widget?.type !is WidgetType.Stack) {
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.widget_glass_mode)) }, leadingIcon = { Icon(Icons.Default.BlurOn, null) }, onClick = { app.widget?.let { viewModel.updateWidgetDisplayMode(it.id, WidgetDisplayMode.GLASS) }; showContextMenu = false })
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.widget_color_mode)) }, leadingIcon = { Icon(Icons.Default.Palette, null) }, onClick = { app.widget?.let { viewModel.updateWidgetDisplayMode(it.id, WidgetDisplayMode.COLOR) }; showContextMenu = false })
+                                }
                                 if (app.widget?.type is WidgetType.Stack) {
                                     DropdownMenuItem(
                                         text = { Text(stringResource(R.string.menu_choose_widgets)) },
                                         leadingIcon = { Icon(Icons.Default.Settings, null) },
                                         onClick = {
                                             stackToEdit = app.widget
+                                            showContextMenu = false
+                                        }
+                                    )
+                                }
+                                if (app.widget?.type is WidgetType.Note) {
+                                    DropdownMenuItem(
+                                        text = { Text("Edit Note") },
+                                        leadingIcon = { Icon(Icons.Default.Edit, null) },
+                                        onClick = {
+                                            noteToEdit = app.widget
                                             showContextMenu = false
                                         }
                                     )
@@ -1594,7 +1593,7 @@ fun AppGrid(
                                         leadingIcon = { Icon(Icons.Default.DeleteForever, null) },
                                         onClick = {
                                             android.util.Log.d("Iteration", "Uninstalling: ${app.packageName}")
-                                            android.widget.Toast.makeText(mContext, "Uninstalling ${app.label}...", android.widget.Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(mContext, "Uninstalling ${app.label}...", Toast.LENGTH_SHORT).show()
                                             try {
                                                 val intent = Intent(Intent.ACTION_DELETE).apply {
                                                     data = Uri.fromParts("package", app.packageName, null)
@@ -1619,11 +1618,21 @@ fun AppGrid(
     if (stackToEdit != null) {
         WidgetStackPickerDialog(
             currentChildren = (stackToEdit!!.type as WidgetType.Stack).children,
+            isWide = (stackToEdit!!.type as WidgetType.Stack).isWide,
             viewModel = viewModel,
             onDismiss = { stackToEdit = null },
             onConfirm = { newChildren ->
                 viewModel.updateStackChildren(stackToEdit!!.id, newChildren)
             }
+        )
+    }
+
+    if (noteToEdit != null) {
+        NoteEditDialog(
+            widgetId = noteToEdit!!.id,
+            initialText = (noteToEdit!!.type as WidgetType.Note).text,
+            viewModel = viewModel,
+            onDismiss = { noteToEdit = null }
         )
     }
 }
@@ -1915,7 +1924,7 @@ fun QuickEditDialog(app: AppModel, viewModel: MainViewModel, iconShape: IconShap
     var pickedImageUri by remember { mutableStateOf<Uri?>(null) }
     val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(18.dp)
 
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         pickedImageUri = uri
     }
 
@@ -2117,89 +2126,82 @@ fun AppLibraryPage(
             targetState = isLibraryView,
             transitionSpec = {
                 if (targetState) {
-                    // 進入詳細列表：從右側滑入並淡入
                     (slideInHorizontally { it } + fadeIn()).togetherWith(fadeOut())
                 } else {
-                    // 返回分頁網格：向右側滑出並淡出
                     fadeIn().togetherWith(slideOutHorizontally { it } + fadeOut())
                 }
             },
             label = "LibraryTransition"
         ) { targetIsLibraryView ->
             if (targetIsLibraryView) {
-                // 安全檢查：如果處於隱藏分類但未解鎖，顯示空列表
                 val appsToShow = if (selectedCategory == "Hidden Apps" && !isHiddenUnlocked) emptyList() else filteredApps
-
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(appsToShow, key = { it.uniqueId }) { app ->
-                        val lastPos = remember { object { var pos = Offset.Zero } }
-                        var showMenu by remember { mutableStateOf(false) }
-
-                        Box(modifier = Modifier.fillMaxWidth().onGloballyPositioned { lastPos.pos = it.positionInRoot() }) {
-                            ListItem(
-                                headlineContent = { Text(app.label, color = Color.White) },
-                                leadingContent = {
-                                    if (app.processedIcon != null) {
-                                        val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(40.dp * 0.238f)
-                                        Image(bitmap = app.processedIcon, contentDescription = null, modifier = Modifier.size(40.dp).clip(shape).background(Color.White))
-                                    }
-                                },
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                modifier = Modifier.combinedClickable(
-                                    onClick = { onAppClick(app.packageName) },
-                                    onLongClick = { showMenu = true }
-                                )
-                            )
-
-                            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.menu_add_to_home)) },
-                                    leadingIcon = { Icon(Icons.Default.Add, null) },
-                                    onClick = { viewModel.addAppToHome(app.packageName); showMenu = false }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.rename)) },
-                                    leadingIcon = { Icon(Icons.Default.Edit, null) },
-                                    onClick = { appToRename = app; newLabelText = app.label; showMenu = false }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(if (app.isHidden) "Unhide" else "Hide") },
-                                    leadingIcon = { Icon(if (app.isHidden) Icons.Default.Visibility else Icons.Default.VisibilityOff, null) },
-                                    onClick = { viewModel.toggleHiddenApp(app.packageName); showMenu = false }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("App Info") },
-                                    leadingIcon = { Icon(Icons.Default.Info, null) },
-                                    onClick = {
-                                        val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                            data = Uri.parse("package:${app.packageName}")
-                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            viewModel.setSearchQuery("")
+                            focusManager.clearFocus()
+                            isSearchFocused = false
+                        }
+                ) {
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        items(appsToShow, key = { it.uniqueId }) { app ->
+                            val lastPos = remember { object { var pos = Offset.Zero } }
+                            var showMenu by remember { mutableStateOf(false) }
+                            Box(modifier = Modifier.fillMaxWidth().onGloballyPositioned { lastPos.pos = it.positionInRoot() }) {
+                                ListItem(
+                                    headlineContent = { Text(app.label, color = Color.White) },
+                                    leadingContent = {
+                                        if (app.processedIcon != null) {
+                                            val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(40.dp * 0.238f)
+                                            Image(bitmap = app.processedIcon, contentDescription = null, modifier = Modifier.size(40.dp).clip(shape).background(Color.White))
                                         }
-                                        mContext.startActivity(intent)
-                                        showMenu = false
-                                    }
+                                    },
+                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                    modifier = Modifier.combinedClickable(
+                                        onClick = { onAppClick(app.packageName) },
+                                        onLongClick = { showMenu = true }
+                                    )
                                 )
-                                HorizontalDivider()
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.menu_uninstall)) },
-                                    leadingIcon = { Icon(Icons.Default.Delete, null) },
-                                    onClick = {
-                                        android.util.Log.d("Iteration", "Uninstalling: ${app.packageName}")
-                                        android.widget.Toast.makeText(mContext, "Uninstalling ${app.label}...", android.widget.Toast.LENGTH_SHORT).show()
-                                        try {
-                                            val intent = Intent(Intent.ACTION_DELETE).apply {
-                                                data = Uri.fromParts("package", app.packageName, null)
+                                DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.menu_add_to_home)) }, leadingIcon = { Icon(Icons.Default.Add, null) }, onClick = { viewModel.addAppToHome(app.packageName); showMenu = false })
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.rename)) }, leadingIcon = { Icon(Icons.Default.Edit, null) }, onClick = { appToRename = app; newLabelText = app.label; showMenu = false })
+                                    DropdownMenuItem(text = { Text(if (app.isHidden) "Unhide" else "Hide") }, leadingIcon = { Icon(if (app.isHidden) Icons.Default.Visibility else Icons.Default.VisibilityOff, null) }, onClick = { viewModel.toggleHiddenApp(app.packageName); showMenu = false })
+                                    DropdownMenuItem(
+                                        text = { Text("App Info") },
+                                        leadingIcon = { Icon(Icons.Default.Info, null) },
+                                        onClick = {
+                                            val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                                data = Uri.parse("package:${app.packageName}")
                                                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
                                             }
                                             mContext.startActivity(intent)
-                                        } catch (e: Exception) {
-                                            android.util.Log.e("Iteration", "Uninstall failed", e)
+                                            showMenu = false
                                         }
-                                        showMenu = false
-                                    }
-                                )
+                                    )
+                                    HorizontalDivider()
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.menu_uninstall)) },
+                                        leadingIcon = { Icon(Icons.Default.Delete, null) },
+                                        onClick = {
+                                            try {
+                                                val intent = Intent(Intent.ACTION_DELETE).apply {
+                                                    data = Uri.fromParts("package", app.packageName, null)
+                                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                                }
+                                                mContext.startActivity(intent)
+                                            } catch (e: Exception) {
+                                                android.util.Log.e("Iteration", "Uninstall failed", e)
+                                            }
+                                            showMenu = false
+                                        }
+                                    )
+                                }
+                                HorizontalDivider(modifier = Modifier.padding(start = 64.dp).align(Alignment.BottomCenter), thickness = 0.5.dp, color = Color.White.copy(alpha = 0.2f))
                             }
-                            HorizontalDivider(modifier = Modifier.padding(start = 64.dp).align(Alignment.BottomCenter), thickness = 0.5.dp, color = Color.White.copy(alpha = 0.2f))
                         }
                     }
                 }
@@ -2261,7 +2263,6 @@ fun AppLibraryFolder(
     isLocked: Boolean = false
 ) {
     val viewModel: MainViewModel = viewModel()
-    val mContext = LocalContext.current
     
     // 根據形狀決定裁切方式：只有圓形才強制裁切（防止脫框），Default 則不裁切（確保 72dp 圖示角角完整）
     val folderShape = if (libraryShape == IconShape.CIRCLE) CircleShape else null
@@ -2403,7 +2404,7 @@ fun LibraryItemWithMenu(
                 leadingIcon = { Icon(Icons.Default.Delete, null) },
                 onClick = {
                     android.util.Log.d("Iteration", "Uninstalling: ${app.packageName}")
-                    android.widget.Toast.makeText(mContext, "Uninstalling ${app.label}...", android.widget.Toast.LENGTH_SHORT).show()
+                    Toast.makeText(mContext, "Uninstalling ${app.label}...", Toast.LENGTH_SHORT).show()
                     try {
                         val intent = Intent(Intent.ACTION_DELETE).apply {
                             data = Uri.fromParts("package", app.packageName, null)
@@ -2443,5 +2444,3 @@ fun LibraryItemWithMenu(
         )
     }
 }
-
-

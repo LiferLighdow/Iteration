@@ -443,7 +443,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             is WidgetType.Calendar -> "Calendar"
             is WidgetType.Photo -> "Photo"
             is WidgetType.Music -> "Music"
-            is WidgetType.Stack -> "Stack"
+            is WidgetType.Note -> "Note"
+            is WidgetType.Stack -> if (type.isWide) "Wide Widget Stacker" else "Stack"
         }
 
         if (pageIndex == -1) {
@@ -925,20 +926,43 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun updateStackChildren(stackId: String, children: List<WidgetModel>) {
         val currentPages = _pages.value.map { page ->
             page.map { item ->
-                if (item.widget?.id == stackId) {
-                    item.copy(widget = item.widget.copy(type = WidgetType.Stack(children)))
+                if (item.widget?.id == stackId && item.widget.type is WidgetType.Stack) {
+                    val isWide = item.widget.type.isWide
+                    item.copy(widget = item.widget.copy(type = WidgetType.Stack(children, isWide)))
                 } else item
             }
         }
         _pages.value = currentPages
         
         val newMinusOne = _minusOneWidgets.value.map { widget ->
-            if (widget.id == stackId) {
-                widget.copy(type = WidgetType.Stack(children))
+            if (widget.id == stackId && widget.type is WidgetType.Stack) {
+                val isWide = widget.type.isWide
+                widget.copy(type = WidgetType.Stack(children, isWide))
             } else widget
         }
         _minusOneWidgets.value = newMinusOne
         
+        saveLayout()
+        saveWidgets(newMinusOne)
+    }
+
+    fun updateNoteText(widgetId: String, text: String) {
+        val currentPages = _pages.value.map { page ->
+            page.map { item ->
+                if (item.widget?.id == widgetId && item.widget.type is WidgetType.Note) {
+                    item.copy(widget = item.widget.copy(type = item.widget.type.copy(text = text)))
+                } else item
+            }
+        }
+        _pages.value = currentPages
+
+        val newMinusOne = _minusOneWidgets.value.map { widget ->
+            if (widget.id == widgetId && widget.type is WidgetType.Note) {
+                widget.copy(type = widget.type.copy(text = text))
+            } else widget
+        }
+        _minusOneWidgets.value = newMinusOne
+
         saveLayout()
         saveWidgets(newMinusOne)
     }
@@ -1343,7 +1367,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             .filter { it.size == 2 }
             .map { it[0] to (it[1].toIntOrNull() ?: 0) }
             .sortedByDescending { it.second }
-            .take(4)
+            .take(8)
             .map { it.first }
             .toList()
 

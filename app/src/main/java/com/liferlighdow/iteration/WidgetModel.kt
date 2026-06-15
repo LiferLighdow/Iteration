@@ -74,7 +74,8 @@ sealed class WidgetType {
     data class Calendar(val isWide: Boolean = false) : WidgetType()
     data class Photo(val isWide: Boolean = false) : WidgetType()
     data class Music(val isWide: Boolean = false) : WidgetType()
-    data class Stack(val children: List<WidgetModel> = emptyList()) : WidgetType()
+    data class Note(val text: String = "", val isWide: Boolean = false) : WidgetType()
+    data class Stack(val children: List<WidgetModel> = emptyList(), val isWide: Boolean = false) : WidgetType()
 }
 
 enum class WidgetDisplayMode {
@@ -339,11 +340,12 @@ fun StackWidget(
     modifier: Modifier = Modifier,
     backdrop: com.kyant.backdrop.Backdrop? = null
 ) {
+    val isWide = (widget.type as? WidgetType.Stack)?.isWide ?: false
     val stackItems = (widget.type as? WidgetType.Stack)?.children ?: emptyList()
     val pagerState = rememberPagerState { stackItems.size.coerceAtLeast(1) }
 
     Card(
-        modifier = modifier.aspectRatio(1f),
+        modifier = modifier.aspectRatio(if (isWide) 2.1f else 1f),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.1f))
     ) {
@@ -362,8 +364,9 @@ fun StackWidget(
                         is WidgetType.Battery -> BatteryWidget(displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop)
                         is WidgetType.Clock -> AnalogClockWidget(displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop)
                         is WidgetType.Calendar -> CalendarWidget(widget = item, displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop)
-                        is WidgetType.Photo -> PhotoWidget(widget = item, viewModel = viewModel, modifier = Modifier.fillMaxSize())
+                        is WidgetType.Photo -> PhotoWidget(widget = item, viewModel = viewModel, modifier = Modifier.fillMaxSize(), enableClick = false)
                         is WidgetType.Music -> MusicWidget(widget = item, displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop)
+                        is WidgetType.Note -> NoteWidget(widget = item, displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop)
                         else -> {}
                     }
                 }
@@ -375,6 +378,7 @@ fun StackWidget(
 @Composable
 fun WidgetStackPickerDialog(
     currentChildren: List<WidgetModel>,
+    isWide: Boolean,
     viewModel: MainViewModel,
     onDismiss: () -> Unit,
     onConfirm: (List<WidgetModel>) -> Unit
@@ -388,6 +392,8 @@ fun WidgetStackPickerDialog(
     val photoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let { cropUri = it }
     }
+
+    var noteToEditInStack by remember { mutableStateOf<Pair<Int, WidgetModel>?>(null) }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -458,6 +464,16 @@ fun WidgetStackPickerDialog(
                                                     }
                                                 )
                                             }
+
+                                            if (item.type is WidgetType.Note) {
+                                                DropdownMenuItem(
+                                                    text = { Text("Edit Note") },
+                                                    onClick = {
+                                                        noteToEditInStack = index to item
+                                                        showItemMenu = false
+                                                    }
+                                                )
+                                            }
                                             HorizontalDivider()
                                             DropdownMenuItem(
                                                 text = { Text("Remove", color = MaterialTheme.colorScheme.error) },
@@ -481,13 +497,24 @@ fun WidgetStackPickerDialog(
                         Triple(WidgetType.Clock, "Clock", Icons.Default.Schedule),
                         Triple(WidgetType.Calendar(false), "Calendar", Icons.Default.CalendarMonth),
                         Triple(WidgetType.Music(false), "Music Player", Icons.Default.MusicNote),
-                        Triple(WidgetType.Photo(false), "Photo", Icons.Default.AddAPhoto)
+                        Triple(WidgetType.Photo(false), "Photo", Icons.Default.AddAPhoto),
+                        Triple(WidgetType.Note(text = "", isWide = false), "Note", Icons.Default.Note)
                     )
+                    
+                    val availableFiltered = if (isWide) {
+                         listOf(
+                            Triple(WidgetType.Calendar(true), "Calendar (Wide)", Icons.Default.EventNote),
+                            Triple(WidgetType.Music(true), "Music Player (Wide)", Icons.Default.MusicVideo),
+                            Triple(WidgetType.Photo(true), "Photo (Wide)", Icons.Default.Rectangle),
+                            Triple(WidgetType.Note(text = "", isWide = true), "Note (Wide)", Icons.Default.Description)
+                        )
+                    } else available
 
-                    items(available.size) { idx ->
-                        val (type, label, icon) = available[idx]
+                    items(availableFiltered.size) { idx ->
+                        val (type, label, icon) = availableFiltered[idx]
                         val canAdd = when (type) {
                             is WidgetType.Photo -> true
+                            is WidgetType.Note -> true
                             else -> children.none { it.type::class == type::class }
                         }
 
@@ -522,6 +549,43 @@ fun WidgetStackPickerDialog(
                 cropUri = null
                 photoTargetId = null
                 // 強制 UI 刷新 (雖然 PhotoWidget 會根據 id 讀取，但這裡列表資訊不變，沒關係)
+            }
+        )
+    }
+
+    if (noteToEditInStack != null) {
+        val (index, widget) = noteToEditInStack!!
+        val initialText = (widget.type as? WidgetType.Note)?.text ?: ""
+        
+        var text by remember { mutableStateOf(initialText) }
+
+        AlertDialog(
+            onDismissRequest = { noteToEditInStack = null },
+            title = { Text("Edit Note") },
+            text = {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    modifier = Modifier.fillMaxWidth().height(150.dp),
+                    placeholder = { Text("Enter your note here...") }
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    val newList = children.toMutableList()
+                    val oldWidget = newList[index]
+                    val newType = (oldWidget.type as WidgetType.Note).copy(text = text)
+                    newList[index] = oldWidget.copy(type = newType)
+                    children = newList
+                    noteToEditInStack = null
+                }) {
+                    Text(stringResource(R.string.done))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { noteToEditInStack = null }) {
+                    Text(stringResource(R.string.cancel))
+                }
             }
         )
     }
@@ -797,7 +861,7 @@ fun WideMusicWidget(
 }
 
 @Composable
-fun PhotoWidget(widget: WidgetModel, viewModel: MainViewModel, modifier: Modifier = Modifier) {
+fun PhotoWidget(widget: WidgetModel, viewModel: MainViewModel, modifier: Modifier = Modifier, enableClick: Boolean = true) {
     var photo by remember(widget.id) { mutableStateOf(viewModel.getWidgetPhoto(widget.id)) }
     var showCropDialog by remember { mutableStateOf<Uri?>(null) }
 
@@ -812,7 +876,7 @@ fun PhotoWidget(widget: WidgetModel, viewModel: MainViewModel, modifier: Modifie
         modifier = modifier
             .fillMaxWidth()
             .aspectRatio(aspectRatio)
-            .clickable { launcher.launch("image/*") },
+            .then(if (enableClick) Modifier.clickable { launcher.launch("image/*") } else Modifier),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.1f))
     ) {
@@ -1297,91 +1361,259 @@ fun WideCalendarWidget(
 }
 
 @Composable
-fun WidgetPickerDialog(onDismiss: () -> Unit, onWidgetSelected: (WidgetType) -> Unit) {
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            shape = RoundedCornerShape(28.dp)
-        ) {
-            Column(modifier = Modifier.padding(20.dp)) {
-                Text(
-                    text = stringResource(R.string.select_widget),
-                    style = MaterialTheme.typography.headlineSmall
-                )
-                Spacer(modifier = Modifier.height(16.dp))
+fun NoteWidget(
+    widget: WidgetModel,
+    displayMode: WidgetDisplayMode,
+    modifier: Modifier = Modifier,
+    backdrop: com.kyant.backdrop.Backdrop? = null
+) {
+    val isWide = (widget.type as? WidgetType.Note)?.isWide ?: false
+    val text = (widget.type as? WidgetType.Note)?.text ?: ""
 
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.widget_battery)) },
-                    leadingContent = { Icon(Icons.Default.BatteryStd, contentDescription = null) },
-                    modifier = Modifier.clickable {
-                        onWidgetSelected(WidgetType.Battery)
-                        onDismiss()
+    val viewModel: MainViewModel = viewModel()
+    val isLiquidGlassEnabled by viewModel.isLiquidGlassEnabled.collectAsState()
+    val isLiquidWidgetsEnabled by viewModel.isLiquidGlassWidgetsEnabled.collectAsState()
+    val blurRadius by viewModel.liquidGlassBlur.collectAsState()
+    val refractionHeight by viewModel.liquidGlassRefractionHeight.collectAsState()
+    val refractionAmount by viewModel.liquidGlassRefractionAmount.collectAsState()
+    val chromaticAberration by viewModel.liquidGlassChromaticAberration.collectAsState()
+
+    val useLiquid = displayMode == WidgetDisplayMode.GLASS && isLiquidGlassEnabled && isLiquidWidgetsEnabled && backdrop != null
+
+    val containerColor = when (displayMode) {
+        WidgetDisplayMode.GLASS -> Color.White.copy(alpha = 0.2f)
+        WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.secondaryContainer
+    }
+    val contentColor = when (displayMode) {
+        WidgetDisplayMode.GLASS -> Color.White
+        WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.onSecondaryContainer
+    }
+
+    Card(
+        modifier = modifier
+            .aspectRatio(if (isWide) 2f else 1f)
+            .then(if (useLiquid) Modifier.liquidGlass(
+                enabled = true,
+                backdrop = backdrop,
+                cornerRadius = 24.dp,
+                blurRadius = blurRadius,
+                refractionHeight = refractionHeight,
+                refractionAmount = refractionAmount,
+                chromaticAberration = chromaticAberration
+            ) else Modifier),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = if (useLiquid) Color.Transparent else containerColor)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            contentAlignment = Alignment.TopStart
+        ) {
+            Text(
+                text = text.ifEmpty { "Tap to edit note..." },
+                style = if (isWide) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.bodyMedium,
+                color = if (text.isEmpty()) contentColor.copy(alpha = 0.5f) else contentColor,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+fun NoteEditDialog(
+    widgetId: String,
+    initialText: String,
+    viewModel: MainViewModel,
+    onDismiss: () -> Unit
+) {
+    var text by remember { mutableStateOf(initialText) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit Note") },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                modifier = Modifier.fillMaxWidth().height(150.dp),
+                placeholder = { Text("Enter your note here...") }
+            )
+        },
+        confirmButton = {
+            Button(onClick = {
+                viewModel.updateNoteText(widgetId, text)
+                onDismiss()
+            }) {
+                Text(stringResource(R.string.done))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
+}
+
+@Composable
+fun WidgetPickerDialog(onDismiss: () -> Unit, onWidgetSelected: (WidgetType) -> Unit) {
+    val context = LocalContext.current
+    
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .fillMaxHeight(0.75f),
+            shape = RoundedCornerShape(32.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp)
+            )
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Header
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 28.dp, start = 28.dp, end = 28.dp, bottom = 20.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.select_widget),
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Customize your home screen with powerful extensions",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                // Scrollable Content
+                LazyColumn(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    val widgets = listOf(
+                        Triple(WidgetType.Battery, R.string.widget_battery, Icons.Default.BatteryStd),
+                        Triple(WidgetType.Clock, R.string.widget_clock, Icons.Default.Schedule),
+                        Triple(WidgetType.Calendar(isWide = false), R.string.widget_calendar, Icons.Default.CalendarMonth),
+                        Triple(WidgetType.Calendar(isWide = true), R.string.widget_calendar_wide, Icons.Default.EventNote),
+                        Triple(WidgetType.Photo(isWide = false), R.string.widget_photo, Icons.Default.AddAPhoto),
+                        Triple(WidgetType.Photo(isWide = true), R.string.widget_photo_wide, Icons.Default.Rectangle),
+                        Triple(WidgetType.Music(isWide = false), R.string.widget_music, Icons.Default.MusicNote),
+                        Triple(WidgetType.Music(isWide = true), R.string.widget_music_wide, Icons.Default.MusicVideo),
+                        Triple(WidgetType.Note(isWide = false), null, Icons.Default.Note),
+                        Triple(WidgetType.Note(isWide = true), null, Icons.Default.Description),
+                        Triple(WidgetType.Stack(isWide = false), R.string.widget_stacker, Icons.Default.Layers),
+                        Triple(WidgetType.Stack(isWide = true), null, Icons.Default.DashboardCustomize)
+                    )
+
+                    items(widgets) { (type, labelRes, icon) ->
+                        val label = if (labelRes != null) stringResource(labelRes) else {
+                            when (type) {
+                                is WidgetType.Note -> if (type.isWide) "Wide Note" else "Note"
+                                is WidgetType.Stack -> "Wide Widget Stacker"
+                                else -> ""
+                            }
+                        }
+                        
+                        val desc = when (type) {
+                            is WidgetType.Battery -> "Monitor system battery level"
+                            is WidgetType.Clock -> "Elegant analog time display"
+                            is WidgetType.Calendar -> if (type.isWide) "View your daily schedule" else "Quick date overview"
+                            is WidgetType.Photo -> "Display your favorite memories"
+                            is WidgetType.Music -> "Control active media sessions"
+                            is WidgetType.Note -> "Quickly jot down thoughts"
+                            is WidgetType.Stack -> if (type.isWide) "Swipe through wide widgets" else "Stacked functional blocks"
+                            else -> ""
+                        }
+
+                        Card(
+                            onClick = {
+                                onWidgetSelected(type)
+                                onDismiss()
+                            },
+                            shape = RoundedCornerShape(24.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp, 
+                                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                            )
+                        ) {
+                            ListItem(
+                                headlineContent = { 
+                                    Text(
+                                        text = label,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                    ) 
+                                },
+                                supportingContent = {
+                                    Text(
+                                        text = desc,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                },
+                                leadingContent = { 
+                                    Box(
+                                        modifier = Modifier
+                                            .size(52.dp)
+                                            .background(
+                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                                RoundedCornerShape(16.dp)
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = icon,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(26.dp)
+                                        )
+                                    }
+                                },
+                                trailingContent = {
+                                    Icon(
+                                        Icons.Default.ChevronRight,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                    )
+                                },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                            )
+                        }
                     }
-                )
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.widget_clock)) },
-                    leadingContent = { Icon(Icons.Default.Schedule, contentDescription = null) },
-                    modifier = Modifier.clickable {
-                        onWidgetSelected(WidgetType.Clock)
-                        onDismiss()
+                }
+                
+                // Footer
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.CenterEnd
+                ) {
+                    TextButton(
+                        onClick = onDismiss,
+                        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.cancel),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                        )
                     }
-                )
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.widget_calendar)) },
-                    leadingContent = { Icon(Icons.Default.CalendarMonth, contentDescription = null) },
-                    modifier = Modifier.clickable {
-                        onWidgetSelected(WidgetType.Calendar(isWide = false))
-                        onDismiss()
-                    }
-                )
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.widget_calendar_wide)) },
-                    leadingContent = { Icon(Icons.Default.EventNote, contentDescription = null) },
-                    modifier = Modifier.clickable {
-                        onWidgetSelected(WidgetType.Calendar(isWide = true))
-                        onDismiss()
-                    }
-                )
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.widget_photo)) },
-                    leadingContent = { Icon(Icons.Default.AddAPhoto, contentDescription = null) },
-                    modifier = Modifier.clickable {
-                        onWidgetSelected(WidgetType.Photo(isWide = false))
-                        onDismiss()
-                    }
-                )
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.widget_photo_wide)) },
-                    leadingContent = { Icon(Icons.Default.Rectangle, contentDescription = null) },
-                    modifier = Modifier.clickable {
-                        onWidgetSelected(WidgetType.Photo(isWide = true))
-                        onDismiss()
-                    }
-                )
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.widget_music)) },
-                    leadingContent = { Icon(Icons.Default.MusicNote, contentDescription = null) },
-                    modifier = Modifier.clickable {
-                        onWidgetSelected(WidgetType.Music(isWide = false))
-                        onDismiss()
-                    }
-                )
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.widget_music_wide)) },
-                    leadingContent = { Icon(Icons.Default.MusicVideo, contentDescription = null) },
-                    modifier = Modifier.clickable {
-                        onWidgetSelected(WidgetType.Music(isWide = true))
-                        onDismiss()
-                    }
-                )
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.widget_stacker)) },
-                    leadingContent = { Icon(Icons.Default.Layers, contentDescription = null) },
-                    modifier = Modifier.clickable {
-                        onWidgetSelected(WidgetType.Stack())
-                        onDismiss()
-                    }
-                )
+                }
             }
         }
     }
