@@ -1441,16 +1441,26 @@ fun RenameAppsScreen(onBack: () -> Unit) {
     }
 }
 
+enum class AppFilter { ALL, HIDDEN, VISIBLE }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HideAppsScreen(onBack: () -> Unit) {
     val viewModel: MainViewModel = viewModel()
     val allApps by viewModel.allApps.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
+    var appFilter by remember { mutableStateOf(AppFilter.ALL) }
 
-    val filteredApps = remember(allApps, searchQuery) {
-        if (searchQuery.isEmpty()) allApps
-        else allApps.filter { it.label.contains(searchQuery, ignoreCase = true) }
+    val filteredApps = remember(allApps, searchQuery, appFilter) {
+        allApps.filter { app ->
+            val matchesSearch = if (searchQuery.isEmpty()) true else app.label.contains(searchQuery, ignoreCase = true)
+            val matchesFilter = when (appFilter) {
+                AppFilter.ALL -> true
+                AppFilter.HIDDEN -> app.isHidden
+                AppFilter.VISIBLE -> !app.isHidden
+            }
+            matchesSearch && matchesFilter
+        }
     }
 
     var currentPassword by remember { mutableStateOf(viewModel.getPassword()) }
@@ -1502,7 +1512,42 @@ fun HideAppsScreen(onBack: () -> Unit) {
             }
             
             item {
-                SearchBar(searchQuery) { searchQuery = it }
+                Column {
+                    SearchBar(searchQuery) { searchQuery = it }
+                    
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = appFilter == AppFilter.ALL,
+                            onClick = { appFilter = AppFilter.ALL },
+                            label = { Text("All") }
+                        )
+                        FilterChip(
+                            selected = appFilter == AppFilter.HIDDEN,
+                            onClick = { appFilter = AppFilter.HIDDEN },
+                            label = { Text("Hidden") },
+                            leadingIcon = {
+                                if (appFilter == AppFilter.HIDDEN) {
+                                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                                }
+                            }
+                        )
+                        FilterChip(
+                            selected = appFilter == AppFilter.VISIBLE,
+                            onClick = { appFilter = AppFilter.VISIBLE },
+                            label = { Text("Visible") },
+                            leadingIcon = {
+                                if (appFilter == AppFilter.VISIBLE) {
+                                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                                }
+                            }
+                        )
+                    }
+                }
             }
 
             items(filteredApps, key = { it.uniqueId }) { app ->
@@ -1534,6 +1579,8 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
     val iconShape by viewModel.iconShape.collectAsState()
     val desktopRows by viewModel.desktopRows.collectAsState()
     val dockStyle by viewModel.dockStyle.collectAsState()
+    val showMinusOnePage by viewModel.showMinusOnePage.collectAsState()
+    val showAppLibrary by viewModel.showAppLibrary.collectAsState()
     val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp)
 
     var showAppPickerForSlot by remember { mutableStateOf<Int?>(null) }
@@ -1560,6 +1607,36 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
             }
+
+            item {
+                ListItem(
+                    headlineContent = { Text("Show Minus One Page") },
+                    supportingContent = { Text("Toggle the widget page on the left") },
+                    trailingContent = {
+                        Switch(
+                            checked = showMinusOnePage,
+                            onCheckedChange = { viewModel.setShowMinusOnePage(it) }
+                        )
+                    },
+                    modifier = Modifier.clickable { viewModel.setShowMinusOnePage(!showMinusOnePage) }
+                )
+            }
+
+            item {
+                ListItem(
+                    headlineContent = { Text("Show App Library") },
+                    supportingContent = { Text("Toggle the app library page on the right") },
+                    trailingContent = {
+                        Switch(
+                            checked = showAppLibrary,
+                            onCheckedChange = { viewModel.setShowAppLibrary(it) }
+                        )
+                    },
+                    modifier = Modifier.clickable { viewModel.setShowAppLibrary(!showAppLibrary) }
+                )
+            }
+
+            item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
 
             item {
                 var expanded by remember { mutableStateOf(false) }

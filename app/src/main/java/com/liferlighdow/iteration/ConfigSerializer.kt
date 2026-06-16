@@ -175,6 +175,8 @@ object ConfigSerializer {
         liquidGlassAppLibrarySearch: Boolean,
         liquidGlassWidgets: Boolean,
         liquidGlassEnabled: Boolean,
+        showMinusOne: Boolean,
+        showAppLibrary: Boolean,
         iconStyle: String,
         iconShape: String,
         libraryShape: String,
@@ -202,6 +204,8 @@ object ConfigSerializer {
         settings.put("liquid_glass_app_library_search", liquidGlassAppLibrarySearch)
         settings.put("liquid_glass_widgets", liquidGlassWidgets)
         settings.put("liquid_glass_enabled", liquidGlassEnabled)
+        settings.put("show_minus_one", showMinusOne)
+        settings.put("show_app_library", showAppLibrary)
         settings.put("icon_style", iconStyle)
         settings.put("icon_shape", iconShape)
         settings.put("library_shape", libraryShape)

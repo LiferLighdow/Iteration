@@ -93,6 +93,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isLiquidGlassWidgetsEnabled = MutableStateFlow(prefs.getBoolean("liquid_glass_widgets", false))
     val isLiquidGlassWidgetsEnabled = _isLiquidGlassWidgetsEnabled.asStateFlow()
 
+    private val _showMinusOnePage = MutableStateFlow(prefs.getBoolean("show_minus_one", true))
+    val showMinusOnePage = _showMinusOnePage.asStateFlow()
+
+    private val _showAppLibrary = MutableStateFlow(prefs.getBoolean("show_app_library", true))
+    val showAppLibrary = _showAppLibrary.asStateFlow()
+
     private val _liquidGlassBlur = MutableStateFlow(prefs.getFloat("liquid_glass_blur", 0f))
     val liquidGlassBlur = _liquidGlassBlur.asStateFlow()
 
@@ -233,6 +239,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _searchQuery = MutableStateFlow("")
     val searchQuery = _searchQuery.asStateFlow()
 
+    private val _isLibrarySearchFocused = MutableStateFlow(false)
+    val isLibrarySearchFocused = _isLibrarySearchFocused.asStateFlow()
+
+    fun setLibrarySearchFocused(focused: Boolean) {
+        _isLibrarySearchFocused.value = focused
+    }
+
     private val _selectedCategory = MutableStateFlow("All")
     val selectedCategory = _selectedCategory.asStateFlow()
 
@@ -342,6 +355,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val newLiquidGlobalSearchEnabled = prefs.getBoolean("liquid_glass_global_search", false)
         val newLiquidAppLibrarySearchEnabled = prefs.getBoolean("liquid_glass_app_library_search", false)
         val newLiquidWidgetsEnabled = prefs.getBoolean("liquid_glass_widgets", false)
+        val newShowMinusOne = prefs.getBoolean("show_minus_one", true)
+        val newShowAppLibrary = prefs.getBoolean("show_app_library", true)
         val newLiquidBlur = prefs.getFloat("liquid_glass_blur", 0f)
         val newLiquidRefractionHeight = prefs.getFloat("liquid_glass_refraction_height", 24f)
         val newLiquidRefractionAmount = prefs.getFloat("liquid_glass_refraction_amount", 48f)
@@ -373,6 +388,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _isLiquidGlassGlobalSearchEnabled.value = newLiquidGlobalSearchEnabled
         _isLiquidGlassAppLibrarySearchEnabled.value = newLiquidAppLibrarySearchEnabled
         _isLiquidGlassWidgetsEnabled.value = newLiquidWidgetsEnabled
+        _showMinusOnePage.value = newShowMinusOne
+        _showAppLibrary.value = newShowAppLibrary
         _liquidGlassBlur.value = newLiquidBlur
         _liquidGlassRefractionHeight.value = newLiquidRefractionHeight
         _liquidGlassRefractionAmount.value = newLiquidRefractionAmount
@@ -1188,6 +1205,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (enabled) updateBlurredWallpaper()
     }
 
+    fun setShowMinusOnePage(enabled: Boolean) {
+        _showMinusOnePage.value = enabled
+        prefs.edit().putBoolean("show_minus_one", enabled).apply()
+    }
+
+    fun setShowAppLibrary(enabled: Boolean) {
+        _showAppLibrary.value = enabled
+        prefs.edit().putBoolean("show_app_library", enabled).apply()
+    }
+
     fun setLiquidGlassBlur(value: Float) {
         _liquidGlassBlur.value = value
         prefs.edit().putFloat("liquid_glass_blur", value).apply()
@@ -1249,6 +1276,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             liquidGlassAppLibrarySearch = _isLiquidGlassAppLibrarySearchEnabled.value,
             liquidGlassWidgets = _isLiquidGlassWidgetsEnabled.value,
             liquidGlassEnabled = _isLiquidGlassEnabled.value,
+            showMinusOne = _showMinusOnePage.value,
+            showAppLibrary = _showAppLibrary.value,
             iconStyle = _iconStyle.value.name,
             iconShape = _iconShape.value.name,
             libraryShape = _libraryShape.value.name,
@@ -1280,6 +1309,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             setLiquidGlassAppLibrarySearchEnabled(settings.optBoolean("liquid_glass_app_library_search", false))
             setLiquidGlassWidgetsEnabled(settings.optBoolean("liquid_glass_widgets", false))
             setLiquidGlassEnabled(settings.optBoolean("liquid_glass_enabled", false))
+            setShowMinusOnePage(settings.optBoolean("show_minus_one", true))
+            setShowAppLibrary(settings.optBoolean("show_app_library", true))
             
             val savedStyle = settings.optString("icon_style", "STANDARD")
             _iconStyle.value = try { IconStyle.valueOf(savedStyle) } catch(e: Exception) { IconStyle.STANDARD }

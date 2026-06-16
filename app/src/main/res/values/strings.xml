@@ -28,6 +28,8 @@
     <string name="menu_delete_home">Delete from Home</string>
     <string name="menu_add_to_home">Add to Home</string>
     <string name="menu_uninstall">Uninstall</string>
+    <string name="menu_manage_apps">Manage Apps</string>
+    <string name="menu_edit">Edit</string>
 
     <!-- Folder Dialog -->
     <string name="folder_default_name">Folder</string>

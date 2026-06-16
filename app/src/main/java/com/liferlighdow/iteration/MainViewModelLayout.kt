@@ -259,18 +259,20 @@ fun MainViewModel.deleteFolder(folderId: String, keepIcons: Boolean = true) {
     reorganizeAllPages(currentPages)
 }
 
-fun MainViewModel.addAppsToFolder(folderId: String, packageNames: List<String>) {
+fun MainViewModel.updateFolderApps(folderId: String, packageNames: List<String>) {
     val currentPages = _pages.value.map { page ->
         page.map { item ->
             if (item.uniqueId == folderId) {
-                val updatedItems = item.folderItems.toMutableList()
-                packageNames.forEach { pkg ->
-                    val appToAdd = _allApps.value.find { it.packageName == pkg }
-                    if (appToAdd != null) {
-                        updatedItems.add(appToAdd.copy(uniqueId = "${pkg}_${System.currentTimeMillis()}"))
-                    }
+                // 1. 建立當前資料夾內現有應用的對照表，以保留 uniqueId
+                val existingMap = item.folderItems.associateBy { it.packageName }
+                
+                // 2. 根據傳入的包名列表構建新的內容
+                val newFolderItems = packageNames.mapNotNull { pkg ->
+                    existingMap[pkg] ?: _allApps.value.find { it.packageName == pkg }?.copy(
+                        uniqueId = "${pkg}_${System.currentTimeMillis()}"
+                    )
                 }
-                item.copy(folderItems = updatedItems)
+                item.copy(folderItems = newFolderItems)
             } else item
         }
     }
