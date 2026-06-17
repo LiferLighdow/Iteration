@@ -1702,6 +1702,50 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
 
             item {
                 Text(
+                    stringResource(R.string.home_menu_options),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                Text(
+                    stringResource(R.string.home_menu_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+            }
+
+            item {
+                val menuOptions by viewModel.homeMenuOptions.collectAsState()
+                val availableOptions = listOf(
+                    "delete_home" to R.string.menu_delete_home,
+                    "edit" to R.string.menu_edit,
+                    "uninstall" to R.string.menu_uninstall,
+                    "hide" to R.string.menu_hide,
+                    "favorite" to R.string.menu_add_favorite,
+                    "app_info" to R.string.menu_app_info
+                )
+
+                Column {
+                    availableOptions.forEach { (key, resId) ->
+                        ListItem(
+                            headlineContent = { Text(stringResource(resId)) },
+                            trailingContent = {
+                                Switch(
+                                    checked = menuOptions.contains(key),
+                                    onCheckedChange = { viewModel.setHomeMenuOption(key, it) }
+                                )
+                            },
+                            modifier = Modifier.clickable { viewModel.setHomeMenuOption(key, !menuOptions.contains(key)) }
+                        )
+                    }
+                }
+            }
+
+            item { HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp)) }
+
+            item {
+                Text(
                     "Dock Apps",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,

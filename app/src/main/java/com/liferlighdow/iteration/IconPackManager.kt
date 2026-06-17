@@ -15,6 +15,8 @@ class IconPackManager(private val context: Context) {
     private var iconPackPackageName: String? = null
     private var iconPackResources: Resources? = null
     private val iconMapping = mutableMapOf<String, String>()
+    // 新增：packageName 到 component 的快速索引快取
+    private val packageToComponentCache = mutableMapOf<String, String>()
 
     companion object {
         private const val TAG = "IconPackManager"
@@ -51,6 +53,7 @@ class IconPackManager(private val context: Context) {
 
         iconPackPackageName = packageName
         iconMapping.clear()
+        packageToComponentCache.clear()
 
         if (packageName.isNullOrEmpty()) {
             iconPackResources = null
@@ -131,11 +134,17 @@ class IconPackManager(private val context: Context) {
         val res = iconPackResources ?: return null
         val iconPkg = iconPackPackageName ?: return null
 
-        var drawableName: String? = null
-        for ((key, value) in iconMapping) {
-            if (key.contains("$packageName/") || key == packageName) {
-                drawableName = value
-                break
+        // 優先從快速索引中尋找
+        var drawableName = packageToComponentCache[packageName]?.let { iconMapping[it] }
+        
+        // 如果沒有快取過，嘗試在 Mapping 中尋找
+        if (drawableName == null) {
+            for ((key, value) in iconMapping) {
+                if (key.startsWith("$packageName/") || key == packageName) {
+                    drawableName = value
+                    packageToComponentCache[packageName] = key // 存入快速索引
+                    break
+                }
             }
         }
 

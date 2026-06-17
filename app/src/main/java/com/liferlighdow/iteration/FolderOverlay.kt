@@ -256,44 +256,90 @@ fun FolderOverlay(
                                                             )
                                                         }
                                                 )
+                                                val menuOptions by viewModel.homeMenuOptions.collectAsState()
+
                                                 DropdownMenu(
                                                     expanded = showItemMenu,
                                                     onDismissRequest = { showItemMenu = false }
                                                 ) {
-                                                    DropdownMenuItem(
-                                                        text = { Text(stringResource(R.string.menu_delete_home)) },
-                                                        leadingIcon = { Icon(Icons.Default.Delete, null) },
-                                                        onClick = {
-                                                            viewModel.removeAppFromFolder(currentFolder.uniqueId, app.uniqueId)
-                                                            showItemMenu = false
-                                                        }
-                                                    )
-                                                    DropdownMenuItem(
-                                                        text = { Text(stringResource(R.string.menu_edit)) },
-                                                        leadingIcon = { Icon(Icons.Default.Edit, null) },
-                                                        onClick = {
-                                                            onEditApp(app)
-                                                            showItemMenu = false
-                                                        }
-                                                    )
-                                                    DropdownMenuItem(
-                                                        text = { Text(stringResource(R.string.menu_uninstall)) },
-                                                        leadingIcon = { Icon(Icons.Default.DeleteForever, null) },
-                                                        onClick = {
-                                                            android.util.Log.d("Iteration", "Uninstalling: ${app.packageName}")
-                                                            Toast.makeText(mContext, "Uninstalling ${app.label}...", Toast.LENGTH_SHORT).show()
-                                                            try {
-                                                                val intent = Intent(Intent.ACTION_DELETE).apply {
-                                                                    data = Uri.fromParts("package", app.packageName, null)
-                                                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                                                }
-                                                                mContext.startActivity(intent)
-                                                            } catch (e: Exception) {
-                                                                android.util.Log.e("Iteration", "Uninstall failed", e)
+                                                    if (menuOptions.contains("delete_home")) {
+                                                        DropdownMenuItem(
+                                                            text = { Text(stringResource(R.string.menu_delete_home)) },
+                                                            leadingIcon = { Icon(Icons.Default.Delete, null) },
+                                                            onClick = {
+                                                                viewModel.removeAppFromFolder(currentFolder.uniqueId, app.uniqueId)
+                                                                showItemMenu = false
                                                             }
-                                                            showItemMenu = false
-                                                        }
-                                                    )
+                                                        )
+                                                    }
+                                                    if (menuOptions.contains("edit")) {
+                                                        DropdownMenuItem(
+                                                            text = { Text(stringResource(R.string.menu_edit)) },
+                                                            leadingIcon = { Icon(Icons.Default.Edit, null) },
+                                                            onClick = {
+                                                                onEditApp(app)
+                                                                showItemMenu = false
+                                                            }
+                                                        )
+                                                    }
+                                                    if (menuOptions.contains("uninstall")) {
+                                                        DropdownMenuItem(
+                                                            text = { Text(stringResource(R.string.menu_uninstall)) },
+                                                            leadingIcon = { Icon(Icons.Default.DeleteForever, null) },
+                                                            onClick = {
+                                                                try {
+                                                                    val intent = Intent(Intent.ACTION_DELETE).apply {
+                                                                        data = Uri.fromParts("package", app.packageName, null)
+                                                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                                                    }
+                                                                    mContext.startActivity(intent)
+                                                                } catch (e: Exception) {
+                                                                    android.util.Log.e("Iteration", "Uninstall failed", e)
+                                                                }
+                                                                showItemMenu = false
+                                                            }
+                                                        )
+                                                    }
+                                                    if (menuOptions.contains("hide")) {
+                                                        DropdownMenuItem(
+                                                            text = { Text(stringResource(R.string.menu_hide)) },
+                                                            leadingIcon = { Icon(Icons.Default.VisibilityOff, null) },
+                                                            onClick = {
+                                                                viewModel.toggleHiddenApp(app.packageName)
+                                                                showItemMenu = false
+                                                            }
+                                                        )
+                                                    }
+                                                    if (menuOptions.contains("app_info")) {
+                                                        DropdownMenuItem(
+                                                            text = { Text(stringResource(R.string.menu_app_info)) },
+                                                            leadingIcon = { Icon(Icons.Default.Info, null) },
+                                                            onClick = {
+                                                                try {
+                                                                    val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                                                        data = Uri.fromParts("package", app.packageName, null)
+                                                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                                                    }
+                                                                    mContext.startActivity(intent)
+                                                                } catch (e: Exception) {
+                                                                    android.util.Log.e("Iteration", "Open App Info failed", e)
+                                                                }
+                                                                showItemMenu = false
+                                                            }
+                                                        )
+                                                    }
+                                                    if (menuOptions.contains("favorite")) {
+                                                        val favoritePackages by viewModel.favoritePackages.collectAsState()
+                                                        val isFavorite = favoritePackages.contains(app.packageName)
+                                                        DropdownMenuItem(
+                                                            text = { Text(stringResource(if (isFavorite) R.string.menu_remove_favorite else R.string.menu_add_favorite)) },
+                                                            leadingIcon = { Icon(if (isFavorite) Icons.Default.Star else Icons.Default.StarOutline, null) },
+                                                            onClick = {
+                                                                viewModel.toggleFavoriteApp(app.packageName)
+                                                                showItemMenu = false
+                                                            }
+                                                        )
+                                                    }
                                                 }
                                             }
                                         }

@@ -1,7 +1,10 @@
 package com.liferlighdow.iteration
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Brush
@@ -16,6 +19,11 @@ import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
 
+@Composable
+fun glassFallbackColor(alpha: Float = 0.3f): Color {
+    return if (isSystemInDarkTheme()) Color.Black.copy(alpha = alpha) else Color.White.copy(alpha = alpha)
+}
+
 /**
  * 滿血版 Liquid Glass 實現，支持物理形變與高級混合模式
  */
@@ -28,42 +36,46 @@ fun Modifier.liquidGlass(
     refractionAmount: Float = 48f,
     chromaticAberration: Boolean = true,
     tint: Color = Color.Unspecified
-): Modifier = if (!enabled || backdrop == null) {
-    this.drawBehind {
-        val cr = cornerRadius.toPx()
-        // 降低降級方案的感官
-        drawRoundRect(
-            color = Color.White.copy(alpha = 0.3f),
-            cornerRadius = CornerRadius(cr, cr)
+): Modifier = composed {
+    val fallbackColor = glassFallbackColor()
+
+    if (!enabled || backdrop == null) {
+        this.drawBehind {
+            val cr = cornerRadius.toPx()
+            // 降低降級方案的感官
+            drawRoundRect(
+                color = fallbackColor,
+                cornerRadius = CornerRadius(cr, cr)
+            )
+        }
+    } else {
+        this.drawBackdrop(
+            backdrop = backdrop,
+            shape = { RoundedCornerShape(cornerRadius) },
+            effects = {
+                // 1. 磨砂感 (Blur)
+                if (blurRadius > 0f) {
+                    blur(radius = blurRadius.dp.toPx())
+                }
+
+                // 2. 物理透鏡折射 (Lens Distortion)
+                // 透過重映射背景像素產生形變，這是 Liquid 的靈魂
+                lens(
+                    refractionHeight = refractionHeight.dp.toPx(),
+                    refractionAmount = refractionAmount.dp.toPx(),
+                    depthEffect = false,
+                    chromaticAberration = chromaticAberration
+                )
+
+                // 3. 增加震盪感
+                vibrancy()
+            },
+            onDrawSurface = {
+                // 這裡保持完全清空，不添加任何流光、邊框或色塊填充
+                // 讓視覺效果完全聚焦在物理重映射產生的液態形變上
+            }
         )
     }
-} else {
-    this.drawBackdrop(
-        backdrop = backdrop,
-        shape = { RoundedCornerShape(cornerRadius) },
-        effects = {
-            // 1. 磨砂感 (Blur)
-            if (blurRadius > 0f) {
-                blur(radius = blurRadius.dp.toPx())
-            }
-
-            // 2. 物理透鏡折射 (Lens Distortion)
-            // 透過重映射背景像素產生形變，這是 Liquid 的靈魂
-            lens(
-                refractionHeight = refractionHeight.dp.toPx(),
-                refractionAmount = refractionAmount.dp.toPx(),
-                depthEffect = false,
-                chromaticAberration = chromaticAberration
-            )
-
-            // 3. 增加震盪感
-            vibrancy()
-        },
-        onDrawSurface = {
-            // 這裡保持完全清空，不添加任何流光、邊框或色塊填充
-            // 讓視覺效果完全聚焦在物理重映射產生的液態形變上
-        }
-    )
 }
 
 fun Modifier.liquidGlassDock(

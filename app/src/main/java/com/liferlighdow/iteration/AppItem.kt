@@ -74,7 +74,7 @@ fun AppItem(
                     modifier = Modifier
                         .size(iconSize)
                         .clip(currentShape)
-                        .background(Color.White.copy(alpha = 0.2f)),
+                        .background(glassFallbackColor(0.2f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null, tint = Color.White.copy(alpha = 0.7f))

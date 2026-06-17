@@ -21,8 +21,12 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarOutline
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -109,6 +113,66 @@ fun AppGrid(
         list
     }
 
+    // 1. 預先計算佈局座標，避免在重組時重複運算
+    val layoutItems = remember(displayApps, columns, rows) {
+        val grid = Array(rows) { BooleanArray(columns) { false } }
+        val result = mutableListOf<Triple<AppModel, Int, Int>>() // app, row, col
+        
+        displayApps.forEach { app ->
+            val w: Int
+            val h: Int
+            if (app.isWidget) {
+                val type = app.widget?.type
+                w = when (type) {
+                    is WidgetType.Calendar -> if (type.isWide) 4 else 2
+                    is WidgetType.Photo -> if (type.isWide) 4 else 2
+                    is WidgetType.Music -> if (type.isWide) 4 else 2
+                    is WidgetType.Note -> if (type.isWide) 4 else 2
+                    is WidgetType.Stack -> if (type.isWide) 4 else 2
+                    is WidgetType.Battery, is WidgetType.Clock -> 2
+                    null -> 1
+                }
+                h = 2
+            } else {
+                w = 1; h = 1
+            }
+
+            var foundRow = -1
+            var foundCol = -1
+            outer@for (r in 0 until rows) {
+                for (c in 0 until columns) {
+                    var canFit = true
+                    if (r + h > rows || c + w > columns) {
+                        canFit = false
+                    } else {
+                        for (tr in r until r + h) {
+                            for (tc in c until c + w) {
+                                if (grid[tr][tc]) {
+                                    canFit = false
+                                    break
+                                }
+                            }
+                            if (!canFit) break
+                        }
+                    }
+
+                    if (canFit) {
+                        foundRow = r
+                        foundCol = c
+                        for (tr in r until r + h) {
+                            for (tc in c until c + w) {
+                                grid[tr][tc] = true
+                            }
+                        }
+                        result.add(Triple(app, foundRow, foundCol))
+                        break@outer
+                    }
+                }
+            }
+        }
+        result
+    }
+
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
@@ -179,88 +243,59 @@ fun AppGrid(
         val cellWidth = maxWidth / columns
         val cellHeight = maxHeight / rows
 
-        val grid = Array(rows) { BooleanArray(columns) { false } }
-
-        displayApps.forEachIndexed { index, app ->
-            val w: Int
-            val h: Int
-            if (app.isWidget) {
-                when (val type = app.widget?.type) {
-                    is WidgetType.Battery -> { w = 2; h = 2 }
-                    is WidgetType.Clock -> { w = 2; h = 2 }
-                    is WidgetType.Calendar -> { w = if (type.isWide) 4 else 2; h = 2 }
-                    is WidgetType.Photo -> { w = if (type.isWide) 4 else 2; h = 2 }
-                    is WidgetType.Music -> { w = if (type.isWide) 4 else 2; h = 2 }
-                    is WidgetType.Note -> { w = if (type.isWide) 4 else 2; h = 2 }
-                    is WidgetType.Stack -> { w = if (type.isWide) 4 else 2; h = 2 }
-                    else -> { w = 1; h = 1 }
-                }
-            } else {
-                w = 1; h = 1
-            }
-
-            // Find first available spot
-            var foundRow = -1
-            var foundCol = -1
-            outer@for (r in 0 until rows) {
-                for (c in 0 until columns) {
-                    var canFit = true
-                    if (r + h > rows || c + w > columns) {
-                        canFit = false
-                    } else {
-                        for (tr in r until r + h) {
-                            for (tc in c until c + w) {
-                                if (grid[tr][tc]) {
-                                    canFit = false
-                                    break
-                                }
-                            }
-                            if (!canFit) break
-                        }
+        layoutItems.forEachIndexed { index, (app, foundRow, foundCol) ->
+            // 使用 key 讓 Compose 追蹤每個元件，減少不必要的重組
+            key(app.uniqueId) {
+                val w: Int
+                val h: Int
+                if (app.isWidget) {
+                    val type = app.widget?.type
+                    w = when (type) {
+                        is WidgetType.Calendar -> if (type.isWide) 4 else 2
+                        is WidgetType.Photo -> if (type.isWide) 4 else 2
+                        is WidgetType.Music -> if (type.isWide) 4 else 2
+                        is WidgetType.Note -> if (type.isWide) 4 else 2
+                        is WidgetType.Stack -> if (type.isWide) 4 else 2
+                        is WidgetType.Battery, is WidgetType.Clock -> 2
+                        null -> 1
                     }
+                    h = 2
+                } else { w = 1; h = 1 }
 
-                    if (canFit) {
-                        foundRow = r
-                        foundCol = c
-                        for (tr in r until r + h) {
-                            for (tc in c until c + w) {
-                                grid[tr][tc] = true
-                            }
-                        }
-                        break@outer
-                    }
-                }
-            }
-
-            if (foundRow != -1) {
                 val lastPosition = remember { object { var pos = Offset.Zero } }
                 val isHoveredFolder = confirmedHoveredSlotIdx == index && confirmedIntent == MainViewModel.DropType.FOLDER
-                val scale by animateFloatAsState(if (isHoveredFolder) 1.25f else 1.0f)
+                val scale by animateFloatAsState(if (isHoveredFolder) 1.25f else 1.0f, label = "folderScale")
+                
                 val infiniteTransition = rememberInfiniteTransition(label = "jiggle")
                 val rotation by infiniteTransition.animateFloat(
                     initialValue = -2.5f, targetValue = 2.5f,
-                    animationSpec = infiniteRepeatable(animation = tween(120, easing = LinearEasing), repeatMode = RepeatMode.Reverse), label = "jiggle"
+                    animationSpec = infiniteRepeatable(animation = tween(120, easing = LinearEasing), repeatMode = RepeatMode.Reverse), 
+                    label = "jiggle"
                 )
 
-                // 使用 animateDpAsState 來讓位置變動更平滑
+                // 目標位置計算
                 val targetX = cellWidth * foundCol
                 val targetY = cellHeight * foundRow
+                
+                // 只有在非滑動頁面時才使用平滑動畫，減少滑動時的計算壓力
+                val isScrolling = pageOffset != 0f
                 val animX by animateDpAsState(targetX, label = "x")
                 val animY by animateDpAsState(targetY, label = "y")
 
-                // 計算圖示彈性位移 (iOS 感的關鍵)
                 val density = LocalDensity.current
+                // 彈性位移 (iOS 感)
                 val elasticOffset = with(density) { pageOffset * (foundCol - (columns - 1) / 2f) * 12.dp.toPx() }
                 var showContextMenu by remember { mutableStateOf(false) }
 
                 Box(
                     modifier = Modifier
-                        .offset(animX, animY)
-                        .size(cellWidth * w, cellHeight * h)
                         .graphicsLayer {
-                            // 套用彈性位移
-                            translationX = elasticOffset
+                            // 改用 translation 處理位置，並整合彈性位移
+                            // 在 Draw 階段計算，比 Modifier.offset 效能更好
+                            translationX = with(density) { (if (isScrolling) targetX else animX).toPx() } + elasticOffset
+                            translationY = with(density) { (if (isScrolling) targetY else animY).toPx() }
                         }
+                        .size(cellWidth * w, cellHeight * h)
                         .onGloballyPositioned {
                             val pos = it.positionInRoot()
                             lastPosition.pos = pos
@@ -276,182 +311,46 @@ fun AppGrid(
                                 )
                             } else {
                                 detectTapGestures(
-                                    onLongPress = {
-                                        showContextMenu = true
-                                    },
-                                    onTap = { 
-                                        if (!app.isWidget) {
-                                            onAppClick(app, lastPosition.pos)
-                                        }
-                                    }
+                                    onLongPress = { showContextMenu = true },
+                                    onTap = { if (!app.isWidget) onAppClick(app, lastPosition.pos) }
                                 )
                             }
                         },
                     contentAlignment = Alignment.Center
                 ) {
                     if (app.isWidget) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(8.dp)
-                                .graphicsLayer { alpha = if (app.uniqueId == draggingUniqueId) 0f else 1f }
-                        ) {
-                            Box(modifier = Modifier.weight(1f)) {
-                                val widget = app.widget
-                                if (widget != null) {
-                                    when (widget.type) {
-                                        is WidgetType.Battery -> BatteryWidget(displayMode = widget.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop)
-                                        is WidgetType.Clock -> AnalogClockWidget(displayMode = widget.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop)
-                                        is WidgetType.Calendar -> CalendarWidget(widget = widget, displayMode = widget.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop)
-                                        is WidgetType.Photo -> PhotoWidget(widget = widget, viewModel = viewModel, modifier = Modifier.fillMaxSize())
-                                        is WidgetType.Music -> MusicWidget(widget = widget, displayMode = widget.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop)
-                                        is WidgetType.Note -> NoteWidget(widget = widget, displayMode = widget.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop)
-                                        is WidgetType.Stack -> StackWidget(widget = widget, viewModel = viewModel, modifier = Modifier.fillMaxSize(), backdrop = backdrop)
-                                        else -> {}
-                                    }
-                                }
-
-                                // 編輯模式下的叉叉按鈕 (Widget)
-                                if (isEditMode) {
-                                    Box(
-                                        modifier = Modifier
-                                            .align(Alignment.TopStart)
-                                            .offset(x = (-8).dp, y = (-8).dp)
-                                            .size(24.dp)
-                                            .background(Color.Gray.copy(alpha = 0.9f), CircleShape)
-                                            .clickable { viewModel.removeAppFromHome(app.uniqueId) },
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Close,
-                                            contentDescription = "Remove",
-                                            tint = Color.White,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
-                                }
-                            }
-
-                            Text(
-                                text = app.label,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.White,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.padding(top = 4.dp)
-                            )
-
-                            DropdownMenu(expanded = showContextMenu, onDismissRequest = { showContextMenu = false }) {
-                                if (app.widget?.type !is WidgetType.Stack) {
-                                    DropdownMenuItem(text = { Text(stringResource(R.string.widget_glass_mode)) }, leadingIcon = { Icon(Icons.Default.BlurOn, null) }, onClick = { app.widget?.let { viewModel.updateWidgetDisplayMode(it.id, WidgetDisplayMode.GLASS) }; showContextMenu = false })
-                                    DropdownMenuItem(text = { Text(stringResource(R.string.widget_color_mode)) }, leadingIcon = { Icon(Icons.Default.Palette, null) }, onClick = { app.widget?.let { viewModel.updateWidgetDisplayMode(it.id, WidgetDisplayMode.COLOR) }; showContextMenu = false })
-                                }
-                                if (app.widget?.type is WidgetType.Stack) {
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.menu_choose_widgets)) },
-                                        leadingIcon = { Icon(Icons.Default.Settings, null) },
-                                        onClick = {
-                                            stackToEdit = app.widget
-                                            showContextMenu = false
-                                        }
-                                    )
-                                }
-                                if (app.widget?.type is WidgetType.Note) {
-                                    DropdownMenuItem(
-                                        text = { Text("Edit Note") },
-                                        leadingIcon = { Icon(Icons.Default.Edit, null) },
-                                        onClick = {
-                                            noteToEdit = app.widget
-                                            showContextMenu = false
-                                        }
-                                    )
-                                }
-                                HorizontalDivider()
-                                DropdownMenuItem(text = { Text(stringResource(R.string.menu_delete_home)) }, leadingIcon = { Icon(Icons.Default.Delete, null) }, onClick = { viewModel.removeAppFromHome(app.uniqueId); showContextMenu = false })
-                            }
-                        }
+                        WidgetGridItem(
+                            app = app,
+                            draggingUniqueId = draggingUniqueId,
+                            isEditMode = isEditMode,
+                            backdrop = backdrop,
+                            viewModel = viewModel,
+                            showContextMenu = showContextMenu,
+                            onContextMenuDismiss = { showContextMenu = false },
+                            onUpdateStackToEdit = { stackToEdit = it },
+                            onUpdateNoteToEdit = { noteToEdit = it }
+                        )
                     } else {
-                        val mContext = LocalContext.current
-                        Box {
-                            AppItem(
-                                app = app,
-                                iconSize = iconSize,
-                                isLiquidGlass = isLiquidGlass,
-                                backdrop = backdrop,
-                                iconShape = iconShape,
-                                blurRadius = blurRadius,
-                                refractionHeight = refractionHeight,
-                                refractionAmount = refractionAmount,
-                                chromaticAberration = chromaticAberration,
-                                isEditMode = isEditMode,
-                                onDeleteClick = {
-                                    if (app.isFolder) {
-                                        viewModel.removeAppFromHome(app.uniqueId)
-                                    } else {
-                                        try {
-                                            val intent = Intent(Intent.ACTION_DELETE).apply {
-                                                data = Uri.fromParts("package", app.packageName, null)
-                                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                            }
-                                            mContext.startActivity(intent)
-                                        } catch (e: Exception) {
-                                            android.util.Log.e("Iteration", "Uninstall failed", e)
-                                        }
-                                    }
-                                },
-                                modifier = Modifier.graphicsLayer {
-                                    alpha = if (app.uniqueId == draggingUniqueId) 0f else 1f
-                                    scaleX = scale; scaleY = scale
-                                    if (isEditMode && app.uniqueId != draggingUniqueId) rotationZ = rotation
-                                }
-                            )
-                            DropdownMenu(
-                                expanded = showContextMenu,
-                                onDismissRequest = { showContextMenu = false },
-                                modifier = Modifier.background(MaterialTheme.colorScheme.surface)
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.menu_delete_home)) },
-                                    leadingIcon = { Icon(Icons.Default.Delete, null) },
-                                    onClick = {
-                                        viewModel.removeAppFromHome(app.uniqueId)
-                                        showContextMenu = false
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(if (app.isFolder) R.string.rename else R.string.menu_edit)) },
-                                    leadingIcon = { Icon(Icons.Default.Edit, null) },
-                                    onClick = {
-                                        if (app.isFolder) {
-                                            // 資料夾的編輯即為重新命名，直接觸發首頁的 FolderOverlay 或 專用 Dialog
-                                            onAppClick(app, lastPosition.pos) 
-                                        } else {
-                                            onEditApp(app)
-                                        }
-                                        showContextMenu = false
-                                    }
-                                )
-                                if (!app.isFolder) {
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.menu_uninstall)) },
-                                        leadingIcon = { Icon(Icons.Default.DeleteForever, null) },
-                                        onClick = {
-                                            try {
-                                                val intent = Intent(Intent.ACTION_DELETE).apply {
-                                                    data = Uri.fromParts("package", app.packageName, null)
-                                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                                }
-                                                mContext.startActivity(intent)
-                                            } catch (e: Exception) {
-                                                android.util.Log.e("Iteration", "Uninstall failed", e)
-                                            }
-                                            showContextMenu = false
-                                        }
-                                    )
-                                }
-                            }
-                        }
+                        AppGridItem(
+                            app = app,
+                            iconSize = iconSize,
+                            isLiquidGlass = isLiquidGlass,
+                            backdrop = backdrop,
+                            iconShape = iconShape,
+                            blurRadius = blurRadius,
+                            refractionHeight = refractionHeight,
+                            refractionAmount = refractionAmount,
+                            chromaticAberration = chromaticAberration,
+                            isEditMode = isEditMode,
+                            draggingUniqueId = draggingUniqueId,
+                            scale = scale,
+                            rotation = rotation,
+                            showContextMenu = showContextMenu,
+                            onContextMenuDismiss = { showContextMenu = false },
+                            onAppClick = { onAppClick(app, lastPosition.pos) },
+                            onEditApp = { onEditApp(app) },
+                            viewModel = viewModel
+                        )
                     }
                 }
             }
@@ -477,5 +376,260 @@ fun AppGrid(
             viewModel = viewModel,
             onDismiss = { noteToEdit = null }
         )
+    }
+}
+
+@Composable
+private fun WidgetGridItem(
+    app: AppModel,
+    draggingUniqueId: String?,
+    isEditMode: Boolean,
+    backdrop: com.kyant.backdrop.Backdrop?,
+    viewModel: MainViewModel,
+    showContextMenu: Boolean,
+    onContextMenuDismiss: () -> Unit,
+    onUpdateStackToEdit: (WidgetModel) -> Unit,
+    onUpdateNoteToEdit: (WidgetModel) -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(8.dp)
+            .graphicsLayer { alpha = if (app.uniqueId == draggingUniqueId) 0f else 1f }
+    ) {
+        Box(modifier = Modifier.weight(1f)) {
+            val widget = app.widget
+            if (widget != null) {
+                when (widget.type) {
+                    is WidgetType.Battery -> BatteryWidget(displayMode = widget.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop)
+                    is WidgetType.Clock -> AnalogClockWidget(displayMode = widget.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop)
+                    is WidgetType.Calendar -> CalendarWidget(widget = widget, displayMode = widget.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop)
+                    is WidgetType.Photo -> PhotoWidget(widget = widget, viewModel = viewModel, modifier = Modifier.fillMaxSize())
+                    is WidgetType.Music -> MusicWidget(widget = widget, displayMode = widget.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop)
+                    is WidgetType.Note -> NoteWidget(widget = widget, displayMode = widget.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop)
+                    is WidgetType.Stack -> StackWidget(widget = widget, viewModel = viewModel, modifier = Modifier.fillMaxSize(), backdrop = backdrop)
+                }
+            }
+
+            if (isEditMode) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .offset(x = (-8).dp, y = (-8).dp)
+                        .size(24.dp)
+                        .background(Color.Gray.copy(alpha = 0.9f), CircleShape)
+                        .clickable { viewModel.removeAppFromHome(app.uniqueId) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Close, "Remove", tint = Color.White, modifier = Modifier.size(16.dp))
+                }
+            }
+        }
+
+        Text(
+            text = app.label,
+            style = MaterialTheme.typography.labelSmall,
+            color = Color.White,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 4.dp)
+        )
+
+        DropdownMenu(expanded = showContextMenu, onDismissRequest = onContextMenuDismiss) {
+            if (app.widget?.type !is WidgetType.Stack) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.widget_glass_mode)) },
+                    leadingIcon = { Icon(Icons.Default.BlurOn, null) },
+                    onClick = {
+                        app.widget?.let { viewModel.updateWidgetDisplayMode(it.id, WidgetDisplayMode.GLASS) }
+                        onContextMenuDismiss()
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.widget_color_mode)) },
+                    leadingIcon = { Icon(Icons.Default.Palette, null) },
+                    onClick = {
+                        app.widget?.let { viewModel.updateWidgetDisplayMode(it.id, WidgetDisplayMode.COLOR) }
+                        onContextMenuDismiss()
+                    }
+                )
+            }
+            if (app.widget?.type is WidgetType.Stack) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.menu_choose_widgets)) },
+                    leadingIcon = { Icon(Icons.Default.Settings, null) },
+                    onClick = {
+                        onUpdateStackToEdit(app.widget)
+                        onContextMenuDismiss()
+                    }
+                )
+            }
+            if (app.widget?.type is WidgetType.Note) {
+                DropdownMenuItem(
+                    text = { Text("Edit Note") },
+                    leadingIcon = { Icon(Icons.Default.Edit, null) },
+                    onClick = {
+                        onUpdateNoteToEdit(app.widget!!)
+                        onContextMenuDismiss()
+                    }
+                )
+            }
+            HorizontalDivider()
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.menu_delete_home)) },
+                leadingIcon = { Icon(Icons.Default.Delete, null) },
+                onClick = {
+                    viewModel.removeAppFromHome(app.uniqueId)
+                    onContextMenuDismiss()
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun AppGridItem(
+    app: AppModel,
+    iconSize: androidx.compose.ui.unit.Dp,
+    isLiquidGlass: Boolean,
+    backdrop: com.kyant.backdrop.Backdrop?,
+    iconShape: IconShape,
+    blurRadius: Float,
+    refractionHeight: Float,
+    refractionAmount: Float,
+    chromaticAberration: Boolean,
+    isEditMode: Boolean,
+    draggingUniqueId: String?,
+    scale: Float,
+    rotation: Float,
+    showContextMenu: Boolean,
+    onContextMenuDismiss: () -> Unit,
+    onAppClick: () -> Unit,
+    onEditApp: () -> Unit,
+    viewModel: MainViewModel
+) {
+    val mContext = LocalContext.current
+    Box {
+        AppItem(
+            app = app,
+            iconSize = iconSize,
+            isLiquidGlass = isLiquidGlass,
+            backdrop = backdrop,
+            iconShape = iconShape,
+            blurRadius = blurRadius,
+            refractionHeight = refractionHeight,
+            refractionAmount = refractionAmount,
+            chromaticAberration = chromaticAberration,
+            isEditMode = isEditMode,
+            onDeleteClick = {
+                if (app.isFolder) {
+                    viewModel.removeAppFromHome(app.uniqueId)
+                } else {
+                    try {
+                        val intent = Intent(Intent.ACTION_DELETE).apply {
+                            data = Uri.fromParts("package", app.packageName, null)
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        }
+                        mContext.startActivity(intent)
+                    } catch (e: Exception) {
+                        android.util.Log.e("Iteration", "Uninstall failed", e)
+                    }
+                }
+            },
+            modifier = Modifier.graphicsLayer {
+                alpha = if (app.uniqueId == draggingUniqueId) 0f else 1f
+                scaleX = scale; scaleY = scale
+                if (isEditMode && app.uniqueId != draggingUniqueId) rotationZ = rotation
+            }
+        )
+        val menuOptions by viewModel.homeMenuOptions.collectAsState()
+
+        DropdownMenu(
+            expanded = showContextMenu,
+            onDismissRequest = onContextMenuDismiss,
+            modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+        ) {
+            if (menuOptions.contains("delete_home")) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.menu_delete_home)) },
+                    leadingIcon = { Icon(Icons.Default.Delete, null) },
+                    onClick = {
+                        viewModel.removeAppFromHome(app.uniqueId)
+                        onContextMenuDismiss()
+                    }
+                )
+            }
+            if (menuOptions.contains("edit")) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(if (app.isFolder) R.string.rename else R.string.menu_edit)) },
+                    leadingIcon = { Icon(Icons.Default.Edit, null) },
+                    onClick = {
+                        if (app.isFolder) onAppClick() else onEditApp()
+                        onContextMenuDismiss()
+                    }
+                )
+            }
+            if (!app.isFolder) {
+                if (menuOptions.contains("uninstall")) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.menu_uninstall)) },
+                        leadingIcon = { Icon(Icons.Default.DeleteForever, null) },
+                        onClick = {
+                            try {
+                                val intent = Intent(Intent.ACTION_DELETE).apply {
+                                    data = Uri.fromParts("package", app.packageName, null)
+                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                }
+                                mContext.startActivity(intent)
+                            } catch (e: Exception) {
+                                android.util.Log.e("Iteration", "Uninstall failed", e)
+                            }
+                            onContextMenuDismiss()
+                        }
+                    )
+                }
+                if (menuOptions.contains("hide")) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.menu_hide)) },
+                        leadingIcon = { Icon(Icons.Default.VisibilityOff, null) },
+                        onClick = {
+                            viewModel.toggleHiddenApp(app.packageName)
+                            onContextMenuDismiss()
+                        }
+                    )
+                }
+                if (menuOptions.contains("app_info")) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.menu_app_info)) },
+                        leadingIcon = { Icon(Icons.Default.Info, null) },
+                        onClick = {
+                            try {
+                                val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                    data = Uri.fromParts("package", app.packageName, null)
+                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                }
+                                mContext.startActivity(intent)
+                            } catch (e: Exception) {
+                                android.util.Log.e("Iteration", "Open App Info failed", e)
+                            }
+                            onContextMenuDismiss()
+                        }
+                    )
+                }
+                if (menuOptions.contains("favorite")) {
+                    val favoritePackages by viewModel.favoritePackages.collectAsState()
+                    val isFavorite = favoritePackages.contains(app.packageName)
+                    DropdownMenuItem(
+                        text = { Text(stringResource(if (isFavorite) R.string.menu_remove_favorite else R.string.menu_add_favorite)) },
+                        leadingIcon = { Icon(if (isFavorite) Icons.Default.Star else Icons.Default.StarOutline, null) },
+                        onClick = {
+                            viewModel.toggleFavoriteApp(app.packageName)
+                            onContextMenuDismiss()
+                        }
+                    )
+                }
+            }
+        }
     }
 }

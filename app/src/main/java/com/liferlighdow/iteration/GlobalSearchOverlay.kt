@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyant.backdrop.Backdrop
+import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlin.math.*
 
 @Composable
@@ -105,8 +106,8 @@ fun GlobalSearchOverlay(
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Color.White, 
                         unfocusedTextColor = Color.White, 
-                        focusedContainerColor = Color.White.copy(alpha = 0.2f), 
-                        unfocusedContainerColor = Color.White.copy(alpha = 0.2f), 
+                        focusedContainerColor = glassFallbackColor(0.2f), 
+                        unfocusedContainerColor = glassFallbackColor(0.2f), 
                         focusedBorderColor = Color.White.copy(alpha = 0.5f), 
                         unfocusedBorderColor = Color.Transparent
                     ),
@@ -124,7 +125,13 @@ fun GlobalSearchOverlay(
                     } else null
                 }
 
-                val finalSuggestions = remember(suggestedApps, allApps) {
+                val viewModel: MainViewModel = viewModel()
+    val favoritePackages by viewModel.favoritePackages.collectAsState()
+    val favoriteApps = remember(favoritePackages, allApps) {
+        allApps.filter { favoritePackages.contains(it.packageName) && !it.isHidden }.take(8)
+    }
+
+    val finalSuggestions = remember(suggestedApps, allApps) {
                     if (suggestedApps.isNotEmpty()) suggestedApps.take(8)
                     else allApps.filter { !it.isHidden }.take(8)
                 }
@@ -142,8 +149,8 @@ fun GlobalSearchOverlay(
                                         android.widget.Toast.makeText(mContext, "Result copied: $mathResult", android.widget.Toast.LENGTH_SHORT).show()
                                     },
                                 shape = RoundedCornerShape(24.dp),
-                                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.15f)),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+                                colors = CardDefaults.cardColors(containerColor = glassFallbackColor(0.15f)),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, glassFallbackColor(0.1f))
                             ) {
                                 Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Box(modifier = Modifier.size(48.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f), CircleShape), contentAlignment = Alignment.Center) {
@@ -161,8 +168,31 @@ fun GlobalSearchOverlay(
                         }
                     }
 
-                    // 2. 建議網格
+                    // 2. 建議網格 與 收藏網格
                     if (query.isBlank()) {
+                        if (favoriteApps.isNotEmpty()) {
+                            item {
+                                Text(stringResource(R.string.favorites), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp, bottom = 12.dp))
+                                Box(modifier = Modifier.fillMaxWidth().height(180.dp)) {
+                                    LazyVerticalGrid(
+                                        columns = GridCells.Fixed(4),
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                                        userScrollEnabled = false
+                                    ) {
+                                        items(favoriteApps) { app ->
+                                            AppItem(
+                                                app = app, iconSize = 56.dp, iconShape = iconShape,
+                                                onAppClick = { onAppClick(app.packageName); onDismiss() }
+                                            )
+                                        }
+                                    }
+                                }
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = glassFallbackColor(0.15f))
+                            }
+                        }
+
                         item {
                             Text(stringResource(R.string.app_suggestions), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp, bottom = 12.dp))
                             Box(modifier = Modifier.fillMaxWidth().height(180.dp)) {
@@ -181,7 +211,7 @@ fun GlobalSearchOverlay(
                                     }
                                 }
                             }
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = Color.White.copy(alpha = 0.15f))
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = glassFallbackColor(0.15f))
                         }
                     } else {
                         // 3. 搜尋結果列表
@@ -203,7 +233,7 @@ fun GlobalSearchOverlay(
                     // 4. 外部搜尋連結
                     if (query.isNotBlank()) {
                         item {
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color.White.copy(alpha = 0.2f))
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = glassFallbackColor(0.2f))
                             Text(stringResource(R.string.more_searches), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(bottom = 8.dp))
                         }
                         item {

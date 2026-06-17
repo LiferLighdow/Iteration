@@ -21,6 +21,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -214,14 +215,26 @@ fun LauncherScreen(
         }
     }
     
-    // 計算精確的連續分頁位置 (例如 1.1 代表離開第一頁往第二頁滑動了 10%)
-    val continuousPage = pagerState.currentPage + pagerState.currentPageOffsetFraction
-
-    // 讓 Dock 顯示的條件更嚴苛，只要離開主畫面區域 15% (0.15f) 就開始隱藏
-    // 主畫面分頁範圍
     val desktopStartIndex = if (showMinusOnePage) 1 else 0
-    val showDockAndIndicator = continuousPage > (desktopStartIndex - 0.15f) && continuousPage < (desktopStartIndex + desktopPageCount - 0.85f)
-    
+    // 計算 Dock 的顯示進度 (1.0 = 完全顯示, 0.0 = 完全隱藏)
+    val dockVisibilityProgress by remember(showMinusOnePage, showAppLibrary, desktopPageCount) {
+        derivedStateOf {
+            val continuousPage = pagerState.currentPage + pagerState.currentPageOffsetFraction
+            val desktopStart = if (showMinusOnePage) 1f else 0f
+            val desktopEnd = desktopStart + desktopPageCount - 1
+            
+            if (continuousPage < desktopStart) {
+                // 滑向負一頁
+                (continuousPage - (desktopStart - 1f)).coerceIn(0f, 1f)
+            } else if (continuousPage > desktopEnd) {
+                // 滑向 App Library
+                (1f - (continuousPage - desktopEnd)).coerceIn(0f, 1f)
+            } else {
+                1f
+            }
+        }
+    }
+
     val isMinusOnePage = showMinusOnePage && pagerState.currentPage == 0
     val isAppLibraryPage = showAppLibrary && pagerState.currentPage == pageCount - 1
     
@@ -265,15 +278,15 @@ fun LauncherScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .then(
-                    // 只有 Android 12+ 才對整個內容層進行系統級模糊
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        Modifier.blur(launcherBlur)
-                    } else Modifier
-                )
                 .graphicsLayer {
                     scaleX = launcherScale
                     scaleY = launcherScale
+                    // 只有 Android 12+ 才對整個內容層進行系統級模糊
+                    // 透過 graphicsLayer 設定 renderEffect 可以避免頻繁重組
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                        val blurPx = with(density) { launcherBlur.toPx() }
+                        renderEffect = if (blurPx > 0f) BlurEffect(blurPx, blurPx) else null
+                    }
                 }
         ) {
             // 1.1 桌布層
@@ -291,14 +304,17 @@ fun LauncherScreen(
                 
                 // Android 12 以下的「高清模糊」替代方案
                 // 透過淡入預先處理好的模糊桌布，避免即時採樣產生的重影
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) {
                     blurredWallpaper?.let {
                         Image(
                             bitmap = it,
                             contentDescription = null,
                             modifier = Modifier
                                 .fillMaxSize()
-                                .alpha((launcherBlur.value / 20f).coerceIn(0f, 1f)),
+                                .graphicsLayer {
+                                    // 在繪製層級控制透明度，避免觸發重組
+                                    alpha = (launcherBlur.value / 20f).coerceIn(0f, 1f)
+                                },
                             contentScale = ContentScale.Crop
                         )
                     }
@@ -309,12 +325,12 @@ fun LauncherScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .then(
+                    .graphicsLayer {
                         // Android 12 以下：透過降低透明度讓內容「融入」模糊背景，模擬模糊感
-                        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-                            Modifier.alpha(1f - (launcherBlur.value / 30f).coerceIn(0f, 0.6f))
-                        } else Modifier
-                    )
+                        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) {
+                            alpha = 1f - (launcherBlur.value / 30f).coerceIn(0f, 0.6f)
+                        }
+                    }
             ) {
                 HorizontalPager(
                     state = pagerState,
@@ -505,78 +521,56 @@ fun LauncherScreen(
                     BackHandler(enabled = (isAppLibraryPage || isMinusOnePage) && !showGlobalSearch) {
                         scope.launch { pagerState.animateScrollToPage(desktopStartIndex) }
                     }
-                    AnimatedVisibility(
-                        visible = showDockAndIndicator,
-                        enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                        exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Box(contentAlignment = Alignment.Center) {
-                                androidx.compose.animation.AnimatedContent(
-                                    targetState = showPillTemporarily,
-                                    transitionSpec = {
-                                        (fadeIn() + scaleIn(initialScale = 0.8f)).togetherWith(fadeOut() + scaleOut(targetScale = 0.8f))
-                                    },
-                                    label = "PillVsDots"
-                                ) { isPill ->
-                                    if (isPill) {
-                                        SearchPill(
-                                            isLiquidGlass = isLiquidGlassEnabled && isLiquidGlassDockEnabled,
-                                            backdrop = backdrop,
-                                            blurRadius = blurRadius,
-                                            refractionHeight = refractionHeight,
-                                            refractionAmount = refractionAmount,
-                                            chromaticAberration = chromaticAberration,
-                                            onClick = { showGlobalSearch = true }
-                                        )
-                                    } else {
-                                        PageIndicator(pageCount = desktopPageCount, currentPage = pagerState.currentPage - desktopStartIndex)
-                                    }
+
+                    LauncherBottomBar(
+                        visibilityProgress = dockVisibilityProgress,
+                        showPill = showPillTemporarily,
+                        isLiquidGlassEnabled = isLiquidGlassEnabled,
+                        isLiquidGlassDockEnabled = isLiquidGlassDockEnabled,
+                        backdrop = backdrop,
+                        iconSize = iconSize,
+                        iconShape = iconShape,
+                        dockStyle = dockStyle,
+                        blurRadius = blurRadius,
+                        refractionHeight = refractionHeight,
+                        refractionAmount = refractionAmount,
+                        chromaticAberration = chromaticAberration,
+                        desktopPageCount = desktopPageCount,
+                        currentPage = pagerState.currentPage - desktopStartIndex,
+                        dockApps = dockApps,
+                        isEditMode = isEditMode,
+                        myPackageName = myPackageName,
+                        onSearchClick = { showGlobalSearch = true },
+                        onAppClick = onAppClick,
+                        onSettingsClick = onSettingsClick,
+                        onLongClick = { showDockPicker = it },
+                        onDeleteClick = { app ->
+                            try {
+                                val intent = Intent(Intent.ACTION_DELETE).apply {
+                                    data = Uri.fromParts("package", app.packageName, null)
+                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
                                 }
-                            }
-                            
-                            Spacer(modifier = Modifier.height(10.dp)) // 增加點點與 Dock 之間的間距
-                            Dock(
-                                apps = dockApps,
-                                iconSize = iconSize,
-                                isLiquidGlass = isLiquidGlassEnabled && isLiquidGlassDockEnabled,
-                                backdrop = backdrop,
-                                dockStyle = dockStyle,
-                                iconShape = iconShape,
-                                blurRadius = blurRadius,
-                                refractionHeight = refractionHeight,
-                                refractionAmount = refractionAmount,
-                                chromaticAberration = chromaticAberration,
-                                isEditMode = isEditMode,
-                                onAppClick = { pkg -> if (pkg == myPackageName) onSettingsClick() else onAppClick(pkg) },
-                                onLongClick = { showDockPicker = it },
-                                onDeleteClick = { app ->
-                                    try {
-                                        val intent = Intent(Intent.ACTION_DELETE).apply {
-                                            data = Uri.fromParts("package", app.packageName, null)
-                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                        }
-                                        mContext.startActivity(intent)
-                                    } catch (e: Exception) {
-                                        android.util.Log.e("Iteration", "Uninstall failed", e)
-                                    }
-                                }
-                            )
-                            // 在 Classic 模式下不需要額外的底部 Spacer，因為 Dock 已經填滿底部
-                            if (dockStyle == DockStyle.MODERN) {
-                                Spacer(modifier = Modifier.height(2.dp))
+                                mContext.startActivity(intent)
+                            } catch (e: Exception) {
+                                android.util.Log.e("Iteration", "Uninstall failed", e)
                             }
                         }
-                    }
+                    )
                 }
             }
 
         draggingApp?.let { app ->
             Box(
                 modifier = Modifier
-                    .offset { IntOffset((touchPosition.x + dragOffset.x - iconSizePx / 2).roundToInt(), (touchPosition.y + dragOffset.y - iconSizePx / 2).roundToInt()) }
                     .size(iconSize)
-                    .graphicsLayer(alpha = 0.8f, scaleX = 1.15f, scaleY = 1.15f)
+                    .graphicsLayer {
+                        // 在 Draw 階段計算位移，避免觸發重組
+                        translationX = touchPosition.x + dragOffset.x - iconSizePx / 2
+                        translationY = touchPosition.y + dragOffset.y - iconSizePx / 2
+                        alpha = 0.8f
+                        scaleX = 1.15f
+                        scaleY = 1.15f
+                    }
             ) { AppItem(app = app, iconSize = iconSize) }
         }
 
@@ -615,117 +609,44 @@ fun LauncherScreen(
         }
     }
 
-    LauncherMenu(
-        isVisible = showDesktopMenu,
-        onDismiss = { showDesktopMenu = false },
+    LauncherOverlays(
         viewModel = viewModel,
-        currentPageIdx = pagerState.currentPage - desktopStartIndex,
-        isCurrentPageEmpty = pages.getOrNull(pagerState.currentPage - desktopStartIndex)?.isEmpty() ?: false,
-        isMultiplePages = pages.size > 1,
-        isDefaultLauncher = isDefaultLauncher,
-        onAddWidgetClick = {
-            widgetTargetPage = pagerState.currentPage - desktopStartIndex
-            showWidgetPicker = true
+        showDesktopMenu = showDesktopMenu,
+        onDismissDesktopMenu = { showDesktopMenu = false },
+        showCreateFolderDialog = showCreateFolderDialog,
+        onDismissCreateFolder = { showCreateFolderDialog = false },
+        showDeleteFolderConfirm = showDeleteFolderConfirm,
+        onDismissDeleteFolder = { showDeleteFolderConfirm = false },
+        showWidgetPicker = showWidgetPicker,
+        onDismissWidgetPicker = {
+            showWidgetPicker = false
+            widgetTargetPage = null
         },
-        onCreateFolderClick = { showCreateFolderDialog = true },
-        onWallpaperClick = { wallpaperLauncher.launch("image/*") },
-        onSetDefaultClick = {
-            val intent = Intent(android.provider.Settings.ACTION_HOME_SETTINGS)
-            mContext.startActivity(intent)
-        },
-        onSettingsClick = onSettingsClick
-    )
-
-    if (showCreateFolderDialog) {
-        var folderName by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { showCreateFolderDialog = false },
-            title = { Text(stringResource(R.string.folder_create_title)) },
-            text = { OutlinedTextField(value = folderName, onValueChange = { folderName = it }, label = { Text(stringResource(R.string.folder_name_hint)) }, singleLine = true) },
-            confirmButton = { Button(onClick = { viewModel.createFolder(pagerState.currentPage - desktopStartIndex, folderName); showCreateFolderDialog = false }) { Text(stringResource(R.string.create)) } },
-            dismissButton = { TextButton(onClick = { showCreateFolderDialog = false }) { Text(stringResource(R.string.cancel)) } }
-        )
-    }
-
-    if (showDeleteFolderConfirm) {
-        val folder = openFolder
-        if (folder != null) {
-            AlertDialog(
-                onDismissRequest = { showDeleteFolderConfirm = false },
-                title = { Text(stringResource(R.string.folder_delete_confirm_title)) },
-                text = { Text(stringResource(R.string.folder_delete_confirm_msg)) },
-                confirmButton = {
-                    TextButton(onClick = {
-                        viewModel.deleteFolder(folder.uniqueId, keepIcons = true)
-                        folderToOpenId = null
-                        showDeleteFolderConfirm = false
-                    }) {
-                        Text(stringResource(R.string.folder_delete_keep))
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = {
-                        viewModel.deleteFolder(folder.uniqueId, keepIcons = false)
-                        folderToOpenId = null
-                        showDeleteFolderConfirm = false
-                    }) {
-                        Text(stringResource(R.string.folder_delete_discard))
-                    }
-                }
-            )
-        }
-    }
-
-    if (showDockPicker != null) {
-        val visibleApps = allAppsFlat.filter { !it.isHidden }
-        AppPickerDialog(
-            allApps = visibleApps,
-            iconShape = iconShape,
-            onDismiss = { showDockPicker = null },
-            onAppSelected = { pkg -> viewModel.updateDockApp(showDockPicker!!, pkg); showDockPicker = null }
-        )
-    }
-
-    if (showWidgetPicker) {
-        WidgetPickerDialog(
-            onDismiss = {
-                showWidgetPicker = false
-                widgetTargetPage = null
-            },
-            onWidgetSelected = {
-                viewModel.addWidget(it, widgetTargetPage ?: -1)
-                showWidgetPicker = false
-                widgetTargetPage = null
-            }
-        )
-    }
-
-    if (appToEdit != null) {
-        QuickEditDialog(
-            app = appToEdit!!,
-            viewModel = viewModel,
-            iconShape = iconShape,
-            onDismiss = { appToEdit = null }
-        )
-    }
-
-    FolderOverlay(
-        isVisible = openFolder != null,
-        folder = openFolder,
+        showDockPicker = showDockPicker,
+        onDismissDockPicker = { showDockPicker = null },
+        appToEdit = appToEdit,
+        onDismissAppEdit = { appToEdit = null },
+        folderToOpenId = folderToOpenId,
+        onDismissFolder = { folderToOpenId = null },
+        currentPage = pagerState.currentPage - desktopStartIndex,
+        pages = pages,
         allAppsFlat = allAppsFlat,
+        isDefaultLauncher = isDefaultLauncher,
         isEditMode = isEditMode,
-        viewModel = viewModel,
-        backdrop = backdrop,
         iconShape = iconShape,
+        backdrop = backdrop,
         blurRadius = blurRadius,
         refractionHeight = refractionHeight,
         refractionAmount = refractionAmount,
         chromaticAberration = chromaticAberration,
         isLiquidGlassEnabled = isLiquidGlassEnabled,
         isLiquidGlassHomeFolderEnabled = isLiquidGlassHomeFolderEnabled,
-        onAppClick = onAppClick,
-        onDismiss = { folderToOpenId = null },
-        onDeleteFolderClick = { showDeleteFolderConfirm = true },
-        onEditApp = { appToEdit = it }
+        onAddWidgetClick = { page ->
+            widgetTargetPage = page
+            showWidgetPicker = true
+        },
+        onWallpaperClick = { wallpaperLauncher.launch("image/*") },
+        onSettingsClick = onSettingsClick,
+        onAppClick = onAppClick
     )
 }

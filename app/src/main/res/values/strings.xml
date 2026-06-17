@@ -28,6 +28,10 @@
     <string name="menu_delete_home">Delete from Home</string>
     <string name="menu_add_to_home">Add to Home</string>
     <string name="menu_uninstall">Uninstall</string>
+    <string name="menu_hide">Hide</string>
+    <string name="menu_app_info">App Info</string>
+    <string name="menu_add_favorite">Add to Favorites</string>
+    <string name="menu_remove_favorite">Remove from Favorites</string>
     <string name="menu_manage_apps">Manage Apps</string>
     <string name="menu_edit">Edit</string>
 
@@ -117,6 +121,9 @@
     <string name="settings_general">General</string>
     <string name="settings_custom_layout">Custom Layout</string>
     <string name="settings_apply">Apply Changes</string>
+    <string name="home_menu_options">Home Screen Context Menu</string>
+    <string name="home_menu_desc">Select which options to show in the app long-press menu</string>
+    <string name="favorites">Favorites</string>
     <!-- Widgets -->
     <string name="widget_battery">Battery Status</string>
     <string name="widget_clock">Analog Clock</string>

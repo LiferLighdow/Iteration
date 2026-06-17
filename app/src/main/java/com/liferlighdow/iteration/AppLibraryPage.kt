@@ -15,6 +15,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -346,14 +347,16 @@ fun AppLibraryFolder(
                 Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                         val lockShape = if (libraryShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(15.1.dp)
-                        if (isLocked) Box(modifier = Modifier.size(internalIconSize).background(Color.White.copy(alpha = 0.3f), lockShape).clickable { onMoreClick() })
+                        val lockColor = if (isSystemInDarkTheme()) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
+                        if (isLocked) Box(modifier = Modifier.size(internalIconSize).background(lockColor, lockShape).clickable { onMoreClick() })
                         else apps.getOrNull(0)?.let { app ->
                             LibraryItemWithMenu(app, name, iconShape, libraryShape, internalIconSize, onAppClick, onDragStart, onDrag, onDragEnd)
                         }
                     }
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                         val lockShape = if (libraryShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(15.1.dp)
-                        if (isLocked) Box(modifier = Modifier.size(internalIconSize).background(Color.White.copy(alpha = 0.3f), lockShape).clickable { onMoreClick() })
+                        val lockColor = if (isSystemInDarkTheme()) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
+                        if (isLocked) Box(modifier = Modifier.size(internalIconSize).background(lockColor, lockShape).clickable { onMoreClick() })
                         else apps.getOrNull(1)?.let { app ->
                             LibraryItemWithMenu(app, name, iconShape, libraryShape, internalIconSize, onAppClick, onDragStart, onDrag, onDragEnd)
                         }
@@ -362,14 +365,16 @@ fun AppLibraryFolder(
                 Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                         val lockShape = if (libraryShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(15.1.dp)
-                        if (isLocked) Box(modifier = Modifier.size(internalIconSize).background(Color.White.copy(alpha = 0.3f), lockShape).clickable { onMoreClick() })
+                        val lockColor = if (isSystemInDarkTheme()) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
+                        if (isLocked) Box(modifier = Modifier.size(internalIconSize).background(lockColor, lockShape).clickable { onMoreClick() })
                         else apps.getOrNull(2)?.let { app ->
                             LibraryItemWithMenu(app, name, iconShape, libraryShape, internalIconSize, onAppClick, onDragStart, onDrag, onDragEnd)
                         }
                     }
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                         val lockShape = if (libraryShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(15.1.dp)
-                        if (isLocked) Box(modifier = Modifier.size(internalIconSize).background(Color.White.copy(alpha = 0.3f), lockShape).clickable { onMoreClick() })
+                        val lockColor = if (isSystemInDarkTheme()) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
+                        if (isLocked) Box(modifier = Modifier.size(internalIconSize).background(lockColor, lockShape).clickable { onMoreClick() })
                         else if (apps.size > 4) Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.2f), lockShape).clickable { onMoreClick() }, contentAlignment = Alignment.Center) { Text("+${apps.size - 3}", color = Color.White, style = MaterialTheme.typography.headlineSmall) }
                         else apps.getOrNull(3)?.let { app ->
                             LibraryItemWithMenu(app, name, iconShape, libraryShape, internalIconSize, onAppClick, onDragStart, onDrag, onDragEnd)

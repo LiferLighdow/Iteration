@@ -33,6 +33,7 @@
     *   **Page Visibility Control**: Fully toggleable **Minus One (Widget) Page** and **App Library** via settings. Users can choose to hide these specialized pages for a cleaner, ultra-minimalist desktop.
     *   **Flexible Layouts**: Choose between 4x5, 4x6, 4x7, or "Auto (Adaptive)" based on screen aspect ratio.
     *   **Dock Styles**: Switch between **Modern (Floating)** round dock and **Classic (Full Width)** iOS-style dock that extends to the navigation bar.
+    *   **Gesture-Responsive Dock**: The Dock and Search Pill feature linear follow-through animations. They dynamically slide and fade based on the precise scroll progress when transitioning to the **Minus One Page** or **App Library**.
     *   **Dynamic Search Pill**: Interactive "Search" capsule that elegantly transitions into page indicator dots during scrolling.
 
 ### 🎭 Icon Customization & Styling (The Ultimate System)
@@ -81,6 +82,7 @@ The project has undergone a massive structural refactoring to ensure high mainta
 *   **Action Proxy Pattern**: System-level interactions are encapsulated in `LauncherActions.kt`, separating user intent from execution logic.
 
 ### 🚀 High-Performance Rendering
+*   **Linear Animation Engine**: Real-time interpolation of UI elements (like the Dock) based on Pager scroll fractions, replacing binary visibility states with fluid, gesture-bound transitions.
 *   **Collision-Free Gestures**: Custom-built `awaitPointerEventScope` logic with event consumption checks to ensure widgets and the Pager coexist perfectly.
 *   **V10 Icon Cache Engine**: Robust multi-level caching (LruCache + Disk) that forces regeneration only when style parameters, custom colors, or exclusions change.
 *   **Intelligent Compatibility**: Built-in API Level Guard for **Liquid Glass** (API 31+) with Material 3 warning dialogs and fallback rendering for older devices.

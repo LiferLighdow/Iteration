@@ -16,6 +16,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -112,7 +113,7 @@ fun BatteryWidget(
     var isCharging by remember { mutableStateOf(false) }
 
     val containerColor = when (displayMode) {
-        WidgetDisplayMode.GLASS -> Color.White.copy(alpha = 0.2f)
+        WidgetDisplayMode.GLASS -> glassFallbackColor(0.2f)
         WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.primaryContainer
     }
     val contentColor = when (displayMode) {
@@ -210,7 +211,7 @@ fun AnalogClockWidget(
     val mContext = LocalContext.current
 
     val containerColor = when (displayMode) {
-        WidgetDisplayMode.GLASS -> Color.White.copy(alpha = 0.2f)
+        WidgetDisplayMode.GLASS -> glassFallbackColor(0.2f)
         WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.secondaryContainer
     }
     val contentColor = when (displayMode) {
@@ -347,7 +348,7 @@ fun StackWidget(
     Card(
         modifier = modifier.aspectRatio(if (isWide) 2.1f else 1f),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.1f))
+        colors = CardDefaults.cardColors(containerColor = glassFallbackColor(0.1f))
     ) {
         if (stackItems.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -610,7 +611,7 @@ fun StandardMusicWidget(
     val mediaInfo by NotificationService.currentMedia.collectAsState()
 
     val containerColor = when (displayMode) {
-        WidgetDisplayMode.GLASS -> Color.White.copy(alpha = 0.2f)
+        WidgetDisplayMode.GLASS -> glassFallbackColor(0.2f)
         WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.secondaryContainer
     }
     val contentColor = when (displayMode) {
@@ -702,7 +703,7 @@ fun StandardMusicWidget(
                         onClick = { NotificationService.sendMediaCommand("play_pause") },
                         modifier = Modifier.size(44.dp),
                         colors = IconButtonDefaults.filledTonalIconButtonColors(
-                            containerColor = if (displayMode == WidgetDisplayMode.GLASS) Color.White.copy(alpha = 0.3f) else MaterialTheme.colorScheme.primary
+                            containerColor = if (displayMode == WidgetDisplayMode.GLASS) glassFallbackColor(0.3f) else MaterialTheme.colorScheme.primary
                         )
                     ) {
                         Icon(
@@ -739,7 +740,7 @@ fun WideMusicWidget(
     val mediaInfo by NotificationService.currentMedia.collectAsState()
 
     val containerColor = when (displayMode) {
-        WidgetDisplayMode.GLASS -> Color.White.copy(alpha = 0.2f)
+        WidgetDisplayMode.GLASS -> glassFallbackColor(0.2f)
         WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.secondaryContainer
     }
     val contentColor = when (displayMode) {
@@ -839,7 +840,7 @@ fun WideMusicWidget(
                             onClick = { NotificationService.sendMediaCommand("play_pause") },
                             modifier = Modifier.size(56.dp),
                             colors = IconButtonDefaults.filledTonalIconButtonColors(
-                                containerColor = if (displayMode == WidgetDisplayMode.GLASS) Color.White.copy(alpha = 0.3f) else MaterialTheme.colorScheme.primary
+                                containerColor = if (displayMode == WidgetDisplayMode.GLASS) glassFallbackColor(0.3f) else MaterialTheme.colorScheme.primary
                             )
                         ) {
                             Icon(
@@ -878,7 +879,7 @@ fun PhotoWidget(widget: WidgetModel, viewModel: MainViewModel, modifier: Modifie
             .aspectRatio(aspectRatio)
             .then(if (enableClick) Modifier.clickable { launcher.launch("image/*") } else Modifier),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.1f))
+        colors = CardDefaults.cardColors(containerColor = glassFallbackColor(0.1f))
     ) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             if (photo != null) {
@@ -1116,7 +1117,7 @@ fun StandardCalendarWidget(
     }
 
     val containerColor = when (displayMode) {
-        WidgetDisplayMode.GLASS -> Color.White.copy(alpha = 0.2f)
+        WidgetDisplayMode.GLASS -> glassFallbackColor(0.2f)
         WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.tertiaryContainer
     }
     val contentColor = when (displayMode) {
@@ -1205,7 +1206,7 @@ fun WideCalendarWidget(
     }
 
     val containerColor = when (displayMode) {
-        WidgetDisplayMode.GLASS -> Color.White.copy(alpha = 0.2f)
+        WidgetDisplayMode.GLASS -> glassFallbackColor(0.2f)
         WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.tertiaryContainer
     }
     val contentColor = when (displayMode) {
@@ -1381,7 +1382,7 @@ fun NoteWidget(
     val useLiquid = displayMode == WidgetDisplayMode.GLASS && isLiquidGlassEnabled && isLiquidWidgetsEnabled && backdrop != null
 
     val containerColor = when (displayMode) {
-        WidgetDisplayMode.GLASS -> Color.White.copy(alpha = 0.2f)
+        WidgetDisplayMode.GLASS -> glassFallbackColor(0.2f)
         WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.secondaryContainer
     }
     val contentColor = when (displayMode) {
