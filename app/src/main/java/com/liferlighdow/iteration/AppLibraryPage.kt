@@ -311,7 +311,7 @@ fun AppLibraryFolder(
 ) {
     val viewModel: MainViewModel = viewModel()
     
-    // 根據形狀決定裁切方式：只有圓形才強制裁切（防止脫框），Default 則不裁切（確保 72dp 圖示角角完整）
+    // 根據形狀決定裁切方式
     val folderShape = if (libraryShape == IconShape.CIRCLE) CircleShape else null
     val folderPadding = if (libraryShape == IconShape.CIRCLE) 20.dp else 12.dp
     val internalIconSize = 72.dp
@@ -338,46 +338,72 @@ fun AppLibraryFolder(
             )
             
             // 內容層
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(folderPadding),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        val lockShape = if (libraryShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(15.1.dp)
-                        val lockColor = if (isSystemInDarkTheme()) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
-                        if (isLocked) Box(modifier = Modifier.size(internalIconSize).background(lockColor, lockShape).clickable { onMoreClick() })
-                        else apps.getOrNull(0)?.let { app ->
-                            LibraryItemWithMenu(app, name, iconShape, libraryShape, internalIconSize, onAppClick, onDragStart, onDrag, onDragEnd)
-                        }
-                    }
-                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        val lockShape = if (libraryShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(15.1.dp)
-                        val lockColor = if (isSystemInDarkTheme()) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
-                        if (isLocked) Box(modifier = Modifier.size(internalIconSize).background(lockColor, lockShape).clickable { onMoreClick() })
-                        else apps.getOrNull(1)?.let { app ->
-                            LibraryItemWithMenu(app, name, iconShape, libraryShape, internalIconSize, onAppClick, onDragStart, onDrag, onDragEnd)
+            if (name == "Suggestions") {
+                // Suggestions 分區改為 4x2 網格顯示前 8 個
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(folderPadding),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    repeat(2) { rowIndex ->
+                        Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            repeat(4) { colIndex ->
+                                val index = rowIndex * 4 + colIndex
+                                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                                    apps.getOrNull(index)?.let { app ->
+                                        // 調整建議分區內的圖示大小以適應 4x2
+                                        val suggestionIconSize = internalIconSize * 0.75f 
+                                        LibraryItemWithMenu(app, name, iconShape, libraryShape, suggestionIconSize, onAppClick, onDragStart, onDrag, onDragEnd)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
-                Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        val lockShape = if (libraryShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(15.1.dp)
-                        val lockColor = if (isSystemInDarkTheme()) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
-                        if (isLocked) Box(modifier = Modifier.size(internalIconSize).background(lockColor, lockShape).clickable { onMoreClick() })
-                        else apps.getOrNull(2)?.let { app ->
-                            LibraryItemWithMenu(app, name, iconShape, libraryShape, internalIconSize, onAppClick, onDragStart, onDrag, onDragEnd)
+            } else {
+                // 其他分區維持 2x2 顯示
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(folderPadding),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                            val lockShape = if (libraryShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(15.1.dp)
+                            val lockColor = if (isSystemInDarkTheme()) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
+                            if (isLocked) Box(modifier = Modifier.size(internalIconSize).background(lockColor, lockShape).clickable { onMoreClick() })
+                            else apps.getOrNull(0)?.let { app ->
+                                LibraryItemWithMenu(app, name, iconShape, libraryShape, internalIconSize, onAppClick, onDragStart, onDrag, onDragEnd)
+                            }
+                        }
+                        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                            val lockShape = if (libraryShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(15.1.dp)
+                            val lockColor = if (isSystemInDarkTheme()) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
+                            if (isLocked) Box(modifier = Modifier.size(internalIconSize).background(lockColor, lockShape).clickable { onMoreClick() })
+                            else apps.getOrNull(1)?.let { app ->
+                                LibraryItemWithMenu(app, name, iconShape, libraryShape, internalIconSize, onAppClick, onDragStart, onDrag, onDragEnd)
+                            }
                         }
                     }
-                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        val lockShape = if (libraryShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(15.1.dp)
-                        val lockColor = if (isSystemInDarkTheme()) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
-                        if (isLocked) Box(modifier = Modifier.size(internalIconSize).background(lockColor, lockShape).clickable { onMoreClick() })
-                        else if (apps.size > 4) Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.2f), lockShape).clickable { onMoreClick() }, contentAlignment = Alignment.Center) { Text("+${apps.size - 3}", color = Color.White, style = MaterialTheme.typography.headlineSmall) }
-                        else apps.getOrNull(3)?.let { app ->
-                            LibraryItemWithMenu(app, name, iconShape, libraryShape, internalIconSize, onAppClick, onDragStart, onDrag, onDragEnd)
+                    Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                            val lockShape = if (libraryShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(15.1.dp)
+                            val lockColor = if (isSystemInDarkTheme()) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
+                            if (isLocked) Box(modifier = Modifier.size(internalIconSize).background(lockColor, lockShape).clickable { onMoreClick() })
+                            else apps.getOrNull(2)?.let { app ->
+                                LibraryItemWithMenu(app, name, iconShape, libraryShape, internalIconSize, onAppClick, onDragStart, onDrag, onDragEnd)
+                            }
+                        }
+                        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                            val lockShape = if (libraryShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(15.1.dp)
+                            val lockColor = if (isSystemInDarkTheme()) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
+                            if (isLocked) Box(modifier = Modifier.size(internalIconSize).background(lockColor, lockShape).clickable { onMoreClick() })
+                            else if (apps.size > 4) Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.2f), lockShape).clickable { onMoreClick() }, contentAlignment = Alignment.Center) { Text("+${apps.size - 3}", color = Color.White, style = MaterialTheme.typography.headlineSmall) }
+                            else apps.getOrNull(3)?.let { app ->
+                                LibraryItemWithMenu(app, name, iconShape, libraryShape, internalIconSize, onAppClick, onDragStart, onDrag, onDragEnd)
+                            }
                         }
                     }
                 }
