@@ -30,62 +30,64 @@
     *   **Applied Everywhere**: Dock, Home Folders, App Library Categories, Search Bars, and Widgets.
     *   **Customizable Effects**: Adjustable blur radius (0-50), physical refraction height, refraction amount, and chromatic aberration.
 *   **Desktop Customization**:
-    *   **Page Visibility Control**: Fully toggleable **Minus One (Widget) Page** and **App Library** via settings. Users can choose to hide these specialized pages for a cleaner, ultra-minimalist desktop.
+    *   **Page Visibility Control**: Fully toggleable **Minus One (Widget) Page** and **App Library** via settings. Users can choose to hide these specialized pages for a cleaner desktop.
     *   **Flexible Layouts**: Choose between 4x5, 4x6, 4x7, or "Auto (Adaptive)" based on screen aspect ratio.
-    *   **Dock Styles**: Switch between **Modern (Floating)** round dock and **Classic (Full Width)** iOS-style dock that extends to the navigation bar.
-    *   **Gesture-Responsive Dock**: The Dock and Search Pill feature linear follow-through animations. They dynamically slide and fade based on the precise scroll progress when transitioning to the **Minus One Page** or **App Library**.
-    *   **Dynamic Search Pill**: Interactive "Search" capsule that elegantly transitions into page indicator dots during scrolling.
+    *   **Dock Styles**: Switch between **Modern (Floating)** round dock and **Classic (Full Width)** iOS-style dock.
+    *   **Gesture-Responsive Dock**: The Dock and Search Pill feature linear follow-through animations. They dynamically slide and fade based on the precise scroll progress.
 
-### 🎭 Icon Customization & Styling (The Ultimate System)
-*   **Iteration Presets**: Instant application of **Standard**, **Black**, **White**, and **Glass** styles.
-*   **Ultimate Custom Style**: High-precision control over foreground and background colors using a full **HSV + Alpha color picker** with Hex support and real-time live preview.
-*   **Smart Original Hybrid**: Toggle between custom colors and original app icons/backgrounds for each layer independently.
-*   **Forced Theming**: Achieve total visual consistency by applying styles to all apps, bypassing traditional monochrome layer limitations.
-*   **Custom Exclusions**: Manually select specific apps to bypass styling and maintain their original colorful look.
-*   **Icon Pack Support**: Full compatibility with third-party icon packs from the Play Store.
-*   **Individual Icon Edit**: Change specific app icons (with built-in cropping) and labels directly from the desktop.
+### 🔍 Global Search & Intelligence (Powerhouse)
+*   **Universal Discovery**: Search for installed **Apps** and **Local Contacts** in a single unified interface.
+    *   **Direct Interaction**: Tap a contact to view details or use the quick-dial icon to call instantly.
+*   **Advanced Scientific Calculator**: A built-in, lightning-fast recursive descent parser.
+    *   **Rich Operations**: Supports `+`, `-`, `*`, `/`, `^` (Power), `%` (Modulo/Percentage).
+    *   **Scientific Functions**: `sqrt`, `abs`, `sin`, `cos`, `tan`, `cot`, `sec`, `csc`, `log`, `ln`.
+    *   **Constants & Symbols**: Full support for `pi`, `e`, and the `π` symbol.
+    *   **Implicit Multiplication**: Intuitively handles `2π`, `2(3+4)`, and `sin(30)cos(30)`.
+    *   **Degree-Based Trig**: Optimized for daily practical use (e.g., `sin(30)` = 0.5).
+*   **Offline Unit Converter**: Instant conversion for **Length**, **Weight**, and **Temperature** without internet.
+*   **Smart Equation Solver**: Detects equations (e.g., `x^2 - 4 = 0`) and provides a direct link to **WolframAlpha** for detailed steps and graphs.
+*   **Smart Clipboard Integration**: Automatically detects recent clipboard content when the search bar is empty for one-tap filling.
+*   **Customizable Search Engines**: Switch between Google, Bing, DuckDuckGo, Baidu, WolframAlpha, Perplexity, and more.
 
-### 📂 Advanced Folder Management
-*   **Context-Aware Menus**: Full context menu support (Long-press) inside folders even in non-edit mode. Users can Remove, Edit, or Uninstall apps directly from the folder overlay.
-*   **Intelligent "Manage Apps"**: The folder management interface now **pre-checks all currently contained apps**. This allows for intuitive batch addition or removal with real-time synchronization and automatic duplicate prevention.
-*   **Dynamic Resizing**: iOS-inspired folder animations that expand and collapse directly from the icon's desktop coordinates.
+### 🎭 App Experience & Shortcuts
+*   **App Shortcuts (Quick Actions)**: Access Android's native app shortcuts directly.
+    *   **Universal Access**: Long-press any icon on the **Home Screen**, **Dock**, inside **Folders**, or the **App Library**.
+    *   **Native UI**: Displays short labels and native icons for shortcuts (e.g., "New Incognito Tab").
+*   **Icon Customization (The Ultimate System)**:
+    *   **Iteration Presets**: Instant application of **Standard**, **Black**, **White**, and **Glass** styles.
+    *   **Ultimate Custom Style**: High-precision control using a full **HSV + Alpha color picker**.
+    *   **Smart Original Hybrid**: Toggle between custom colors and original app icons/backgrounds independently.
+    *   **Forced Theming**: Apply styles to all apps, bypassing traditional monochrome layer limitations.
+    *   **Icon Pack Support**: Full compatibility with third-party icon packs.
 
-### 🖖 Advanced Gesture System
-*   **Intelligent Priority**: Smart gesture handling that prioritizes widget scrolling (like Stack or Calendar) over home screen gestures.
-*   **Search Lock**: Horizontal paging is automatically disabled when the App Library search is active or focused, preventing accidental page swaps during typing.
-*   **Rich Gesture Set**:
-    *   **Single Finger**: Double Tap, Swipe Up, Swipe Down, Long Press.
-    *   **Multi-Finger**: Two-finger Swipe Up, Two-finger Swipe Down.
-*   **Versatile Actions**:
-    *   **System Controls**: Lock Screen (via Accessibility), Open Notifications, Open System Settings.
-    *   **Launcher Actions**: Global Search, Desktop Menu, Launcher Settings (Mapped to Two-finger Swipe Up by default).
+### 📂 Advanced Folder & Library
+*   **Context-Aware Menus**: Full shortcut and management support inside folders even in non-edit mode.
+*   **Intelligent "Manage Apps"**: Folder management pre-checks contained apps for intuitive batch addition/removal with automatic duplicate prevention.
+*   **Optimized App Library**:
+    *   **2x2 Suggestions**: Intelligent recommendation grid (max 4 icons) for a cleaner, unified look.
+    *   **Fast Categorization**: Zero-lag filtering and background-processed group management.
+*   **Privacy & Security**: **Hide Apps** with a secure **Password Gate**.
 
-### 🧩 Widgets & Extensions (Minus One Page)
-*   **Interactive Stack Stacker**: A vertical container for cycling through multiple widgets with simple swipes.
-*   **Wide Calendar Widget**: Detailed event list view with prioritized scrolling.
-*   **Real-time Music Widgets**: Live metadata and integrated controls for all active media sessions (Spotify, YouTube, etc.).
-*   **Smart Monitoring**: Minimalist Battery, Clock, and Standard Calendar monitoring widgets.
-
-### 🔍 Discovery & Organization
-*   **Responsive App Library**: Background-processed filtering and categorization for zero-lag interaction.
-*   **Privacy & Security**: Secure sensitive applications with **Hide Apps** and a custom **Password Gate**.
-    *   **Advanced App Filtering**: Quickly manage hidden applications using live filters for **All**, **Hidden**, or **Visible** apps within the security settings.
+### 🖖 Gesture System & Permissions
+*   **Intelligent Priority**: Smart gesture handling that prioritizes widget scrolling over home screen gestures.
+*   **Search Lock**: Horizontal paging is automatically disabled when the App Library search is focused.
+*   **Centralized Permission Center**: A dedicated "Permissions" page for **Contacts**, **Notifications**, and **Accessibility**.
+*   **Local Privacy Oath**: Guaranteed local processing; your data never leaves your device.
 
 ---
 
 ## 🛠️ Technical Showcase
 
 ### 🏗️ Modern Decoupled Architecture
-The project has undergone a massive structural refactoring to ensure high maintainability and developer productivity. The core logic is now distributed across specialized modules:
-*   **Component-Based UI**: UI logic is strictly separated into atomic files (`Dock.kt`, `AppGrid.kt`, `FolderOverlay.kt`, `AppLibraryPage.kt`, etc.).
-*   **State-Driven Overlays**: All overlays (Folders, Search, Menus) are managed via robust `StateFlow` orchestration, ensuring smooth transition animations and crash-free state handovers (e.g., during "Fade-out" cycles).
+*   **Component-Based UI**: UI logic is strictly separated into atomic files (`Dock.kt`, `AppGrid.kt`, `FolderOverlay.kt`, etc.).
+*   **State-Driven Overlays**: All overlays are managed via robust `StateFlow` orchestration for smooth transitions and crash-free state handovers.
 *   **Action Proxy Pattern**: System-level interactions are encapsulated in `LauncherActions.kt`, separating user intent from execution logic.
 
 ### 🚀 High-Performance Rendering
-*   **Linear Animation Engine**: Real-time interpolation of UI elements (like the Dock) based on Pager scroll fractions, replacing binary visibility states with fluid, gesture-bound transitions.
-*   **Collision-Free Gestures**: Custom-built `awaitPointerEventScope` logic with event consumption checks to ensure widgets and the Pager coexist perfectly.
-*   **V10 Icon Cache Engine**: Robust multi-level caching (LruCache + Disk) that forces regeneration only when style parameters, custom colors, or exclusions change.
-*   **Intelligent Compatibility**: Built-in API Level Guard for **Liquid Glass** (API 31+) with Material 3 warning dialogs and fallback rendering for older devices.
+*   **Linear Animation Engine**: Real-time interpolation of UI elements based on Pager scroll fractions, replacing binary visibility states with fluid transitions.
+*   **Collision-Free Gestures**: Custom-built `awaitPointerEventScope` logic ensuring widgets and the Pager coexist perfectly.
+*   **V10 Icon Cache Engine**: Robust multi-level caching (LruCache + Disk) that forces regeneration only when style parameters change.
+*   **Full Configuration Backup**: JSON-based serialization including Desktop Layout, Liquid Glass parameters, Gesture mappings, and search engine choices.
 
 ---
 
@@ -96,18 +98,16 @@ app/src/main/java/com/liferlighdow/iteration/
 ├── MainActivity.kt           # Pure entry point & Window configuration
 ├── LauncherScreen.kt        # Core Page Orchestrator & Navigation state
 ├── AppGrid.kt               # Desktop grid layout & Drag-and-drop engine
-├── Dock.kt                  # Bottom bar variants & Search Pill logic
+├── Dock.kt                  # Bottom bar variants & App Shortcut logic
 ├── FolderOverlay.kt         # Immersive folder UI & context menu logic
-├── GlobalSearchOverlay.kt   # High-performance search with math support
+├── GlobalSearchOverlay.kt   # High-performance search, contacts & math
 ├── LauncherActions.kt       # System interaction & Gesture execution
-├── LauncherMenu.kt          # Desktop long-press BottomSheet logic
-├── LauncherDialogs.kt       # Pickers, App Editors, and confirmation dialogs
 ├── MainViewModel.kt          # Core state orchestration & Persistent Settings
 ├── MainViewModelLayout.kt    # Folder synchronization & layout serialization
 ├── LiquidGlass.kt            # Backdrop-powered glassmorphism engine
 ├── IconProcessor.kt          # Optimized icon masking & M3 tinting
-├── ConfigSerializer.kt       # JSON Serialization for Backup/Restore
-└── NotificationService.kt    # Media metadata & real-time badge counts
+├── ConfigSerializer.kt       # JSON Serialization for Full Backup/Restore
+└── ContactModel.kt          # Data structure for offline contact search
 ```
 
 ---

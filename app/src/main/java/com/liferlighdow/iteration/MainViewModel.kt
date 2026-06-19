@@ -13,6 +13,7 @@ import android.util.LruCache
 import androidx.core.graphics.drawable.toBitmap
 import java.io.File
 import java.io.FileOutputStream
+import android.net.Uri
 import android.os.Build
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ImageBitmap
@@ -226,6 +227,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     )
     val dockStyle = _dockStyle.asStateFlow()
 
+    private val _searchEngineUrl = MutableStateFlow(prefs.getString("search_engine_url", "https://www.google.com/search?q=") ?: "https://www.google.com/search?q=")
+    val searchEngineUrl = _searchEngineUrl.asStateFlow()
+
     private val _excludedThemedPackages = MutableStateFlow(prefs.getStringSet("excluded_themed_packages", emptySet()) ?: emptySet())
     val excludedThemedPackages = _excludedThemedPackages.asStateFlow()
 
@@ -280,6 +284,50 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _suggestedApps = MutableStateFlow<List<AppModel>>(emptyList())
     val suggestedApps = _suggestedApps.asStateFlow()
+
+    private val _contacts = MutableStateFlow<List<ContactModel>>(emptyList())
+    val contacts = _contacts.asStateFlow()
+
+    fun loadContacts() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val context = getApplication<Application>()
+            if (androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.READ_CONTACTS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                return@launch
+            }
+
+            val contactList = mutableListOf<ContactModel>()
+            val uri = android.provider.ContactsContract.CommonDataKinds.Phone.CONTENT_URI
+            val projection = arrayOf(
+                android.provider.ContactsContract.CommonDataKinds.Phone.CONTACT_ID,
+                android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER,
+                android.provider.ContactsContract.CommonDataKinds.Phone.PHOTO_THUMBNAIL_URI
+            )
+
+            context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+                val idIdx = cursor.getColumnIndex(android.provider.ContactsContract.CommonDataKinds.Phone.CONTACT_ID)
+                val nameIdx = cursor.getColumnIndex(android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+                val numIdx = cursor.getColumnIndex(android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER)
+                val photoIdx = cursor.getColumnIndex(android.provider.ContactsContract.CommonDataKinds.Phone.PHOTO_THUMBNAIL_URI)
+
+                while (cursor.moveToNext()) {
+                    val id = cursor.getString(idIdx)
+                    val name = cursor.getString(nameIdx)
+                    val number = cursor.getString(numIdx)
+                    val photoUri = cursor.getString(photoIdx)
+                    
+                    var photoBitmap: Bitmap? = null
+                    if (photoUri != null) {
+                        try {
+                            photoBitmap = android.provider.MediaStore.Images.Media.getBitmap(context.contentResolver, Uri.parse(photoUri))
+                        } catch (e: Exception) {}
+                    }
+                    contactList.add(ContactModel(id, name, number, photoBitmap))
+                }
+            }
+            _contacts.value = contactList.distinctBy { it.phoneNumber }
+        }
+    }
 
     private val customIconDir = File(application.filesDir, "custom_icons").apply { mkdirs() }
     private val processedIconCacheDir = File(application.cacheDir, "processed_icons").apply { mkdirs() }
@@ -375,6 +423,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val newRows = prefs.getInt("desktop_rows", 0)
         val newDockStyle = try { DockStyle.valueOf(prefs.getString("dock_style", "MODERN") ?: "MODERN") }
         catch (e: Exception) { DockStyle.MODERN }
+        val newSearchEngine = prefs.getString("search_engine_url", "https://www.google.com/search?q=") ?: "https://www.google.com/search?q="
 
         if (_iconStyle.value != newStyle || _isThemedIconsEnabled.value != newThemed || _iconPackPackage.value != newIconPackPackage || _iconShape.value != newShape || _libraryShape.value != newLibShape || _excludedThemedPackages.value != newExcluded || _desktopRows.value != newRows || _dockStyle.value != newDockStyle) {
             _iconStyle.value = newStyle
@@ -388,6 +437,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             iconCache.evictAll()
         }
 
+        _searchEngineUrl.value = newSearchEngine
         _isLiquidGlassEnabled.value = newLiquidEnabled
         _isLiquidGlassDockEnabled.value = newLiquidDockEnabled
         _isLiquidGlassHomeFolderEnabled.value = newLiquidHomeFolderEnabled
@@ -683,6 +733,38 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (file.exists()) file.delete()
         iconCache.remove(packageName) // 清除快取
         loadApps()
+    }
+
+    fun getShortcuts(packageName: String): List<AppShortcut> {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N_MR1) return emptyList()
+        val launcherApps = getApplication<Application>().getSystemService(Context.LAUNCHER_APPS_SERVICE) as android.content.pm.LauncherApps
+        val query = android.content.pm.LauncherApps.ShortcutQuery().apply {
+            setPackage(packageName)
+            setQueryFlags(android.content.pm.LauncherApps.ShortcutQuery.FLAG_MATCH_DYNAMIC or android.content.pm.LauncherApps.ShortcutQuery.FLAG_MATCH_MANIFEST or android.content.pm.LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED)
+        }
+        return try {
+            val shortcuts = launcherApps.getShortcuts(query, android.os.Process.myUserHandle()) ?: emptyList()
+            shortcuts.map { shortcut ->
+                AppShortcut(
+                    id = shortcut.id,
+                    label = (shortcut.shortLabel ?: shortcut.longLabel ?: "").toString(),
+                    icon = try { launcherApps.getShortcutIconDrawable(shortcut, getApplication<Application>().resources.displayMetrics.densityDpi) } catch (e: Exception) { null },
+                    packageName = packageName
+                )
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    fun launchShortcut(packageName: String, shortcutId: String) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N_MR1) return
+        val launcherApps = getApplication<Application>().getSystemService(Context.LAUNCHER_APPS_SERVICE) as android.content.pm.LauncherApps
+        try {
+            launcherApps.startShortcut(packageName, shortcutId, null, null, android.os.Process.myUserHandle())
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     fun toggleHiddenApp(packageName: String) {
@@ -1278,6 +1360,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         prefs.edit().putString("dock_style", style.name).apply()
     }
 
+    fun setSearchEngineUrl(url: String) {
+        _searchEngineUrl.value = url
+        prefs.edit().putString("search_engine_url", url).apply()
+    }
+
     fun resetLiquidGlassParams() {
         setLiquidGlassBlur(0f)
         setLiquidGlassRefractionHeight(24f)
@@ -1299,6 +1386,38 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun exportConfig(): String {
+        val glassParams = mapOf(
+            "blur" to _liquidGlassBlur.value,
+            "refraction_height" to _liquidGlassRefractionHeight.value,
+            "refraction_amount" to _liquidGlassRefractionAmount.value,
+            "chromatic_aberration" to _liquidGlassChromaticAberration.value
+        )
+        val gestures = mapOf(
+            "double_tap_action" to _doubleTapAction.value.name,
+            "swipe_up_action" to _swipeUpAction.value.name,
+            "swipe_down_action" to _swipeDownAction.value.name,
+            "long_press_action" to _longPressAction.value.name,
+            "two_finger_swipe_up_action" to _twoFingerSwipeUpAction.value.name,
+            "two_finger_swipe_down_action" to _twoFingerSwipeDownAction.value.name,
+            "double_tap_app" to _doubleTapApp.value,
+            "swipe_up_app" to _swipeUpApp.value,
+            "swipe_down_app" to _swipeDownApp.value,
+            "long_press_app" to _longPressApp.value,
+            "two_finger_swipe_up_app" to _twoFingerSwipeUpApp.value,
+            "two_finger_swipe_down_app" to _twoFingerSwipeDownApp.value
+        )
+        val appearance = mapOf(
+            "icon_pack" to _iconPackPackage.value,
+            "desktop_rows" to _desktopRows.value,
+            "dock_style" to _dockStyle.value.name
+        )
+        val customIconSettings = mapOf(
+            "bg_color" to _customIconBgColor.value,
+            "fg_color" to _customIconFgColor.value,
+            "use_original" to _customIconUseOriginal.value,
+            "use_original_bg" to _customIconUseOriginalBg.value
+        )
+
         return ConfigSerializer.exportConfig(
             themedIcons = _isThemedIconsEnabled.value,
             liquidGlassDock = _isLiquidGlassDockEnabled.value,
@@ -1313,6 +1432,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             iconStyle = _iconStyle.value.name,
             iconShape = _iconShape.value.name,
             libraryShape = _libraryShape.value.name,
+            searchEngineUrl = _searchEngineUrl.value,
             pageSize = pageSize,
             password = getPassword(),
             hiddenPackages = hiddenPackages,
@@ -1323,7 +1443,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             pages = _pages.value,
             minusOneWidgets = _minusOneWidgets.value,
             dockPackageNames = _dockPackageNames.value,
-            launchCounts = prefs.getString("launch_counts", "")
+            launchCounts = prefs.getString("launch_counts", ""),
+            glassParams = glassParams,
+            gestures = gestures,
+            appearance = appearance,
+            favorites = _favoritePackages.value,
+            excludedThemed = _excludedThemedPackages.value,
+            homeMenuOptions = _homeMenuOptions.value,
+            customIconSettings = customIconSettings
         )
     }
 
@@ -1356,8 +1483,69 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _libraryShape.value = try { IconShape.valueOf(savedLibShape) } catch(e: Exception) { IconShape.DEFAULT }
             prefs.edit().putString("library_shape", _libraryShape.value.name).apply()
 
+            setSearchEngineUrl(settings.optString("search_engine_url", "https://www.google.com/search?q="))
+
             pageSize = settings.optInt("page_size", 20)
             setPassword(settings.optString("hidden_password", "1234"))
+
+            // 3. 恢復進階細項設定
+            root.optJSONObject("glass_params")?.let { g ->
+                setLiquidGlassBlur(g.optDouble("blur", 0.0).toFloat())
+                setLiquidGlassRefractionHeight(g.optDouble("refraction_height", 24.0).toFloat())
+                setLiquidGlassRefractionAmount(g.optDouble("refraction_amount", 48.0).toFloat())
+                setLiquidGlassChromaticAberration(g.optBoolean("chromatic_aberration", true))
+            }
+
+            root.optJSONObject("gestures")?.let { gst ->
+                try {
+                    setDoubleTapAction(GestureAction.valueOf(gst.optString("double_tap_action", "NONE")))
+                    setSwipeUpAction(GestureAction.valueOf(gst.optString("swipe_up_action", "NONE")))
+                    setSwipeDownAction(GestureAction.valueOf(gst.optString("swipe_down_action", "OPEN_GLOBAL_SEARCH")))
+                    setLongPressAction(GestureAction.valueOf(gst.optString("long_press_action", "OPEN_DESKTOP_MENU")))
+                    setTwoFingerSwipeUpAction(GestureAction.valueOf(gst.optString("two_finger_swipe_up_action", "NONE")))
+                    setTwoFingerSwipeDownAction(GestureAction.valueOf(gst.optString("two_finger_swipe_down_action", "OPEN_NOTIFICATIONS")))
+                } catch (_: Exception) {}
+                setDoubleTapApp(gst.optString("double_tap_app", ""))
+                setSwipeUpApp(gst.optString("swipe_up_app", ""))
+                setSwipeDownApp(gst.optString("swipe_down_app", ""))
+                setLongPressApp(gst.optString("long_press_app", ""))
+                setTwoFingerSwipeUpApp(gst.optString("two_finger_swipe_up_app", ""))
+                setTwoFingerSwipeDownApp(gst.optString("two_finger_swipe_down_app", ""))
+            }
+
+            root.optJSONObject("appearance")?.let { ap ->
+                setIconPack(ap.optString("icon_pack", ""))
+                setDesktopRows(ap.optInt("desktop_rows", 0))
+                try { setDockStyle(DockStyle.valueOf(ap.optString("dock_style", "MODERN"))) } catch (_: Exception) {}
+            }
+
+            root.optJSONObject("custom_icon_settings")?.let { ci ->
+                setCustomIconBgColor(ci.optInt("bg_color", 0xFF2196F3.toInt()))
+                setCustomIconFgColor(ci.optInt("fg_color", 0xFFFFFFFF.toInt()))
+                setCustomIconUseOriginal(ci.optBoolean("use_original", false))
+                setCustomIconUseOriginalBg(ci.optBoolean("use_original_bg", false))
+            }
+
+            root.optJSONArray("favorites")?.let { arr ->
+                val set = mutableSetOf<String>()
+                for (i in 0 until arr.length()) set.add(arr.getString(i))
+                _favoritePackages.value = set
+                prefs.edit().putStringSet("favorite_packages", set).apply()
+            }
+
+            root.optJSONArray("excluded_themed")?.let { arr ->
+                val set = mutableSetOf<String>()
+                for (i in 0 until arr.length()) set.add(arr.getString(i))
+                _excludedThemedPackages.value = set
+                prefs.edit().putStringSet("excluded_themed_packages", set).apply()
+            }
+
+            root.optJSONArray("home_menu_options")?.let { arr ->
+                val set = mutableSetOf<String>()
+                for (i in 0 until arr.length()) set.add(arr.getString(i))
+                _homeMenuOptions.value = set
+                prefs.edit().putStringSet("home_menu_options", set).apply()
+            }
 
             // 2. 恢復 App 設定
             hiddenPackages.clear()

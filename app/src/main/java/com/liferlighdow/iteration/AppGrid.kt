@@ -38,6 +38,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.core.graphics.drawable.toBitmap
+import androidx.compose.foundation.Image
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -510,6 +513,7 @@ private fun AppGridItem(
     viewModel: MainViewModel
 ) {
     val mContext = LocalContext.current
+    val shortcuts = remember(showContextMenu) { if (showContextMenu && !app.isFolder) viewModel.getShortcuts(app.packageName) else emptyList() }
     Box {
         AppItem(
             app = app,
@@ -550,6 +554,27 @@ private fun AppGridItem(
             onDismissRequest = onContextMenuDismiss,
             modifier = Modifier.background(MaterialTheme.colorScheme.surface)
         ) {
+            if (shortcuts.isNotEmpty()) {
+                shortcuts.forEach { shortcut ->
+                    DropdownMenuItem(
+                        text = { Text(shortcut.label) },
+                        leadingIcon = {
+                            shortcut.icon?.let { icon ->
+                                Image(
+                                    bitmap = icon.toBitmap().asImageBitmap(),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        },
+                        onClick = {
+                            viewModel.launchShortcut(app.packageName, shortcut.id)
+                            onContextMenuDismiss()
+                        }
+                    )
+                }
+                HorizontalDivider()
+            }
             if (menuOptions.contains("delete_home")) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.menu_delete_home)) },

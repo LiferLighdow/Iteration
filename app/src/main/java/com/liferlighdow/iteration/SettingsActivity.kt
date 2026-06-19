@@ -78,7 +78,7 @@ class SettingsActivity : ComponentActivity() {
 }
 
 enum class SettingsPage {
-    MAIN, HIDE_APPS, RENAME_APPS, CHANGE_ICON, APP_LIBRARY, ICON_THEME, DOCK, LIQUID_GLASS, GESTURES
+    MAIN, HIDE_APPS, RENAME_APPS, CHANGE_ICON, APP_LIBRARY, ICON_THEME, DOCK, LIQUID_GLASS, GESTURES, SEARCH, PERMISSIONS
 }
 
 @Composable
@@ -102,7 +102,9 @@ fun SettingsNavigation() {
             onNavigateToIconTheme = { currentPage = SettingsPage.ICON_THEME },
             onNavigateToDock = { currentPage = SettingsPage.DOCK },
             onNavigateToLiquidGlass = { currentPage = SettingsPage.LIQUID_GLASS },
-            onNavigateToGestures = { currentPage = SettingsPage.GESTURES }
+            onNavigateToGestures = { currentPage = SettingsPage.GESTURES },
+            onNavigateToSearch = { currentPage = SettingsPage.SEARCH },
+            onNavigateToPermissions = { currentPage = SettingsPage.PERMISSIONS }
         )
         SettingsPage.HIDE_APPS -> HideAppsScreen(onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.RENAME_APPS -> RenameAppsScreen(onBack = { currentPage = SettingsPage.MAIN })
@@ -115,6 +117,8 @@ fun SettingsNavigation() {
         SettingsPage.DOCK -> DesktopSettingsScreen(onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.LIQUID_GLASS -> LiquidGlassSettingsScreen(onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.GESTURES -> GesturesSettingsScreen(onBack = { currentPage = SettingsPage.MAIN })
+        SettingsPage.SEARCH -> SearchSettingsScreen(onBack = { currentPage = SettingsPage.MAIN })
+        SettingsPage.PERMISSIONS -> PermissionsSettingsScreen(onBack = { currentPage = SettingsPage.MAIN })
     }
 }
 
@@ -151,7 +155,9 @@ fun SettingsMainScreen(
     onNavigateToIconTheme: () -> Unit,
     onNavigateToDock: () -> Unit,
     onNavigateToLiquidGlass: () -> Unit,
-    onNavigateToGestures: () -> Unit
+    onNavigateToGestures: () -> Unit,
+    onNavigateToSearch: () -> Unit,
+    onNavigateToPermissions: () -> Unit
 ) {
     val viewModel: MainViewModel = viewModel()
     val context = LocalContext.current
@@ -190,10 +196,6 @@ fun SettingsMainScreen(
         }
     }
 
-    val isNotificationEnabled = remember {
-        NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)
-    }
-
     var showRestartDialog by remember { mutableStateOf(false) }
     var showPasswordGate by remember { mutableStateOf(false) }
     var showApiWarningDialog by remember { mutableStateOf(false) }
@@ -216,6 +218,7 @@ fun SettingsMainScreen(
                 ListItem(
                     headlineContent = { Text("Icon Theme") },
                     supportingContent = { Text("Change the style and color of your app icons") },
+                    leadingContent = { Icon(Icons.Default.Palette, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                     trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
                     modifier = Modifier.clickable { onNavigateToIconTheme() }
                 )
@@ -224,6 +227,7 @@ fun SettingsMainScreen(
                 ListItem(
                     headlineContent = { Text("Liquid Glass") },
                     supportingContent = { Text("Real-time glassmorphism effects") },
+                    leadingContent = { Icon(Icons.Default.BlurOn, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                     trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
                     modifier = Modifier.clickable { 
                         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
@@ -238,44 +242,43 @@ fun SettingsMainScreen(
                 ListItem(
                     headlineContent = { Text("Desktop Settings") },
                     supportingContent = { Text("Layout, Dock, and icon grid configuration") },
+                    leadingContent = { Icon(Icons.Default.Dashboard, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                     trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
                     modifier = Modifier.clickable { onNavigateToDock() }
                 )
             }
             item {
                 ListItem(
+                    headlineContent = { Text(stringResource(R.string.settings_search)) },
+                    supportingContent = { Text(stringResource(R.string.settings_search_desc)) },
+                    leadingContent = { Icon(Icons.Default.Search, contentDescription = null) },
+                    trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
+                    modifier = Modifier.clickable { onNavigateToSearch() }
+                )
+            }
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.settings_permissions)) },
+                    supportingContent = { Text(stringResource(R.string.settings_permissions_desc)) },
+                    leadingContent = { Icon(Icons.Default.Security, contentDescription = null) },
+                    trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
+                    modifier = Modifier.clickable { onNavigateToPermissions() }
+                )
+            }
+            item {
+                ListItem(
                     headlineContent = { Text(stringResource(R.string.settings_gestures)) },
                     supportingContent = { Text(stringResource(R.string.settings_gestures_desc)) },
+                    leadingContent = { Icon(Icons.Default.TouchApp, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                     trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
                     modifier = Modifier.clickable { onNavigateToGestures() }
                 )
             }
             item {
                 ListItem(
-                    headlineContent = { Text(stringResource(R.string.settings_notifications)) },
-                    supportingContent = {
-                        Text(if (isNotificationEnabled) "Enabled" else stringResource(R.string.settings_notifications_desc))
-                    },
-                    trailingContent = {
-                        if (!isNotificationEnabled) {
-                            TextButton(onClick = {
-                                context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-                            }) {
-                                Text(stringResource(R.string.grant_permission))
-                            }
-                        } else {
-                            Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        }
-                    },
-                    modifier = Modifier.clickable {
-                        context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-                    }
-                )
-            }
-            item {
-                ListItem(
                     headlineContent = { Text(stringResource(R.string.settings_hide_apps)) },
                     supportingContent = { Text(stringResource(R.string.settings_hide_apps_desc)) },
+                    leadingContent = { Icon(Icons.Default.VisibilityOff, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                     trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
                     modifier = Modifier.clickable {
                         if (viewModel.getPassword().isEmpty()) {
@@ -290,6 +293,7 @@ fun SettingsMainScreen(
                 ListItem(
                     headlineContent = { Text(stringResource(R.string.settings_rename_apps)) },
                     supportingContent = { Text(stringResource(R.string.settings_rename_apps_desc)) },
+                    leadingContent = { Icon(Icons.Default.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                     trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
                     modifier = Modifier.clickable { onNavigateToRenameApps() }
                 )
@@ -298,6 +302,7 @@ fun SettingsMainScreen(
                 ListItem(
                     headlineContent = { Text(stringResource(R.string.settings_library)) },
                     supportingContent = { Text(stringResource(R.string.settings_library_desc)) },
+                    leadingContent = { Icon(Icons.Default.Apps, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                     trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
                     modifier = Modifier.clickable { onNavigateToAppLibrary() }
                 )
@@ -1841,16 +1846,6 @@ fun GesturesSettingsScreen(onBack: () -> Unit) {
     var showAppPickerForTwoFingerSwipeUp by remember { mutableStateOf(false) }
     var showAppPickerForTwoFingerSwipeDown by remember { mutableStateOf(false) }
 
-    val context = LocalContext.current
-
-    val isAccessibilityEnabled = {
-        val expectedComponentName = ComponentName(context, IterationAccessibilityService::class.java).flattenToString()
-        val enabledServices = Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
-        enabledServices?.contains(expectedComponentName) == true
-    }
-    
-    var isServiceActive by remember { mutableStateOf(isAccessibilityEnabled()) }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -1926,46 +1921,9 @@ fun GesturesSettingsScreen(onBack: () -> Unit) {
                     onClick = { showTwoFingerSwipeDownDialog = true }
                 )
             }
-
-            val needsAccessibility = listOf(doubleTapAction, swipeUpAction, swipeDownAction, longPressAction, twoFingerSwipeUpAction, twoFingerSwipeDownAction).any {
-                it == GestureAction.LOCK_SCREEN || it == GestureAction.OPEN_NOTIFICATIONS
-            }
-
-            if (needsAccessibility) {
-                item {
-                    val toggleService = {
-                        val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                        context.startActivity(intent)
-                        Toast.makeText(context, "Find 'Iteration Gestures' and enable it", Toast.LENGTH_LONG).show()
-                    }
-
-                    ListItem(
-                        headlineContent = { Text("Accessibility Service") },
-                        supportingContent = { Text(if (isServiceActive) "Activated" else "Deactivated (Tap to configure)") },
-                        trailingContent = {
-                            Switch(
-                                checked = isServiceActive,
-                                onCheckedChange = { toggleService() }
-                            )
-                        },
-                        modifier = Modifier.clickable { toggleService() }
-                    )
-                }
-            }
         }
     }
     
-    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
-        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
-                isServiceActive = isAccessibilityEnabled()
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
-
     if (showDoubleTapDialog) {
         GestureActionPicker(
             title = stringResource(R.string.gesture_double_tap_dialog_title),
@@ -2441,6 +2399,244 @@ fun CompatibilityRow(version: String, level: String, desc: String, isCurrentDevi
             }
         }
         Text(desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PermissionsSettingsScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    
+    // 聯絡人權限狀態
+    var hasContactsPermission by remember {
+        mutableStateOf(
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.READ_CONTACTS
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    // 通知權限狀態
+    var isNotificationEnabled by remember {
+        mutableStateOf(
+            NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)
+        )
+    }
+
+    // 無障礙服務狀態
+    val isAccessibilityEnabled = {
+        val expectedComponentName = ComponentName(context, IterationAccessibilityService::class.java).flattenToString()
+        val enabledServices = Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
+        enabledServices?.contains(expectedComponentName) == true
+    }
+    var isServiceActive by remember { mutableStateOf(isAccessibilityEnabled()) }
+
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        hasContactsPermission = isGranted
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.settings_permissions)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.permission_contacts)) },
+                    supportingContent = { Text(stringResource(R.string.permission_contacts_desc)) },
+                    trailingContent = {
+                        Switch(
+                            checked = hasContactsPermission,
+                            onCheckedChange = {
+                                if (!hasContactsPermission) {
+                                    launcher.launch(android.Manifest.permission.READ_CONTACTS)
+                                }
+                            }
+                        )
+                    },
+                    modifier = Modifier.clickable {
+                        if (!hasContactsPermission) {
+                            launcher.launch(android.Manifest.permission.READ_CONTACTS)
+                        }
+                    }
+                )
+            }
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.permission_notifications)) },
+                    supportingContent = { Text(stringResource(R.string.permission_notifications_desc)) },
+                    trailingContent = {
+                        Switch(
+                            checked = isNotificationEnabled,
+                            onCheckedChange = {
+                                context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                            }
+                        )
+                    },
+                    modifier = Modifier.clickable {
+                        context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                    }
+                )
+            }
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.permission_accessibility)) },
+                    supportingContent = { Text(stringResource(R.string.permission_accessibility_desc)) },
+                    trailingContent = {
+                        Switch(
+                            checked = isServiceActive,
+                            onCheckedChange = {
+                                context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                            }
+                        )
+                    },
+                    modifier = Modifier.clickable {
+                        context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                    }
+                )
+            }
+            item {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                PaddingRemaining(16.dp) {
+                    Text(
+                        "Privacy Note",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        "Iteration Launcher processes all data locally on your device. Your contacts and notifications are never uploaded to any server.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+
+    // 生命週期監聽，用於從系統設定回來後更新狀態
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                hasContactsPermission = androidx.core.content.ContextCompat.checkSelfPermission(
+                    context, android.Manifest.permission.READ_CONTACTS
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                isNotificationEnabled = NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)
+                isServiceActive = isAccessibilityEnabled()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SearchSettingsScreen(onBack: () -> Unit) {
+    val viewModel: MainViewModel = viewModel()
+    val currentSearchEngineUrl by viewModel.searchEngineUrl.collectAsState()
+    var customUrl by remember { mutableStateOf(currentSearchEngineUrl) }
+
+    val searchEngines = listOf(
+        "Google" to "https://www.google.com/search?q=",
+        "Microsoft Bing" to "https://www.bing.com/search?q=",
+        "Baidu" to "https://www.baidu.com/s?wd=",
+        "Yahoo!" to "https://search.yahoo.com/search?p=",
+        "DuckDuckGo" to "https://duckduckgo.com/?q=",
+        "Yandex" to "https://yandex.com/search/?text=",
+        "WolframAlpha" to "https://www.wolframalpha.com/input/?i=",
+        "Brave Search" to "https://search.brave.com/search?q=",
+        "Ecosia" to "https://www.ecosia.org/search?q=",
+        "Startpage" to "https://www.startpage.com/do/search?q=",
+        "Swisscows" to "https://swisscows.com/web?query=",
+        "Perplexity" to "https://www.perplexity.ai/search?q=",
+        "You.com" to "https://you.com/search?q=",
+        "Naver" to "https://search.naver.com/search.naver?query=",
+        "Qwant" to "https://www.qwant.com/?q=",
+        "Seznam" to "https://search.seznam.cz/?q="
+    )
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.settings_search)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+            item {
+                PaddingRemaining(16.dp) {
+                    Text(
+                        stringResource(R.string.search_engine),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        stringResource(R.string.search_engine_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            items(searchEngines) { (name, url) ->
+                val isSelected = currentSearchEngineUrl == url
+                ListItem(
+                    headlineContent = { Text(name) },
+                    supportingContent = { Text(url, maxLines = 1) },
+                    leadingContent = {
+                        RadioButton(selected = isSelected, onClick = { viewModel.setSearchEngineUrl(url) })
+                    },
+                    modifier = Modifier.clickable { viewModel.setSearchEngineUrl(url) }
+                )
+            }
+
+            item {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(stringResource(R.string.custom_search_url), style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.custom_search_url_desc), style = MaterialTheme.typography.bodySmall)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = customUrl,
+                        onValueChange = { customUrl = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("https://example.com/search?q=") },
+                        singleLine = true,
+                        trailingIcon = {
+                            if (customUrl != currentSearchEngineUrl) {
+                                IconButton(onClick = { viewModel.setSearchEngineUrl(customUrl) }) {
+                                    Icon(Icons.Default.Save, contentDescription = stringResource(R.string.save))
+                                }
+                            }
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun PaddingRemaining(padding: androidx.compose.ui.unit.Dp, content: @Composable ColumnScope.() -> Unit) {
+    Column(modifier = Modifier.padding(padding)) {
+        content()
     }
 }
 

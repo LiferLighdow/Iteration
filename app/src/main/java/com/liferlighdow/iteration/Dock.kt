@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,6 +20,14 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.core.graphics.drawable.toBitmap
+import androidx.compose.foundation.Image
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
@@ -80,6 +90,12 @@ fun Dock(
                         initialValue = -2.5f, targetValue = 2.5f,
                         animationSpec = infiniteRepeatable(animation = tween(120, easing = LinearEasing), repeatMode = RepeatMode.Reverse), label = "jiggle"
                     )
+                    
+                    val viewModel: MainViewModel = viewModel()
+                    val mContext = LocalContext.current
+                    var showContextMenu by remember { mutableStateOf(false) }
+                    val shortcuts = remember(showContextMenu) { if (showContextMenu && app.packageName.isNotEmpty()) viewModel.getShortcuts(app.packageName) else emptyList() }
+
                     AppItem(
                         app = app,
                         isLiquidGlass = isLiquidGlass,
@@ -95,11 +111,62 @@ fun Dock(
                             if (isEditMode) rotationZ = rotation
                         }.combinedClickable(
                             onClick = { if (app.packageName.isNotEmpty()) onAppClick(app.packageName) else onLongClick(index) },
-                            onLongClick = { onLongClick(index) }
+                            onLongClick = { 
+                                if (app.packageName.isNotEmpty() && !isEditMode) showContextMenu = true 
+                                else onLongClick(index) 
+                            }
                         ),
                         showLabel = false,
                         iconSize = iconSize
                     )
+
+                    DropdownMenu(
+                        expanded = showContextMenu,
+                        onDismissRequest = { showContextMenu = false }
+                    ) {
+                        if (shortcuts.isNotEmpty()) {
+                            shortcuts.forEach { shortcut ->
+                                DropdownMenuItem(
+                                    text = { Text(shortcut.label) },
+                                    leadingIcon = {
+                                        shortcut.icon?.let { icon ->
+                                            Image(
+                                                bitmap = icon.toBitmap().asImageBitmap(),
+                                                contentDescription = null,
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                        }
+                                    },
+                                    onClick = {
+                                        viewModel.launchShortcut(app.packageName, shortcut.id)
+                                        showContextMenu = false
+                                    }
+                                )
+                            }
+                            HorizontalDivider()
+                        }
+                        DropdownMenuItem(
+                            text = { Text("Replace App") },
+                            leadingIcon = { Icon(Icons.Default.Settings, null) },
+                            onClick = { onLongClick(index); showContextMenu = false }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.menu_uninstall)) },
+                            leadingIcon = { Icon(Icons.Default.Delete, null) },
+                            onClick = {
+                                try {
+                                    val intent = Intent(Intent.ACTION_DELETE).apply {
+                                        data = Uri.fromParts("package", app.packageName, null)
+                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    }
+                                    mContext.startActivity(intent)
+                                } catch (e: Exception) {
+                                    android.util.Log.e("Iteration", "Uninstall failed", e)
+                                }
+                                showContextMenu = false
+                            }
+                        )
+                    }
                 }
             }
         }

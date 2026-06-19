@@ -26,6 +26,9 @@ import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.core.graphics.drawable.toBitmap
+import androidx.compose.foundation.Image
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.geometry.Offset
@@ -202,6 +205,7 @@ fun FolderOverlay(
                                         rowItems.forEach { app ->
                                             val lastPos = remember { object { var pos = Offset.Zero } }
                                             var showItemMenu by remember { mutableStateOf(false) }
+                                            val shortcuts = remember(showItemMenu) { if (showItemMenu) viewModel.getShortcuts(app.packageName) else emptyList() }
                                             Box(
                                                 modifier = Modifier
                                                     .weight(1f)
@@ -262,6 +266,28 @@ fun FolderOverlay(
                                                     expanded = showItemMenu,
                                                     onDismissRequest = { showItemMenu = false }
                                                 ) {
+                                                    if (shortcuts.isNotEmpty()) {
+                                                        shortcuts.forEach { shortcut ->
+                                                            DropdownMenuItem(
+                                                                text = { Text(shortcut.label) },
+                                                                leadingIcon = {
+                                                                    shortcut.icon?.let { icon ->
+                                                                        Image(
+                                                                            bitmap = icon.toBitmap().asImageBitmap(),
+                                                                            contentDescription = null,
+                                                                            modifier = Modifier.size(24.dp)
+                                                                        )
+                                                                    }
+                                                                },
+                                                                onClick = {
+                                                                    viewModel.launchShortcut(app.packageName, shortcut.id)
+                                                                    showItemMenu = false
+                                                                    onDismiss()
+                                                                }
+                                                            )
+                                                        }
+                                                        HorizontalDivider()
+                                                    }
                                                     if (menuOptions.contains("delete_home")) {
                                                         DropdownMenuItem(
                                                             text = { Text(stringResource(R.string.menu_delete_home)) },

@@ -180,7 +180,16 @@ object ConfigSerializer {
         iconStyle: String,
         iconShape: String,
         libraryShape: String,
+        searchEngineUrl: String,
         pageSize: Int,
+        // 新增項目
+        glassParams: Map<String, Any>,
+        gestures: Map<String, String>,
+        appearance: Map<String, Any>,
+        favorites: Set<String>,
+        excludedThemed: Set<String>,
+        homeMenuOptions: Set<String>,
+        customIconSettings: Map<String, Any>,
         password: String,
         hiddenPackages: Set<String>,
         customLabels: Map<String, String>,
@@ -209,7 +218,37 @@ object ConfigSerializer {
         settings.put("icon_style", iconStyle)
         settings.put("icon_shape", iconShape)
         settings.put("library_shape", libraryShape)
+        settings.put("search_engine_url", searchEngineUrl)
         settings.put("page_size", pageSize)
+
+        // 寫入新增的詳細設定
+        val glassObj = JSONObject()
+        glassParams.forEach { (k, v) -> glassObj.put(k, v) }
+        root.put("glass_params", glassObj)
+
+        val gestureObj = JSONObject()
+        gestures.forEach { (k, v) -> gestureObj.put(k, v) }
+        root.put("gestures", gestureObj)
+
+        val appearanceObj = JSONObject()
+        appearance.forEach { (k, v) -> appearanceObj.put(k, v) }
+        root.put("appearance", appearanceObj)
+
+        val favArray = JSONArray()
+        favorites.forEach { favArray.put(it) }
+        root.put("favorites", favArray)
+
+        val excludedArray = JSONArray()
+        excludedThemed.forEach { excludedArray.put(it) }
+        root.put("excluded_themed", excludedArray)
+
+        val menuArray = JSONArray()
+        homeMenuOptions.forEach { menuArray.put(it) }
+        root.put("home_menu_options", menuArray)
+
+        val customIconObj = JSONObject()
+        customIconSettings.forEach { (k, v) -> customIconObj.put(k, v) }
+        root.put("custom_icon_settings", customIconObj)
         settings.put("hidden_password", password)
 
         // 2. App 相關
