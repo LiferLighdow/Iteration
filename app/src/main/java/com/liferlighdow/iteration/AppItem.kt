@@ -199,7 +199,6 @@ fun FolderPreviewIcon(
             modifier = Modifier
                 .size(size)
                 .clip(currentShape)
-                .background(Color.White)
         )
     } else {
         Spacer(modifier = Modifier.size(size))

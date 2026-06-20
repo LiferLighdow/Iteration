@@ -77,12 +77,12 @@ class IconProcessor(private val context: Context) {
         } else null
 
         val bgColor = determineBgColor(style, isThemed, m3Colors?.first,
-            isIconPack, customBgColor, customUseOriginalBg)
+            customBgColor, customUseOriginalBg)
         val fgColor = determineFgColor(style, isThemed, m3Colors, customFgColor, customUseOriginal)
 
         // 4. 繪製
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && icon is AdaptiveIconDrawable) {
-            val scale = 1.4f
+            val scale = 1.45f
             val scaledSize = (sizePx * scale).toInt()
             val offset = (sizePx - scaledSize) / 2
 
@@ -154,7 +154,7 @@ class IconProcessor(private val context: Context) {
     }
 
     private fun determineBgColor(style: IconStyle, isThemed: Boolean, m3Color: Int?,
-                                 isIconPack: Boolean, customBg: Int, customUseOrigBg: Boolean): Int? {
+                                 customBg: Int, customUseOrigBg: Boolean): Int? {
         if (style == IconStyle.CUSTOM) return if (customUseOrigBg) null else customBg
         if (isThemed && m3Color != null) {
             return when (style) {
@@ -166,7 +166,7 @@ class IconProcessor(private val context: Context) {
             }
         }
         return when (style) {
-            IconStyle.STANDARD -> if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || isIconPack) null else Color.WHITE
+            IconStyle.STANDARD -> null
             IconStyle.BLACK -> Color.BLACK
             IconStyle.WHITE -> Color.WHITE
             IconStyle.GLASS -> Color.argb(120, 255, 255, 255)
