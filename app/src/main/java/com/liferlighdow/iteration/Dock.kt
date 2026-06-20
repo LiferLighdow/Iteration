@@ -1,6 +1,5 @@
 package com.liferlighdow.iteration
 
-import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,7 +26,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import android.content.Intent
 import android.net.Uri
-import android.widget.Toast
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
@@ -38,7 +36,6 @@ fun Dock(
     backdrop: com.kyant.backdrop.Backdrop,
     dockStyle: DockStyle = DockStyle.MODERN,
     iconShape: IconShape = IconShape.DEFAULT,
-    libraryShape: IconShape = IconShape.DEFAULT,
     blurRadius: Float = 0f,
     refractionHeight: Float = 24f,
     refractionAmount: Float = 48f,
@@ -107,6 +104,7 @@ fun Dock(
                         chromaticAberration = chromaticAberration,
                         isEditMode = isEditMode,
                         onDeleteClick = { onDeleteClick?.invoke(app) },
+                        getIcon = { pkg -> viewModel.getIcon(pkg) },
                         modifier = Modifier.graphicsLayer {
                             if (isEditMode) rotationZ = rotation
                         }.combinedClickable(

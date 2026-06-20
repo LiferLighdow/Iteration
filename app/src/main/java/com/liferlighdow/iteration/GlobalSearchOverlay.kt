@@ -289,6 +289,7 @@ fun GlobalSearchOverlay(
                                         items(favoriteApps) { app ->
                                             AppItem(
                                                 app = app, iconSize = 56.dp, iconShape = iconShape,
+                                                getIcon = { pkg -> viewModel.getIcon(pkg) },
                                                 onAppClick = { onAppClick(app.packageName); onDismiss() }
                                             )
                                         }
@@ -311,6 +312,7 @@ fun GlobalSearchOverlay(
                                     items(finalSuggestions) { app ->
                                         AppItem(
                                             app = app, iconSize = 56.dp, iconShape = iconShape,
+                                            getIcon = { pkg -> viewModel.getIcon(pkg) },
                                             onAppClick = { onAppClick(app.packageName); onDismiss() }
                                         )
                                     }
@@ -327,9 +329,10 @@ fun GlobalSearchOverlay(
                             ListItem(
                                 headlineContent = { Text(app.label, color = Color.White) }, 
                                 leadingContent = { 
-                                    if (app.processedIcon != null) {
+                                    val appIcon = viewModel.getIcon(app.packageName)
+                                    if (appIcon != null) {
                                         val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(48.dp * 0.238f)
-                                        Image(bitmap = app.processedIcon, contentDescription = null, modifier = Modifier.size(48.dp).clip(shape).background(Color.White)) 
+                                        Image(bitmap = appIcon, contentDescription = null, modifier = Modifier.size(48.dp).clip(shape).background(Color.White))
                                     }
                                 },
                                 colors = ListItemDefaults.colors(containerColor = Color.Transparent), 

@@ -34,8 +34,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.asImageBitmap
@@ -204,9 +202,10 @@ fun AppLibraryPage(
                                 ListItem(
                                     headlineContent = { Text(app.label, color = Color.White) },
                                     leadingContent = {
-                                        if (app.processedIcon != null) {
+                                        val appIcon = viewModel.getIcon(app.packageName)
+                                        if (appIcon != null) {
                                             val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(40.dp * 0.238f)
-                                            Image(bitmap = app.processedIcon, contentDescription = null, modifier = Modifier.size(40.dp).clip(shape).background(Color.White))
+                                            Image(bitmap = appIcon, contentDescription = null, modifier = Modifier.size(40.dp).clip(shape).background(Color.White))
                                         }
                                     },
                                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
@@ -216,12 +215,12 @@ fun AppLibraryPage(
                                     )
                                 )
                                 DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                                    DropdownMenuItem(text = { Text(stringResource(R.string.menu_add_to_home)) }, leadingIcon = { Icon(Icons.Default.Add, null) }, onClick = { viewModel.addAppToHome(app.packageName); showMenu = false })
-                                    DropdownMenuItem(text = { Text(stringResource(R.string.rename)) }, leadingIcon = { Icon(Icons.Default.Edit, null) }, onClick = { appToRename = app; newLabelText = app.label; showMenu = false })
-                                    DropdownMenuItem(text = { Text(if (app.isHidden) "Unhide" else "Hide") }, leadingIcon = { Icon(if (app.isHidden) Icons.Default.Visibility else Icons.Default.VisibilityOff, null) }, onClick = { viewModel.toggleHiddenApp(app.packageName); showMenu = false })
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.menu_add_to_home)) }, leadingIcon = { Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.primary) }, onClick = { viewModel.addAppToHome(app.packageName); showMenu = false })
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.rename)) }, leadingIcon = { Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary) }, onClick = { appToRename = app; newLabelText = app.label; showMenu = false })
+                                    DropdownMenuItem(text = { Text(if (app.isHidden) "Unhide" else "Hide") }, leadingIcon = { Icon(if (app.isHidden) Icons.Default.Visibility else Icons.Default.VisibilityOff, null, tint = MaterialTheme.colorScheme.primary) }, onClick = { viewModel.toggleHiddenApp(app.packageName); showMenu = false })
                                     DropdownMenuItem(
                                         text = { Text("App Info") },
-                                        leadingIcon = { Icon(Icons.Default.Info, null) },
+                                        leadingIcon = { Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary) },
                                         onClick = {
                                             val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                                                 data = Uri.parse("package:${app.packageName}")
@@ -234,7 +233,7 @@ fun AppLibraryPage(
                                     HorizontalDivider()
                                     DropdownMenuItem(
                                         text = { Text(stringResource(R.string.menu_uninstall)) },
-                                        leadingIcon = { Icon(Icons.Default.Delete, null) },
+                                        leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
                                         onClick = {
                                             try {
                                                 val intent = Intent(Intent.ACTION_DELETE).apply {
@@ -255,12 +254,21 @@ fun AppLibraryPage(
                     }
                 }
             } else {
-                LazyVerticalGrid(columns = GridCells.Fixed(2), modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp), contentPadding = PaddingValues(bottom = 32.dp)) {
+                val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    contentPadding = PaddingValues(bottom = 32.dp)
+                ) {
                     val folderList = mutableListOf<Pair<String, List<AppModel>>>()
                     if (suggestedApps.isNotEmpty()) folderList.add("Suggestions" to suggestedApps.take(4))
                     folderList.addAll(categories)
                     if (showHiddenFolder) folderList.add("Hidden Apps" to hiddenApps)
-                    items(folderList) { (name, apps) ->
+                    
+                    // 優化點：加入穩定的 key，提升列表重組效能
+                    items(folderList, key = { it.first }) { (name, apps) ->
                         AppLibraryFolder(
                             name = name,
                             apps = apps,
@@ -273,8 +281,14 @@ fun AppLibraryPage(
                             refractionAmount = refractionAmount,
                             chromaticAberration = chromaticAberration,
                             isLocked = name == "Hidden Apps" && !isHiddenUnlocked,
-                            onAppClick = { if (name == "Hidden Apps" && !isHiddenUnlocked) showPasswordDialog = true else onAppClick(it) },
-                            onMoreClick = { if (name == "Hidden Apps" && !isHiddenUnlocked) showPasswordDialog = true else viewModel.setSelectedCategory(name) },
+                            onAppClick = { 
+                                if (name == "Hidden Apps" && !isHiddenUnlocked) showPasswordDialog = true 
+                                else onAppClick(it) 
+                            },
+                            onMoreClick = { 
+                                if (name == "Hidden Apps" && !isHiddenUnlocked) showPasswordDialog = true 
+                                else viewModel.setSelectedCategory(name) 
+                            },
                             onDragStart = onDragStart, onDrag = onDrag, onDragEnd = onDragEnd
                         )
                     }
@@ -352,7 +366,7 @@ fun AppLibraryFolder(
                         val lockColor = if (isSystemInDarkTheme()) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
                         if (isLocked) Box(modifier = Modifier.size(internalIconSize).background(lockColor, lockShape).clickable { onMoreClick() })
                         else apps.getOrNull(0)?.let { app ->
-                            LibraryItemWithMenu(app, name, iconShape, libraryShape, internalIconSize, onAppClick, onDragStart, onDrag, onDragEnd)
+                            LibraryItemWithMenu(app, name, iconShape, internalIconSize, onAppClick)
                         }
                     }
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
@@ -360,7 +374,7 @@ fun AppLibraryFolder(
                         val lockColor = if (isSystemInDarkTheme()) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
                         if (isLocked) Box(modifier = Modifier.size(internalIconSize).background(lockColor, lockShape).clickable { onMoreClick() })
                         else apps.getOrNull(1)?.let { app ->
-                            LibraryItemWithMenu(app, name, iconShape, libraryShape, internalIconSize, onAppClick, onDragStart, onDrag, onDragEnd)
+                            LibraryItemWithMenu(app, name, iconShape, internalIconSize, onAppClick)
                         }
                     }
                 }
@@ -370,7 +384,7 @@ fun AppLibraryFolder(
                         val lockColor = if (isSystemInDarkTheme()) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
                         if (isLocked) Box(modifier = Modifier.size(internalIconSize).background(lockColor, lockShape).clickable { onMoreClick() })
                         else apps.getOrNull(2)?.let { app ->
-                            LibraryItemWithMenu(app, name, iconShape, libraryShape, internalIconSize, onAppClick, onDragStart, onDrag, onDragEnd)
+                            LibraryItemWithMenu(app, name, iconShape, internalIconSize, onAppClick)
                         }
                     }
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
@@ -379,7 +393,7 @@ fun AppLibraryFolder(
                         if (isLocked) Box(modifier = Modifier.size(internalIconSize).background(lockColor, lockShape).clickable { onMoreClick() })
                         else if (apps.size > 4) Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.2f), lockShape).clickable { onMoreClick() }, contentAlignment = Alignment.Center) { Text("+${apps.size - 3}", color = Color.White, style = MaterialTheme.typography.headlineSmall) }
                         else apps.getOrNull(3)?.let { app ->
-                            LibraryItemWithMenu(app, name, iconShape, libraryShape, internalIconSize, onAppClick, onDragStart, onDrag, onDragEnd)
+                            LibraryItemWithMenu(app, name, iconShape, internalIconSize, onAppClick)
                         }
                     }
                 }
@@ -395,15 +409,12 @@ fun LibraryItemWithMenu(
     app: AppModel,
     folderName: String,
     iconShape: IconShape = IconShape.DEFAULT,
-    libraryShape: IconShape = IconShape.DEFAULT,
     iconSize: androidx.compose.ui.unit.Dp = 72.dp,
-    onAppClick: (String) -> Unit,
-    onDragStart: (AppModel, Offset) -> Unit,
-    onDrag: (Offset) -> Unit,
-    onDragEnd: () -> Unit
+    onAppClick: (String) -> Unit
 ) {
     val viewModel: MainViewModel = viewModel()
     val mContext = LocalContext.current
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     var showMenu by remember { mutableStateOf(false) }
 
     // 用於重新命名的狀態（這裡稍微簡化，實際可能需要傳回 AppLibraryPage 處理更優雅，但我們先做基本功能）
@@ -418,9 +429,15 @@ fun LibraryItemWithMenu(
             showLabel = false,
             iconSize = iconSize,
             iconShape = iconShape,
+            getIcon = { pkg -> viewModel.getIcon(pkg) },
             modifier = Modifier.combinedClickable(
                 onClick = { onAppClick(app.packageName) },
-                onLongClick = { if (folderName != "Hidden Apps") showMenu = true }
+                onLongClick = { 
+                    if (folderName != "Hidden Apps") {
+                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                        showMenu = true 
+                    }
+                }
             )
         )
 

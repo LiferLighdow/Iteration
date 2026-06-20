@@ -5,7 +5,6 @@ import android.app.WallpaperManager
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Paint
 import android.graphics.RenderEffect
 import android.graphics.Shader
 import android.graphics.drawable.AdaptiveIconDrawable
@@ -32,7 +31,9 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -55,6 +56,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // 用於強制更新 UI 的訊號
     private val _wallpaperUpdateSignal = MutableStateFlow(0L)
     val wallpaperUpdateSignal = _wallpaperUpdateSignal.asStateFlow()
+
+    private val _iconUpdateSignal = MutableStateFlow(0L)
+    val iconUpdateSignal = _iconUpdateSignal.asStateFlow()
 
     internal val _pages = MutableStateFlow<List<List<AppModel>>>(emptyList())
     val pages: StateFlow<List<List<AppModel>>> = _pages
@@ -97,6 +101,48 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _showMinusOnePage = MutableStateFlow(prefs.getBoolean("show_minus_one", true))
     val showMinusOnePage = _showMinusOnePage.asStateFlow()
+
+    private var currentStyleSuffix = "default"
+    private var themeColorsCache: ColorScheme? = null
+
+    /**
+     * 從 LruCache 或磁碟獲取處理後的圖示
+     */
+    fun getIcon(packageName: String): ImageBitmap? {
+        val styleSuffix = currentStyleSuffix
+        if (styleSuffix == "default") return null
+        
+        val cacheKey = "${packageName}_$styleSuffix"
+        
+        // 1. 檢查 LruCache
+        iconCache[cacheKey]?.let { return it }
+
+        // 2. 檢查自定義圖示
+        val customIconFile = File(customIconDir, "$packageName.png")
+        if (customIconFile.exists()) {
+            return try {
+                BitmapFactory.decodeFile(customIconFile.absolutePath)?.asImageBitmap()?.also {
+                    iconCache.put(cacheKey, it)
+                }
+            } catch (e: Exception) { null }
+        }
+
+        // 3. 檢查磁碟快取
+        val diskCacheFile = File(processedIconCacheDir, "${packageName}_$styleSuffix.png")
+        if (diskCacheFile.exists()) {
+            return try {
+                BitmapFactory.decodeFile(diskCacheFile.absolutePath)?.asImageBitmap()?.also {
+                    iconCache.put(cacheKey, it)
+                }
+            } catch (e: Exception) { null }
+        }
+
+        return null
+    }
+
+    fun triggerIconUpdate() {
+        _iconUpdateSignal.value = System.currentTimeMillis()
+    }
 
     private val _showAppLibrary = MutableStateFlow(prefs.getBoolean("show_app_library", true))
     val showAppLibrary = _showAppLibrary.asStateFlow()
@@ -261,21 +307,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val selectedCategory = _selectedCategory.asStateFlow()
 
     /**
-     * 自動計算 App Library 的顯示清單 (無損優化)
+     * 優化：預先排序好的全 App 清單
      */
-    val filteredLibraryApps = combine(_allApps, _searchQuery, _selectedCategory) { apps, query, category ->
-        apps.asSequence()
-            .filter { app ->
-                val matchesQuery = app.label.contains(query, ignoreCase = true)
-                val matchesCategory = when (category) {
-                    "All" -> true
-                    "Hidden Apps" -> app.isHidden
-                    else -> app.displayCategory == category
-                }
-                matchesQuery && matchesCategory
+    private val sortedAllApps = _allApps.map { apps: List<AppModel> ->
+        apps.sortedBy { it.label.lowercase() }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /**
+     * 自動計算 App Library 的顯示清單 (高效過濾)
+     */
+    val filteredLibraryApps = combine(sortedAllApps, _searchQuery, _selectedCategory) { apps: List<AppModel>, query: String, category: String ->
+        if (query.isEmpty() && category == "All") return@combine apps
+        
+        apps.filter { app ->
+            val matchesQuery = if (query.isEmpty()) true else app.label.contains(query, ignoreCase = true)
+            val matchesCategory = when (category) {
+                "All" -> true
+                "Hidden Apps" -> app.isHidden
+                else -> app.displayCategory == category
             }
-            .sortedBy { it.label.lowercase() }
-            .toList()
+            matchesQuery && matchesCategory
+        }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun setSearchQuery(query: String) { _searchQuery.value = query }
@@ -334,14 +386,62 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     internal var pageSize = 20
     internal var dragBackupPages: List<List<AppModel>>? = null
 
+    // --- 新增：監聽 App 安裝/卸載/更新 ---
+    private val launcherApps = application.getSystemService(Context.LAUNCHER_APPS_SERVICE) as android.content.pm.LauncherApps
+    private val packageCallback = object : android.content.pm.LauncherApps.Callback() {
+        override fun onPackageAdded(packageName: String, user: android.os.UserHandle) {
+            refreshApps()
+        }
+        override fun onPackageRemoved(packageName: String, user: android.os.UserHandle) {
+            // 從 seen_apps 中移除該包名的所有 uniqueId，以便重新安裝時能再次出現在桌面
+            val seenApps = (prefs.getStringSet("seen_apps", emptySet()) ?: emptySet()).toMutableSet()
+            val toRemove = seenApps.filter { it.startsWith("$packageName/") || it == packageName }
+            if (toRemove.isNotEmpty()) {
+                seenApps.removeAll(toRemove.toSet())
+                prefs.edit().putStringSet("seen_apps", seenApps).apply()
+            }
+            refreshApps()
+        }
+        override fun onPackageChanged(packageName: String, user: android.os.UserHandle) {
+            refreshApps()
+        }
+        override fun onPackagesAvailable(packageNames: Array<out String>, user: android.os.UserHandle, replacing: Boolean) {
+            refreshApps()
+        }
+        override fun onPackagesUnavailable(packageNames: Array<out String>, user: android.os.UserHandle, replacing: Boolean) {
+            refreshApps()
+        }
+        
+        private fun refreshApps() {
+            cachedRawApps = null // 清除緩存
+            loadApps()           // 重新讀取
+        }
+    }
+
     init {
         loadSettings()
         loadApps()
         updateBlurredWallpaper()
+        // 註冊監聽
+        launcherApps.registerCallback(packageCallback)
     }
 
+    override fun onCleared() {
+        super.onCleared()
+        // 取消註冊，避免內存洩漏
+        launcherApps.unregisterCallback(packageCallback)
+    }
+    // ------------------------------------
+
+    private var lastBlurredSignal = -1L
+
     fun updateBlurredWallpaper() {
+        val currentSignal = _wallpaperUpdateSignal.value
+        // 如果桌布沒換，且已經有緩存，就不重複執行昂貴的模糊運算
+        if (currentSignal == lastBlurredSignal && _blurredWallpaper.value != null) return
+        
         viewModelScope.launch(Dispatchers.IO) {
+            lastBlurredSignal = currentSignal
             // 1. 優先從本地儲存載入 (使用者自選)
             var result = wallpaperProcessor.loadWallpaperFromFile(wallpaperFile)
 
@@ -380,10 +480,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _wallpaperUpdateSignal.value = System.currentTimeMillis()
             updateBlurredWallpaper()
         } catch (e: Exception) { e.printStackTrace() }
-    }
-
-    override fun onCleared() {
-        super.onCleared()
     }
 
     private fun loadSettings() {
@@ -861,114 +957,123 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     val seed = withContext(Dispatchers.IO) {
                         try {
                             val wm = WallpaperManager.getInstance(getApplication())
-                            wm.drawable?.toBitmap()?.let { DynamicColorGenerator.extractSeedColorFromBitmap(it) }
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                                // 優化點：API 27+ 直接獲取顏色，不需加載完整桌布位圖
+                                wm.getWallpaperColors(WallpaperManager.FLAG_SYSTEM)?.primaryColor?.toArgb()
+                            } else {
+                                wm.drawable?.toBitmap()?.let { DynamicColorGenerator.extractSeedColorFromBitmap(it) }
+                            }
                         } catch (e: Exception) { null }
                     }
                     seed?.let { DynamicColorGenerator.generateColorSchemeFromSeed(it, false) }
                 }
             } else null
 
-            val processedApps = withContext(Dispatchers.Default) {
+            // 預先計算樣式後綴，確保 getIcon 尋找的路徑正確
+            val colorKey = themeColors?.primary?.let {
+                val argb = ((it.alpha * 255).toInt() shl 24) or
+                           ((it.red * 255).toInt() shl 16) or
+                           ((it.green * 255).toInt() shl 8) or
+                           (it.blue * 255).toInt()
+                argb.toString(16)
+            } ?: "default"
+            
+            val customBg = _customIconBgColor.value
+            val customFg = _customIconFgColor.value
+            val customOriginal = _customIconUseOriginal.value
+            val customOriginalBg = _customIconUseOriginalBg.value
+            val customKey = if (currentStyle == IconStyle.CUSTOM) {
+                "C_${customBg.toString(16)}_${customFg.toString(16)}_${if (customOriginal) "O" else "M"}_${if (customOriginalBg) "OB" else "CB"}"
+            } else "N"
+
+            currentStyleSuffix = if (currentIconPack.isNotEmpty()) {
+                "IP_V10_${currentIconPack.hashCode()}_${currentShape.name}_${currentStyle.name}_${if (isThemed) "T_$colorKey" else "N"}_$customKey"
+            } else {
+                "V9_${currentStyle.name}_${currentShape.name}_${if (isThemed) "T_$colorKey" else "N"}_$customKey"
+            }
+            themeColorsCache = themeColors
+
+            val processedApps: List<AppModel> = withContext(Dispatchers.Default) {
                 val density = getApplication<Application>().resources.displayMetrics.density
                 val sizePx = (62 * density).toInt()
+                val styleSuffix = currentStyleSuffix
 
-                // 獲取目前的顏色特徵值，用於區分快取 (使用 ARGB 確保唯一性)
-                val colorKey = themeColors?.primary?.let {
-                    val argb = ((it.alpha * 255).toInt() shl 24) or
-                               ((it.red * 255).toInt() shl 16) or
-                               ((it.green * 255).toInt() shl 8) or
-                               (it.blue * 255).toInt()
-                    argb.toString(16)
-                } ?: "default"
+                val semaphore = kotlinx.coroutines.sync.Semaphore(8) // 限制併發數
 
                 coroutineScope {
                     rawApps.map { app ->
                         async {
-                            val customIconFile = File(customIconDir, "${app.packageName}.png")
+                            semaphore.withPermit {
+                                val customIconFile = File(customIconDir, "${app.packageName}.png")
+                                val diskCacheFile = File(processedIconCacheDir, "${app.packageName}_$styleSuffix.png")
+                                val cacheKey = "${app.packageName}_$styleSuffix"
+                                val isExcluded = excludedThemedPackages.value.contains(app.packageName)
 
-                            // 關鍵：快取檔名現在包含顏色數值，桌布一換，快取即失效
-                            // V8: 加入自定義顏色支援
-                            val excludedKey = if (excludedThemedPackages.value.contains(app.packageName)) "EX" else "IN"
-                            val customBg = _customIconBgColor.value
-                            val customFg = _customIconFgColor.value
-                            val customOriginal = _customIconUseOriginal.value
-                            val customOriginalBg = _customIconUseOriginalBg.value
-                            val customKey = if (currentStyle == IconStyle.CUSTOM) {
-                                "C_${customBg.toString(16)}_${customFg.toString(16)}_${if (customOriginal) "O" else "M"}_${if (customOriginalBg) "OB" else "CB"}"
-                            } else "N"
-
-                            val styleSuffix = if (currentIconPack.isNotEmpty()) {
-                                "IP_V10_${currentIconPack.hashCode()}_${currentShape.name}_${currentStyle.name}_${if (isThemed) "T_$colorKey" else "N"}_${excludedKey}_$customKey"
-                            } else {
-                                "V9_${currentStyle.name}_${currentShape.name}_${if (isThemed) "T_$colorKey" else "N"}_${excludedKey}_$customKey"
-                            }
-
-                            val diskCacheFile = File(processedIconCacheDir, "${app.packageName}_$styleSuffix.png")
-
-                            val cacheKey = "${app.packageName}_$styleSuffix"
-                            val cachedIcon = iconCache[cacheKey]
-                            val isExcluded = excludedThemedPackages.value.contains(app.packageName)
-
-                            val processedIcon: ImageBitmap = if (cachedIcon != null) {
-                                cachedIcon
-                            } else if (customIconFile.exists()) {
-                                BitmapFactory.decodeFile(customIconFile.absolutePath)?.asImageBitmap()
-                                    ?: processNewIcon(app, currentIconPack, isThemed, isExcluded, themeColors, currentStyle, currentShape, sizePx, customBg, customFg, customOriginal, customOriginalBg)
-                            } else if (diskCacheFile.exists()) {
-                                val bitmap = BitmapFactory.decodeFile(diskCacheFile.absolutePath)
-                                if (bitmap != null) {
-                                    val imageBitmap = bitmap.asImageBitmap()
-                                    iconCache.put(cacheKey, imageBitmap)
-                                    imageBitmap
-                                } else {
-                                    val processed = processNewIcon(app, currentIconPack, isThemed, isExcluded, themeColors, currentStyle, currentShape, sizePx, customBg, customFg, customOriginal, customOriginalBg)
-                                    saveIconToDisk(processed, diskCacheFile)
-                                    iconCache.put(cacheKey, processed)
-                                    processed
+                                // 檢查快取，如果不存在則處理並存入快取與磁碟
+                                if (iconCache[cacheKey] == null) {
+                                    if (customIconFile.exists()) {
+                                        BitmapFactory.decodeFile(customIconFile.absolutePath)?.asImageBitmap()?.let {
+                                            iconCache.put(cacheKey, it)
+                                        }
+                                    } else if (diskCacheFile.exists()) {
+                                        BitmapFactory.decodeFile(diskCacheFile.absolutePath)?.let {
+                                            iconCache.put(cacheKey, it.asImageBitmap())
+                                        }
+                                    } else {
+                                        val processed = processNewIcon(app, currentIconPack, isThemed, isExcluded, themeColors, currentStyle, currentShape, sizePx, customBg, customFg, customOriginal, customOriginalBg)
+                                        saveIconToDisk(processed, diskCacheFile)
+                                        iconCache.put(cacheKey, processed)
+                                    }
                                 }
-                            } else {
-                                val processed = processNewIcon(app, currentIconPack, isThemed, isExcluded, themeColors, currentStyle, currentShape, sizePx, customBg, customFg, customOriginal, customOriginalBg)
-                                saveIconToDisk(processed, diskCacheFile)
-                                iconCache.put(cacheKey, processed)
-                                processed
+
+                                val appRes = getApplication<Application>()
+                                val rawCategory = customCategories[app.packageName] ?: when (app.category) {
+                                    0 -> appRes.getString(R.string.cat_games)
+                                    1 -> appRes.getString(R.string.cat_audio)
+                                    2 -> appRes.getString(R.string.cat_video)
+                                    3 -> appRes.getString(R.string.cat_imaging)
+                                    4 -> appRes.getString(R.string.cat_social)
+                                    5 -> appRes.getString(R.string.cat_news)
+                                    6 -> appRes.getString(R.string.cat_maps)
+                                    7 -> appRes.getString(R.string.cat_productivity)
+                                    else -> appRes.getString(R.string.cat_other)
+                                }
+
+                                // 套用全域重命名映射
+                                val displayCategory = categoryRenames[rawCategory] ?: rawCategory
+
+                                app.copy(
+                                    label = customLabels[app.packageName] ?: app.label,
+                                    isHidden = hiddenPackages.contains(app.packageName),
+                                    displayCategory = displayCategory
+                                )
                             }
-
-                            val appRes = getApplication<Application>()
-                            val rawCategory = customCategories[app.packageName] ?: when (app.category) {
-                                0 -> appRes.getString(R.string.cat_games)
-                                1 -> appRes.getString(R.string.cat_audio)
-                                2 -> appRes.getString(R.string.cat_video)
-                                3 -> appRes.getString(R.string.cat_imaging)
-                                4 -> appRes.getString(R.string.cat_social)
-                                5 -> appRes.getString(R.string.cat_news)
-                                6 -> appRes.getString(R.string.cat_maps)
-                                7 -> appRes.getString(R.string.cat_productivity)
-                                else -> appRes.getString(R.string.cat_other)
-                            }
-
-                            // 套用全域重命名映射
-                            val displayCategory = categoryRenames[rawCategory] ?: rawCategory
-
-                            app.copy(
-                                label = customLabels[app.packageName] ?: app.label,
-                                processedIcon = processedIcon,
-                                isHidden = hiddenPackages.contains(app.packageName),
-                                displayCategory = displayCategory
-                            )
                         }
                     }.awaitAll()
                 }
             }
 
             _allApps.value = processedApps
-            // ... 後續佈局恢復邏輯保持不變
+            triggerIconUpdate() // 完成處理後通知 UI 刷新圖示
             
+            // 獲取已紀錄過的 App 清單，用於判定「新安裝」
+            val seenApps = (prefs.getStringSet("seen_apps", null) ?: emptySet()).toMutableSet()
+            val isMigration = prefs.getStringSet("seen_apps", null) == null
+
             // 優先從儲存的佈局恢復
             val savedLayout = prefs.getString("launcher_layout_v2", null)
             if (savedLayout != null) {
                 try {
                     val pagesArray = JSONArray(savedLayout)
                     val restoredPages = mutableListOf<List<AppModel>>()
+                    
+                    // 遷移邏輯：如果是第一次使用 seen_apps 且已有佈局，先將目前已安裝的所有 App 標記為已見過
+                    // 避免舊有的 App 被誤認成新安裝的。
+                    if (isMigration) {
+                        seenApps.addAll(processedApps.map { it.uniqueId })
+                        prefs.edit().putStringSet("seen_apps", seenApps).apply()
+                    }
+
                     for (i in 0 until pagesArray.length()) {
                         val pageArray = pagesArray.getJSONArray(i)
                         val pageItems = mutableListOf<AppModel>()
@@ -978,20 +1083,56 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                 processedApps,
                                 customLabels,
                                 hiddenPackages
-                            )?.let { pageItems.add(it) }
+                            )?.let { 
+                                pageItems.add(it)
+                            }
                         }
                         restoredPages.add(pageItems)
                     }
-                    _pages.value = restoredPages
+
+                    // 關鍵：找出真正新安裝的 App (不在 seen_apps 中)
+                    val newApps = processedApps.filter { 
+                        !seenApps.contains(it.uniqueId) && !it.isHidden 
+                    }
+
+                    if (newApps.isNotEmpty()) {
+                        // 將新 App 加入最後一頁，或者如果太滿就開新分頁
+                        val mutablePages = restoredPages.map { it.toMutableList() }.toMutableList()
+                        newApps.forEach { app ->
+                            var added = false
+                            for (page in mutablePages) {
+                                if (page.size < pageSize) {
+                                    page.add(app)
+                                    added = true
+                                    break
+                                }
+                            }
+                            if (!added) {
+                                mutablePages.add(mutableListOf(app))
+                            }
+                            seenApps.add(app.uniqueId)
+                        }
+                        // 儲存新的已見過清單
+                        prefs.edit().putStringSet("seen_apps", seenApps).apply()
+
+                        _pages.value = mutablePages
+                        saveLayout() // 更新儲存的佈局
+                    } else {
+                        _pages.value = restoredPages
+                    }
                 } catch (e: Exception) {
                     repaginate(processedApps)
                 }
             } else {
                 repaginate(processedApps)
+                // 首次啟動，將所有目前 App 標記為已處理
+                seenApps.addAll(processedApps.map { it.uniqueId })
+                prefs.edit().putStringSet("seen_apps", seenApps).apply()
+                saveLayout()
             }
 
             if (_dockPackageNames.value.all { it.isEmpty() } && processedApps.isNotEmpty()) {
-                val defaultDock = processedApps.take(4).map { it.packageName }
+                val defaultDock = processedApps.take(4).map { app: AppModel -> app.packageName }
                 _dockPackageNames.value = defaultDock
                 prefs.edit().putString("dock_packages", defaultDock.joinToString(",")).apply()
             }
@@ -1012,15 +1153,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         customOriginal: Boolean,
         customOriginalBg: Boolean
     ): ImageBitmap {
+        val pm = getApplication<Application>().packageManager
+        val rawIcon = try {
+            pm.getApplicationIcon(app.packageName)
+        } catch (e: Exception) {
+            null
+        }
+
         return if (currentIconPack.isNotEmpty()) {
             val ipIcon = iconPackManager.getIcon(app.packageName)
             if (ipIcon != null) {
                 iconProcessor.processIcon(ipIcon, false, null, IconStyle.STANDARD, currentShape, sizePx, isIconPack = true)
             } else {
-                iconProcessor.processIcon(app.icon, isThemed && !isExcluded, themeColors, if (isExcluded) IconStyle.STANDARD else currentStyle, currentShape, sizePx, customBgColor = customBg, customFgColor = customFg, customUseOriginal = customOriginal, customUseOriginalBg = customOriginalBg)
+                // 當使用圖標包但該 App 未適配時，強制使用原版樣式 (Custom + UseOriginal)，不套用 Iteration Style
+                iconProcessor.processIcon(rawIcon, false, null, IconStyle.CUSTOM, currentShape, sizePx, customBgColor = 0, customFgColor = 0, customUseOriginal = true, customUseOriginalBg = true)
             }
         } else {
-            iconProcessor.processIcon(app.icon, isThemed && !isExcluded, themeColors, if (isExcluded) IconStyle.STANDARD else currentStyle, currentShape, sizePx, customBgColor = customBg, customFgColor = customFg, customUseOriginal = customOriginal, customUseOriginalBg = customOriginalBg)
+            iconProcessor.processIcon(rawIcon, isThemed && !isExcluded, themeColors, if (isExcluded) IconStyle.STANDARD else currentStyle, currentShape, sizePx, customBgColor = customBg, customFgColor = customFg, customUseOriginal = customOriginal, customUseOriginalBg = customOriginalBg)
         }
     }
 

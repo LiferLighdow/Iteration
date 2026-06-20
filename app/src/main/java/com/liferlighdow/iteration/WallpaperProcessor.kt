@@ -66,13 +66,14 @@ class WallpaperProcessor(private val context: Application) {
         val scaled = Bitmap.createScaledBitmap(cropped, screenW, screenH, true)
         
         // 2. 【Liquid Glass 採樣優化】
-        // 使用 0.15f 的採樣率，在保持平滑模糊的同時，避免出現低像素色塊感
+        // 優化點：不再將模糊後的圖片拉伸回全解析度。
+        // 返回小尺寸位圖，由 UI 層 (Compose Image) 進行硬體加速拉伸，
+        // 視覺效果幾乎一致（因為本就是模糊的），但節省了 90% 的內存佔用。
         val blurScale = 0.15f
         val bw = (screenW * blurScale).toInt().coerceAtLeast(1)
         val bh = (screenH * blurScale).toInt().coerceAtLeast(1)
         
-        val small = Bitmap.createScaledBitmap(scaled, bw, bh, true)
-        val blurred = Bitmap.createScaledBitmap(small, screenW, screenH, true)
+        val blurred = Bitmap.createScaledBitmap(scaled, bw, bh, true)
         
         return WallpaperResult(
             raw = scaled.asImageBitmap(),

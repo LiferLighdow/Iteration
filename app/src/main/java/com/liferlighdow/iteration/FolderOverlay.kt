@@ -233,6 +233,7 @@ fun FolderOverlay(
                                                     refractionAmount = refractionAmount,
                                                     chromaticAberration = chromaticAberration,
                                                     isEditMode = isEditMode,
+                                                    getIcon = { pkg -> viewModel.getIcon(pkg) },
                                                     onDeleteClick = {
                                                         try {
                                                             val intent = Intent(Intent.ACTION_DELETE).apply {
@@ -386,6 +387,7 @@ fun FolderOverlay(
                 MultiAppPickerDialog(
                     allApps = allAppsFlat,
                     iconShape = iconShape,
+                    viewModel = viewModel,
                     initialSelectedPackages = currentFolder.folderItems.map { it.packageName },
                     onDismiss = { showAppPicker = false },
                     onAppsSelected = {

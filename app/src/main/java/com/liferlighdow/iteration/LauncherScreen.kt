@@ -3,7 +3,6 @@ package com.liferlighdow.iteration
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.net.Uri
-import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -17,18 +16,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.BlurEffect
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -39,7 +33,6 @@ import com.kyant.backdrop.backdrops.layerBackdrop
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -571,7 +564,7 @@ fun LauncherScreen(
                         scaleX = 1.15f
                         scaleY = 1.15f
                     }
-            ) { AppItem(app = app, iconSize = iconSize) }
+            ) { AppItem(app = app, iconSize = iconSize, getIcon = { pkg -> viewModel.getIcon(pkg) }) }
         }
 
         GlobalSearchOverlay(
@@ -593,10 +586,9 @@ fun LauncherScreen(
 
     val wallpaperLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
-            val context = mContext
             scope.launch(Dispatchers.IO) {
                 try {
-                    context.contentResolver.openInputStream(it)?.use { input ->
+                    mContext.contentResolver.openInputStream(it)?.use { input ->
                         val bitmap = BitmapFactory.decodeStream(input)
                         if (bitmap != null) {
                             viewModel.setCustomWallpaper(bitmap)

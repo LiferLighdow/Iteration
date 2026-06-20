@@ -31,7 +31,7 @@ fun LauncherMenu(
             Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                 ListItem(
                     headlineContent = { Text(stringResource(R.string.menu_edit_mode)) },
-                    leadingContent = { Icon(Icons.Default.Edit, contentDescription = null) },
+                    leadingContent = { Icon(Icons.Default.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                     modifier = Modifier.clickable {
                         viewModel.setEditMode(true)
                         onDismiss()
@@ -39,7 +39,7 @@ fun LauncherMenu(
                 )
                 ListItem(
                     headlineContent = { Text(stringResource(R.string.menu_add_widget)) },
-                    leadingContent = { Icon(Icons.Default.Add, contentDescription = null) },
+                    leadingContent = { Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                     modifier = Modifier.clickable {
                         onAddWidgetClick()
                         onDismiss()
@@ -47,7 +47,7 @@ fun LauncherMenu(
                 )
                 ListItem(
                     headlineContent = { Text(stringResource(R.string.menu_new_folder)) },
-                    leadingContent = { Icon(Icons.Default.CreateNewFolder, contentDescription = null) },
+                    leadingContent = { Icon(Icons.Default.CreateNewFolder, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                     modifier = Modifier.clickable {
                         onCreateFolderClick()
                         onDismiss()
@@ -55,7 +55,7 @@ fun LauncherMenu(
                 )
                 ListItem(
                     headlineContent = { Text(stringResource(R.string.menu_add_page)) },
-                    leadingContent = { Icon(Icons.Default.PostAdd, contentDescription = null) },
+                    leadingContent = { Icon(Icons.Default.PostAdd, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                     modifier = Modifier.clickable {
                         viewModel.addEmptyPage()
                         onDismiss()
@@ -75,7 +75,7 @@ fun LauncherMenu(
 
                 ListItem(
                     headlineContent = { Text(stringResource(R.string.menu_wallpaper)) },
-                    leadingContent = { Icon(Icons.Default.Image, contentDescription = null) },
+                    leadingContent = { Icon(Icons.Default.Image, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                     modifier = Modifier.clickable {
                         onWallpaperClick()
                         onDismiss()
@@ -85,7 +85,7 @@ fun LauncherMenu(
                 if (!isDefaultLauncher) {
                     ListItem(
                         headlineContent = { Text(stringResource(R.string.menu_set_default)) },
-                        leadingContent = { Icon(Icons.Default.Home, contentDescription = null) },
+                        leadingContent = { Icon(Icons.Default.Home, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                         modifier = Modifier.clickable {
                             onSetDefaultClick()
                             onDismiss()
@@ -95,7 +95,7 @@ fun LauncherMenu(
 
                 ListItem(
                     headlineContent = { Text(stringResource(R.string.menu_launcher_settings)) },
-                    leadingContent = { Icon(Icons.Default.Settings, contentDescription = null) },
+                    leadingContent = { Icon(Icons.Default.Settings, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                     modifier = Modifier.clickable {
                         onSettingsClick()
                         onDismiss()

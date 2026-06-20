@@ -7,10 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.isSpecified
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.kyant.backdrop.Backdrop
@@ -34,8 +31,7 @@ fun Modifier.liquidGlass(
     blurRadius: Float = 0f,
     refractionHeight: Float = 24f,
     refractionAmount: Float = 48f,
-    chromaticAberration: Boolean = true,
-    tint: Color = Color.Unspecified
+    chromaticAberration: Boolean = true
 ): Modifier = composed {
     val fallbackColor = glassFallbackColor()
 
@@ -94,6 +90,5 @@ fun Modifier.liquidGlassDock(
     blurRadius = blurRadius,
     refractionHeight = refractionHeight,
     refractionAmount = refractionAmount,
-    chromaticAberration = chromaticAberration,
-    tint = Color.Unspecified
+    chromaticAberration = chromaticAberration
 )

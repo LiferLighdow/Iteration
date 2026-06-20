@@ -51,7 +51,6 @@ import kotlin.math.max
 import kotlin.math.min
 import android.content.Intent
 import android.net.Uri
-import android.widget.Toast
 
 fun calculateOverlap(r1: Rect, r2: Rect): Float {
     val intersection = Rect(
@@ -75,7 +74,6 @@ fun AppGrid(
     isLiquidGlass: Boolean = false,
     backdrop: com.kyant.backdrop.Backdrop? = null,
     iconShape: IconShape = IconShape.DEFAULT,
-    libraryShape: IconShape = IconShape.DEFAULT,
     blurRadius: Float = 0f,
     refractionHeight: Float = 24f,
     refractionAmount: Float = 48f,
@@ -207,10 +205,10 @@ fun AppGrid(
                                     
                                     if (isVertical) {
                                         if (pointerCount == 2) {
-                                            if (totalDragY < -150f) {
+                                            if (totalDragY < -80f) {
                                                 onBackgroundTwoFingerSwipeUp()
                                                 hasTriggered = true
-                                            } else if (totalDragY > 150f) {
+                                            } else if (totalDragY > 80f) {
                                                 onBackgroundTwoFingerSwipeDown()
                                                 hasTriggered = true
                                             }
@@ -443,7 +441,7 @@ private fun WidgetGridItem(
             if (app.widget?.type !is WidgetType.Stack) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.widget_glass_mode)) },
-                    leadingIcon = { Icon(Icons.Default.BlurOn, null) },
+                    leadingIcon = { Icon(Icons.Default.BlurOn, null, tint = MaterialTheme.colorScheme.primary) },
                     onClick = {
                         app.widget?.let { viewModel.updateWidgetDisplayMode(it.id, WidgetDisplayMode.GLASS) }
                         onContextMenuDismiss()
@@ -451,7 +449,7 @@ private fun WidgetGridItem(
                 )
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.widget_color_mode)) },
-                    leadingIcon = { Icon(Icons.Default.Palette, null) },
+                    leadingIcon = { Icon(Icons.Default.Palette, null, tint = MaterialTheme.colorScheme.primary) },
                     onClick = {
                         app.widget?.let { viewModel.updateWidgetDisplayMode(it.id, WidgetDisplayMode.COLOR) }
                         onContextMenuDismiss()
@@ -461,7 +459,7 @@ private fun WidgetGridItem(
             if (app.widget?.type is WidgetType.Stack) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.menu_choose_widgets)) },
-                    leadingIcon = { Icon(Icons.Default.Settings, null) },
+                    leadingIcon = { Icon(Icons.Default.Settings, null, tint = MaterialTheme.colorScheme.primary) },
                     onClick = {
                         onUpdateStackToEdit(app.widget)
                         onContextMenuDismiss()
@@ -471,7 +469,7 @@ private fun WidgetGridItem(
             if (app.widget?.type is WidgetType.Note) {
                 DropdownMenuItem(
                     text = { Text("Edit Note") },
-                    leadingIcon = { Icon(Icons.Default.Edit, null) },
+                    leadingIcon = { Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary) },
                     onClick = {
                         onUpdateNoteToEdit(app.widget!!)
                         onContextMenuDismiss()
@@ -481,7 +479,7 @@ private fun WidgetGridItem(
             HorizontalDivider()
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.menu_delete_home)) },
-                leadingIcon = { Icon(Icons.Default.Delete, null) },
+                leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
                 onClick = {
                     viewModel.removeAppFromHome(app.uniqueId)
                     onContextMenuDismiss()
@@ -526,6 +524,7 @@ private fun AppGridItem(
             refractionAmount = refractionAmount,
             chromaticAberration = chromaticAberration,
             isEditMode = isEditMode,
+            getIcon = { pkg -> viewModel.getIcon(pkg) },
             onDeleteClick = {
                 if (app.isFolder) {
                     viewModel.removeAppFromHome(app.uniqueId)

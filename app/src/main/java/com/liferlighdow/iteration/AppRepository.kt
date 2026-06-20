@@ -22,7 +22,6 @@ class AppRepository(private val context: Context) {
                 label = info.loadLabel(pm).toString(),
                 packageName = pkgName,
                 uniqueId = "$pkgName/$activityName",
-                icon = info.activityInfo.loadIcon(pm), // 改用 activityInfo 讀取較原始的圖示
                 category = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                     info.activityInfo.applicationInfo.category
                 } else {

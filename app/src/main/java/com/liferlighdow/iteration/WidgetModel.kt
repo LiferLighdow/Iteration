@@ -109,7 +109,7 @@ fun BatteryWidget(
     val useLiquid = displayMode == WidgetDisplayMode.GLASS && isLiquidGlassEnabled && isLiquidWidgetsEnabled && backdrop != null
 
     val mContext = LocalContext.current
-    var batteryLevel by remember { mutableStateOf(0) }
+    var batteryLevel by remember { mutableIntStateOf(0) }
     var isCharging by remember { mutableStateOf(false) }
 
     val containerColor = when (displayMode) {

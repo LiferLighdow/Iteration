@@ -20,7 +20,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.remember
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -42,9 +45,16 @@ fun AppItem(
     chromaticAberration: Boolean = true,
     isEditMode: Boolean = false,
     onAppClick: (() -> Unit)? = null,
-    onDeleteClick: (() -> Unit)? = null
+    onDeleteClick: (() -> Unit)? = null,
+    getIcon: @Composable (String) -> ImageBitmap? = { null }
 ) {
+    val viewModel: MainViewModel = viewModel()
+    val iconSignal by viewModel.iconUpdateSignal.collectAsState()
     val notificationCounts by NotificationService.notifications.collectAsState()
+    
+    val appIcon = remember(app.packageName, iconSignal) {
+        if (!app.isFolder) viewModel.getIcon(app.packageName) else null
+    }
 
     // 計算通知數量：若是資料夾，則加總內部所有 App 的數量
     val count = if (app.isFolder) {
@@ -97,18 +107,18 @@ fun AppItem(
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { 
-                            FolderPreviewIcon(app.folderItems.getOrNull(0), iconSize / 2.5f, iconShape)
-                            FolderPreviewIcon(app.folderItems.getOrNull(1), iconSize / 2.5f, iconShape) 
+                            FolderPreviewIcon(app.folderItems.getOrNull(0), iconSize / 2.5f, iconShape, getIcon)
+                            FolderPreviewIcon(app.folderItems.getOrNull(1), iconSize / 2.5f, iconShape, getIcon) 
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { 
-                            FolderPreviewIcon(app.folderItems.getOrNull(2), iconSize / 2.5f, iconShape)
-                            FolderPreviewIcon(app.folderItems.getOrNull(3), iconSize / 2.5f, iconShape) 
+                            FolderPreviewIcon(app.folderItems.getOrNull(2), iconSize / 2.5f, iconShape, getIcon)
+                            FolderPreviewIcon(app.folderItems.getOrNull(3), iconSize / 2.5f, iconShape, getIcon) 
                         }
                     }
                 }
-            } else if (app.processedIcon != null) {
+            } else if (appIcon != null) {
                 Image(
-                    bitmap = app.processedIcon,
+                    bitmap = appIcon,
                     contentDescription = null,
                     modifier = Modifier
                         .size(iconSize)
@@ -177,12 +187,14 @@ fun AppItem(
 fun FolderPreviewIcon(
     app: AppModel?,
     size: androidx.compose.ui.unit.Dp,
-    iconShape: IconShape = IconShape.DEFAULT
+    iconShape: IconShape = IconShape.DEFAULT,
+    getIcon: @Composable (String) -> ImageBitmap?
 ) {
     val currentShape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(size * 0.238f)
-    if (app?.processedIcon != null) {
+    val appIcon = app?.let { if (!it.isFolder) getIcon(it.packageName) else null }
+    if (appIcon != null) {
         Image(
-            bitmap = app.processedIcon,
+            bitmap = appIcon,
             contentDescription = null,
             modifier = Modifier
                 .size(size)
