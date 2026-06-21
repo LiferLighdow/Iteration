@@ -39,11 +39,13 @@ object ConfigSerializer {
             is WidgetType.Photo -> "Photo"
             is WidgetType.Music -> "Music"
             is WidgetType.Note -> "Note"
+            is WidgetType.Weather -> "Weather"
             is WidgetType.Stack -> "Stack"
         })
         if (w.type is WidgetType.Calendar) obj.put("is_wide", w.type.isWide)
         if (w.type is WidgetType.Photo) obj.put("is_wide", w.type.isWide)
         if (w.type is WidgetType.Music) obj.put("is_wide", w.type.isWide)
+        if (w.type is WidgetType.Weather) obj.put("is_wide", w.type.isWide)
         if (w.type is WidgetType.Note) {
             obj.put("is_wide", w.type.isWide)
             obj.put("note_text", w.type.text)
@@ -75,6 +77,7 @@ object ConfigSerializer {
             "Photo" -> WidgetType.Photo(isWide)
             "Music" -> WidgetType.Music(isWide)
             "Note" -> WidgetType.Note(text = obj.optString("note_text", ""), isWide = isWide)
+            "Weather" -> WidgetType.Weather(isWide = obj.optBoolean("is_wide", true))
             "Stack" -> {
                 val children = mutableListOf<WidgetModel>()
                 val childrenArr = obj.optJSONArray("children")
@@ -174,6 +177,7 @@ object ConfigSerializer {
         liquidGlassGlobalSearch: Boolean,
         liquidGlassAppLibrarySearch: Boolean,
         liquidGlassWidgets: Boolean,
+        networkAccessEnabled: Boolean,
         liquidGlassEnabled: Boolean,
         showMinusOne: Boolean,
         showAppLibrary: Boolean,
@@ -212,6 +216,7 @@ object ConfigSerializer {
         settings.put("liquid_glass_global_search", liquidGlassGlobalSearch)
         settings.put("liquid_glass_app_library_search", liquidGlassAppLibrarySearch)
         settings.put("liquid_glass_widgets", liquidGlassWidgets)
+        settings.put("network_access_enabled", networkAccessEnabled)
         settings.put("liquid_glass_enabled", liquidGlassEnabled)
         settings.put("show_minus_one", showMinusOne)
         settings.put("show_app_library", showAppLibrary)

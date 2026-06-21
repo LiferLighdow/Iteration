@@ -27,6 +27,10 @@ class IconProcessor(private val context: Context) {
     // 緩存 Mask（遮罩），使用 ConcurrentHashMap 確保線程安全
     private val maskCache = ConcurrentHashMap<String, Bitmap>()
 
+    fun clearCache() {
+        maskCache.clear()
+    }
+
     private fun getOrCreateMask(shape: IconShape, size: Int): Bitmap {
         val key = "${shape.name}_$size"
         return maskCache.getOrPut(key) {

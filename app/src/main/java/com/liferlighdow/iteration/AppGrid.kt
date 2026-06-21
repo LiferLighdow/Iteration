@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarOutline
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,6 +36,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -96,6 +98,7 @@ fun AppGrid(
     val draggingUniqueId = draggingApp?.uniqueId
     var stackToEdit by remember { mutableStateOf<WidgetModel?>(null) }
     var noteToEdit by remember { mutableStateOf<WidgetModel?>(null) }
+    var weatherToEdit by remember { mutableStateOf<WidgetModel?>(null) }
 
     val displayApps = remember(apps, confirmedHoveredSlotIdx, draggingUniqueId, confirmedIntent) {
         val list = apps.toMutableList()
@@ -130,6 +133,7 @@ fun AppGrid(
                     is WidgetType.Music -> if (type.isWide) 4 else 2
                     is WidgetType.Note -> if (type.isWide) 4 else 2
                     is WidgetType.Stack -> if (type.isWide) 4 else 2
+                    is WidgetType.Weather -> if (type.isWide) 4 else 2
                     is WidgetType.Battery, is WidgetType.Clock -> 2
                     null -> 1
                 }
@@ -257,6 +261,7 @@ fun AppGrid(
                         is WidgetType.Music -> if (type.isWide) 4 else 2
                         is WidgetType.Note -> if (type.isWide) 4 else 2
                         is WidgetType.Stack -> if (type.isWide) 4 else 2
+                        is WidgetType.Weather -> if (type.isWide) 4 else 2
                         is WidgetType.Battery, is WidgetType.Clock -> 2
                         null -> 1
                     }
@@ -329,7 +334,8 @@ fun AppGrid(
                             showContextMenu = showContextMenu,
                             onContextMenuDismiss = { showContextMenu = false },
                             onUpdateStackToEdit = { stackToEdit = it },
-                            onUpdateNoteToEdit = { noteToEdit = it }
+                            onUpdateNoteToEdit = { noteToEdit = it },
+                            onUpdateWeatherToEdit = { weatherToEdit = it }
                         )
                     } else {
                         AppGridItem(
@@ -378,6 +384,12 @@ fun AppGrid(
             onDismiss = { noteToEdit = null }
         )
     }
+    if (weatherToEdit != null) {
+        LocationSearchDialog(
+            viewModel = viewModel,
+            onDismiss = { weatherToEdit = null }
+        )
+    }
 }
 
 @Composable
@@ -390,7 +402,8 @@ private fun WidgetGridItem(
     showContextMenu: Boolean,
     onContextMenuDismiss: () -> Unit,
     onUpdateStackToEdit: (WidgetModel) -> Unit,
-    onUpdateNoteToEdit: (WidgetModel) -> Unit
+    onUpdateNoteToEdit: (WidgetModel) -> Unit,
+    onUpdateWeatherToEdit: (WidgetModel) -> Unit
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -409,6 +422,7 @@ private fun WidgetGridItem(
                     is WidgetType.Photo -> PhotoWidget(widget = widget, viewModel = viewModel, modifier = Modifier.fillMaxSize())
                     is WidgetType.Music -> MusicWidget(widget = widget, displayMode = widget.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop)
                     is WidgetType.Note -> NoteWidget(widget = widget, displayMode = widget.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop)
+                    is WidgetType.Weather -> WeatherWidget(displayMode = widget.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop)
                     is WidgetType.Stack -> StackWidget(widget = widget, viewModel = viewModel, modifier = Modifier.fillMaxSize(), backdrop = backdrop)
                 }
             }
@@ -430,7 +444,13 @@ private fun WidgetGridItem(
 
         Text(
             text = app.label,
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.labelSmall.copy(
+                shadow = Shadow(
+                    color = Color.Black.copy(alpha = 0.5f),
+                    offset = Offset(0f, 2f),
+                    blurRadius = 4f
+                )
+            ),
             color = Color.White,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -438,23 +458,27 @@ private fun WidgetGridItem(
         )
 
         DropdownMenu(expanded = showContextMenu, onDismissRequest = onContextMenuDismiss) {
-            if (app.widget?.type !is WidgetType.Stack) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.widget_glass_mode)) },
-                    leadingIcon = { Icon(Icons.Default.BlurOn, null, tint = MaterialTheme.colorScheme.primary) },
-                    onClick = {
-                        app.widget?.let { viewModel.updateWidgetDisplayMode(it.id, WidgetDisplayMode.GLASS) }
-                        onContextMenuDismiss()
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.widget_color_mode)) },
-                    leadingIcon = { Icon(Icons.Default.Palette, null, tint = MaterialTheme.colorScheme.primary) },
-                    onClick = {
-                        app.widget?.let { viewModel.updateWidgetDisplayMode(it.id, WidgetDisplayMode.COLOR) }
-                        onContextMenuDismiss()
-                    }
-                )
+            val widget = app.widget
+            if (widget != null && widget.type !is WidgetType.Stack && widget.type !is WidgetType.Photo) {
+                if (widget.displayMode == WidgetDisplayMode.COLOR) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.widget_glass_mode)) },
+                        leadingIcon = { Icon(Icons.Default.BlurOn, null, tint = MaterialTheme.colorScheme.primary) },
+                        onClick = {
+                            viewModel.updateWidgetDisplayMode(widget.id, WidgetDisplayMode.GLASS)
+                            onContextMenuDismiss()
+                        }
+                    )
+                } else {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.widget_color_mode)) },
+                        leadingIcon = { Icon(Icons.Default.Palette, null, tint = MaterialTheme.colorScheme.primary) },
+                        onClick = {
+                            viewModel.updateWidgetDisplayMode(widget.id, WidgetDisplayMode.COLOR)
+                            onContextMenuDismiss()
+                        }
+                    )
+                }
             }
             if (app.widget?.type is WidgetType.Stack) {
                 DropdownMenuItem(
@@ -472,6 +496,16 @@ private fun WidgetGridItem(
                     leadingIcon = { Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary) },
                     onClick = {
                         onUpdateNoteToEdit(app.widget!!)
+                        onContextMenuDismiss()
+                    }
+                )
+            }
+            if (app.widget?.type is WidgetType.Weather) {
+                DropdownMenuItem(
+                    text = { Text("Choose Location") },
+                    leadingIcon = { Icon(Icons.Default.LocationOn, null, tint = MaterialTheme.colorScheme.primary) },
+                    onClick = {
+                        onUpdateWeatherToEdit(app.widget!!)
                         onContextMenuDismiss()
                     }
                 )

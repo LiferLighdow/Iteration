@@ -38,6 +38,7 @@ fun MinusOnePage(
     val effectiveEditMode = isEditMode || isReorderMode
     var stackToEdit by remember { mutableStateOf<WidgetModel?>(null) }
     var noteToEdit by remember { mutableStateOf<WidgetModel?>(null) }
+    var weatherToEdit by remember { mutableStateOf<WidgetModel?>(null) }
     val mContext = LocalContext.current
 
     Column(
@@ -84,6 +85,7 @@ fun MinusOnePage(
                     (widget.type as? WidgetType.Calendar)?.isWide == true ||
                     (widget.type as? WidgetType.Music)?.isWide == true ||
                     (widget.type as? WidgetType.Note)?.isWide == true ||
+                    (widget.type as? WidgetType.Weather)?.isWide == true ||
                     (widget.type as? WidgetType.Stack)?.isWide == true) 4 else 2
                 GridItemSpan(span)
             }) { widget ->
@@ -138,6 +140,7 @@ fun MinusOnePage(
                         is WidgetType.Photo -> PhotoWidget(widget = widget, viewModel = viewModel)
                         is WidgetType.Music -> MusicWidget(widget = widget, displayMode = widget.displayMode, backdrop = backdrop)
                         is WidgetType.Note -> NoteWidget(widget = widget, displayMode = widget.displayMode, backdrop = backdrop)
+                        is WidgetType.Weather -> WeatherWidget(displayMode = widget.displayMode, backdrop = backdrop)
                         is WidgetType.Stack -> StackWidget(widget = widget, viewModel = viewModel, backdrop = backdrop)
                     }
 
@@ -164,23 +167,26 @@ fun MinusOnePage(
                         expanded = showContextMenu,
                         onDismissRequest = { showContextMenu = false }
                     ) {
-                        if (widget.type !is WidgetType.Stack) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.widget_glass_mode)) },
-                                leadingIcon = { Icon(Icons.Default.BlurOn, null) },
-                                onClick = {
-                                    onUpdateWidgetMode(widget.id, WidgetDisplayMode.GLASS)
-                                    showContextMenu = false
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.widget_color_mode)) },
-                                leadingIcon = { Icon(Icons.Default.Palette, null) },
-                                onClick = {
-                                    onUpdateWidgetMode(widget.id, WidgetDisplayMode.COLOR)
-                                    showContextMenu = false
-                                }
-                            )
+                        if (widget.type !is WidgetType.Stack && widget.type !is WidgetType.Photo) {
+                            if (widget.displayMode == WidgetDisplayMode.COLOR) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.widget_glass_mode)) },
+                                    leadingIcon = { Icon(Icons.Default.BlurOn, null, tint = MaterialTheme.colorScheme.primary) },
+                                    onClick = {
+                                        onUpdateWidgetMode(widget.id, WidgetDisplayMode.GLASS)
+                                        showContextMenu = false
+                                    }
+                                )
+                            } else {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.widget_color_mode)) },
+                                    leadingIcon = { Icon(Icons.Default.Palette, null, tint = MaterialTheme.colorScheme.primary) },
+                                    onClick = {
+                                        onUpdateWidgetMode(widget.id, WidgetDisplayMode.COLOR)
+                                        showContextMenu = false
+                                    }
+                                )
+                            }
                         }
                         if (widget.type is WidgetType.Stack) {
                             DropdownMenuItem(
@@ -198,6 +204,16 @@ fun MinusOnePage(
                                 leadingIcon = { Icon(Icons.Default.Edit, null) },
                                 onClick = {
                                     noteToEdit = widget
+                                    showContextMenu = false
+                                }
+                            )
+                        }
+                        if (widget.type is WidgetType.Weather) {
+                            DropdownMenuItem(
+                                text = { Text("Choose Location") },
+                                leadingIcon = { Icon(Icons.Default.LocationOn, null) },
+                                onClick = {
+                                    weatherToEdit = widget
                                     showContextMenu = false
                                 }
                             )
@@ -226,6 +242,13 @@ fun MinusOnePage(
             initialText = (noteToEdit!!.type as WidgetType.Note).text,
             viewModel = viewModel,
             onDismiss = { noteToEdit = null }
+        )
+    }
+
+    if (weatherToEdit != null) {
+        LocationSearchDialog(
+            viewModel = viewModel,
+            onDismiss = { weatherToEdit = null }
         )
     }
 }

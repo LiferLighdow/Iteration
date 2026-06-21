@@ -7,6 +7,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.BatteryManager
+import org.json.JSONObject
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
@@ -55,6 +56,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import androidx.compose.ui.window.Dialog
@@ -76,6 +78,7 @@ sealed class WidgetType {
     data class Photo(val isWide: Boolean = false) : WidgetType()
     data class Music(val isWide: Boolean = false) : WidgetType()
     data class Note(val text: String = "", val isWide: Boolean = false) : WidgetType()
+    data class Weather(val isWide: Boolean = true) : WidgetType()
     data class Stack(val children: List<WidgetModel> = emptyList(), val isWide: Boolean = false) : WidgetType()
 }
 
@@ -91,6 +94,19 @@ data class WidgetModel(
 )
 
 data class CalendarEvent(val title: String, val startTime: Long, val endTime: Long)
+
+data class DailyWeather(
+    val date: String,
+    val maxTemp: Double,
+    val minTemp: Double,
+    val weatherCode: Int
+)
+
+data class WeatherInfo(
+    val currentTemp: Double,
+    val daily: List<DailyWeather>,
+    val cityName: String = "Taipei"
+)
 
 @Composable
 fun BatteryWidget(
@@ -1422,6 +1438,108 @@ fun NoteWidget(
 }
 
 @Composable
+fun LocationSearchDialog(
+    viewModel: MainViewModel,
+    onDismiss: () -> Unit
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    var results by remember { mutableStateOf<List<JSONObject>>(emptyList()) }
+    var isSearching by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .fillMaxHeight(0.6f),
+            shape = RoundedCornerShape(28.dp)
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Text("Choose Location", style = MaterialTheme.typography.headlineSmall)
+                Spacer(Modifier.height(8.dp))
+
+                // 新增：使用 IP 定位按鈕
+                Button(
+                    onClick = {
+                        viewModel.resetToIpLocation()
+                        onDismiss()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer)
+                ) {
+                    Icon(Icons.Default.MyLocation, null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Use IP Location (Automatic)")
+                }
+
+                Spacer(Modifier.height(16.dp))
+                
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { 
+                        searchQuery = it
+                        if (it.length >= 2) {
+                            isSearching = true
+                            scope.launch(Dispatchers.IO) {
+                                try {
+                                    val url = java.net.URL("https://geocoding-api.open-meteo.com/v1/search?name=${java.net.URLEncoder.encode(it, "UTF-8")}&count=10")
+                                    val res = url.readText()
+                                    val json = JSONObject(res)
+                                    val array = json.optJSONArray("results")
+                                    val list = mutableListOf<JSONObject>()
+                                    if (array != null) {
+                                        for (i in 0 until array.length()) list.add(array.getJSONObject(i))
+                                    }
+                                    withContext(Dispatchers.Main) {
+                                        results = list
+                                        isSearching = false
+                                    }
+                                } catch (e: Exception) {
+                                    isSearching = false
+                                }
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Search city...") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp)
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                if (isSearching) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally).size(24.dp))
+                }
+
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    items(results) { item ->
+                        val name = item.getString("name")
+                        val country = item.optString("country", "")
+                        val admin = item.optString("admin1", "")
+                        val lat = item.getDouble("latitude")
+                        val lon = item.getDouble("longitude")
+
+                        ListItem(
+                            headlineContent = { Text(name) },
+                            supportingContent = { Text("$admin, $country") },
+                            modifier = Modifier.clickable {
+                                viewModel.updateLocation(lat, lon, name)
+                                onDismiss()
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun NoteEditDialog(
     widgetId: String,
     initialText: String,
@@ -1455,6 +1573,170 @@ fun NoteEditDialog(
             }
         }
     )
+}
+
+@Composable
+fun WeatherWidget(
+    displayMode: WidgetDisplayMode,
+    modifier: Modifier = Modifier,
+    backdrop: com.kyant.backdrop.Backdrop? = null
+) {
+    val viewModel: MainViewModel = viewModel()
+    val isLiquidGlassEnabled by viewModel.isLiquidGlassEnabled.collectAsState()
+    val isLiquidWidgetsEnabled by viewModel.isLiquidGlassWidgetsEnabled.collectAsState()
+    val blurRadius by viewModel.liquidGlassBlur.collectAsState()
+    val refractionHeight by viewModel.liquidGlassRefractionHeight.collectAsState()
+    val refractionAmount by viewModel.liquidGlassRefractionAmount.collectAsState()
+    val chromaticAberration by viewModel.liquidGlassChromaticAberration.collectAsState()
+    val isNetworkEnabled by viewModel.isNetworkAccessEnabled.collectAsState()
+    val weatherInfo by viewModel.weatherInfo.collectAsState()
+    val weatherError by viewModel.weatherError.collectAsState()
+    var showLocationSearch by remember { mutableStateOf(false) }
+
+    val useLiquid = displayMode == WidgetDisplayMode.GLASS && isLiquidGlassEnabled && isLiquidWidgetsEnabled && backdrop != null
+
+    val containerColor = when (displayMode) {
+        WidgetDisplayMode.GLASS -> glassFallbackColor(0.2f)
+        WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.tertiaryContainer
+    }
+    val contentColor = when (displayMode) {
+        WidgetDisplayMode.GLASS -> Color.White
+        WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.onTertiaryContainer
+    }
+
+    LaunchedEffect(isNetworkEnabled) {
+        if (isNetworkEnabled && weatherInfo == null) {
+            viewModel.fetchWeather()
+        }
+    }
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(180.dp)
+            .then(if (useLiquid) Modifier.liquidGlass(
+                enabled = true,
+                backdrop = backdrop,
+                cornerRadius = 24.dp,
+                blurRadius = blurRadius,
+                refractionHeight = refractionHeight,
+                refractionAmount = refractionAmount,
+                chromaticAberration = chromaticAberration
+            ) else Modifier),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = if (useLiquid) Color.Transparent else containerColor)
+    ) {
+        if (!isNetworkEnabled) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(Icons.Default.CloudOff, null, tint = contentColor.copy(alpha = 0.5f))
+                    Text("Network Disabled", color = contentColor.copy(alpha = 0.5f), style = MaterialTheme.typography.labelSmall)
+                }
+            }
+        } else if (weatherInfo == null) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(color = contentColor, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        weatherError ?: "Loading Weather...",
+                        color = contentColor,
+                        style = MaterialTheme.typography.labelSmall,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                    if (weatherError != null) {
+                        Text(
+                            "Tap to Retry",
+                            color = contentColor.copy(alpha = 0.8f),
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier
+                                .padding(4.dp)
+                                .clickable { viewModel.fetchWeather() }
+                        )
+                    }
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxSize().padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    modifier = Modifier.weight(1.2f),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    val today = weatherInfo!!.daily.firstOrNull()
+                    Icon(
+                        imageVector = getWeatherIcon(today?.weatherCode ?: 0),
+                        contentDescription = null,
+                        tint = contentColor,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Text(
+                        text = "${weatherInfo!!.currentTemp.toInt()}°",
+                        style = MaterialTheme.typography.headlineLarge,
+                        color = contentColor,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = weatherInfo?.cityName ?: "Today",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = contentColor.copy(alpha = 0.7f)
+                    )
+                }
+
+                VerticalDivider(modifier = Modifier.fillMaxHeight().padding(horizontal = 12.dp), color = contentColor.copy(alpha = 0.1f))
+
+                Row(
+                    modifier = Modifier.weight(3f).fillMaxHeight(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    weatherInfo!!.daily.drop(1).take(5).forEach { day ->
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = day.date.split("-").lastOrNull() ?: "",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = contentColor.copy(alpha = 0.6f)
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Icon(
+                                imageVector = getWeatherIcon(day.weatherCode),
+                                contentDescription = null,
+                                tint = contentColor,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = "${day.maxTemp.toInt()}°",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = contentColor,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "${day.minTemp.toInt()}°",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = contentColor.copy(alpha = 0.5f)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun getWeatherIcon(code: Int): androidx.compose.ui.graphics.vector.ImageVector {
+    return when (code) {
+        0 -> Icons.Default.WbSunny
+        1, 2, 3 -> Icons.Default.CloudQueue
+        45, 48 -> Icons.Default.Cloud
+        51, 53, 55, 61, 63, 65, 80, 81, 82 -> Icons.Default.Umbrella
+        71, 73, 75, 77, 85, 86 -> Icons.Default.AcUnit
+        95, 96, 99 -> Icons.Default.Thunderstorm
+        else -> Icons.Default.Cloud
+    }
 }
 
 @Composable
@@ -1514,7 +1796,8 @@ fun WidgetPickerDialog(onDismiss: () -> Unit, onWidgetSelected: (WidgetType) -> 
                         Triple(WidgetType.Note(isWide = false), null, Icons.Default.Note),
                         Triple(WidgetType.Note(isWide = true), null, Icons.Default.Description),
                         Triple(WidgetType.Stack(isWide = false), R.string.widget_stacker, Icons.Default.Layers),
-                        Triple(WidgetType.Stack(isWide = true), null, Icons.Default.DashboardCustomize)
+                        Triple(WidgetType.Stack(isWide = true), null, Icons.Default.DashboardCustomize),
+                        Triple(WidgetType.Weather(isWide = true), null, Icons.Default.WbSunny)
                     )
 
                     items(widgets) { (type, labelRes, icon) ->
@@ -1522,6 +1805,7 @@ fun WidgetPickerDialog(onDismiss: () -> Unit, onWidgetSelected: (WidgetType) -> 
                             when (type) {
                                 is WidgetType.Note -> if (type.isWide) "Wide Note" else "Note"
                                 is WidgetType.Stack -> "Wide Widget Stacker"
+                                is WidgetType.Weather -> "Weather Forecast"
                                 else -> ""
                             }
                         }

@@ -725,6 +725,7 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
     
     var showIconPackPicker by remember { mutableStateOf(false) }
     var showStyleInfoDialog by remember { mutableStateOf(false) }
+    var showClearCacheDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -936,7 +937,51 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
                     )
                 }
             }
+
+            item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
+
+            item {
+                Text(
+                    text = "Maintenance",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+
+            item {
+                ListItem(
+                    headlineContent = { Text("Clear Icon Cache") },
+                    supportingContent = { Text("Force re-generation of all application icons") },
+                    trailingContent = { Icon(Icons.Default.Refresh, null, tint = MaterialTheme.colorScheme.primary) },
+                    modifier = Modifier.clickable { showClearCacheDialog = true }
+                )
+            }
         }
+    }
+
+    if (showClearCacheDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearCacheDialog = false },
+            title = { Text("Clear Icon Cache?") },
+            text = { Text("This will delete all processed icon previews and re-generate them. Use this if icons are not displaying correctly or after changing system settings.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.clearIconCache()
+                        showClearCacheDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Clear")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearCacheDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     if (showStyleInfoDialog) {
@@ -2704,6 +2749,8 @@ fun CompatibilityRow(version: String, level: String, desc: String, isCurrentDevi
 @Composable
 fun PermissionsSettingsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
+    val viewModel: MainViewModel = viewModel()
+    val isNetworkEnabled by viewModel.isNetworkAccessEnabled.collectAsState()
     
     // 聯絡人權限狀態
     var hasContactsPermission by remember {
@@ -2749,6 +2796,20 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
         }
     ) { innerPadding ->
         LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+            item {
+                ListItem(
+                    headlineContent = { Text("Network Access") },
+                    supportingContent = { Text("Allow Iteration to access the internet for web search and currency/unit conversion") },
+                    trailingContent = {
+                        Switch(
+                            checked = isNetworkEnabled,
+                            onCheckedChange = { viewModel.setNetworkAccessEnabled(it) }
+                        )
+                    },
+                    modifier = Modifier.clickable { viewModel.setNetworkAccessEnabled(!isNetworkEnabled) }
+                )
+            }
+            item { HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp)) }
             item {
                 ListItem(
                     headlineContent = { Text(stringResource(R.string.permission_contacts)) },

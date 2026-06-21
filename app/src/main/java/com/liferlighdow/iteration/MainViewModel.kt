@@ -99,6 +99,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isLiquidGlassWidgetsEnabled = MutableStateFlow(prefs.getBoolean("liquid_glass_widgets", false))
     val isLiquidGlassWidgetsEnabled = _isLiquidGlassWidgetsEnabled.asStateFlow()
 
+    private val _isNetworkAccessEnabled = MutableStateFlow(prefs.getBoolean("network_access_enabled", true))
+    val isNetworkAccessEnabled = _isNetworkAccessEnabled.asStateFlow()
+
+    private val _exchangeRates = MutableStateFlow<Map<String, Double>>(emptyMap())
+    val exchangeRates = _exchangeRates.asStateFlow()
+
+    private val _weatherInfo = MutableStateFlow<WeatherInfo?>(null)
+    val weatherInfo = _weatherInfo.asStateFlow()
+
+    private val _customLocation = MutableStateFlow<Pair<Double, Double>?>(null)
+    private val _customCityName = MutableStateFlow<String?>(null)
+
+    private val _weatherError = MutableStateFlow<String?>(null)
+    val weatherError = _weatherError.asStateFlow()
+
+    init {
+        loadWeatherFromCache()
+    }
+
     private val _showMinusOnePage = MutableStateFlow(prefs.getBoolean("show_minus_one", true))
     val showMinusOnePage = _showMinusOnePage.asStateFlow()
 
@@ -142,6 +161,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun triggerIconUpdate() {
         _iconUpdateSignal.value = System.currentTimeMillis()
+    }
+
+    fun clearIconCache() {
+        viewModelScope.launch(Dispatchers.IO) {
+            iconCache.evictAll()
+            processedIconCacheDir.listFiles()?.forEach { it.delete() }
+            iconProcessor.clearCache()
+            withContext(Dispatchers.Main) {
+                loadApps()
+            }
+        }
     }
 
     private val _showAppLibrary = MutableStateFlow(prefs.getBoolean("show_app_library", true))
@@ -422,6 +452,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         loadSettings()
         loadApps()
         updateBlurredWallpaper()
+        fetchExchangeRates() // 初始化時嘗試抓取匯率
         // 註冊監聽
         launcherApps.registerCallback(packageCallback)
     }
@@ -506,6 +537,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val newLiquidGlobalSearchEnabled = prefs.getBoolean("liquid_glass_global_search", false)
         val newLiquidAppLibrarySearchEnabled = prefs.getBoolean("liquid_glass_app_library_search", false)
         val newLiquidWidgetsEnabled = prefs.getBoolean("liquid_glass_widgets", false)
+        val newNetworkAccessEnabled = prefs.getBoolean("network_access_enabled", true)
         val newShowMinusOne = prefs.getBoolean("show_minus_one", true)
         val newShowAppLibrary = prefs.getBoolean("show_app_library", true)
         val newLiquidBlur = prefs.getFloat("liquid_glass_blur", 0f)
@@ -541,6 +573,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _isLiquidGlassGlobalSearchEnabled.value = newLiquidGlobalSearchEnabled
         _isLiquidGlassAppLibrarySearchEnabled.value = newLiquidAppLibrarySearchEnabled
         _isLiquidGlassWidgetsEnabled.value = newLiquidWidgetsEnabled
+        _isNetworkAccessEnabled.value = newNetworkAccessEnabled
         _showMinusOnePage.value = newShowMinusOne
         _showAppLibrary.value = newShowAppLibrary
         _liquidGlassBlur.value = newLiquidBlur
@@ -618,6 +651,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             is WidgetType.Photo -> "Photo"
             is WidgetType.Music -> "Music"
             is WidgetType.Note -> "Note"
+            is WidgetType.Weather -> "Weather"
             is WidgetType.Stack -> if (type.isWide) "Wide Widget Stacker" else "Stack"
         }
 
@@ -868,14 +902,41 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             hiddenPackages.remove(packageName)
         } else {
             hiddenPackages.add(packageName)
-            // 如果 App 被隱藏，確保它從桌面佈局中移除 (預留)
+            // 如果 App 被隱藏，從桌面佈局中移除
+            removeAppFromHomeByPackage(packageName)
         }
         prefs.edit().putStringSet("hidden_apps", hiddenPackages).apply()
 
-        // 如果 App 被隱藏，從桌面佈局中移除 (已由 repaginate 處理)
-        // 但如果是在 Dock 中，UI 會根據 isHidden 自動隱藏
+        // 刪除該 App 所有的磁碟快取圖示，確保排除/恢復排除能立即生效
+        processedIconCacheDir.listFiles { _, name ->
+            name.startsWith("${packageName}_")
+        }?.forEach { it.delete() }
 
+        iconCache.evictAll()
         loadApps() // Reload to update isHidden status
+    }
+
+    /**
+     * 從桌面分頁中移除指定包名的所有實例（用於隱藏 App 時）
+     */
+    private fun removeAppFromHomeByPackage(packageName: String) {
+        val currentPages = _pages.value.map { page ->
+            page.filter { item ->
+                if (item.isFolder) {
+                    // 如果是資料夾，我們檢查是否內部的項目全部被過濾後會導致資料夾變動
+                    true 
+                } else {
+                    item.packageName != packageName
+                }
+            }.map { item ->
+                if (item.isFolder) {
+                    item.copy(folderItems = item.folderItems.filter { it.packageName != packageName })
+                } else item
+            }
+        }.filter { it.isNotEmpty() }
+        
+        _pages.value = currentPages
+        saveLayout()
     }
 
     fun getPassword(): String = prefs.getString("hidden_password", "") ?: ""
@@ -1401,6 +1462,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
         _excludedThemedPackages.value = current
         prefs.edit().putStringSet("excluded_themed_packages", current).apply()
+
+        // 刪除該 App 所有的磁碟快取圖示，確保排除/恢復排除能立即生效
+        processedIconCacheDir.listFiles { _, name ->
+            name.startsWith("${packageName}_")
+        }?.forEach { it.delete() }
+
         iconCache.evictAll()
         loadApps()
     }
@@ -1451,6 +1518,241 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _isLiquidGlassWidgetsEnabled.value = enabled
         prefs.edit().putBoolean("liquid_glass_widgets", enabled).apply()
         if (enabled) updateBlurredWallpaper()
+    }
+
+    fun setNetworkAccessEnabled(enabled: Boolean) {
+        _isNetworkAccessEnabled.value = enabled
+        prefs.edit().putBoolean("network_access_enabled", enabled).apply()
+        if (enabled) {
+            fetchExchangeRates()
+            fetchWeather()
+        }
+    }
+
+    fun fetchWeather() {
+        if (!_isNetworkAccessEnabled.value) {
+            loadWeatherFromCache()
+            return
+        }
+
+        _weatherError.value = "Updating..."
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                // 優先使用自定義位置，否則嘗試 IP 定位
+                var lat = _customLocation.value?.first
+                var lon = _customLocation.value?.second
+                var cityName = _customCityName.value
+
+                if (lat == null || lon == null) {
+                    try {
+                        val ipUrl = java.net.URL("https://free.freeipapi.com/api/json")
+                        val ipConn = ipUrl.openConnection() as java.net.HttpURLConnection
+                        ipConn.connectTimeout = 5000
+                        val ipRes = ipConn.inputStream.bufferedReader().use { it.readText() }
+                        val ipJson = JSONObject(ipRes)
+                        lat = ipJson.getDouble("latitude")
+                        lon = ipJson.getDouble("longitude")
+                        cityName = ipJson.getString("cityName")
+                        _customLocation.value = lat to lon
+                        _customCityName.value = cityName
+                    } catch (e: Exception) {
+                        // IP 定位失敗則使用預設
+                        lat = 25.03; lon = 121.56; cityName = "Taipei"
+                    }
+                }
+
+                val url = java.net.URL("https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=$lat&lon=$lon")
+                val connection = url.openConnection() as java.net.HttpURLConnection
+                connection.connectTimeout = 10000
+                connection.readTimeout = 10000
+                connection.setRequestProperty("User-Agent", "Iteration/1.0")
+                
+                val responseCode = connection.responseCode
+                if (responseCode == 200) {
+                    val response = connection.inputStream.bufferedReader().use { it.readText() }
+                    val json = JSONObject(response)
+                    prefs.edit().putString("cached_weather_json", response).apply()
+                    parseAndSetMetWeather(json, cityName ?: "Unknown")
+                    _weatherError.value = null
+                } else {
+                    _weatherError.value = "Service Unavailable ($responseCode)"
+                }
+            } catch (e: Exception) {
+                val msg = e.message ?: e.toString()
+                _weatherError.value = if (msg.contains("resolve") || msg.contains("address")) "Network Error" else msg
+                loadWeatherFromCache()
+            }
+        }
+    }
+
+    fun updateLocation(lat: Double, lon: Double, name: String) {
+        _customLocation.value = lat to lon
+        _customCityName.value = name
+        fetchWeather()
+    }
+
+    fun resetToIpLocation() {
+        _customLocation.value = null
+        _customCityName.value = null
+        fetchWeather()
+    }
+
+    private fun loadWeatherFromCache() {
+        val cached = prefs.getString("cached_weather_json", null)
+        if (cached != null) {
+            try {
+                // 根據數據結構決定如何解析
+                if (cached.contains("timeseries")) {
+                    parseAndSetMetWeather(JSONObject(cached))
+                } else {
+                    parseAndSetWeather(JSONObject(cached)) // 舊的 Open-Meteo 解析器
+                }
+            } catch (e: Exception) { e.printStackTrace() }
+        }
+    }
+
+    private fun parseAndSetMetWeather(json: JSONObject, cityName: String = "Taipei") {
+        val properties = json.getJSONObject("properties")
+        val timeseries = properties.getJSONArray("timeseries")
+        
+        // 目前天氣
+        val currentData = timeseries.getJSONObject(0).getJSONObject("data").getJSONObject("instant").getJSONObject("details")
+        val currentTemp = currentData.getDouble("air_temperature")
+        
+        // 每日預報 (從序列中提取每天中午的數據作為代表)
+        val dailyList = mutableListOf<DailyWeather>()
+        val seenDates = mutableSetOf<String>()
+        
+        for (i in 0 until timeseries.length()) {
+            val entry = timeseries.getJSONObject(i)
+            val fullTime = entry.getString("time")
+            val date = fullTime.split("T")[0]
+            
+            // 每個日期只抓一個代表數據 (例如中午 12:00)
+            if (!seenDates.contains(date) && (fullTime.contains("T12:00:00Z") || fullTime.contains("T11:00:00Z"))) {
+                val data = entry.getJSONObject("data")
+                val details = data.getJSONObject("instant").getJSONObject("details")
+                
+                // MET Norway 的天氣代碼在 next_12_hours 或 next_6_hours 內
+                val weatherSymbol = try {
+                    data.getJSONObject("next_12_hours").getJSONObject("summary").getString("symbol_code")
+                } catch (e: Exception) { 
+                    try {
+                        data.getJSONObject("next_6_hours").getJSONObject("summary").getString("symbol_code")
+                    } catch (e2: Exception) { "clearsky_day" }
+                }
+
+                dailyList.add(DailyWeather(
+                    date = date,
+                    weatherCode = convertMetSymbolToCode(weatherSymbol),
+                    maxTemp = details.getDouble("air_temperature"),
+                    minTemp = details.getDouble("air_temperature") - 2.0
+                ))
+                seenDates.add(date)
+            }
+            if (dailyList.size >= 6) break
+        }
+        
+        _weatherInfo.value = WeatherInfo(
+            currentTemp = currentTemp,
+            daily = dailyList,
+            cityName = cityName
+        )
+    }
+
+    private fun convertMetSymbolToCode(symbol: String): Int {
+        return when {
+            symbol.contains("clearsky") || symbol.contains("fair") -> 0
+            symbol.contains("cloud") -> 3
+            symbol.contains("fog") -> 45
+            symbol.contains("rain") || symbol.contains("drizzle") -> 61
+            symbol.contains("snow") -> 71
+            symbol.contains("sleet") || symbol.contains("showers") -> 95
+            else -> 1
+        }
+    }
+
+    private fun parseAndSetWeather(json: JSONObject) {
+        val current = json.getJSONObject("current_weather")
+        val daily = json.getJSONObject("daily")
+        
+        val timeArray = daily.getJSONArray("time")
+        val codeArray = daily.getJSONArray("weather_code")
+        val maxArray = daily.getJSONArray("temperature_2m_max")
+        val minArray = daily.getJSONArray("temperature_2m_min")
+        
+        val dailyList = mutableListOf<DailyWeather>()
+        for (i in 0 until timeArray.length()) {
+            dailyList.add(DailyWeather(
+                date = timeArray.getString(i),
+                weatherCode = codeArray.getInt(i),
+                maxTemp = maxArray.getDouble(i),
+                minTemp = minArray.getDouble(i)
+            ))
+        }
+        
+        _weatherInfo.value = WeatherInfo(
+            currentTemp = current.getDouble("temperature"),
+            daily = dailyList
+        )
+    }
+
+    fun fetchExchangeRates() {
+        // 如果關閉了網路存取，則不執行
+        if (!_isNetworkAccessEnabled.value) {
+            loadExchangeRatesFromCache()
+            return
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val url = java.net.URL("https://api.exchangerate-api.com/v4/latest/USD")
+                val connection = url.openConnection() as java.net.HttpURLConnection
+                connection.connectTimeout = 5000
+                connection.readTimeout = 5000
+                
+                val response = connection.inputStream.bufferedReader().use { it.readText() }
+                val json = JSONObject(response)
+                val ratesJson = json.getJSONObject("rates")
+                val ratesMap = mutableMapOf<String, Double>()
+                
+                ratesJson.keys().forEach { key ->
+                    ratesMap[key.lowercase()] = ratesJson.getDouble(key)
+                }
+                
+                _exchangeRates.value = ratesMap
+                prefs.edit().putString("cached_exchange_rates", ratesJson.toString()).apply()
+                prefs.edit().putLong("last_rates_update", System.currentTimeMillis()).apply()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                loadExchangeRatesFromCache()
+            }
+        }
+    }
+
+    private fun loadExchangeRatesFromCache() {
+        val cached = prefs.getString("cached_exchange_rates", null)
+        if (cached != null) {
+            try {
+                val ratesJson = JSONObject(cached)
+                val ratesMap = mutableMapOf<String, Double>()
+                ratesJson.keys().forEach { key ->
+                    ratesMap[key.lowercase()] = ratesJson.getDouble(key)
+                }
+                _exchangeRates.value = ratesMap
+            } catch (e: Exception) { e.printStackTrace() }
+        } else {
+            // 提供一組基礎的離線匯率作為初始值，確保功能立即可用 (以 USD 為基準)
+            _exchangeRates.value = mapOf(
+                "usd" to 1.0,
+                "twd" to 32.5,
+                "jpy" to 155.0,
+                "eur" to 0.92,
+                "cny" to 7.25,
+                "hkd" to 7.8,
+                "gbp" to 0.79
+            )
+        }
     }
 
     fun setHomeMenuOption(option: String, enabled: Boolean) {
@@ -1575,6 +1877,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             liquidGlassGlobalSearch = _isLiquidGlassGlobalSearchEnabled.value,
             liquidGlassAppLibrarySearch = _isLiquidGlassAppLibrarySearchEnabled.value,
             liquidGlassWidgets = _isLiquidGlassWidgetsEnabled.value,
+            networkAccessEnabled = _isNetworkAccessEnabled.value,
             liquidGlassEnabled = _isLiquidGlassEnabled.value,
             showMinusOne = _showMinusOnePage.value,
             showAppLibrary = _showAppLibrary.value,
@@ -1616,6 +1919,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             setLiquidGlassGlobalSearchEnabled(settings.optBoolean("liquid_glass_global_search", false))
             setLiquidGlassAppLibrarySearchEnabled(settings.optBoolean("liquid_glass_app_library_search", false))
             setLiquidGlassWidgetsEnabled(settings.optBoolean("liquid_glass_widgets", false))
+            setNetworkAccessEnabled(settings.optBoolean("network_access_enabled", true))
             setLiquidGlassEnabled(settings.optBoolean("liquid_glass_enabled", false))
             setShowMinusOnePage(settings.optBoolean("show_minus_one", true))
             setShowAppLibrary(settings.optBoolean("show_app_library", true))

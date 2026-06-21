@@ -49,6 +49,14 @@
 *   **Smart Clipboard Integration**: Automatically detects recent clipboard content when the search bar is empty for one-tap filling.
 *   **Customizable Search Engines**: Switch between Google, Bing, DuckDuckGo, Baidu, WolframAlpha, Perplexity, and more.
 
+### 🌤️ Weather & Location (Privacy-First)
+*   **Adaptive Weather Widget**: A native 4x2 widget providing real-time conditions and a 5-day forecast.
+*   **Privacy-Friendly Geolocation**:
+    *   **IP-Based Discovery**: Automatically determines your general location via IP address—**No GPS permissions required**.
+    *   **Manual Search**: Integrated **Geocoding API** allows you to search and set any city worldwide.
+*   **Intelligent Caching**: Automatically saves the last known weather data for offline viewing.
+*   **Network Guard**: Fully integrated with system-level network toggles; respects your data and privacy settings.
+
 ### 🎭 App Experience & Shortcuts
 *   **App Shortcuts (Quick Actions)**: Access Android's native app shortcuts directly.
     *   **Universal Access**: Long-press any icon on the **Home Screen**, **Dock**, inside **Folders**, or the **App Library**.

@@ -157,15 +157,28 @@ fun GlobalSearchOverlay(
     val favoritePackages by viewModel.favoritePackages.collectAsState()
     val searchEngineUrl by viewModel.searchEngineUrl.collectAsState()
     val contacts by viewModel.contacts.collectAsState()
+    val isNetworkEnabled by viewModel.isNetworkAccessEnabled.collectAsState()
+    val exchangeRates by viewModel.exchangeRates.collectAsState()
 
     // 載入聯絡人 (如果尚未載入)
     LaunchedEffect(isVisible) {
-        if (isVisible) viewModel.loadContacts()
+        if (isVisible) {
+            viewModel.loadContacts()
+            // 如果匯率為空且開啟網路，嘗試刷新
+            if (exchangeRates.isEmpty() && isNetworkEnabled) {
+                viewModel.fetchExchangeRates()
+            }
+        }
     }
 
     val filteredContacts = remember(query, contacts) {
         if (query.isBlank()) emptyList()
         else contacts.filter { it.name.contains(query, ignoreCase = true) || it.phoneNumber.contains(query) }
+    }
+
+    val currencyResult = remember(query, exchangeRates) {
+        if (query.isBlank() || exchangeRates.isEmpty()) return@remember null
+        performCurrencyConversion(query, exchangeRates)
     }
 
     val clipboardText = remember(isVisible, query) {
@@ -217,31 +230,14 @@ fun GlobalSearchOverlay(
                     // 1.5 單位換算卡片
                     if (query.isNotBlank() && unitResult != null) {
                         item {
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 8.dp)
-                                    .clickable {
-                                        clipboardManager.setText(AnnotatedString(unitResult))
-                                        android.widget.Toast.makeText(mContext, "Result copied: $unitResult", android.widget.Toast.LENGTH_SHORT).show()
-                                    },
-                                shape = RoundedCornerShape(24.dp),
-                                colors = CardDefaults.cardColors(containerColor = glassFallbackColor(0.15f)),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, glassFallbackColor(0.1f))
-                            ) {
-                                Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Box(modifier = Modifier.size(48.dp).background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f), CircleShape), contentAlignment = Alignment.Center) {
-                                        Icon(Icons.AutoMirrored.Filled.CompareArrows, null, tint = Color.White)
-                                    }
-                                    Spacer(modifier = Modifier.width(16.dp))
-                                    Column {
-                                        Text("Unit Converter", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f))
-                                        Text(text = unitResult, style = MaterialTheme.typography.headlineMedium, color = Color.White, fontWeight = FontWeight.Bold)
-                                    }
-                                    Spacer(modifier = Modifier.weight(1f))
-                                    Icon(Icons.Default.ContentCopy, null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
-                                }
-                            }
+                            UnitConverterCard(unitResult, mContext, clipboardManager, "Unit Converter", Icons.AutoMirrored.Filled.CompareArrows, MaterialTheme.colorScheme.secondary)
+                        }
+                    }
+
+                    // 1.6 匯率換算卡片 (直接顯示結果)
+                    if (query.isNotBlank() && currencyResult != null) {
+                        item {
+                            UnitConverterCard(currencyResult!!, mContext, clipboardManager, "Currency Converter", Icons.Default.CurrencyExchange, Color(0xFF4CAF50))
                         }
                     }
 
@@ -436,6 +432,67 @@ private fun SearchLinkItem(label: String, icon: androidx.compose.ui.graphics.vec
     )
 }
 
+@Composable
+private fun UnitConverterCard(
+    result: String,
+    context: android.content.Context,
+    clipboard: androidx.compose.ui.platform.ClipboardManager,
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    iconBgColor: Color
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .clickable {
+                clipboard.setText(AnnotatedString(result))
+                android.widget.Toast.makeText(context, "Result copied: $result", android.widget.Toast.LENGTH_SHORT).show()
+            },
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = glassFallbackColor(0.15f)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, glassFallbackColor(0.1f))
+    ) {
+        Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(modifier = Modifier.size(48.dp).background(iconBgColor.copy(alpha = 0.2f), CircleShape), contentAlignment = Alignment.Center) {
+                Icon(icon, null, tint = Color.White)
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                Text(label, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f))
+                Text(text = result, style = MaterialTheme.typography.headlineMedium, color = Color.White, fontWeight = FontWeight.Bold)
+            }
+            Spacer(modifier = Modifier.weight(1f))
+            Icon(Icons.Default.ContentCopy, null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
+        }
+    }
+}
+
+/**
+ * 貨幣換算邏輯
+ */
+fun performCurrencyConversion(str: String, rates: Map<String, Double>): String? {
+    // 正則：支持算式開頭，例如 (100+50) usd to twd
+    val regex = Regex("""^(.+?)\s*([a-zA-Z]{3})\s+(?:to|in)\s+([a-zA-Z]{3})$""")
+    val match = regex.find(str.lowercase().trim()) ?: return null
+    
+    val valuePart = match.groupValues[1].trim()
+    val from = match.groupValues[2]
+    val to = match.groupValues[3]
+
+    val amount = evaluateExpression(valuePart)?.toDoubleOrNull() ?: valuePart.toDoubleOrNull() ?: return null
+
+    val fromRate = rates[from]
+    val toRate = rates[to]
+
+    if (fromRate == null || toRate == null) return null
+
+    // 換算公式：(金額 / 原始幣對USD匯率) * 目標幣對USD匯率
+    val result = (amount / fromRate) * toRate
+    
+    return String.format("%,.2f", result) + " " + to.uppercase()
+}
+
 /**
  * 加強版輕量級數學表達式解析器
  * 支持: +, -, *, /, ^, %, (), sqrt, abs, sin, cos, tan, pi, e
@@ -554,14 +611,19 @@ fun evaluateExpression(str: String): String? {
 /**
  * 本地離線單位換算器
  * 支持: 長度 (m, km, cm, mm, in, ft, yd, mi), 重量 (g, kg, mg, lb, oz), 溫度 (c, f, k)
+ * 改良版：支持在單位前使用算式，例如 (1+2)*5 kg to g
  */
 fun performUnitConversion(str: String): String? {
-    val regex = Regex("""^([\d.]+)\s*([a-zA-Z]+)\s+(?:to|in)\s+([a-zA-Z]+)$""")
+    // 改良正則：支持括號與算式開頭 (^(.+?) 配合後續的單位識別)
+    val regex = Regex("""^(.+?)\s*([a-zA-Z]+)\s+(?:to|in)\s+([a-zA-Z]+)$""")
     val match = regex.find(str.lowercase().trim()) ?: return null
     
-    val value = match.groupValues[1].toDoubleOrNull() ?: return null
+    val valuePart = match.groupValues[1].trim()
     val from = match.groupValues[2]
     val to = match.groupValues[3]
+
+    // 嘗試將 valuePart 當作算式解析，若失敗則嘗試直接轉 Double
+    val evaluatedValue = evaluateExpression(valuePart)?.toDoubleOrNull() ?: valuePart.toDoubleOrNull() ?: return null
 
     // 單位係數基準 (Length -> meter, Weight -> gram)
     val lengthMap = mapOf(
@@ -586,19 +648,19 @@ fun performUnitConversion(str: String): String? {
     return when {
         // 長度換算
         lengthMap.containsKey(from) && lengthMap.containsKey(to) -> {
-            val res = value * lengthMap[from]!! / lengthMap[to]!!
+            val res = evaluatedValue * lengthMap[from]!! / lengthMap[to]!!
             formatResult(res) + to
         }
         // 重量換算
         weightMap.containsKey(from) && weightMap.containsKey(to) -> {
-            val res = value * weightMap[from]!! / weightMap[to]!!
+            val res = evaluatedValue * weightMap[from]!! / weightMap[to]!!
             formatResult(res) + to
         }
         // 溫度換算 (特殊邏輯)
-        from == "c" && to == "f" -> formatResult(value * 9/5 + 32) + "°F"
-        from == "f" && to == "c" -> formatResult((value - 32) * 5/9) + "°C"
-        from == "c" && to == "k" -> formatResult(value + 273.15) + "K"
-        from == "k" && to == "c" -> formatResult(value - 273.15) + "°C"
+        from == "c" && to == "f" -> formatResult(evaluatedValue * 9/5 + 32) + "°F"
+        from == "f" && to == "c" -> formatResult((evaluatedValue - 32) * 5/9) + "°C"
+        from == "c" && to == "k" -> formatResult(evaluatedValue + 273.15) + "K"
+        from == "k" && to == "c" -> formatResult(evaluatedValue - 273.15) + "°C"
         else -> null
     }
 }
