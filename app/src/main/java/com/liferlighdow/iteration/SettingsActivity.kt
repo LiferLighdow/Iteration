@@ -98,10 +98,11 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -134,6 +135,20 @@ import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.liferlighdow.iteration.data.AppModel
+import com.liferlighdow.iteration.service.IterationAccessibilityService
+import com.liferlighdow.iteration.ui.AppPickerDialog
+import com.liferlighdow.iteration.ui.DockStyle
+import com.liferlighdow.iteration.ui.GlobalSearchManualScreen
+import com.liferlighdow.iteration.ui.IterationTheme
+import com.liferlighdow.iteration.ui.ManualsScreen
+import com.liferlighdow.iteration.ui.liquidGlass
+import com.liferlighdow.iteration.utils.GestureAction
+import com.liferlighdow.iteration.utils.IconPackInfo
+import com.liferlighdow.iteration.utils.IconProcessor
+import com.liferlighdow.iteration.utils.IconShape
+import com.liferlighdow.iteration.utils.IconStyle
+import com.liferlighdow.iteration.viewmodel.MainViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
@@ -169,7 +184,7 @@ class SettingsActivity : ComponentActivity() {
 }
 
 enum class SettingsPage {
-    MAIN, HIDE_APPS, RENAME_APPS, CHANGE_ICON, APP_LIBRARY, ICON_THEME, DOCK, LIQUID_GLASS, GESTURES, SEARCH, PERMISSIONS
+    MAIN, HIDE_APPS, RENAME_APPS, CHANGE_ICON, APP_LIBRARY, ICON_THEME, DOCK, LIQUID_GLASS, GESTURES, SEARCH, PERMISSIONS, MANUALS, GLOBAL_SEARCH_MANUAL
 }
 
 @Composable
@@ -180,6 +195,7 @@ fun SettingsNavigation() {
     BackHandler(enabled = currentPage != SettingsPage.MAIN) {
         when (currentPage) {
             SettingsPage.CHANGE_ICON -> currentPage = SettingsPage.ICON_THEME
+            SettingsPage.GLOBAL_SEARCH_MANUAL -> currentPage = SettingsPage.MANUALS
             else -> currentPage = SettingsPage.MAIN
         }
     }
@@ -195,7 +211,8 @@ fun SettingsNavigation() {
             onNavigateToLiquidGlass = { currentPage = SettingsPage.LIQUID_GLASS },
             onNavigateToGestures = { currentPage = SettingsPage.GESTURES },
             onNavigateToSearch = { currentPage = SettingsPage.SEARCH },
-            onNavigateToPermissions = { currentPage = SettingsPage.PERMISSIONS }
+            onNavigateToPermissions = { currentPage = SettingsPage.PERMISSIONS },
+            onNavigateToManuals = { currentPage = SettingsPage.MANUALS }
         )
         SettingsPage.HIDE_APPS -> HideAppsScreen(onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.RENAME_APPS -> RenameAppsScreen(onBack = { currentPage = SettingsPage.MAIN })
@@ -210,6 +227,13 @@ fun SettingsNavigation() {
         SettingsPage.GESTURES -> GesturesSettingsScreen(onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.SEARCH -> SearchSettingsScreen(onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.PERMISSIONS -> PermissionsSettingsScreen(onBack = { currentPage = SettingsPage.MAIN })
+        SettingsPage.MANUALS -> ManualsScreen(
+            onBack = { currentPage = SettingsPage.MAIN },
+            onNavigateToGlobalSearchManual = { currentPage = SettingsPage.GLOBAL_SEARCH_MANUAL }
+        )
+        SettingsPage.GLOBAL_SEARCH_MANUAL -> GlobalSearchManualScreen(onBack = {
+            currentPage = SettingsPage.MANUALS
+        })
     }
 }
 
@@ -299,7 +323,8 @@ fun SettingsMainScreen(
     onNavigateToLiquidGlass: () -> Unit,
     onNavigateToGestures: () -> Unit,
     onNavigateToSearch: () -> Unit,
-    onNavigateToPermissions: () -> Unit
+    onNavigateToPermissions: () -> Unit,
+    onNavigateToManuals: () -> Unit
 ) {
     val viewModel: MainViewModel = viewModel()
     val context = LocalContext.current
@@ -318,6 +343,7 @@ fun SettingsMainScreen(
             SettingsMetadata(context.getString(R.string.settings_gestures), context.getString(R.string.settings_gestures_desc), Icons.Default.TouchApp, Color(0xFF9C27B0), onNavigateToGestures),
             SettingsMetadata(context.getString(R.string.settings_search), context.getString(R.string.settings_search_desc), Icons.Default.Search, Color(0xFF00ACC1), onNavigateToSearch),
             SettingsMetadata(context.getString(R.string.settings_permissions), context.getString(R.string.settings_permissions_desc), Icons.Default.Security, Color(0xFF607D8B), onNavigateToPermissions),
+            SettingsMetadata("User Manual", "Learn how to use Iteration Launcher", Icons.AutoMirrored.Filled.MenuBook, Color(0xFFFF9800), onNavigateToManuals),
             SettingsMetadata(context.getString(R.string.settings_hide_apps), context.getString(R.string.settings_hide_apps_desc), Icons.Default.VisibilityOff, Color(0xFF795548), {
                 if (viewModel.getPassword().isEmpty()) onNavigateToHideApps() else {} // 觸發 PasswordGate
             }, isHideApps = true),
@@ -570,6 +596,26 @@ fun SettingsMainScreen(
                             icon = Icons.Default.Edit,
                             iconColor = Color(0xFF673AB7),
                             onClick = onNavigateToRenameApps
+                        )
+                    }
+                }
+
+                item {
+                    Text(
+                        "Help & Feedback",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = 32.dp, top = 16.dp, bottom = 8.dp)
+                    )
+                }
+                item {
+                    SettingsGroup {
+                        SettingsItem(
+                            headline = "User Manual",
+                            supporting = "Discover powerful features and hidden tips",
+                            icon = Icons.AutoMirrored.Filled.MenuBook,
+                            iconColor = Color(0xFFFF9800),
+                            onClick = onNavigateToManuals
                         )
                     }
                 }
@@ -2335,22 +2381,56 @@ fun GesturesSettingsScreen(onBack: () -> Unit) {
     }
 
     if (showAppPickerForDoubleTap) {
-        AppPickerDialog(allApps.filter { !it.isHidden }, iconShape, viewModel, onDismiss = { showAppPickerForDoubleTap = false }, onAppSelected = { viewModel.setDoubleTapApp(it); showAppPickerForDoubleTap = false })
+        AppPickerDialog(
+            allApps.filter { !it.isHidden },
+            iconShape,
+            viewModel,
+            onDismiss = { showAppPickerForDoubleTap = false },
+            onAppSelected = { viewModel.setDoubleTapApp(it); showAppPickerForDoubleTap = false })
     }
     if (showAppPickerForSwipeUp) {
-        AppPickerDialog(allApps.filter { !it.isHidden }, iconShape, viewModel, onDismiss = { showAppPickerForSwipeUp = false }, onAppSelected = { viewModel.setSwipeUpApp(it); showAppPickerForSwipeUp = false })
+        AppPickerDialog(
+            allApps.filter { !it.isHidden },
+            iconShape,
+            viewModel,
+            onDismiss = { showAppPickerForSwipeUp = false },
+            onAppSelected = { viewModel.setSwipeUpApp(it); showAppPickerForSwipeUp = false })
     }
     if (showAppPickerForSwipeDown) {
-        AppPickerDialog(allApps.filter { !it.isHidden }, iconShape, viewModel, onDismiss = { showAppPickerForSwipeDown = false }, onAppSelected = { viewModel.setSwipeDownApp(it); showAppPickerForSwipeDown = false })
+        AppPickerDialog(
+            allApps.filter { !it.isHidden },
+            iconShape,
+            viewModel,
+            onDismiss = { showAppPickerForSwipeDown = false },
+            onAppSelected = { viewModel.setSwipeDownApp(it); showAppPickerForSwipeDown = false })
     }
     if (showAppPickerForLongPress) {
-        AppPickerDialog(allApps.filter { !it.isHidden }, iconShape, viewModel, onDismiss = { showAppPickerForLongPress = false }, onAppSelected = { viewModel.setLongPressApp(it); showAppPickerForLongPress = false })
+        AppPickerDialog(
+            allApps.filter { !it.isHidden },
+            iconShape,
+            viewModel,
+            onDismiss = { showAppPickerForLongPress = false },
+            onAppSelected = { viewModel.setLongPressApp(it); showAppPickerForLongPress = false })
     }
     if (showAppPickerForTwoFingerSwipeUp) {
-        AppPickerDialog(allApps.filter { !it.isHidden }, iconShape, viewModel, onDismiss = { showAppPickerForTwoFingerSwipeUp = false }, onAppSelected = { viewModel.setTwoFingerSwipeUpApp(it); showAppPickerForTwoFingerSwipeUp = false })
+        AppPickerDialog(
+            allApps.filter { !it.isHidden },
+            iconShape,
+            viewModel,
+            onDismiss = { showAppPickerForTwoFingerSwipeUp = false },
+            onAppSelected = {
+                viewModel.setTwoFingerSwipeUpApp(it); showAppPickerForTwoFingerSwipeUp = false
+            })
     }
     if (showAppPickerForTwoFingerSwipeDown) {
-        AppPickerDialog(allApps.filter { !it.isHidden }, iconShape, viewModel, onDismiss = { showAppPickerForTwoFingerSwipeDown = false }, onAppSelected = { viewModel.setTwoFingerSwipeDownApp(it); showAppPickerForTwoFingerSwipeDown = false })
+        AppPickerDialog(
+            allApps.filter { !it.isHidden },
+            iconShape,
+            viewModel,
+            onDismiss = { showAppPickerForTwoFingerSwipeDown = false },
+            onAppSelected = {
+                viewModel.setTwoFingerSwipeDownApp(it); showAppPickerForTwoFingerSwipeDown = false
+            })
     }
 }
 

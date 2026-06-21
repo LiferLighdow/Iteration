@@ -6,12 +6,12 @@
 }
 
 # 2. 保持 Data Models，避免混淆導致的 JSON 解析或邏輯錯誤
--keep class com.liferlighdow.iteration.AppModel { *; }
--keep class com.liferlighdow.iteration.WidgetModel { *; }
--keep class com.liferlighdow.iteration.WidgetType { *; }
--keep class com.liferlighdow.iteration.WidgetDisplayMode { *; }
--keep class com.liferlighdow.iteration.IconStyle { *; }
--keep class com.liferlighdow.iteration.CalendarEvent { *; }
+-keep class com.liferlighdow.iteration.data.AppModel { *; }
+-keep class com.liferlighdow.iteration.data.WidgetModel { *; }
+-keep class com.liferlighdow.iteration.data.WidgetType { *; }
+-keep class com.liferlighdow.iteration.data.WidgetDisplayMode { *; }
+-keep class com.liferlighdow.iteration.utils.IconStyle { *; }
+-keep class com.liferlighdow.iteration.data.CalendarEvent { *; }
 
 # 3. 保持 Enum 的必要方法 (valueOf/values)，因為程式碼中有用到 valueOf
 -keepclassmembers enum com.liferlighdow.iteration.** {
@@ -20,7 +20,7 @@
 }
 
 # 4. 保持 NotificationService，系統需要透過類名啟動它
--keep class com.liferlighdow.iteration.NotificationService { *; }
+-keep class com.liferlighdow.iteration.service.NotificationService { *; }
 
 # 5. 保持 Material Color Utilities，避免動態色彩提取失效或崩潰
 -keep class com.google.android.material.color.utilities.** { *; }
@@ -43,4 +43,4 @@
 -dontwarn com.kyant.backdrop.**
 
 # 10. Device Admin
--keep class com.liferlighdow.iteration.AdminReceiver { *; }
+-keep class com.liferlighdow.iteration.service.AdminReceiver { *; }

@@ -1,0 +1,5 @@
+package com.liferlighdow.iteration.utils
+
+enum class GestureAction {
+    NONE, LOCK_SCREEN, LAUNCHER_SETTINGS, OPEN_SYSTEM_SETTINGS, LAUNCH_APP, OPEN_GLOBAL_SEARCH, OPEN_DESKTOP_MENU, OPEN_NOTIFICATIONS
+}

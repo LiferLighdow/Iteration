@@ -55,7 +55,7 @@
             android:parentActivityName=".MainActivity" />
 
         <service
-            android:name=".NotificationService"
+            android:name=".service.NotificationService"
             android:label="Iteration Notification Listener"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
             android:exported="true">
@@ -65,7 +65,7 @@
         </service>
 
         <service
-            android:name="com.liferlighdow.iteration.IterationAccessibilityService"
+            android:name="com.liferlighdow.iteration.service.IterationAccessibilityService"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
             android:label="@string/accessibility_label"
             android:exported="true">

@@ -44,9 +44,13 @@
     *   **Constants & Symbols**: Full support for `pi`, `e`, and the `π` symbol.
     *   **Implicit Multiplication**: Intuitively handles `2π`, `2(3+4)`, and `sin(30)cos(30)`.
     *   **Degree-Based Trig**: Optimized for daily practical use (e.g., `sin(30)` = 0.5).
-*   **Offline Unit Converter**: Instant conversion for **Length**, **Weight**, and **Temperature** without internet.
+*   **Offline-Ready Unit Converter**: Instant conversion for **Length**, **Weight**, and **Temperature**—works with or without internet.
 *   **Smart Equation Solver**: Detects equations (e.g., `x^2 - 4 = 0`) and provides a direct link to **WolframAlpha** for detailed steps and graphs.
 *   **Smart Clipboard Integration**: Automatically detects recent clipboard content when the search bar is empty for one-tap filling.
+*   **Real-time Language Translator**:
+    *   **Natural Command Support**: Use `[text] to [lang]` (e.g., `Hello to ja`) for precise translations.
+    *   **Smart System Default**: Type `tr [text]` to instantly translate into your device's current system language.
+    *   **Lightning Fast**: Powered by high-performance asynchronous requests with intelligent debouncing.
 *   **Customizable Search Engines**: Switch between Google, Bing, DuckDuckGo, Baidu, WolframAlpha, Perplexity, and more.
 
 ### 🌤️ Weather & Location (Privacy-First)
@@ -54,8 +58,14 @@
 *   **Privacy-Friendly Geolocation**:
     *   **IP-Based Discovery**: Automatically determines your general location via IP address—**No GPS permissions required**.
     *   **Manual Search**: Integrated **Geocoding API** allows you to search and set any city worldwide.
+*   **Dual Data Sources**: Choose between **MET Norway** (Authority) and **Open-Meteo** (Open Source) directly from the widget menu.
 *   **Intelligent Caching**: Automatically saves the last known weather data for offline viewing.
 *   **Network Guard**: Fully integrated with system-level network toggles; respects your data and privacy settings.
+
+### 📚 Knowledge & Support
+*   **In-App User Manual**: A dedicated documentation hub built directly into the settings.
+    *   **Discoverable Power**: Step-by-step guides for Global Search, hidden gestures, and advanced tools.
+    *   **Modular Design**: Expanding library of "manual books" to help you master every corner of the launcher.
 
 ### 🎭 App Experience & Shortcuts
 *   **App Shortcuts (Quick Actions)**: Access Android's native app shortcuts directly.
@@ -80,7 +90,7 @@
 *   **Intelligent Priority**: Smart gesture handling that prioritizes widget scrolling over home screen gestures.
 *   **Search Lock**: Horizontal paging is automatically disabled when the App Library search is focused.
 *   **Centralized Permission Center**: A dedicated "Permissions" page for **Contacts**, **Notifications**, and **Accessibility**.
-*   **Local Privacy Oath**: Guaranteed local processing; your data never leaves your device.
+*   **Local Privacy Control**: Fully configurable network access; your personal data processing remains on-device by default.
 
 ---
 
@@ -103,19 +113,51 @@
 
 ```text
 app/src/main/java/com/liferlighdow/iteration/
-├── MainActivity.kt           # Pure entry point & Window configuration
-├── LauncherScreen.kt        # Core Page Orchestrator & Navigation state
-├── AppGrid.kt               # Desktop grid layout & Drag-and-drop engine
-├── Dock.kt                  # Bottom bar variants & App Shortcut logic
-├── FolderOverlay.kt         # Immersive folder UI & context menu logic
-├── GlobalSearchOverlay.kt   # High-performance search, contacts & math
-├── LauncherActions.kt       # System interaction & Gesture execution
-├── MainViewModel.kt          # Core state orchestration & Persistent Settings
-├── MainViewModelLayout.kt    # Folder synchronization & layout serialization
-├── LiquidGlass.kt            # Backdrop-powered glassmorphism engine
-├── IconProcessor.kt          # Optimized icon masking & M3 tinting
-├── ConfigSerializer.kt       # JSON Serialization for Full Backup/Restore
-└── ContactModel.kt          # Data structure for offline contact search
+│
+├── data/                 # Data & Configuration Layer
+│   ├── AppModel.kt
+│   ├── AppRepository.kt
+│   ├── AppShortcut.kt
+│   ├── ConfigSerializer.kt
+│   ├── ContactModel.kt
+│   └── WidgetModel.kt
+│
+├── ui/                   # UI Components & Screens
+│   ├── AppGrid.kt
+│   ├── AppItem.kt
+│   ├── AppLibraryPage.kt
+│   ├── Dock.kt
+│   ├── DockStyle.kt
+│   ├── DynamicTheme.kt
+│   ├── FolderOverlay.kt
+│   ├── GlobalSearchOverlay.kt
+│   ├── LauncherBottomBar.kt
+│   ├── LauncherDialogs.kt
+│   ├── LauncherScreen.kt
+│   ├── LiquidGlass.kt
+│   ├── ManualScreens.kt
+│   └── MinusOnePage.kt
+│
+├── viewmodel/            # Architecture & State Management
+│   ├── MainViewModel.kt
+│   └── MainViewModelLayout.kt
+│
+├── service/              # System Services & Receivers
+│   ├── AdminReceiver.kt
+│   ├── IterationAccessibilityService.kt
+│   └── NotificationService.kt
+│
+├── utils/                # Utility Classes (Icons, Wallpaper, Actions)
+│   ├── GestureAction.kt
+│   ├── IconPackManager.kt
+│   ├── IconProcessor.kt
+│   ├── IconShape.kt
+│   ├── IconStyle.kt
+│   ├── LauncherActions.kt
+│   └── WallpaperProcessor.kt
+│
+├── MainActivity.kt      
+└── SettingsActivity.kt
 ```
 
 ---
