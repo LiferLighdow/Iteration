@@ -28,6 +28,7 @@ import com.liferlighdow.iteration.viewmodel.createFolder
 import com.liferlighdow.iteration.data.AppModel
 import com.liferlighdow.iteration.data.WidgetPickerDialog
 import com.liferlighdow.iteration.viewmodel.deleteFolder
+import com.liferlighdow.iteration.viewmodel.deletePage
 
 @Composable
 fun LauncherOverlays(
@@ -39,6 +40,9 @@ fun LauncherOverlays(
     onDismissCreateFolder: () -> Unit,
     showDeleteFolderConfirm: Boolean,
     onDismissDeleteFolder: () -> Unit,
+    showDeletePageConfirm: Boolean,
+    onDismissDeletePage: () -> Unit,
+    onShowDeletePageConfirm: () -> Unit,
     showWidgetPicker: Boolean,
     onDismissWidgetPicker: () -> Unit,
     showDockPicker: Int?,
@@ -72,13 +76,10 @@ fun LauncherOverlays(
         pages.flatten().find { it.uniqueId == folderToOpenId }
     }
 
-    // 1. 桌面長按選單
     LauncherMenu(
         isVisible = showDesktopMenu,
         onDismiss = onDismissDesktopMenu,
         viewModel = viewModel,
-        currentPageIdx = currentPage,
-        isCurrentPageEmpty = pages.getOrNull(currentPage)?.isEmpty() ?: false,
         isMultiplePages = pages.size > 1,
         isDefaultLauncher = isDefaultLauncher,
         onAddWidgetClick = { onAddWidgetClick(currentPage) },
@@ -91,7 +92,15 @@ fun LauncherOverlays(
             val intent = Intent(Settings.ACTION_HOME_SETTINGS)
             mContext.startActivity(intent)
         },
-        onSettingsClick = onSettingsClick
+        onSettingsClick = onSettingsClick,
+        onDeletePageClick = {
+            val isEmpty = pages.getOrNull(currentPage)?.isEmpty() ?: false
+            if (isEmpty) {
+                viewModel.deletePage(currentPage)
+            } else {
+                onShowDeletePageConfirm()
+            }
+        }
     )
 
     // 2. 建立資料夾對話框
@@ -139,6 +148,31 @@ fun LauncherOverlays(
                     onDismissFolder()
                     onDismissDeleteFolder()
                 }) { Text(stringResource(R.string.folder_delete_discard)) }
+            }
+        )
+    }
+
+    // 新增：刪除頁面確認 (當頁面非空時)
+    if (showDeletePageConfirm) {
+        AlertDialog(
+            onDismissRequest = onDismissDeletePage,
+            title = { Text(stringResource(R.string.menu_delete_page)) },
+            text = { Text("此頁面還有內容，確定要刪除嗎？這將會移除頁面上的所有圖示與組件。") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deletePage(currentPage)
+                        onDismissDeletePage()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text(stringResource(R.string.delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismissDeletePage) {
+                    Text(stringResource(R.string.cancel))
+                }
             }
         )
     }

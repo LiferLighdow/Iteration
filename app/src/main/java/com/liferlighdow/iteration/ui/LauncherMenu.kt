@@ -20,15 +20,14 @@ fun LauncherMenu(
     isVisible: Boolean,
     onDismiss: () -> Unit,
     viewModel: MainViewModel,
-    currentPageIdx: Int,
-    isCurrentPageEmpty: Boolean,
     isMultiplePages: Boolean,
     isDefaultLauncher: Boolean,
     onAddWidgetClick: () -> Unit,
     onCreateFolderClick: () -> Unit,
     onWallpaperClick: () -> Unit,
     onSetDefaultClick: () -> Unit,
-    onSettingsClick: () -> Unit
+    onSettingsClick: () -> Unit,
+    onDeletePageClick: () -> Unit
 ) {
     if (isVisible) {
         ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -66,12 +65,12 @@ fun LauncherMenu(
                     }
                 )
 
-                if (isCurrentPageEmpty && isMultiplePages) {
+                if (isMultiplePages) {
                     ListItem(
                         headlineContent = { Text(stringResource(R.string.menu_delete_page), color = MaterialTheme.colorScheme.error) },
                         leadingContent = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
                         modifier = Modifier.clickable {
-                            viewModel.deletePage(currentPageIdx)
+                            onDeletePageClick()
                             onDismiss()
                         }
                     )

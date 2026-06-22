@@ -119,6 +119,8 @@ fun AppGrid(
     onBackgroundSwipeDown: () -> Unit = {},
     onBackgroundTwoFingerSwipeUp: () -> Unit = {},
     onBackgroundTwoFingerSwipeDown: () -> Unit = {},
+    onBackgroundVerticalDrag: (Float) -> Unit = {},
+    onBackgroundDragRelease: () -> Unit = {},
     onEditApp: (AppModel) -> Unit = {}
 ) {
     val draggingUniqueId = draggingApp?.uniqueId
@@ -223,10 +225,19 @@ fun AppGrid(
                                 if (event.changes.any { it.isConsumed }) break
 
                                 val dragEvent = event.changes.firstOrNull() ?: break
-                                if (!dragEvent.pressed) break 
+                                if (!dragEvent.pressed) {
+                                    onBackgroundDragRelease()
+                                    break 
+                                }
 
-                                totalDragY += (dragEvent.position.y - dragEvent.previousPosition.y)
+                                val deltaY = (dragEvent.position.y - dragEvent.previousPosition.y)
+                                totalDragY += deltaY
                                 totalDragX += (dragEvent.position.x - dragEvent.previousPosition.x)
+
+                                // 只要在垂直滑動，就持續發送位移更新給 Overlay
+                                if (abs(totalDragY) > abs(totalDragX)) {
+                                    onBackgroundVerticalDrag(totalDragY)
+                                }
 
                                 if (!hasTriggered) {
                                     // 加入方向判定：垂直位移必須是水平位移的 2 倍以上，防止換頁誤觸
@@ -243,11 +254,11 @@ fun AppGrid(
                                                 hasTriggered = true
                                             }
                                         } else if (pointerCount == 1) {
-                                            // 單指門檻提高
-                                            if (totalDragY < -360f) {
+                                            // 門檻降低，增加靈敏度
+                                            if (totalDragY < -200f) {
                                                 onBackgroundSwipeUp()
                                                 hasTriggered = true
-                                            } else if (totalDragY > 360f) {
+                                            } else if (totalDragY > 200f) {
                                                 onBackgroundSwipeDown()
                                                 hasTriggered = true
                                             }

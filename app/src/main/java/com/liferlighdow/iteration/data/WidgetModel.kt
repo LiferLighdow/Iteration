@@ -376,7 +376,7 @@ fun StackWidget(
     val pagerState = rememberPagerState { stackItems.size.coerceAtLeast(1) }
 
     Card(
-        modifier = modifier.aspectRatio(if (isWide) 2.1f else 1f),
+        modifier = modifier.aspectRatio(if (isWide) 2.0f else 1f),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = glassFallbackColor(0.1f))
     ) {
@@ -398,6 +398,7 @@ fun StackWidget(
                         is WidgetType.Photo -> PhotoWidget(widget = item, viewModel = viewModel, modifier = Modifier.fillMaxSize(), enableClick = false)
                         is WidgetType.Music -> MusicWidget(widget = item, displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop)
                         is WidgetType.Note -> NoteWidget(widget = item, displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop)
+                        is WidgetType.Weather -> WeatherWidget(displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop)
                         else -> {}
                     }
                 }
@@ -425,6 +426,7 @@ fun WidgetStackPickerDialog(
     }
 
     var noteToEditInStack by remember { mutableStateOf<Pair<Int, WidgetModel>?>(null) }
+    var showLocationSearch by remember { mutableStateOf(false) }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -465,29 +467,35 @@ fun WidgetStackPickerDialog(
                                         }
                                         DropdownMenu(expanded = showItemMenu, onDismissRequest = { showItemMenu = false }) {
                                             if (item.type !is WidgetType.Photo) {
-                                                DropdownMenuItem(
-                                                    text = { Text(stringResource(R.string.widget_glass_mode)) },
-                                                    onClick = {
-                                                        val newList = children.toMutableList()
-                                                        newList[index] = item.copy(displayMode = WidgetDisplayMode.GLASS)
-                                                        children = newList
-                                                        showItemMenu = false
-                                                    }
-                                                )
-                                                DropdownMenuItem(
-                                                    text = { Text(stringResource(R.string.widget_color_mode)) },
-                                                    onClick = {
-                                                        val newList = children.toMutableList()
-                                                        newList[index] = item.copy(displayMode = WidgetDisplayMode.COLOR)
-                                                        children = newList
-                                                        showItemMenu = false
-                                                    }
-                                                )
+                                                if (item.displayMode == WidgetDisplayMode.COLOR) {
+                                                    DropdownMenuItem(
+                                                        text = { Text(stringResource(R.string.widget_glass_mode)) },
+                                                        leadingIcon = { Icon(Icons.Default.BlurOn, null, tint = MaterialTheme.colorScheme.primary) },
+                                                        onClick = {
+                                                            val newList = children.toMutableList()
+                                                            newList[index] = item.copy(displayMode = WidgetDisplayMode.GLASS)
+                                                            children = newList
+                                                            showItemMenu = false
+                                                        }
+                                                    )
+                                                } else {
+                                                    DropdownMenuItem(
+                                                        text = { Text(stringResource(R.string.widget_color_mode)) },
+                                                        leadingIcon = { Icon(Icons.Default.Palette, null, tint = MaterialTheme.colorScheme.primary) },
+                                                        onClick = {
+                                                            val newList = children.toMutableList()
+                                                            newList[index] = item.copy(displayMode = WidgetDisplayMode.COLOR)
+                                                            children = newList
+                                                            showItemMenu = false
+                                                        }
+                                                    )
+                                                }
                                             }
 
                                             if (item.type is WidgetType.Photo) {
                                                 DropdownMenuItem(
                                                     text = { Text("Choose Picture") },
+                                                    leadingIcon = { Icon(Icons.Default.AddAPhoto, null, tint = MaterialTheme.colorScheme.primary) },
                                                     onClick = {
                                                         photoTargetId = item.id
                                                         photoLauncher.launch("image/*")
@@ -499,8 +507,29 @@ fun WidgetStackPickerDialog(
                                             if (item.type is WidgetType.Note) {
                                                 DropdownMenuItem(
                                                     text = { Text("Edit Note") },
+                                                    leadingIcon = { Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary) },
                                                     onClick = {
                                                         noteToEditInStack = index to item
+                                                        showItemMenu = false
+                                                    }
+                                                )
+                                            }
+
+                                            if (item.type is WidgetType.Weather) {
+                                                val currentProvider by viewModel.weatherProvider.collectAsState()
+                                                DropdownMenuItem(
+                                                    text = { Text("Choose Location") },
+                                                    leadingIcon = { Icon(Icons.Default.LocationOn, null, tint = MaterialTheme.colorScheme.primary) },
+                                                    onClick = {
+                                                        showLocationSearch = true
+                                                        showItemMenu = false
+                                                    }
+                                                )
+                                                DropdownMenuItem(
+                                                    text = { Text(if (currentProvider == WeatherProvider.MET_NORWAY) "Use Open-Meteo" else "Use MET Norway") },
+                                                    leadingIcon = { Icon(Icons.Default.Cloud, null, tint = MaterialTheme.colorScheme.primary) },
+                                                    onClick = {
+                                                        viewModel.setWeatherProvider(if (currentProvider == WeatherProvider.MET_NORWAY) WeatherProvider.OPEN_METEO else WeatherProvider.MET_NORWAY)
                                                         showItemMenu = false
                                                     }
                                                 )
@@ -508,6 +537,7 @@ fun WidgetStackPickerDialog(
                                             HorizontalDivider()
                                             DropdownMenuItem(
                                                 text = { Text("Remove", color = MaterialTheme.colorScheme.error) },
+                                                leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
                                                 onClick = {
                                                     children = children.filterIndexed { i, _ -> i != index }
                                                     showItemMenu = false
@@ -524,25 +554,35 @@ fun WidgetStackPickerDialog(
                     item { Text("Available Widgets", style = MaterialTheme.typography.labelMedium) }
 
                     val available = listOf(
-                        Triple(WidgetType.Battery, "Battery", Icons.Default.BatteryStd),
-                        Triple(WidgetType.Clock, "Clock", Icons.Default.Schedule),
-                        Triple(WidgetType.Calendar(false), "Calendar", Icons.Default.CalendarMonth),
-                        Triple(WidgetType.Music(false), "Music Player", Icons.Default.MusicNote),
-                        Triple(WidgetType.Photo(false), "Photo", Icons.Default.AddAPhoto),
-                        Triple(WidgetType.Note(text = "", isWide = false), "Note", Icons.Default.Note)
+                        Triple(WidgetType.Battery, R.string.widget_battery, Icons.Default.BatteryStd),
+                        Triple(WidgetType.Clock, R.string.widget_clock, Icons.Default.Schedule),
+                        Triple(WidgetType.Calendar(false), R.string.widget_calendar, Icons.Default.CalendarMonth),
+                        Triple(WidgetType.Music(false), R.string.widget_music, Icons.Default.MusicNote),
+                        Triple(WidgetType.Photo(false), R.string.widget_photo, Icons.Default.AddAPhoto),
+                        Triple(WidgetType.Note(text = "", isWide = false), null, Icons.Default.Note),
+                        Triple(WidgetType.Weather(false), null, Icons.Default.WbSunny)
                     )
                     
                     val availableFiltered = if (isWide) {
                          listOf(
-                            Triple(WidgetType.Calendar(true), "Calendar (Wide)", Icons.Default.EventNote),
-                            Triple(WidgetType.Music(true), "Music Player (Wide)", Icons.Default.MusicVideo),
-                            Triple(WidgetType.Photo(true), "Photo (Wide)", Icons.Default.Rectangle),
-                            Triple(WidgetType.Note(text = "", isWide = true), "Note (Wide)", Icons.Default.Description)
+                            Triple(WidgetType.Calendar(true), R.string.widget_calendar_wide, Icons.Default.EventNote),
+                            Triple(WidgetType.Music(true), R.string.widget_music_wide, Icons.Default.MusicVideo),
+                            Triple(WidgetType.Photo(true), R.string.widget_photo_wide, Icons.Default.Rectangle),
+                            Triple(WidgetType.Note(text = "", isWide = true), null, Icons.Default.Description),
+                            Triple(WidgetType.Weather(true), null, Icons.Default.WbSunny)
                         )
                     } else available
 
                     items(availableFiltered.size) { idx ->
-                        val (type, label, icon) = availableFiltered[idx]
+                        val (type, labelRes, icon) = availableFiltered[idx]
+                        val label = if (labelRes != null) stringResource(labelRes) else {
+                            when (type) {
+                                is WidgetType.Note -> if (type.isWide) "Wide Note" else "Note"
+                                is WidgetType.Weather -> if (type.isWide) "Weather Forecast" else "Weather"
+                                else -> ""
+                            }
+                        }
+
                         val canAdd = when (type) {
                             is WidgetType.Photo -> true
                             is WidgetType.Note -> true
@@ -618,6 +658,13 @@ fun WidgetStackPickerDialog(
                     Text(stringResource(R.string.cancel))
                 }
             }
+        )
+    }
+
+    if (showLocationSearch) {
+        LocationSearchDialog(
+            viewModel = viewModel,
+            onDismiss = { showLocationSearch = false }
         )
     }
 }
@@ -1636,7 +1683,7 @@ fun WeatherWidget(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .height(180.dp)
+            .aspectRatio(2f)
             .then(if (useLiquid) Modifier.liquidGlass(
                 enabled = true,
                 backdrop = backdrop,

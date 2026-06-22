@@ -147,7 +147,9 @@ fun LauncherScreen(
 
     var showCreateFolderDialog by remember { mutableStateOf(false) }
     var showDeleteFolderConfirm by remember { mutableStateOf(false) }
+    var showDeletePageConfirm by remember { mutableStateOf(false) }
     var showWidgetPicker by remember { mutableStateOf(false) }
+    var searchDragOffset by remember { mutableStateOf(0f) }
     var widgetTargetPage by remember { mutableStateOf<Int?>(null) }
 
     // 新增：快速編輯 App 的狀態
@@ -519,6 +521,15 @@ fun LauncherScreen(
                                         twoFingerSwipeDownApp
                                     )
                                 },
+                                onBackgroundVerticalDrag = { offset ->
+                                    if (!showGlobalSearch) searchDragOffset = offset
+                                },
+                                onBackgroundDragRelease = {
+                                    if (searchDragOffset > 150f) {
+                                        showGlobalSearch = true
+                                    }
+                                    searchDragOffset = 0f
+                                },
                                 onEditApp = { appToEdit = it }
                             )
                         }
@@ -645,6 +656,7 @@ fun LauncherScreen(
 
         GlobalSearchOverlay(
             isVisible = showGlobalSearch,
+            dragOffset = searchDragOffset,
             onDismiss = { showGlobalSearch = false },
             allApps = allAppsFlat,
             suggestedApps = viewModel.suggestedApps.collectAsState().value,
@@ -685,6 +697,9 @@ fun LauncherScreen(
         onDismissCreateFolder = { showCreateFolderDialog = false },
         showDeleteFolderConfirm = showDeleteFolderConfirm,
         onDismissDeleteFolder = { showDeleteFolderConfirm = false },
+        showDeletePageConfirm = showDeletePageConfirm,
+        onDismissDeletePage = { showDeletePageConfirm = false },
+        onShowDeletePageConfirm = { showDeletePageConfirm = true },
         showWidgetPicker = showWidgetPicker,
         onDismissWidgetPicker = {
             showWidgetPicker = false

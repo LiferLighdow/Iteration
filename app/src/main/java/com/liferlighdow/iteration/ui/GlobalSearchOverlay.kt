@@ -6,8 +6,7 @@ import android.net.Uri
 import android.provider.ContactsContract
 import android.widget.Toast
 import androidx.compose.animation.*
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -31,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -59,6 +59,7 @@ import kotlin.math.*
 @Composable
 fun GlobalSearchOverlay(
     isVisible: Boolean,
+    dragOffset: Float = 0f,
     onDismiss: () -> Unit,
     allApps: List<AppModel>,
     suggestedApps: List<AppModel>,
@@ -159,25 +160,41 @@ fun GlobalSearchOverlay(
         }
     }
 
-    AnimatedVisibility(
-        visible = isVisible,
-        enter = slideInVertically(
-            initialOffsetY = { -it },
-            animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-        ) + fadeIn(),
-        exit = slideOutVertically(
-            targetOffsetY = { -it },
-            animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
-        ) + fadeOut()
-    ) {
+    // 使用 Animatable 來實現流暢的從拖拽切換到動畫
+    val animOffset = remember { Animatable(-150f) }
+    val density = LocalContext.current.resources.displayMetrics.density
+
+    // 同步拖拽位移與動畫
+    LaunchedEffect(isVisible, dragOffset) {
+        if (isVisible) {
+            // 當觸發顯示後，從當前位置彈到 0
+            animOffset.animateTo(0f, spring(stiffness = Spring.StiffnessLow))
+        } else {
+            // 拖拽中，1:1 更新，起始隱藏位置設為 -150dp
+            val dragPos = -150f + (dragOffset / density)
+            animOffset.snapTo(dragPos.coerceAtMost(0f))
+        }
+    }
+
+    val totalProgress = ((animOffset.value + 150f) / 150f).coerceIn(0f, 1f)
+
+    if (totalProgress > 0f || isVisible) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.3f))
-                .clickable { onDismiss() }
+                .background(Color.Black.copy(alpha = 0.45f * totalProgress))
+                .then(if (isVisible) Modifier.clickable { onDismiss() } else Modifier)
                 .statusBarsPadding()
         ) {
-            Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp)
+                    .graphicsLayer {
+                        translationY = animOffset.value * density
+                        alpha = totalProgress
+                    }
+            ) {
                 OutlinedTextField(
                     value = query, onValueChange = { query = it }, 
                     modifier = Modifier
