@@ -142,6 +142,7 @@ import com.liferlighdow.iteration.ui.DockStyle
 import com.liferlighdow.iteration.ui.GlobalSearchManualScreen
 import com.liferlighdow.iteration.ui.IterationTheme
 import com.liferlighdow.iteration.ui.ManualsScreen
+import com.liferlighdow.iteration.ui.ThemeMode
 import com.liferlighdow.iteration.ui.liquidGlass
 import com.liferlighdow.iteration.utils.GestureAction
 import com.liferlighdow.iteration.utils.IconPackInfo
@@ -171,7 +172,10 @@ class SettingsActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            IterationTheme {
+            val viewModel: MainViewModel = viewModel()
+            val themeMode by viewModel.themeMode.collectAsState()
+            val isAmoledBlack by viewModel.isAmoledBlack.collectAsState()
+            IterationTheme(themeMode = themeMode, isAmoledBlack = isAmoledBlack) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -1960,6 +1964,9 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
     val dockStyle by viewModel.dockStyle.collectAsState()
     val showMinusOnePage by viewModel.showMinusOnePage.collectAsState()
     val showAppLibrary by viewModel.showAppLibrary.collectAsState()
+    val autoAddAppsToHome by viewModel.autoAddAppsToHome.collectAsState()
+    val themeMode by viewModel.themeMode.collectAsState()
+    val isAmoledBlack by viewModel.isAmoledBlack.collectAsState()
     val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp)
 
     var showAppPickerForSlot by remember { mutableStateOf<Int?>(null) }
@@ -2012,6 +2019,69 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
                         )
                     },
                     modifier = Modifier.clickable { viewModel.setShowAppLibrary(!showAppLibrary) }
+                )
+            }
+
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.settings_auto_add_apps)) },
+                    supportingContent = { Text(stringResource(R.string.settings_auto_add_apps_desc)) },
+                    trailingContent = {
+                        Switch(
+                            checked = autoAddAppsToHome,
+                            onCheckedChange = { viewModel.setAutoAddAppsToHome(it) }
+                        )
+                    },
+                    modifier = Modifier.clickable { viewModel.setAutoAddAppsToHome(!autoAddAppsToHome) }
+                )
+            }
+
+            item {
+                var expanded by remember { mutableStateOf(false) }
+                val options = listOf(
+                    ThemeMode.LIGHT to stringResource(R.string.theme_light),
+                    ThemeMode.DARK to stringResource(R.string.theme_dark),
+                    ThemeMode.FOLLOW_SYSTEM to stringResource(R.string.theme_follow_system)
+                )
+                val currentLabel = options.find { it.first == themeMode }?.second ?: stringResource(R.string.theme_follow_system)
+
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.settings_theme_mode)) },
+                    supportingContent = { Text(currentLabel) },
+                    trailingContent = {
+                        Box {
+                            TextButton(onClick = { expanded = true }) {
+                                Text("Change")
+                                Icon(Icons.Default.ArrowDropDown, null)
+                            }
+                            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                                options.forEach { (mode, label) ->
+                                    DropdownMenuItem(
+                                        text = { Text(label) },
+                                        onClick = {
+                                            viewModel.setThemeMode(mode)
+                                            expanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    modifier = Modifier.clickable { expanded = true }
+                )
+            }
+
+            item {
+                ListItem(
+                    headlineContent = { Text("AMOLED Pure Black") },
+                    supportingContent = { Text("Force pure black background in dark mode") },
+                    trailingContent = {
+                        Switch(
+                            checked = isAmoledBlack,
+                            onCheckedChange = { viewModel.setAmoledBlack(it) }
+                        )
+                    },
+                    modifier = Modifier.clickable { viewModel.setAmoledBlack(!isAmoledBlack) }
                 )
             }
 

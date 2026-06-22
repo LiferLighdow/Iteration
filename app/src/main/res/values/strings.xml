@@ -131,6 +131,12 @@
     <string name="settings_apply">Apply Changes</string>
     <string name="home_menu_options">Home Screen Context Menu</string>
     <string name="home_menu_desc">Select which options to show in the app long-press menu</string>
+    <string name="settings_auto_add_apps">Auto Add New Apps</string>
+    <string name="settings_auto_add_apps_desc">Automatically add newly installed apps to the home screen</string>
+    <string name="settings_theme_mode">Theme Mode</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_follow_system">Follow System</string>
     <string name="favorites">Favorites</string>
     <!-- Widgets -->
     <string name="widget_battery">Battery Status</string>

@@ -190,12 +190,15 @@ object ConfigSerializer {
         iconShape: String,
         libraryShape: String,
         searchEngineUrl: String,
+        autoAddAppsToHome: Boolean,
         pageSize: Int,
         // 新增項目
         glassParams: Map<String, Any>,
         gestures: Map<String, String>,
         appearance: Map<String, Any>,
         favorites: Set<String>,
+        themeMode: String,
+        isAmoledBlack: Boolean,
         excludedThemed: Set<String>,
         homeMenuOptions: Set<String>,
         customIconSettings: Map<String, Any>,
@@ -229,6 +232,9 @@ object ConfigSerializer {
         settings.put("icon_shape", iconShape)
         settings.put("library_shape", libraryShape)
         settings.put("search_engine_url", searchEngineUrl)
+        settings.put("auto_add_apps_to_home", autoAddAppsToHome)
+        settings.put("theme_mode", themeMode)
+        settings.put("amoled_black", isAmoledBlack)
         settings.put("page_size", pageSize)
 
         // 寫入新增的詳細設定

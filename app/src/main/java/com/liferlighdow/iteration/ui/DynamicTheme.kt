@@ -10,6 +10,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.google.android.material.color.utilities.*
 
+enum class ThemeMode { LIGHT, DARK, FOLLOW_SYSTEM }
+
 /**
  * 基礎動態顏色類別，封裝 MaterialColorUtilities 的顏色提取與產生邏輯
  */
@@ -93,13 +95,19 @@ object DynamicColorGenerator {
 
 @Composable
 fun IterationTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    themeMode: ThemeMode = ThemeMode.FOLLOW_SYSTEM,
+    isAmoledBlack: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
+    val darkTheme = when (themeMode) {
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+        ThemeMode.FOLLOW_SYSTEM -> isSystemInDarkTheme()
+    }
     
     // 優先使用 Android 12+ 的官方動態色彩
-    val colorScheme = when {
+    var colorScheme = when {
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
@@ -107,6 +115,17 @@ fun IterationTheme(
             // Android 12 以下的回退邏輯 (手動提取或預設)
             if (darkTheme) darkColorScheme() else lightColorScheme()
         }
+    }
+
+    if (darkTheme && isAmoledBlack) {
+        colorScheme = colorScheme.copy(
+            background = Color.Black,
+            surface = Color.Black,
+            surfaceVariant = Color(0xFF111111), // 稍微留一點層次感給卡片
+            surfaceContainer = Color.Black,
+            surfaceContainerLow = Color.Black,
+            surfaceContainerLowest = Color.Black
+        )
     }
 
     MaterialTheme(

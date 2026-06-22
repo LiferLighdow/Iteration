@@ -44,6 +44,7 @@ import com.liferlighdow.iteration.data.WidgetModel
 import com.liferlighdow.iteration.data.WidgetType
 import com.liferlighdow.iteration.ui.DockStyle
 import com.liferlighdow.iteration.ui.DynamicColorGenerator
+import com.liferlighdow.iteration.ui.ThemeMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -163,6 +164,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     )
     val weatherProvider = _weatherProvider.asStateFlow()
+
+    private val _autoAddAppsToHome = MutableStateFlow(prefs.getBoolean("auto_add_apps_to_home", true))
+    val autoAddAppsToHome = _autoAddAppsToHome.asStateFlow()
+
+    private val _themeMode = MutableStateFlow(
+        try {
+            ThemeMode.valueOf(prefs.getString("theme_mode", "FOLLOW_SYSTEM") ?: "FOLLOW_SYSTEM")
+        } catch (e: Exception) {
+            ThemeMode.FOLLOW_SYSTEM
+        }
+    )
+    val themeMode = _themeMode.asStateFlow()
+
+    private val _isAmoledBlack = MutableStateFlow(prefs.getBoolean("amoled_black", false))
+    val isAmoledBlack = _isAmoledBlack.asStateFlow()
 
     init {
         loadWeatherFromCache()
@@ -645,6 +661,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val newDockStyle = try { DockStyle.valueOf(prefs.getString("dock_style", "MODERN") ?: "MODERN") }
         catch (e: Exception) { DockStyle.MODERN }
         val newSearchEngine = prefs.getString("search_engine_url", "https://www.google.com/search?q=") ?: "https://www.google.com/search?q="
+        val newAutoAdd = prefs.getBoolean("auto_add_apps_to_home", true)
+        val newThemeMode = try {
+            ThemeMode.valueOf(prefs.getString("theme_mode", "FOLLOW_SYSTEM") ?: "FOLLOW_SYSTEM")
+        } catch (e: Exception) {
+            ThemeMode.FOLLOW_SYSTEM
+        }
+        val newAmoled = prefs.getBoolean("amoled_black", false)
 
         if (_iconStyle.value != newStyle || _isThemedIconsEnabled.value != newThemed || _iconPackPackage.value != newIconPackPackage || _iconShape.value != newShape || _libraryShape.value != newLibShape || _excludedThemedPackages.value != newExcluded || _desktopRows.value != newRows || _dockStyle.value != newDockStyle) {
             _iconStyle.value = newStyle
@@ -659,6 +682,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         _searchEngineUrl.value = newSearchEngine
+        _autoAddAppsToHome.value = newAutoAdd
+        _themeMode.value = newThemeMode
+        _isAmoledBlack.value = newAmoled
         _isLiquidGlassEnabled.value = newLiquidEnabled
         _isLiquidGlassDockEnabled.value = newLiquidDockEnabled
         _isLiquidGlassHomeFolderEnabled.value = newLiquidHomeFolderEnabled
@@ -1279,27 +1305,34 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     }
 
                     if (newApps.isNotEmpty()) {
-                        // 將新 App 加入最後一頁，或者如果太滿就開新分頁
-                        val mutablePages = restoredPages.map { it.toMutableList() }.toMutableList()
-                        newApps.forEach { app ->
-                            var added = false
-                            for (page in mutablePages) {
-                                if (page.size < pageSize) {
-                                    page.add(app)
-                                    added = true
-                                    break
+                        if (_autoAddAppsToHome.value) {
+                            // 將新 App 加入最後一頁，或者如果太滿就開新分頁
+                            val mutablePages = restoredPages.map { it.toMutableList() }.toMutableList()
+                            newApps.forEach { app ->
+                                var added = false
+                                for (page in mutablePages) {
+                                    if (page.size < pageSize) {
+                                        page.add(app)
+                                        added = true
+                                        break
+                                    }
                                 }
+                                if (!added) {
+                                    mutablePages.add(mutableListOf(app))
+                                }
+                                seenApps.add(app.uniqueId)
                             }
-                            if (!added) {
-                                mutablePages.add(mutableListOf(app))
-                            }
-                            seenApps.add(app.uniqueId)
-                        }
-                        // 儲存新的已見過清單
-                        prefs.edit().putStringSet("seen_apps", seenApps).apply()
+                            // 儲存新的已見過清單
+                            prefs.edit().putStringSet("seen_apps", seenApps).apply()
 
-                        _pages.value = mutablePages
-                        saveLayout() // 更新儲存的佈局
+                            _pages.value = mutablePages
+                            saveLayout() // 更新儲存的佈局
+                        } else {
+                            // 不自動加入桌面，但也標記為已見過，否則下次 loadApps 又會進來
+                            seenApps.addAll(newApps.map { it.uniqueId })
+                            prefs.edit().putStringSet("seen_apps", seenApps).apply()
+                            _pages.value = restoredPages
+                        }
                     } else {
                         _pages.value = restoredPages
                     }
@@ -1959,6 +1992,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         prefs.edit().putString("search_engine_url", url).apply()
     }
 
+    fun setAutoAddAppsToHome(enabled: Boolean) {
+        _autoAddAppsToHome.value = enabled
+        prefs.edit().putBoolean("auto_add_apps_to_home", enabled).apply()
+    }
+
+    fun setThemeMode(mode: ThemeMode) {
+        _themeMode.value = mode
+        prefs.edit().putString("theme_mode", mode.name).apply()
+    }
+
+    fun setAmoledBlack(enabled: Boolean) {
+        _isAmoledBlack.value = enabled
+        prefs.edit().putBoolean("amoled_black", enabled).apply()
+    }
+
     fun resetLiquidGlassParams() {
         setLiquidGlassBlur(0f)
         setLiquidGlassRefractionHeight(24f)
@@ -2028,6 +2076,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             iconShape = _iconShape.value.name,
             libraryShape = _libraryShape.value.name,
             searchEngineUrl = _searchEngineUrl.value,
+            autoAddAppsToHome = _autoAddAppsToHome.value,
             pageSize = pageSize,
             password = getPassword(),
             hiddenPackages = hiddenPackages,
@@ -2043,6 +2092,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             gestures = gestures,
             appearance = appearance,
             favorites = _favoritePackages.value,
+            themeMode = _themeMode.value.name,
+            isAmoledBlack = _isAmoledBlack.value,
             excludedThemed = _excludedThemedPackages.value,
             homeMenuOptions = _homeMenuOptions.value,
             customIconSettings = customIconSettings
@@ -2066,6 +2117,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             setLiquidGlassEnabled(settings.optBoolean("liquid_glass_enabled", false))
             setShowMinusOnePage(settings.optBoolean("show_minus_one", true))
             setShowAppLibrary(settings.optBoolean("show_app_library", true))
+            setAutoAddAppsToHome(settings.optBoolean("auto_add_apps_to_home", true))
 
             val savedStyle = settings.optString("icon_style", "STANDARD")
             _iconStyle.value = try { IconStyle.valueOf(savedStyle) } catch(e: Exception) { IconStyle.STANDARD }
@@ -2114,6 +2166,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 setDesktopRows(ap.optInt("desktop_rows", 0))
                 try { setDockStyle(DockStyle.valueOf(ap.optString("dock_style", "MODERN"))) } catch (_: Exception) {}
             }
+
+            val savedThemeMode = settings.optString("theme_mode", "FOLLOW_SYSTEM")
+            setThemeMode(try { ThemeMode.valueOf(savedThemeMode) } catch (e: Exception) { ThemeMode.FOLLOW_SYSTEM })
+            setAmoledBlack(settings.optBoolean("amoled_black", false))
 
             root.optJSONObject("custom_icon_settings")?.let { ci ->
                 setCustomIconBgColor(ci.optInt("bg_color", 0xFF2196F3.toInt()))
