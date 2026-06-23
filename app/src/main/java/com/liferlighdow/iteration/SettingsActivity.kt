@@ -894,7 +894,7 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
                     Text(
                         text = "Iteration Style",
                         style = MaterialTheme.typography.labelLarge,
-                        color = if (currentIconPack.isEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.weight(1f)
                     )
                     IconButton(
@@ -911,28 +911,26 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
                 }
             }
 
-            if (currentIconPack.isEmpty()) {
-                item {
-                    var showExclusionPicker by remember { mutableStateOf(false) }
-                    val excludedApps by viewModel.excludedThemedPackages.collectAsState()
-                    
-                    ListItem(
-                        headlineContent = { Text("Custom Exclusions") },
-                        supportingContent = { Text("${excludedApps.size} apps will never apply styles") },
-                        trailingContent = { Icon(Icons.Default.Settings, null, tint = MaterialTheme.colorScheme.primary) },
-                        modifier = Modifier.clickable { showExclusionPicker = true }
+            item {
+                var showExclusionPicker by remember { mutableStateOf(false) }
+                val excludedApps by viewModel.excludedThemedPackages.collectAsState()
+                
+                ListItem(
+                    headlineContent = { Text("Custom Exclusions") },
+                    supportingContent = { Text("${excludedApps.size} apps will never apply styles or icon packs") },
+                    trailingContent = { Icon(Icons.Default.Settings, null, tint = MaterialTheme.colorScheme.primary) },
+                    modifier = Modifier.clickable { showExclusionPicker = true }
+                )
+                
+                if (showExclusionPicker) {
+                    val allApps by viewModel.allApps.collectAsState()
+                    MultiAppExclusionPickerDialog(
+                        allApps = allApps,
+                        excludedPackages = excludedApps,
+                        viewModel = viewModel,
+                        onDismiss = { showExclusionPicker = false },
+                        onToggle = { viewModel.toggleExcludedThemedApp(it) }
                     )
-                    
-                    if (showExclusionPicker) {
-                        val allApps by viewModel.allApps.collectAsState()
-                        MultiAppExclusionPickerDialog(
-                            allApps = allApps,
-                            excludedPackages = excludedApps,
-                            viewModel = viewModel,
-                            onDismiss = { showExclusionPicker = false },
-                            onToggle = { viewModel.toggleExcludedThemedApp(it) }
-                        )
-                    }
                 }
             }
 
@@ -1233,11 +1231,12 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
 
             item {
                 Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Text("Blur radius: ${blurRadius.toInt()}")
+                    Text("Blur radius: ${(blurRadius * 5).toInt()}")
                     Slider(
-                        value = blurRadius.coerceIn(0f, 40f),
-                        onValueChange = { viewModel.setLiquidGlassBlur(it) },
-                        valueRange = 0f..40f
+                        value = (blurRadius * 5).coerceIn(0f, 100f),
+                        onValueChange = { viewModel.setLiquidGlassBlur(it / 5f) },
+                        valueRange = 0f..100f,
+                        steps = 99
                     )
                 }
             }
@@ -1571,7 +1570,7 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
                     headlineContent = { Text(app.label) },
                     supportingContent = { Text("Folder: ${app.displayCategory}") },
                     leadingContent = {
-                        val appIcon = viewModel.getIcon(app.packageName)
+                        val appIcon = viewModel.getIcon(app.uniqueId)
                         if (appIcon != null) {
                             Image(bitmap = appIcon, contentDescription = null, modifier = Modifier.size(40.dp).clip(shape).background(Color.White))
                         }
@@ -1708,7 +1707,7 @@ fun ChangeIconScreen(onBack: () -> Unit) {
                     ListItem(
                         headlineContent = { Text(app.label) },
                         leadingContent = {
-                            val appIcon = viewModel.getIcon(app.packageName)
+                            val appIcon = viewModel.getIcon(app.uniqueId)
                             if (appIcon != null) {
                                 Image(
                                     bitmap = appIcon,
@@ -1787,7 +1786,7 @@ fun RenameAppsScreen(onBack: () -> Unit) {
                     ListItem(
                         headlineContent = { Text(app.label) },
                         leadingContent = {
-                            val appIcon = viewModel.getIcon(app.packageName)
+                            val appIcon = viewModel.getIcon(app.uniqueId)
                             if (appIcon != null) {
                                 Image(bitmap = appIcon, contentDescription = null, modifier = Modifier.size(40.dp).clip(shape).background(Color.White))
                             }
@@ -2581,7 +2580,7 @@ fun MultiAppExclusionPickerDialog(
                         ListItem(
                             headlineContent = { Text(app.label) },
                             leadingContent = {
-                                val appIcon = viewModel.getIcon(app.packageName)
+                                val appIcon = viewModel.getIcon(app.uniqueId)
                                 if (appIcon != null) {
                                     Image(
                                         bitmap = appIcon,
@@ -2901,6 +2900,7 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val viewModel: MainViewModel = viewModel()
     val isNetworkEnabled by viewModel.isNetworkAccessEnabled.collectAsState()
+    val isSystemNetworkEnabled by viewModel.isSystemNetworkEnabled.collectAsState()
     
     // 聯絡人權限狀態
     var hasContactsPermission by remember {
@@ -2948,8 +2948,34 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
         LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
             item {
                 ListItem(
-                    headlineContent = { Text("Network Access") },
-                    supportingContent = { Text("Allow Iteration to access the internet for web search and currency/unit conversion") },
+                    headlineContent = { Text("Network Access & Usage") },
+                    supportingContent = { 
+                        Text(if (isSystemNetworkEnabled) "Connected / Access Granted" else "No internet or access restricted")
+                    },
+                    trailingContent = {
+                        Icon(Icons.Default.ChevronRight, contentDescription = null)
+                    },
+                    modifier = Modifier.clickable {
+                        try {
+                            // 嘗試直接進入 App 的數據用量頁面 (部分系統支持)
+                            val intent = Intent("android.settings.APP_DATA_USAGE")
+                            intent.putExtra("package", context.packageName)
+                            intent.putExtra("uid", context.applicationInfo.uid)
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            // 備選：進入 App Info 頁面，用戶可從中進入數據用量
+                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = Uri.fromParts("package", context.packageName, null)
+                            }
+                            context.startActivity(intent)
+                        }
+                    }
+                )
+            }
+            item {
+                ListItem(
+                    headlineContent = { Text("Internal Network Toggle") },
+                    supportingContent = { Text("Allow Iteration to perform background network tasks") },
                     trailingContent = {
                         Switch(
                             checked = isNetworkEnabled,
@@ -3043,6 +3069,7 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
                 ) == android.content.pm.PackageManager.PERMISSION_GRANTED
                 isNotificationEnabled = NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)
                 isServiceActive = isAccessibilityEnabled()
+                viewModel.checkSystemNetworkStatus()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)

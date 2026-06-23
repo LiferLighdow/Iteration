@@ -8,6 +8,8 @@ import android.content.pm.LauncherApps
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Build
 import android.os.Process
@@ -142,6 +144,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         MutableStateFlow(prefs.getBoolean("network_access_enabled", true))
     val isNetworkAccessEnabled = _isNetworkAccessEnabled.asStateFlow()
 
+    private val _isSystemNetworkEnabled = MutableStateFlow(true)
+    val isSystemNetworkEnabled = _isSystemNetworkEnabled.asStateFlow()
+
+    fun checkSystemNetworkStatus() {
+        val cm = getApplication<Application>().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val activeNetwork = cm.activeNetwork
+        val caps = cm.getNetworkCapabilities(activeNetwork)
+        
+        // 如果系統有網路但 App 無法獲取 INTERNET 能力，或者根本沒有活動網路
+        // 注意：這只是一個啟發式判斷，因為 Wi-Fi 關閉也會導致這個結果
+        // 但在設定頁面中，這可以作為「當前是否具備連線能力」的參考
+        val hasInternet = caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+        _isSystemNetworkEnabled.value = hasInternet
+    }
+
     private val _exchangeRates = MutableStateFlow<Map<String, Double>>(emptyMap())
     val exchangeRates = _exchangeRates.asStateFlow()
 
@@ -193,17 +210,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /**
      * 從 LruCache 或磁碟獲取處理後的圖示
      */
-    fun getIcon(packageName: String): ImageBitmap? {
+    fun getIcon(uniqueId: String): ImageBitmap? {
         val styleSuffix = currentStyleSuffix
         if (styleSuffix == "default") return null
 
-        val cacheKey = "${packageName}_$styleSuffix"
+        // 處理帶有時間戳記的 uniqueId (來自桌面分頁)
+        val baseId = if (uniqueId.contains("_") && !allApps.value.any { it.uniqueId == uniqueId }) {
+            uniqueId.substringBeforeLast("_")
+        } else uniqueId
+
+        val cacheKey = "${baseId}_$styleSuffix"
 
         // 1. 檢查 LruCache
         iconCache[cacheKey]?.let { return it }
 
-        // 2. 檢查自定義圖示
-        val customIconFile = File(customIconDir, "$packageName.png")
+        // 2. 檢查自定義圖示 (轉換 baseId 為檔案名稱友善格式)
+        val fileSafeId = baseId.replace("/", "_").replace(":", "_")
+        val customIconFile = File(customIconDir, "$fileSafeId.png")
         if (customIconFile.exists()) {
             return try {
                 BitmapFactory.decodeFile(customIconFile.absolutePath)?.asImageBitmap()?.also {
@@ -213,7 +236,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         // 3. 檢查磁碟快取
-        val diskCacheFile = File(processedIconCacheDir, "${packageName}_$styleSuffix.png")
+        val diskCacheFile = File(processedIconCacheDir, "${fileSafeId}_$styleSuffix.png")
         if (diskCacheFile.exists()) {
             return try {
                 BitmapFactory.decodeFile(diskCacheFile.absolutePath)?.asImageBitmap()?.also {
@@ -532,13 +555,36 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             refreshApps()
         }
         override fun onPackageRemoved(packageName: String, user: UserHandle) {
-            // 從 seen_apps 中移除該包名的所有 uniqueId，以便重新安裝時能再次出現在桌面
+            // 1. 從 seen_apps 中移除
             val seenApps = (prefs.getStringSet("seen_apps", emptySet()) ?: emptySet()).toMutableSet()
-            val toRemove = seenApps.filter { it.startsWith("$packageName/") || it == packageName }
-            if (toRemove.isNotEmpty()) {
-                seenApps.removeAll(toRemove.toSet())
+            val toRemoveSeen = seenApps.filter { it.startsWith("$packageName/") || it == packageName }
+            if (toRemoveSeen.isNotEmpty()) {
+                seenApps.removeAll(toRemoveSeen.toSet())
                 prefs.edit().putStringSet("seen_apps", seenApps).apply()
             }
+
+            // 2. 從排除名單 (Exclusions) 中移除記憶
+            val excluded = (prefs.getStringSet("excluded_themed_packages", emptySet()) ?: emptySet()).toMutableSet()
+            if (excluded.remove(packageName)) {
+                prefs.edit().putStringSet("excluded_themed_packages", excluded).apply()
+                _excludedThemedPackages.value = excluded
+            }
+
+            // 3. 從隱藏名單中移除
+            if (hiddenPackages.remove(packageName)) {
+                prefs.edit().putStringSet("hidden_apps", hiddenPackages).apply()
+            }
+
+            // 4. 清除自定義標籤與類別
+            if (customLabels.remove(packageName) != null) {
+                val json = JSONObject()
+                customLabels.forEach { (k, v) -> json.put(k, v) }
+                prefs.edit().putString("custom_labels_json", json.toString()).apply()
+            }
+            if (customCategories.remove(packageName) != null) {
+                saveCustomCategories()
+            }
+
             refreshApps()
         }
         override fun onPackageChanged(packageName: String, user: UserHandle) {
@@ -548,6 +594,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             refreshApps()
         }
         override fun onPackagesUnavailable(packageNames: Array<out String>, user: UserHandle, replacing: Boolean) {
+            refreshApps()
+        }
+
+        override fun onShortcutsChanged(packageName: String, shortcuts: List<android.content.pm.ShortcutInfo>, user: UserHandle) {
             refreshApps()
         }
 
@@ -562,6 +612,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         loadApps()
         updateBlurredWallpaper()
         fetchExchangeRates() // 初始化時嘗試抓取匯率
+        checkSystemNetworkStatus()
         // 註冊監聽
         launcherApps.registerCallback(packageCallback)
     }
@@ -940,11 +991,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         prefs.edit().putString("user_categories_ordered", list.joinToString(",")).apply()
     }
 
-    fun setAppCategory(packageName: String, category: String) {
+    fun setAppCategory(uniqueId: String, category: String) {
         if (category.isBlank()) {
-            customCategories.remove(packageName)
+            customCategories.remove(uniqueId)
         } else {
-            customCategories[packageName] = category
+            customCategories[uniqueId] = category
         }
         saveCustomCategories()
         loadApps()
@@ -956,11 +1007,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         prefs.edit().putString("custom_categories_json", json.toString()).apply()
     }
 
-    fun setCustomLabel(packageName: String, newLabel: String) {
+    fun setCustomLabel(uniqueId: String, newLabel: String) {
         if (newLabel.isBlank()) {
-            customLabels.remove(packageName)
+            customLabels.remove(uniqueId)
         } else {
-            customLabels[packageName] = newLabel
+            customLabels[uniqueId] = newLabel
         }
         val json = JSONObject()
         customLabels.forEach { (k, v) -> json.put(k, v) }
@@ -968,19 +1019,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         loadApps()
     }
 
-    fun setCustomIcon(packageName: String, bitmap: Bitmap) {
-        val file = File(customIconDir, "$packageName.png")
+    fun setCustomIcon(uniqueId: String, bitmap: Bitmap) {
+        val fileSafeId = uniqueId.replace("/", "_").replace(":", "_")
+        val file = File(customIconDir, "$fileSafeId.png")
         FileOutputStream(file).use { out ->
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
         }
-        iconCache.remove(packageName) // 清除快取以強制重讀
+        iconCache.remove(uniqueId) // 清除快取以強制重讀
         loadApps()
     }
 
-    fun resetCustomIcon(packageName: String) {
-        val file = File(customIconDir, "$packageName.png")
+    fun resetCustomIcon(uniqueId: String) {
+        val fileSafeId = uniqueId.replace("/", "_").replace(":", "_")
+        val file = File(customIconDir, "$fileSafeId.png")
         if (file.exists()) file.delete()
-        iconCache.remove(packageName) // 清除快取
+        iconCache.remove(uniqueId) // 清除快取
         loadApps()
     }
 
@@ -1194,12 +1247,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     rawApps.map { app ->
                         async {
                             semaphore.withPermit {
-                                val customIconFile = File(customIconDir, "${app.packageName}.png")
+                                val fileSafeId = app.uniqueId.replace("/", "_").replace(":", "_")
+                                val customIconFile = File(customIconDir, "$fileSafeId.png")
                                 val diskCacheFile = File(
                                     processedIconCacheDir,
-                                    "${app.packageName}_$styleSuffix.png"
+                                    "${fileSafeId}_$styleSuffix.png"
                                 )
-                                val cacheKey = "${app.packageName}_$styleSuffix"
+                                val cacheKey = "${app.uniqueId}_$styleSuffix"
                                 val isExcluded =
                                     excludedThemedPackages.value.contains(app.packageName)
 
@@ -1236,7 +1290,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                                 val appRes = getApplication<Application>()
                                 val rawCategory =
-                                    customCategories[app.packageName] ?: when (app.category) {
+                                    customCategories[app.uniqueId] ?: customCategories[app.packageName] ?: when (app.category) {
                                         0 -> appRes.getString(R.string.cat_games)
                                         1 -> appRes.getString(R.string.cat_audio)
                                         2 -> appRes.getString(R.string.cat_video)
@@ -1252,8 +1306,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                 val displayCategory = categoryRenames[rawCategory] ?: rawCategory
 
                                 app.copy(
-                                    label = customLabels[app.packageName] ?: app.label,
-                                    isHidden = hiddenPackages.contains(app.packageName),
+                                    label = customLabels[app.uniqueId] ?: customLabels[app.packageName] ?: app.label,
+                                    isHidden = hiddenPackages.contains(app.packageName) || hiddenPackages.contains(app.uniqueId),
                                     displayCategory = displayCategory
                                 )
                             }
@@ -1370,10 +1424,38 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         customOriginalBg: Boolean
     ): ImageBitmap {
         val pm = getApplication<Application>().packageManager
-        val rawIcon = try {
-            pm.getApplicationIcon(app.packageName)
-        } catch (e: Exception) {
-            null
+        
+        // 優先獲取原始圖示
+        val rawIcon = if (app.isShortcut && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
+            try {
+                val query = LauncherApps.ShortcutQuery().apply {
+                    setPackage(app.packageName)
+                    setShortcutIds(listOf(app.shortcutId!!))
+                    setQueryFlags(LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED or LauncherApps.ShortcutQuery.FLAG_MATCH_DYNAMIC or LauncherApps.ShortcutQuery.FLAG_MATCH_MANIFEST)
+                }
+                val shortcuts = launcherApps.getShortcuts(query, Process.myUserHandle())
+                if (!shortcuts.isNullOrEmpty()) {
+                    launcherApps.getShortcutIconDrawable(shortcuts[0], getApplication<Application>().resources.displayMetrics.densityDpi)
+                } else {
+                    pm.getApplicationIcon(app.packageName)
+                }
+            } catch (e: Exception) {
+                try { pm.getApplicationIcon(app.packageName) } catch (e2: Exception) { null }
+            }
+        } else {
+            try {
+                pm.getApplicationIcon(app.packageName)
+            } catch (e: Exception) {
+                null
+            }
+        }
+
+        // 如果該 App 被設為排除 (Excluded)，不論是否使用圖標包，皆強制回歸原版並僅套用形狀
+        if (isExcluded) {
+            return iconProcessor.processIcon(
+                rawIcon, false, null, IconStyle.STANDARD, currentShape, sizePx,
+                customBgColor = 0, customFgColor = 0, customUseOriginal = true, customUseOriginalBg = true
+            )
         }
 
         return if (currentIconPack.isNotEmpty()) {
@@ -1385,7 +1467,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 iconProcessor.processIcon(rawIcon, false, null, IconStyle.CUSTOM, currentShape, sizePx, customBgColor = 0, customFgColor = 0, customUseOriginal = true, customUseOriginalBg = true)
             }
         } else {
-            iconProcessor.processIcon(rawIcon, isThemed && !isExcluded, themeColors, if (isExcluded) IconStyle.STANDARD else currentStyle, currentShape, sizePx, customBgColor = customBg, customFgColor = customFg, customUseOriginal = customOriginal, customUseOriginalBg = customOriginalBg)
+            iconProcessor.processIcon(rawIcon, isThemed, themeColors, currentStyle, currentShape, sizePx, customBgColor = customBg, customFgColor = customFg, customUseOriginal = customOriginal, customUseOriginalBg = customOriginalBg)
         }
     }
 

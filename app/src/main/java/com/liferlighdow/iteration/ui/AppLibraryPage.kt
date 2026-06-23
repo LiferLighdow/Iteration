@@ -70,7 +70,7 @@ fun AppLibraryPage(
     refractionHeight: Float = 24f,
     refractionAmount: Float = 48f,
     chromaticAberration: Boolean = true,
-    onAppClick: (String) -> Unit,
+    onAppClick: (AppModel) -> Unit,
     onDragStart: (AppModel, Offset) -> Unit,
     onDrag: (Offset) -> Unit,
     onDragEnd: () -> Unit
@@ -215,7 +215,7 @@ fun AppLibraryPage(
                                 ListItem(
                                     headlineContent = { Text(app.label, color = Color.White) },
                                     leadingContent = {
-                                        val appIcon = viewModel.getIcon(app.packageName)
+                                        val appIcon = viewModel.getIcon(app.uniqueId)
                                         if (appIcon != null) {
                                             val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(40.dp * 0.238f)
                                             Image(bitmap = appIcon, contentDescription = null, modifier = Modifier.size(40.dp).clip(shape).background(Color.White))
@@ -223,14 +223,14 @@ fun AppLibraryPage(
                                     },
                                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                                     modifier = Modifier.combinedClickable(
-                                        onClick = { onAppClick(app.packageName) },
+                                        onClick = { onAppClick(app) },
                                         onLongClick = { showMenu = true }
                                     )
                                 )
                                 DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                                    DropdownMenuItem(text = { Text(stringResource(R.string.menu_add_to_home)) }, leadingIcon = { Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.primary) }, onClick = { viewModel.addAppToHome(app.packageName); showMenu = false })
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.menu_add_to_home)) }, leadingIcon = { Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.primary) }, onClick = { viewModel.addAppToHome(app.uniqueId); showMenu = false })
                                     DropdownMenuItem(text = { Text(stringResource(R.string.rename)) }, leadingIcon = { Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary) }, onClick = { appToRename = app; newLabelText = app.label; showMenu = false })
-                                    DropdownMenuItem(text = { Text(if (app.isHidden) "Unhide" else "Hide") }, leadingIcon = { Icon(if (app.isHidden) Icons.Default.Visibility else Icons.Default.VisibilityOff, null, tint = MaterialTheme.colorScheme.primary) }, onClick = { viewModel.toggleHiddenApp(app.packageName); showMenu = false })
+                                    DropdownMenuItem(text = { Text(if (app.isHidden) "Unhide" else "Hide") }, leadingIcon = { Icon(if (app.isHidden) Icons.Default.Visibility else Icons.Default.VisibilityOff, null, tint = MaterialTheme.colorScheme.primary) }, onClick = { viewModel.toggleHiddenApp(app.uniqueId); showMenu = false })
                                     DropdownMenuItem(
                                         text = { Text("App Info") },
                                         leadingIcon = { Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary) },
@@ -333,7 +333,7 @@ fun AppLibraryFolder(
     refractionHeight: Float = 24f,
     refractionAmount: Float = 48f,
     chromaticAberration: Boolean = true,
-    onAppClick: (String) -> Unit,
+    onAppClick: (AppModel) -> Unit,
     onMoreClick: () -> Unit,
     onDragStart: (AppModel, Offset) -> Unit,
     onDrag: (Offset) -> Unit,
@@ -426,7 +426,7 @@ fun LibraryItemWithMenu(
     folderName: String,
     iconShape: IconShape = IconShape.DEFAULT,
     iconSize: Dp = 72.dp,
-    onAppClick: (String) -> Unit
+    onAppClick: (AppModel) -> Unit
 ) {
     val viewModel: MainViewModel = viewModel()
     val mContext = LocalContext.current
@@ -447,7 +447,7 @@ fun LibraryItemWithMenu(
             iconShape = iconShape,
             getIcon = { pkg -> viewModel.getIcon(pkg) },
             modifier = Modifier.combinedClickable(
-                onClick = { onAppClick(app.packageName) },
+                onClick = { onAppClick(app) },
                 onLongClick = {
                     if (folderName != "Hidden Apps") {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -482,7 +482,7 @@ fun LibraryItemWithMenu(
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.menu_add_to_home)) },
                 leadingIcon = { Icon(Icons.Default.Add, null) },
-                onClick = { viewModel.addAppToHome(app.packageName); showMenu = false }
+                onClick = { viewModel.addAppToHome(app.uniqueId); showMenu = false }
             )
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.rename)) },

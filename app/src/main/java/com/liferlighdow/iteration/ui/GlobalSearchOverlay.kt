@@ -6,7 +6,8 @@ import android.net.Uri
 import android.provider.ContactsContract
 import android.widget.Toast
 import androidx.compose.animation.*
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -30,7 +31,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -59,11 +59,10 @@ import kotlin.math.*
 @Composable
 fun GlobalSearchOverlay(
     isVisible: Boolean,
-    dragOffset: Float = 0f,
     onDismiss: () -> Unit,
     allApps: List<AppModel>,
     suggestedApps: List<AppModel>,
-    onAppClick: (String) -> Unit,
+    onAppClick: (AppModel) -> Unit,
     iconShape: IconShape,
     isLiquidGlassEnabled: Boolean,
     isLiquidGlassGlobalSearchEnabled: Boolean,
@@ -160,41 +159,25 @@ fun GlobalSearchOverlay(
         }
     }
 
-    // 使用 Animatable 來實現流暢的從拖拽切換到動畫
-    val animOffset = remember { Animatable(-150f) }
-    val density = LocalContext.current.resources.displayMetrics.density
-
-    // 同步拖拽位移與動畫
-    LaunchedEffect(isVisible, dragOffset) {
-        if (isVisible) {
-            // 當觸發顯示後，從當前位置彈到 0
-            animOffset.animateTo(0f, spring(stiffness = Spring.StiffnessLow))
-        } else {
-            // 拖拽中，1:1 更新，起始隱藏位置設為 -150dp
-            val dragPos = -150f + (dragOffset / density)
-            animOffset.snapTo(dragPos.coerceAtMost(0f))
-        }
-    }
-
-    val totalProgress = ((animOffset.value + 150f) / 150f).coerceIn(0f, 1f)
-
-    if (totalProgress > 0f || isVisible) {
+    AnimatedVisibility(
+        visible = isVisible,
+        enter = slideInVertically(
+            initialOffsetY = { -it },
+            animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
+        ) + fadeIn(),
+        exit = slideOutVertically(
+            targetOffsetY = { -it },
+            animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+        ) + fadeOut()
+    ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.45f * totalProgress))
-                .then(if (isVisible) Modifier.clickable { onDismiss() } else Modifier)
+                .background(Color.Black.copy(alpha = 0.3f))
+                .clickable { onDismiss() }
                 .statusBarsPadding()
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 20.dp)
-                    .graphicsLayer {
-                        translationY = animOffset.value * density
-                        alpha = totalProgress
-                    }
-            ) {
+            Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
                 OutlinedTextField(
                     value = query, onValueChange = { query = it }, 
                     modifier = Modifier
@@ -447,7 +430,7 @@ fun GlobalSearchOverlay(
                                             AppItem(
                                                 app = app, iconSize = 56.dp, iconShape = iconShape,
                                                 getIcon = { pkg -> viewModel.getIcon(pkg) },
-                                                onAppClick = { onAppClick(app.packageName); onDismiss() }
+                                                onAppClick = { onAppClick(app); onDismiss() }
                                             )
                                         }
                                     }
@@ -473,7 +456,7 @@ fun GlobalSearchOverlay(
                                         AppItem(
                                             app = app, iconSize = 56.dp, iconShape = iconShape,
                                             getIcon = { pkg -> viewModel.getIcon(pkg) },
-                                            onAppClick = { onAppClick(app.packageName); onDismiss() }
+                                            onAppClick = { onAppClick(app); onDismiss() }
                                         )
                                     }
                                 }
@@ -492,14 +475,14 @@ fun GlobalSearchOverlay(
                             ListItem(
                                 headlineContent = { Text(app.label, color = Color.White) }, 
                                 leadingContent = { 
-                                    val appIcon = viewModel.getIcon(app.packageName)
+                                    val appIcon = viewModel.getIcon(app.uniqueId)
                                     if (appIcon != null) {
                                         val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(48.dp * 0.238f)
                                         Image(bitmap = appIcon, contentDescription = null, modifier = Modifier.size(48.dp).clip(shape).background(Color.White))
                                     }
                                 },
                                 colors = ListItemDefaults.colors(containerColor = Color.Transparent), 
-                                modifier = Modifier.clickable { onAppClick(app.packageName); onDismiss() }
+                                modifier = Modifier.clickable { onAppClick(app); onDismiss() }
                             )
                         }
 

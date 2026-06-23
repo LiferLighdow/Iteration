@@ -32,10 +32,14 @@ class MainActivity : ComponentActivity() {
                 Box(modifier = Modifier.fillMaxSize().background(Color.Transparent)) {
                     LauncherScreen(
                         viewModel = viewModel,
-                        onAppClick = { pkg ->
-                            viewModel.logAppLaunch(pkg)
-                            val intent = packageManager.getLaunchIntentForPackage(pkg)
-                            if (intent != null) startActivity(intent)
+                        onAppClick = { app ->
+                            if (app.isShortcut) {
+                                viewModel.launchShortcut(app.packageName, app.shortcutId!!)
+                            } else {
+                                viewModel.logAppLaunch(app.packageName)
+                                val intent = packageManager.getLaunchIntentForPackage(app.packageName)
+                                if (intent != null) startActivity(intent)
+                            }
                         },
                         onSettingsClick = {
                             startActivity(Intent(this@MainActivity, SettingsActivity::class.java))

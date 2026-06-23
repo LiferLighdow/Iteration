@@ -10,10 +10,18 @@ object ConfigSerializer {
 
     fun serializeAppModel(item: AppModel): JSONObject {
         val obj = JSONObject()
-        obj.put("type", if (item.isFolder) "folder" else if (item.isWidget) "widget" else "app")
+        obj.put("type", when {
+            item.isFolder -> "folder"
+            item.isWidget -> "widget"
+            item.isShortcut -> "shortcut"
+            else -> "app"
+        })
         obj.put("id", item.uniqueId)
         obj.put("label", item.label)
         obj.put("pkg", item.packageName)
+        if (item.isShortcut) {
+            obj.put("shortcutId", item.shortcutId)
+        }
 
         if (item.isFolder) {
             val children = JSONArray()
@@ -160,8 +168,17 @@ object ConfigSerializer {
                     widget = widget
                 )
             }
+            "shortcut" -> {
+                val shortcutId = obj.optString("shortcutId")
+                val baseApp = allInstalled.find { it.packageName == pkg && it.shortcutId == shortcutId } ?: return null
+                baseApp.copy(
+                    uniqueId = obj.optString("id", baseApp.uniqueId),
+                    label = obj.optString("label", baseApp.label),
+                    isHidden = hiddenPackages.contains(baseApp.uniqueId) || hiddenPackages.contains(pkg)
+                )
+            }
             else -> {
-                val baseApp = allInstalled.find { it.packageName == pkg } ?: return null
+                val baseApp = allInstalled.find { it.packageName == pkg && !it.isShortcut } ?: return null
                 baseApp.copy(
                     uniqueId = obj.optString("id", pkg),
                     label = customLabels[pkg] ?: baseApp.label,

@@ -69,7 +69,7 @@ fun LauncherOverlays(
     onAddWidgetClick: (Int) -> Unit,
     onWallpaperClick: () -> Unit,
     onSettingsClick: () -> Unit,
-    onAppClick: (String) -> Unit
+    onAppClick: (AppModel) -> Unit
 ) {
     val mContext = LocalContext.current
     val openFolder = remember(folderToOpenId, pages) {
@@ -157,7 +157,7 @@ fun LauncherOverlays(
         AlertDialog(
             onDismissRequest = onDismissDeletePage,
             title = { Text(stringResource(R.string.menu_delete_page)) },
-            text = { Text("此頁面還有內容，確定要刪除嗎？這將會移除頁面上的所有圖示與組件。") },
+            text = { Text("This page still contains content. Are you sure you want to delete it? This will remove all icons and components from the page.") },
             confirmButton = {
                 Button(
                     onClick = {
@@ -279,7 +279,7 @@ fun AppPickerDialog(
                         ListItem(
                             headlineContent = { Text(app.label) },
                             leadingContent = {
-                                val appIcon = viewModel.getIcon(app.packageName)
+                                val appIcon = viewModel.getIcon(app.uniqueId)
                                 if (appIcon != null) {
                                     val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp)
                                     Image(bitmap = appIcon, contentDescription = null, modifier = Modifier.size(40.dp).clip(shape))
@@ -356,11 +356,11 @@ fun MultiAppPickerDialog(
     allApps: List<AppModel>,
     iconShape: IconShape = IconShape.DEFAULT,
     viewModel: MainViewModel,
-    initialSelectedPackages: List<String>,
+    initialSelectedIds: List<String>,
     onDismiss: () -> Unit,
     onAppsSelected: (List<String>) -> Unit
 ) {
-    val selected = remember { mutableStateListOf<String>().apply { addAll(initialSelectedPackages) } }
+    val selected = remember { mutableStateListOf<String>().apply { addAll(initialSelectedIds) } }
     
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -391,7 +391,7 @@ fun MultiAppPickerDialog(
                         ListItem(
                             headlineContent = { Text(app.label) },
                             leadingContent = {
-                                val appIcon = viewModel.getIcon(app.packageName)
+                                val appIcon = viewModel.getIcon(app.uniqueId)
                                 if (appIcon != null) {
                                     val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp)
                                     Image(bitmap = appIcon, contentDescription = null, modifier = Modifier.size(40.dp).clip(shape))
@@ -399,16 +399,16 @@ fun MultiAppPickerDialog(
                             },
                             trailingContent = {
                                 Checkbox(
-                                    checked = selected.contains(app.packageName),
+                                    checked = selected.contains(app.uniqueId),
                                     onCheckedChange = { checked ->
-                                        if (checked) selected.add(app.packageName)
-                                        else selected.remove(app.packageName)
+                                        if (checked) selected.add(app.uniqueId)
+                                        else selected.remove(app.uniqueId)
                                     }
                                 )
                             },
                             modifier = Modifier.clickable {
-                                if (selected.contains(app.packageName)) selected.remove(app.packageName)
-                                else selected.add(app.packageName)
+                                if (selected.contains(app.uniqueId)) selected.remove(app.uniqueId)
+                                else selected.add(app.uniqueId)
                             }
                         )
                     }

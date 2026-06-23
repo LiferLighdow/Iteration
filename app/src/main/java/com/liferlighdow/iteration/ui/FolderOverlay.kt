@@ -56,7 +56,7 @@ fun FolderOverlay(
     chromaticAberration: Boolean,
     isLiquidGlassEnabled: Boolean,
     isLiquidGlassHomeFolderEnabled: Boolean,
-    onAppClick: (String) -> Unit,
+    onAppClick: (AppModel) -> Unit,
     onDismiss: () -> Unit,
     onDeleteFolderClick: () -> Unit,
     onEditApp: (AppModel) -> Unit
@@ -274,7 +274,7 @@ fun FolderOverlay(
                                                                         true
                                                                 },
                                                                 onTap = {
-                                                                    onAppClick(app.packageName)
+                                                                    onAppClick(app)
                                                                     onDismiss()
                                                                 }
                                                             )
@@ -410,7 +410,7 @@ fun FolderOverlay(
                     allApps = allAppsFlat,
                     iconShape = iconShape,
                     viewModel = viewModel,
-                    initialSelectedPackages = currentFolder.folderItems.map { it.packageName },
+                    initialSelectedIds = currentFolder.folderItems.map { it.uniqueId },
                     onDismiss = { showAppPicker = false },
                     onAppsSelected = {
                         viewModel.updateFolderApps(currentFolder.uniqueId, it)

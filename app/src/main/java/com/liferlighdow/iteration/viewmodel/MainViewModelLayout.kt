@@ -29,7 +29,7 @@ fun MainViewModel.handleAppDrop(
 
     // 1. 取得移動物件 (包含從資料夾內抓取)
     if (isFromLibrary) {
-        val baseApp = _allApps.value.find { it.packageName == fromId }
+        val baseApp = _allApps.value.find { it.uniqueId == fromId }
         movingItem = baseApp?.copy(uniqueId = "${fromId}_${System.currentTimeMillis()}")
     } else {
         // 遞迴尋找：檢查頁面與資料夾
@@ -113,9 +113,9 @@ fun MainViewModel.handleAppDrop(
     reorganizeAllPages(currentPages)
 }
 
-fun MainViewModel.addAppToHome(packageName: String) {
-    val baseApp = _allApps.value.find { it.packageName == packageName } ?: return
-    val newItem = baseApp.copy(uniqueId = "${packageName}_${System.currentTimeMillis()}")
+fun MainViewModel.addAppToHome(uniqueId: String) {
+    val baseApp = _allApps.value.find { it.uniqueId == uniqueId } ?: return
+    val newItem = baseApp.copy(uniqueId = "${uniqueId}_${System.currentTimeMillis()}")
     
     val currentPages = _pages.value.map { it.toMutableList() }.toMutableList()
     if (currentPages.isEmpty()) {
@@ -261,17 +261,19 @@ fun MainViewModel.deleteFolder(folderId: String, keepIcons: Boolean = true) {
     reorganizeAllPages(currentPages)
 }
 
-fun MainViewModel.updateFolderApps(folderId: String, packageNames: List<String>) {
+fun MainViewModel.updateFolderApps(folderId: String, ids: List<String>) {
     val currentPages = _pages.value.map { page ->
         page.map { item ->
             if (item.uniqueId == folderId) {
-                // 1. 建立當前資料夾內現有應用的對照表，以保留 uniqueId
-                val existingMap = item.folderItems.associateBy { it.packageName }
+                // 1. 建立當前所有可用 App 的對照表
+                val allAppsMap = _allApps.value.associateBy { it.uniqueId }
+                // 建立目前資料夾內現有應用的對照表
+                val existingMap = item.folderItems.associateBy { it.uniqueId }
                 
-                // 2. 根據傳入的包名列表構建新的內容
-                val newFolderItems = packageNames.mapNotNull { pkg ->
-                    existingMap[pkg] ?: _allApps.value.find { it.packageName == pkg }?.copy(
-                        uniqueId = "${pkg}_${System.currentTimeMillis()}"
+                // 2. 根據傳入的 ID 列表構建新的內容
+                val newFolderItems = ids.mapNotNull { id ->
+                    existingMap[id] ?: allAppsMap[id]?.copy(
+                        uniqueId = "${id}_${System.currentTimeMillis()}"
                     )
                 }
                 item.copy(folderItems = newFolderItems)

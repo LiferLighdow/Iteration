@@ -60,8 +60,8 @@ fun AppItem(
     val iconSignal by viewModel.iconUpdateSignal.collectAsState()
     val notificationCounts by NotificationService.notifications.collectAsState()
     
-    val appIcon = remember(app.packageName, iconSignal) {
-        if (!app.isFolder) viewModel.getIcon(app.packageName) else null
+    val appIcon = remember(app.uniqueId, iconSignal) {
+        if (!app.isFolder) viewModel.getIcon(app.uniqueId) else null
     }
 
     // 計算通知數量：若是資料夾，則加總內部所有 App 的數量
@@ -205,7 +205,7 @@ fun FolderPreviewIcon(
     getIcon: @Composable (String) -> ImageBitmap?
 ) {
     val currentShape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(size * 0.238f)
-    val appIcon = app?.let { if (!it.isFolder) getIcon(it.packageName) else null }
+    val appIcon = app?.let { if (!it.isFolder) getIcon(it.uniqueId) else null }
     if (appIcon != null) {
         Image(
             bitmap = appIcon,

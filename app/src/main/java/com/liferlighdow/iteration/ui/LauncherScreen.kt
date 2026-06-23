@@ -49,7 +49,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun LauncherScreen(
     viewModel: MainViewModel = viewModel(),
-    onAppClick: (String) -> Unit,
+    onAppClick: (AppModel) -> Unit,
     onSettingsClick: () -> Unit
 ) {
     val blurredWallpaper by viewModel.blurredWallpaper.collectAsState()
@@ -149,7 +149,6 @@ fun LauncherScreen(
     var showDeleteFolderConfirm by remember { mutableStateOf(false) }
     var showDeletePageConfirm by remember { mutableStateOf(false) }
     var showWidgetPicker by remember { mutableStateOf(false) }
-    var searchDragOffset by remember { mutableStateOf(0f) }
     var widgetTargetPage by remember { mutableStateOf<Int?>(null) }
 
     // 新增：快速編輯 App 的狀態
@@ -196,8 +195,7 @@ fun LauncherScreen(
     val desktopPageCount = pages.size.coerceAtLeast(1)
     val minusOneCount = if (showMinusOnePage) 1 else 0
     val libraryCount = if (showAppLibrary) 1 else 0
-    val extraDragPage = if (draggingApp != null) 1 else 0
-    val pageCount = minusOneCount + desktopPageCount + libraryCount + extraDragPage
+    val pageCount = minusOneCount + desktopPageCount + libraryCount
     
     val pagerState = rememberPagerState(
         initialPage = if (showMinusOnePage) 1 else 0,
@@ -269,10 +267,12 @@ fun LauncherScreen(
             while (true) {
                 val finalX = touchPosition.x + dragOffset.x
                 val edgeWidth = with(density) { 45.dp.toPx() }
-                if (finalX < edgeWidth && pagerState.currentPage > 0) {
+                
+                // 限制拖曳時的自動換頁範圍僅限於桌面分頁，防止進入負一屏或 App Library
+                if (finalX < edgeWidth && pagerState.currentPage > desktopStartIndex) {
                     pagerState.animateScrollToPage(pagerState.currentPage - 1)
                     delay(800)
-                } else if (finalX > with(density) { maxWidth.toPx() } - edgeWidth && pagerState.currentPage < pageCount - 1) {
+                } else if (finalX > with(density) { maxWidth.toPx() } - edgeWidth && pagerState.currentPage < desktopStartIndex + desktopPageCount - 1) {
                     pagerState.animateScrollToPage(pagerState.currentPage + 1)
                     delay(800)
                 }
@@ -352,7 +352,6 @@ fun LauncherScreen(
                 
                 val desktopStartIndex = if (showMinusOnePage) 1 else 0
                 val isDesktop = pageIndex >= desktopStartIndex && pageIndex < desktopStartIndex + desktopPageCount
-                val isNewPage = draggingApp != null && pageIndex == desktopStartIndex + desktopPageCount
 
                 Box(
                     modifier = Modifier
@@ -377,7 +376,7 @@ fun LauncherScreen(
                                 }
                             )
                         }
-                        isDesktop || isNewPage -> {
+                        isDesktop -> {
                             val desktopIdx = pageIndex - desktopStartIndex
                             AppGrid(
                                 apps = pages.getOrNull(desktopIdx) ?: emptyList(),
@@ -404,7 +403,7 @@ fun LauncherScreen(
                                     if (app.isFolder) {
                                         folderIconPosition = pos
                                         folderToOpenId = app.uniqueId
-                                    } else onAppClick(app.packageName)
+                                    } else onAppClick(app)
                                 },
                                 onSlotPositioned = { idx, rect ->
                                     slotBounds["$pageIndex-$idx"] = rect
@@ -476,7 +475,7 @@ fun LauncherScreen(
                                                 val targetIdx =
                                                     (currentPage - desktopStartIndex).coerceIn(
                                                         0,
-                                                        desktopPageCount
+                                                        desktopPageCount - 1
                                                     )
                                                 viewModel.handleAppDrop(
                                                     draggingApp!!.uniqueId,
@@ -521,15 +520,6 @@ fun LauncherScreen(
                                         twoFingerSwipeDownApp
                                     )
                                 },
-                                onBackgroundVerticalDrag = { offset ->
-                                    if (!showGlobalSearch) searchDragOffset = offset
-                                },
-                                onBackgroundDragRelease = {
-                                    if (searchDragOffset > 150f) {
-                                        showGlobalSearch = true
-                                    }
-                                    searchDragOffset = 0f
-                                },
                                 onEditApp = { appToEdit = it }
                             )
                         }
@@ -545,10 +535,12 @@ fun LauncherScreen(
                                 refractionHeight = refractionHeight,
                                 refractionAmount = refractionAmount,
                                 chromaticAberration = chromaticAberration,
-                                onAppClick = { pkg ->
-                                    val app = allAppsFlat.find { it.packageName == pkg }
-                                    if (app?.isFolder == true) folderToOpenId =
-                                        app.uniqueId else onAppClick(pkg)
+                                onAppClick = { app ->
+                                    if (app.isFolder) {
+                                        folderToOpenId = app.uniqueId
+                                    } else {
+                                        onAppClick(app)
+                                    }
                                 },
                                 onDragStart = { app, offset ->
                                     draggingApp = app; touchPosition = offset; dragOffset =
@@ -557,9 +549,9 @@ fun LauncherScreen(
                                 onDrag = { delta -> dragOffset += delta },
                                 onDragEnd = {
                                     if (draggingApp != null) viewModel.handleAppDrop(
-                                        draggingApp!!.packageName,
+                                        draggingApp!!.uniqueId,
                                         null,
-                                        pagerState.currentPage - desktopStartIndex,
+                                        (pagerState.currentPage - desktopStartIndex).coerceIn(0, desktopPageCount - 1),
                                         true,
                                         MainViewModel.DropType.REORDER
                                     )
@@ -656,7 +648,6 @@ fun LauncherScreen(
 
         GlobalSearchOverlay(
             isVisible = showGlobalSearch,
-            dragOffset = searchDragOffset,
             onDismiss = { showGlobalSearch = false },
             allApps = allAppsFlat,
             suggestedApps = viewModel.suggestedApps.collectAsState().value,

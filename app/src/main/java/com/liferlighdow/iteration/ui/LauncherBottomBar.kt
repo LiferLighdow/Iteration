@@ -37,7 +37,7 @@ fun LauncherBottomBar(
     myPackageName: String,
     // 回調
     onSearchClick: () -> Unit,
-    onAppClick: (String) -> Unit,
+    onAppClick: (AppModel) -> Unit,
     onSettingsClick: () -> Unit,
     onLongClick: (Int) -> Unit,
     onDeleteClick: (AppModel) -> Unit
@@ -98,8 +98,8 @@ fun LauncherBottomBar(
                     refractionAmount = refractionAmount,
                     chromaticAberration = chromaticAberration,
                     isEditMode = isEditMode,
-                    onAppClick = { pkg ->
-                        if (pkg == myPackageName) onSettingsClick() else onAppClick(pkg)
+                    onAppClick = { app ->
+                        if (app.packageName == myPackageName) onSettingsClick() else onAppClick(app)
                     },
                     onLongClick = onLongClick,
                     onDeleteClick = onDeleteClick

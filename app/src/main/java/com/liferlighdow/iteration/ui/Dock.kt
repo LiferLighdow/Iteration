@@ -49,7 +49,7 @@ fun Dock(
     refractionAmount: Float = 48f,
     chromaticAberration: Boolean = true,
     isEditMode: Boolean = false,
-    onAppClick: (String) -> Unit,
+    onAppClick: (AppModel) -> Unit,
     onLongClick: (Int) -> Unit,
     onDeleteClick: ((AppModel) -> Unit)? = null
 ) {
@@ -117,7 +117,7 @@ fun Dock(
                             if (isEditMode) rotationZ = rotation
                         }.combinedClickable(
                             onClick = {
-                                if (app.packageName.isNotEmpty()) onAppClick(app.packageName) else onLongClick(
+                                if (app.packageName.isNotEmpty()) onAppClick(app) else onLongClick(
                                     index
                                 )
                             },
