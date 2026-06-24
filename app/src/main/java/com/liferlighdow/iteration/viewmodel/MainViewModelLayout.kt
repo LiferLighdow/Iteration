@@ -30,7 +30,7 @@ fun MainViewModel.handleAppDrop(
     // 1. 取得移動物件 (包含從資料夾內抓取)
     if (isFromLibrary) {
         val baseApp = _allApps.value.find { it.uniqueId == fromId }
-        movingItem = baseApp?.copy(uniqueId = "${fromId}_${System.currentTimeMillis()}")
+        movingItem = baseApp?.copy(uniqueId = "${fromId}@${System.currentTimeMillis()}")
     } else {
         // 遞迴尋找：檢查頁面與資料夾
         outer@for (pIdx in currentPages.indices) {
@@ -115,7 +115,7 @@ fun MainViewModel.handleAppDrop(
 
 fun MainViewModel.addAppToHome(uniqueId: String) {
     val baseApp = _allApps.value.find { it.uniqueId == uniqueId } ?: return
-    val newItem = baseApp.copy(uniqueId = "${uniqueId}_${System.currentTimeMillis()}")
+    val newItem = baseApp.copy(uniqueId = "${uniqueId}@${System.currentTimeMillis()}")
     
     val currentPages = _pages.value.map { it.toMutableList() }.toMutableList()
     if (currentPages.isEmpty()) {
@@ -273,7 +273,7 @@ fun MainViewModel.updateFolderApps(folderId: String, ids: List<String>) {
                 // 2. 根據傳入的 ID 列表構建新的內容
                 val newFolderItems = ids.mapNotNull { id ->
                     existingMap[id] ?: allAppsMap[id]?.copy(
-                        uniqueId = "${id}_${System.currentTimeMillis()}"
+                        uniqueId = "${id}@${System.currentTimeMillis()}"
                     )
                 }
                 item.copy(folderItems = newFolderItems)

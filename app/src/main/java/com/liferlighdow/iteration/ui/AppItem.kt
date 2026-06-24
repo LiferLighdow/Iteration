@@ -61,8 +61,13 @@ fun AppItem(
     val notificationCounts by NotificationService.notifications.collectAsState()
     
     val appIcon = remember(app.uniqueId, iconSignal) {
-        if (!app.isFolder) viewModel.getIcon(app.uniqueId) else null
+        if (!app.isFolder) {
+            viewModel.getIcon(app.uniqueId)
+        } else null
     }
+    
+    // 優先使用 viewModel 的 icon，若沒有則使用傳入的 getIcon (用於資料夾與拖曳預覽)
+    val displayIcon = appIcon ?: if (!app.isFolder) getIcon(app.uniqueId) else null
 
     // 計算通知數量：若是資料夾，則加總內部所有 App 的數量
     val count = if (app.isFolder) {
@@ -124,9 +129,9 @@ fun AppItem(
                         }
                     }
                 }
-            } else if (appIcon != null) {
+            } else if (displayIcon != null) {
                 Image(
-                    bitmap = appIcon,
+                    bitmap = displayIcon,
                     contentDescription = null,
                     modifier = Modifier
                         .size(iconSize)

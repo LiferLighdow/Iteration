@@ -188,7 +188,7 @@ class SettingsActivity : ComponentActivity() {
 }
 
 enum class SettingsPage {
-    MAIN, HIDE_APPS, RENAME_APPS, CHANGE_ICON, APP_LIBRARY, ICON_THEME, DOCK, LIQUID_GLASS, GESTURES, SEARCH, PERMISSIONS, MANUALS, GLOBAL_SEARCH_MANUAL
+    MAIN, HIDE_APPS, RENAME_APPS, CHANGE_ICON, APP_LIBRARY, ICON_THEME, DOCK, LIQUID_GLASS, GESTURES, SEARCH, PERMISSIONS, MANUALS, GLOBAL_SEARCH_MANUAL, ICON_ENGINE_MANUAL
 }
 
 @Composable
@@ -200,6 +200,7 @@ fun SettingsNavigation() {
         when (currentPage) {
             SettingsPage.CHANGE_ICON -> currentPage = SettingsPage.ICON_THEME
             SettingsPage.GLOBAL_SEARCH_MANUAL -> currentPage = SettingsPage.MANUALS
+            SettingsPage.ICON_ENGINE_MANUAL -> currentPage = SettingsPage.MANUALS
             else -> currentPage = SettingsPage.MAIN
         }
     }
@@ -233,9 +234,13 @@ fun SettingsNavigation() {
         SettingsPage.PERMISSIONS -> PermissionsSettingsScreen(onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.MANUALS -> ManualsScreen(
             onBack = { currentPage = SettingsPage.MAIN },
-            onNavigateToGlobalSearchManual = { currentPage = SettingsPage.GLOBAL_SEARCH_MANUAL }
+            onNavigateToGlobalSearchManual = { currentPage = SettingsPage.GLOBAL_SEARCH_MANUAL },
+            onNavigateToIconEngineManual = { currentPage = SettingsPage.ICON_ENGINE_MANUAL }
         )
         SettingsPage.GLOBAL_SEARCH_MANUAL -> GlobalSearchManualScreen(onBack = {
+            currentPage = SettingsPage.MANUALS
+        })
+        SettingsPage.ICON_ENGINE_MANUAL -> com.liferlighdow.iteration.ui.IconEngineManualScreen(onBack = {
             currentPage = SettingsPage.MANUALS
         })
     }

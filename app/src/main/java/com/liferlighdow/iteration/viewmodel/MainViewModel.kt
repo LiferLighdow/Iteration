@@ -214,17 +214,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val styleSuffix = currentStyleSuffix
         if (styleSuffix == "default") return null
 
-        // 處理帶有時間戳記的 uniqueId (來自桌面分頁)
-        val baseId = if (uniqueId.contains("_") && !allApps.value.any { it.uniqueId == uniqueId }) {
-            uniqueId.substringBeforeLast("_")
-        } else uniqueId
-
+        // 1. 取得基礎 ID (處理桌面實例的 @ 符號)
+        val baseId = if (uniqueId.contains("@")) uniqueId.substringBeforeLast("@") else uniqueId
         val cacheKey = "${baseId}_$styleSuffix"
 
-        // 1. 檢查 LruCache
+        // 2. 檢查 LruCache
         iconCache[cacheKey]?.let { return it }
 
-        // 2. 檢查自定義圖示 (轉換 baseId 為檔案名稱友善格式)
+        // 3. 檢查自定義圖示
         val fileSafeId = baseId.replace("/", "_").replace(":", "_")
         val customIconFile = File(customIconDir, "$fileSafeId.png")
         if (customIconFile.exists()) {
@@ -235,7 +232,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             } catch (e: Exception) { null }
         }
 
-        // 3. 檢查磁碟快取
+        // 4. 檢查磁碟快取
         val diskCacheFile = File(processedIconCacheDir, "${fileSafeId}_$styleSuffix.png")
         if (diskCacheFile.exists()) {
             return try {
@@ -1230,9 +1227,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             } else "N"
 
             currentStyleSuffix = if (currentIconPack.isNotEmpty()) {
-                "IP_V10_${currentIconPack.hashCode()}_${currentShape.name}_${currentStyle.name}_${if (isThemed) "T_$colorKey" else "N"}_$customKey"
+                "IP_V13_${currentIconPack.hashCode()}_${currentShape.name}_${currentStyle.name}_${if (isThemed) "T_$colorKey" else "N"}_$customKey"
             } else {
-                "V9_${currentStyle.name}_${currentShape.name}_${if (isThemed) "T_$colorKey" else "N"}_$customKey"
+                "V13_${currentStyle.name}_${currentShape.name}_${if (isThemed) "T_$colorKey" else "N"}_$customKey"
             }
             themeColorsCache = themeColors
 
@@ -1249,6 +1246,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             semaphore.withPermit {
                                 val fileSafeId = app.uniqueId.replace("/", "_").replace(":", "_")
                                 val customIconFile = File(customIconDir, "$fileSafeId.png")
+                                val legacyCustomIconFile = File(customIconDir, "${app.packageName}.png")
+                                
                                 val diskCacheFile = File(
                                     processedIconCacheDir,
                                     "${fileSafeId}_$styleSuffix.png"
@@ -1259,8 +1258,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                                 // 檢查快取，如果不存在則處理並存入快取與磁碟
                                 if (iconCache[cacheKey] == null) {
-                                    if (customIconFile.exists()) {
-                                        BitmapFactory.decodeFile(customIconFile.absolutePath)
+                                    val customToLoad = if (customIconFile.exists()) customIconFile else if (legacyCustomIconFile.exists()) legacyCustomIconFile else null
+                                    
+                                    if (customToLoad != null) {
+                                        BitmapFactory.decodeFile(customToLoad.absolutePath)
                                             ?.asImageBitmap()?.let {
                                             iconCache.put(cacheKey, it)
                                         }

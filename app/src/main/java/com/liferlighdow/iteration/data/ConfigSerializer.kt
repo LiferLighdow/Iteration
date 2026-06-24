@@ -172,7 +172,6 @@ object ConfigSerializer {
                 val shortcutId = obj.optString("shortcutId")
                 val baseApp = allInstalled.find { it.packageName == pkg && it.shortcutId == shortcutId } ?: return null
                 baseApp.copy(
-                    uniqueId = obj.optString("id", baseApp.uniqueId),
                     label = obj.optString("label", baseApp.label),
                     isHidden = hiddenPackages.contains(baseApp.uniqueId) || hiddenPackages.contains(pkg)
                 )
@@ -180,8 +179,7 @@ object ConfigSerializer {
             else -> {
                 val baseApp = allInstalled.find { it.packageName == pkg && !it.isShortcut } ?: return null
                 baseApp.copy(
-                    uniqueId = obj.optString("id", pkg),
-                    label = customLabels[pkg] ?: baseApp.label,
+                    label = customLabels[baseApp.uniqueId] ?: customLabels[pkg] ?: baseApp.label,
                     isHidden = hiddenPackages.contains(pkg)
                 )
             }

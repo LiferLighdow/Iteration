@@ -23,7 +23,11 @@ import androidx.compose.ui.unit.sp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ManualsScreen(onBack: () -> Unit, onNavigateToGlobalSearchManual: () -> Unit) {
+fun ManualsScreen(
+    onBack: () -> Unit,
+    onNavigateToGlobalSearchManual: () -> Unit,
+    onNavigateToIconEngineManual: () -> Unit
+) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -55,6 +59,28 @@ fun ManualsScreen(onBack: () -> Unit, onNavigateToGlobalSearchManual: () -> Unit
                         Column(modifier = Modifier.weight(1f)) {
                             Text("Global Search", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                             Text("Master the all-in-one search powerhouse", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = MaterialTheme.colorScheme.outline)
+                    }
+                }
+            }
+            
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth().clickable(onClick = onNavigateToIconEngineManual),
+                    shape = RoundedCornerShape(24.dp)
+                ) {
+                    Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier.size(56.dp).background(Color(0xFF8E24AA).copy(alpha = 0.1f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Dashboard, null, tint = Color(0xFF8E24AA), modifier = Modifier.size(28.dp))
+                        }
+                        Spacer(Modifier.width(16.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Icon Cache Engine", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            Text("Understanding the core of Iteration's visuals", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = MaterialTheme.colorScheme.outline)
                     }
@@ -145,6 +171,64 @@ fun GlobalSearchManualScreen(onBack: () -> Unit) {
                 )
             }
             
+            item { Spacer(Modifier.height(40.dp)) }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun IconEngineManualScreen(onBack: () -> Unit) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Icon Cache Engine") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) }
+                }
+            )
+        }
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(20.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            item {
+                ManualSection(
+                    title = "What is the Icon Cache Engine?",
+                    content = "The Icon Cache Engine is the core system responsible for generating, processing, and storing all application icons in Iteration Launcher. It ensures that complex visual effects (like glass refraction and Material You theming) run smoothly without draining your battery."
+                )
+            }
+
+            item {
+                ManualSection(
+                    title = "Version 13: The Unification Era",
+                    content = "Iteration currently uses the V13 Engine. This version introduced the 'ID Unification Mechanism,' ensuring that icons in your folders, desktop, and app library are always perfectly synchronized and never mismatched."
+                )
+            }
+
+            item {
+                ManualSection(
+                    title = "PWA & Web Shortcut Support",
+                    content = "Unlike standard launchers, the engine assigns unique identities to web shortcuts (PWA). This allows you to have multiple shortcuts from the same browser (e.g., Chrome) with completely independent icons and labels."
+                )
+            }
+
+            item {
+                ManualSection(
+                    title = "High-Performance Processing",
+                    content = "The engine utilizes a multi-threaded architecture (Semaphore 8), allowing it to process hundreds of icons simultaneously in the background. This ensures the UI remains responsive even when you change your entire icon style or theme color."
+                )
+            }
+
+            item {
+                ManualSection(
+                    title = "Self-Healing Cache",
+                    content = "If a visual bug occurs, the engine can be manually reset. It will automatically detect outdated cache files and regenerate them using the latest rendering algorithms to keep your desktop looking sharp."
+                )
+            }
+
             item { Spacer(Modifier.height(40.dp)) }
         }
     }

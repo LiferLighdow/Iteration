@@ -3,18 +3,45 @@ package com.liferlighdow.iteration.receiver
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.pm.LauncherApps
+import android.os.Build
 import android.util.Log
+import android.widget.Toast
 
 /**
- * 接收舊版捷徑安裝請求。
- * 雖然現代 Android 使用 ShortcutManager，但宣告此接收器能讓許多第三方 App (如 Hermit)
- * 認定此桌面具備接收捷徑的能力。
+ * 接收並處理來自第三方 App (如 Hermit) 的捷徑安裝請求。
  */
 class ShortcutReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == "com.android.launcher.action.INSTALL_SHORTCUT") {
-            Log.d("ShortcutReceiver", "Received legacy shortcut install request")
-            // 現代 Android 系統會透過我們在 MainViewModel 設置的 LauncherApps.Callback 自動處理更新
+        val action = intent.action ?: return
+        Log.e("ShortcutReceiver", "!!!!! Received action: $action")
+        
+        // 彈出 Toast 讓我們知道 Receiver 真的有被觸發
+        Toast.makeText(context, "Shortcut Action: $action", Toast.LENGTH_SHORT).show()
+
+        when (action) {
+            "com.android.launcher.action.INSTALL_SHORTCUT" -> {
+                Log.e("ShortcutReceiver", "Handling legacy INSTALL_SHORTCUT")
+            }
+            "android.content.pm.action.CONFIRM_PIN_SHORTCUT" -> {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    val launcherApps = context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
+                    try {
+                        val pinItemRequest = launcherApps.getPinItemRequest(intent)
+                        if (pinItemRequest != null) {
+                            Log.e("ShortcutReceiver", "Pin request valid. Type: ${pinItemRequest.requestType}")
+                            if (pinItemRequest.isValid) {
+                                val success = pinItemRequest.accept()
+                                Log.e("ShortcutReceiver", "Accept result: $success")
+                            }
+                        } else {
+                            Log.e("ShortcutReceiver", "PinItemRequest is null")
+                        }
+                    } catch (e: Exception) {
+                        Log.e("ShortcutReceiver", "Error parsing PinItemRequest", e)
+                    }
+                }
+            }
         }
     }
 }
