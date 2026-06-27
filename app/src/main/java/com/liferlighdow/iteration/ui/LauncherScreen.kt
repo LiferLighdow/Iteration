@@ -96,6 +96,7 @@ fun LauncherScreen(
     val twoFingerSwipeUpApp by viewModel.twoFingerSwipeUpApp.collectAsState()
     val twoFingerSwipeDownApp by viewModel.twoFingerSwipeDownApp.collectAsState()
     val dockStyle by viewModel.dockStyle.collectAsState()
+    val dockCornerRadius by viewModel.dockCornerRadius.collectAsState()
     val showMinusOnePage by viewModel.showMinusOnePage.collectAsState()
     val showAppLibrary by viewModel.showAppLibrary.collectAsState()
 
@@ -189,8 +190,8 @@ fun LauncherScreen(
     )
     
     if (showGlobalSearch) BackHandler { showGlobalSearch = false }
-
     if (isEditMode) BackHandler { viewModel.setEditMode(false) }
+    if (folderToOpenId != null) BackHandler { folderToOpenId = null }
 
     val desktopPageCount = pages.size.coerceAtLeast(1)
     val minusOneCount = if (showMinusOnePage) 1 else 0
@@ -220,6 +221,16 @@ fun LauncherScreen(
     }
     
     val desktopStartIndex = if (showMinusOnePage) 1 else 0
+
+    // 處理返回按鍵以返回主頁面，並防止在主頁面按下返回鍵導致 Activity 重啟（刷新）
+    // 此 Handler 應在所有變數定義後宣告
+    BackHandler(enabled = !showGlobalSearch && !isEditMode && folderToOpenId == null) {
+        if (pagerState.currentPage != desktopStartIndex) {
+            scope.launch { pagerState.animateScrollToPage(desktopStartIndex) }
+        }
+        // 如果已經在主頁面，BackHandler 會攔截事件但不做任何事，從而防止 Activity 結束
+    }
+
     // 計算 Dock 的顯示進度 (1.0 = 完全顯示, 0.0 = 完全隱藏)
     val dockVisibilityProgress by remember(showMinusOnePage, showAppLibrary, desktopPageCount) {
         derivedStateOf {
@@ -332,10 +343,9 @@ fun LauncherScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer {
-                        // Android 12 以下：透過降低透明度讓內容「融入」模糊背景，模擬模糊感
-                        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-                            alpha = 1f - (launcherBlur.value / 30f).coerceIn(0f, 0.6f)
-                        }
+                        // 當資料夾打開或搜尋時，讓內容完全消失 (隱藏)
+                        // 這樣可以讓背景更乾淨，並解決在 API 31 以下模擬模糊時產生的重影問題
+                        alpha = 1f - (launcherBlur.value / 20f).coerceIn(0f, 1f)
                     }
             ) {
                 HorizontalPager(
@@ -497,7 +507,6 @@ fun LauncherScreen(
                                 },
                                 onBackgroundClick = {
                                     if (isEditMode) viewModel.setEditMode(false)
-                                    else showGlobalSearch = true
                                 },
                                 onBackgroundDoubleTap = {
                                     performGestureAction(doubleTapAction, doubleTapApp)
@@ -582,12 +591,14 @@ fun LauncherScreen(
                 }
 
                 Box(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            // 同步桌面內容：當資料夾打開或搜尋時，Dock 也應相應淡出
+                            alpha = (1f - (launcherBlur.value / 20f).coerceIn(0f, 1f)) * dockVisibilityProgress
+                        },
                     contentAlignment = Alignment.BottomCenter
                 ) {
-                    BackHandler(enabled = (isAppLibraryPage || isMinusOnePage) && !showGlobalSearch) {
-                        scope.launch { pagerState.animateScrollToPage(desktopStartIndex) }
-                    }
 
                     LauncherBottomBar(
                         visibilityProgress = dockVisibilityProgress,
@@ -598,6 +609,7 @@ fun LauncherScreen(
                         iconSize = iconSize,
                         iconShape = iconShape,
                         dockStyle = dockStyle,
+                        dockCornerRadius = dockCornerRadius,
                         blurRadius = blurRadius,
                         refractionHeight = refractionHeight,
                         refractionAmount = refractionAmount,

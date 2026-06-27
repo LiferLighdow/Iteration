@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Application
 import android.app.WallpaperManager
 import android.content.Context
+import android.content.SharedPreferences
 import android.content.pm.LauncherApps
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -47,6 +48,8 @@ import com.liferlighdow.iteration.data.WidgetType
 import com.liferlighdow.iteration.ui.DockStyle
 import com.liferlighdow.iteration.ui.DynamicColorGenerator
 import com.liferlighdow.iteration.ui.ThemeMode
+import com.liferlighdow.iteration.data.WeatherRepository
+import com.liferlighdow.iteration.data.CurrencyRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -75,6 +78,8 @@ import kotlin.collections.plus
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = AppRepository(application)
+    private val weatherRepository = WeatherRepository(application)
+    private val currencyRepository = CurrencyRepository(application)
     private val prefs = application.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
     private val iconProcessor = IconProcessor(application)
     private val iconPackManager = IconPackManager(application)
@@ -159,28 +164,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _isSystemNetworkEnabled.value = hasInternet
     }
 
-    private val _exchangeRates = MutableStateFlow<Map<String, Double>>(emptyMap())
-    val exchangeRates = _exchangeRates.asStateFlow()
-
-    private val _weatherInfo = MutableStateFlow<WeatherInfo?>(null)
-    val weatherInfo = _weatherInfo.asStateFlow()
-
-    private val _customLocation = MutableStateFlow<Pair<Double, Double>?>(null)
-    private val _customCityName = MutableStateFlow<String?>(null)
-
-    private val _weatherError = MutableStateFlow<String?>(null)
-    val weatherError = _weatherError.asStateFlow()
-
-    private val _weatherProvider = MutableStateFlow(
-        try {
-            WeatherProvider.valueOf(
-                prefs.getString("weather_provider", "MET_NORWAY") ?: "MET_NORWAY"
-            )
-        } catch (e: Exception) {
-            WeatherProvider.MET_NORWAY
-        }
-    )
-    val weatherProvider = _weatherProvider.asStateFlow()
+    val exchangeRates = currencyRepository.exchangeRates
+    val weatherInfo = weatherRepository.weatherInfo
+    val weatherError = weatherRepository.weatherError
+    val weatherProvider = weatherRepository.weatherProvider
 
     private val _autoAddAppsToHome = MutableStateFlow(prefs.getBoolean("auto_add_apps_to_home", true))
     val autoAddAppsToHome = _autoAddAppsToHome.asStateFlow()
@@ -197,9 +184,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isAmoledBlack = MutableStateFlow(prefs.getBoolean("amoled_black", false))
     val isAmoledBlack = _isAmoledBlack.asStateFlow()
 
-    init {
-        loadWeatherFromCache()
-    }
+    private val _showStatusBar = MutableStateFlow(prefs.getBoolean("show_status_bar", true))
+    val showStatusBar = _showStatusBar.asStateFlow()
+
+    private val _showNavigationBar = MutableStateFlow(prefs.getBoolean("show_navigation_bar", true))
+    val showNavigationBar = _showNavigationBar.asStateFlow()
 
     private val _showMinusOnePage = MutableStateFlow(prefs.getBoolean("show_minus_one", true))
     val showMinusOnePage = _showMinusOnePage.asStateFlow()
@@ -420,6 +409,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     )
     val dockStyle = _dockStyle.asStateFlow()
 
+    private val _dockCornerRadius = MutableStateFlow(prefs.getFloat("dock_corner_radius", 42f))
+    val dockCornerRadius = _dockCornerRadius.asStateFlow()
+
     private val _searchEngineUrl = MutableStateFlow(
         prefs.getString("search_engine_url", "https://www.google.com/search?q=")
             ?: "https://www.google.com/search?q="
@@ -604,11 +596,33 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { sharedPreferences, key ->
+        when (key) {
+            "dock_style" -> {
+                try {
+                    _dockStyle.value = DockStyle.valueOf(sharedPreferences.getString(key, "MODERN") ?: "MODERN")
+                } catch (_: Exception) {}
+            }
+            "dock_corner_radius" -> {
+                _dockCornerRadius.value = sharedPreferences.getFloat(key, 42f)
+            }
+            "liquid_glass_blur" -> _liquidGlassBlur.value = sharedPreferences.getFloat(key, 0f)
+            "liquid_glass_refraction_height" -> _liquidGlassRefractionHeight.value = sharedPreferences.getFloat(key, 24f)
+            "liquid_glass_refraction_amount" -> _liquidGlassRefractionAmount.value = sharedPreferences.getFloat(key, 48f)
+            "liquid_glass_chromatic_aberration" -> _liquidGlassChromaticAberration.value = sharedPreferences.getBoolean(key, true)
+            "themed_icons" -> _isThemedIconsEnabled.value = sharedPreferences.getBoolean(key, false)
+            "show_minus_one" -> _showMinusOnePage.value = sharedPreferences.getBoolean(key, true)
+            "show_app_library" -> _showAppLibrary.value = sharedPreferences.getBoolean(key, true)
+        }
+    }
+
     init {
+        prefs.registerOnSharedPreferenceChangeListener(prefsListener)
         loadSettings()
         loadApps()
         updateBlurredWallpaper()
-        fetchExchangeRates() // 初始化時嘗試抓取匯率
+        fetchExchangeRates()
+        fetchWeather()
         checkSystemNetworkStatus()
         // 註冊監聽
         launcherApps.registerCallback(packageCallback)
@@ -616,10 +630,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     override fun onCleared() {
         super.onCleared()
+        prefs.unregisterOnSharedPreferenceChangeListener(prefsListener)
         // 取消註冊，避免內存洩漏
         launcherApps.unregisterCallback(packageCallback)
     }
-    // ------------------------------------
 
     private var lastBlurredSignal = -1L
 
@@ -710,6 +724,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         catch (e: Exception) { DockStyle.MODERN }
         val newSearchEngine = prefs.getString("search_engine_url", "https://www.google.com/search?q=") ?: "https://www.google.com/search?q="
         val newAutoAdd = prefs.getBoolean("auto_add_apps_to_home", true)
+        val newShowStatusBar = prefs.getBoolean("show_status_bar", true)
+        val newShowNavigationBar = prefs.getBoolean("show_navigation_bar", true)
         val newThemeMode = try {
             ThemeMode.valueOf(prefs.getString("theme_mode", "FOLLOW_SYSTEM") ?: "FOLLOW_SYSTEM")
         } catch (e: Exception) {
@@ -731,6 +747,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         _searchEngineUrl.value = newSearchEngine
         _autoAddAppsToHome.value = newAutoAdd
+        _showStatusBar.value = newShowStatusBar
+        _showNavigationBar.value = newShowNavigationBar
         _themeMode.value = newThemeMode
         _isAmoledBlack.value = newAmoled
         _isLiquidGlassEnabled.value = newLiquidEnabled
@@ -1768,249 +1786,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun fetchWeather() {
-        if (!_isNetworkAccessEnabled.value) {
-            loadWeatherFromCache()
-            return
-        }
-
-        _weatherError.value = "Updating..."
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                var lat = _customLocation.value?.first
-                var lon = _customLocation.value?.second
-                var cityName = _customCityName.value
-
-                if (lat == null || lon == null) {
-                    try {
-                        val ipUrl = URL("https://free.freeipapi.com/api/json")
-                        val ipConn = ipUrl.openConnection() as HttpURLConnection
-                        ipConn.connectTimeout = 5000
-                        val ipRes = ipConn.inputStream.bufferedReader().use { it.readText() }
-                        val ipJson = JSONObject(ipRes)
-                        lat = ipJson.getDouble("latitude")
-                        lon = ipJson.getDouble("longitude")
-                        cityName = ipJson.getString("cityName")
-                        _customLocation.value = lat to lon
-                        _customCityName.value = cityName
-                    } catch (e: Exception) {
-                        lat = 25.03; lon = 121.56; cityName = "Taipei"
-                    }
-                }
-
-                val response = when (_weatherProvider.value) {
-                    WeatherProvider.MET_NORWAY -> {
-                        val url = URL("https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=$lat&lon=$lon")
-                        val connection = url.openConnection() as HttpURLConnection
-                        connection.connectTimeout = 10000
-                        connection.readTimeout = 10000
-                        connection.setRequestProperty("User-Agent", "Iteration/1.0")
-                        if (connection.responseCode == 200) {
-                            val res = connection.inputStream.bufferedReader().use { it.readText() }
-                            prefs.edit().putString("cached_weather_json", res).apply()
-                            parseAndSetMetWeather(JSONObject(res), cityName ?: "Unknown")
-                            null
-                        } else "Service Unavailable (${connection.responseCode})"
-                    }
-                    WeatherProvider.OPEN_METEO -> {
-                        val url = URL("https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&daily=weather_code,temperature_2m_max,temperature_2m_min&current_weather=true&timezone=auto")
-                        val connection = url.openConnection() as HttpURLConnection
-                        connection.connectTimeout = 10000
-                        connection.readTimeout = 10000
-                        if (connection.responseCode == 200) {
-                            val res = connection.inputStream.bufferedReader().use { it.readText() }
-                            prefs.edit().putString("cached_weather_json", res).apply()
-                            parseAndSetWeather(JSONObject(res), cityName ?: "Unknown")
-                            null
-                        } else "Service Unavailable (${connection.responseCode})"
-                    }
-                }
-                _weatherError.value = response
-            } catch (e: Exception) {
-                val msg = e.message ?: e.toString()
-                _weatherError.value = if (msg.contains("resolve") || msg.contains("address")) "Network Error" else msg
-                loadWeatherFromCache()
-            }
+        viewModelScope.launch {
+            weatherRepository.fetchWeather(_isNetworkAccessEnabled.value)
         }
     }
 
     fun setWeatherProvider(provider: WeatherProvider) {
-        _weatherProvider.value = provider
-        prefs.edit().putString("weather_provider", provider.name).apply()
+        weatherRepository.setWeatherProvider(provider)
         fetchWeather()
     }
 
     fun updateLocation(lat: Double, lon: Double, name: String) {
-        _customLocation.value = lat to lon
-        _customCityName.value = name
+        weatherRepository.updateLocation(lat, lon, name)
         fetchWeather()
     }
 
     fun resetToIpLocation() {
-        _customLocation.value = null
-        _customCityName.value = null
+        weatherRepository.resetToIpLocation()
         fetchWeather()
     }
 
-    private fun loadWeatherFromCache() {
-        val cached = prefs.getString("cached_weather_json", null)
-        if (cached != null) {
-            try {
-                // 根據數據結構決定如何解析
-                if (cached.contains("timeseries")) {
-                    parseAndSetMetWeather(JSONObject(cached))
-                } else {
-                    parseAndSetWeather(JSONObject(cached)) // 舊的 Open-Meteo 解析器
-                }
-            } catch (e: Exception) { e.printStackTrace() }
-        }
-    }
-
-    private fun parseAndSetMetWeather(json: JSONObject, cityName: String = "Taipei") {
-        val properties = json.getJSONObject("properties")
-        val timeseries = properties.getJSONArray("timeseries")
-
-        // 目前天氣
-        val currentData = timeseries.getJSONObject(0).getJSONObject("data").getJSONObject("instant").getJSONObject("details")
-        val currentTemp = currentData.getDouble("air_temperature")
-
-        // 每日預報 (從序列中提取每天中午的數據作為代表)
-        val dailyList = mutableListOf<DailyWeather>()
-        val seenDates = mutableSetOf<String>()
-
-        for (i in 0 until timeseries.length()) {
-            val entry = timeseries.getJSONObject(i)
-            val fullTime = entry.getString("time")
-            val date = fullTime.split("T")[0]
-
-            // 每個日期只抓一個代表數據 (例如中午 12:00)
-            if (!seenDates.contains(date) && (fullTime.contains("T12:00:00Z") || fullTime.contains("T11:00:00Z"))) {
-                val data = entry.getJSONObject("data")
-                val details = data.getJSONObject("instant").getJSONObject("details")
-
-                // MET Norway 的天氣代碼在 next_12_hours 或 next_6_hours 內
-                val weatherSymbol = try {
-                    data.getJSONObject("next_12_hours").getJSONObject("summary").getString("symbol_code")
-                } catch (e: Exception) {
-                    try {
-                        data.getJSONObject("next_6_hours").getJSONObject("summary").getString("symbol_code")
-                    } catch (e2: Exception) { "clearsky_day" }
-                }
-
-                dailyList.add(
-                    DailyWeather(
-                        date = date,
-                        weatherCode = convertMetSymbolToCode(weatherSymbol),
-                        maxTemp = details.getDouble("air_temperature"),
-                        minTemp = details.getDouble("air_temperature") - 2.0
-                    )
-                )
-                seenDates.add(date)
-            }
-            if (dailyList.size >= 6) break
-        }
-
-        _weatherInfo.value = WeatherInfo(
-            currentTemp = currentTemp,
-            daily = dailyList,
-            cityName = cityName
-        )
-    }
-
-    private fun convertMetSymbolToCode(symbol: String): Int {
-        return when {
-            symbol.contains("clearsky") || symbol.contains("fair") -> 0
-            symbol.contains("cloud") -> 3
-            symbol.contains("fog") -> 45
-            symbol.contains("rain") || symbol.contains("drizzle") -> 61
-            symbol.contains("snow") -> 71
-            symbol.contains("sleet") || symbol.contains("showers") -> 95
-            else -> 1
-        }
-    }
-
-    private fun parseAndSetWeather(json: JSONObject, cityName: String = "Taipei") {
-        val current = json.getJSONObject("current_weather")
-        val daily = json.getJSONObject("daily")
-
-        val timeArray = daily.getJSONArray("time")
-        val codeArray = daily.getJSONArray("weather_code")
-        val maxArray = daily.getJSONArray("temperature_2m_max")
-        val minArray = daily.getJSONArray("temperature_2m_min")
-
-        val dailyList = mutableListOf<DailyWeather>()
-        for (i in 0 until timeArray.length()) {
-            dailyList.add(
-                DailyWeather(
-                    date = timeArray.getString(i),
-                    weatherCode = codeArray.getInt(i),
-                    maxTemp = maxArray.getDouble(i),
-                    minTemp = minArray.getDouble(i)
-                )
-            )
-        }
-
-        _weatherInfo.value = WeatherInfo(
-            currentTemp = current.getDouble("temperature"),
-            daily = dailyList,
-            cityName = cityName
-        )
-    }
-
     fun fetchExchangeRates() {
-        // 如果關閉了網路存取，則不執行
-        if (!_isNetworkAccessEnabled.value) {
-            loadExchangeRatesFromCache()
-            return
-        }
-
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val url = URL("https://api.exchangerate-api.com/v4/latest/USD")
-                val connection = url.openConnection() as HttpURLConnection
-                connection.connectTimeout = 5000
-                connection.readTimeout = 5000
-
-                val response = connection.inputStream.bufferedReader().use { it.readText() }
-                val json = JSONObject(response)
-                val ratesJson = json.getJSONObject("rates")
-                val ratesMap = mutableMapOf<String, Double>()
-
-                ratesJson.keys().forEach { key ->
-                    ratesMap[key.lowercase()] = ratesJson.getDouble(key)
-                }
-
-                _exchangeRates.value = ratesMap
-                prefs.edit().putString("cached_exchange_rates", ratesJson.toString()).apply()
-                prefs.edit().putLong("last_rates_update", System.currentTimeMillis()).apply()
-            } catch (e: Exception) {
-                e.printStackTrace()
-                loadExchangeRatesFromCache()
-            }
-        }
-    }
-
-    private fun loadExchangeRatesFromCache() {
-        val cached = prefs.getString("cached_exchange_rates", null)
-        if (cached != null) {
-            try {
-                val ratesJson = JSONObject(cached)
-                val ratesMap = mutableMapOf<String, Double>()
-                ratesJson.keys().forEach { key ->
-                    ratesMap[key.lowercase()] = ratesJson.getDouble(key)
-                }
-                _exchangeRates.value = ratesMap
-            } catch (e: Exception) { e.printStackTrace() }
-        } else {
-            // 提供一組基礎的離線匯率作為初始值，確保功能立即可用 (以 USD 為基準)
-            _exchangeRates.value = mapOf(
-                "usd" to 1.0,
-                "twd" to 32.5,
-                "jpy" to 155.0,
-                "eur" to 0.92,
-                "cny" to 7.25,
-                "hkd" to 7.8,
-                "gbp" to 0.79
-            )
+        viewModelScope.launch {
+            currencyRepository.fetchExchangeRates(_isNetworkAccessEnabled.value)
         }
     }
 
@@ -2070,6 +1868,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         prefs.edit().putString("dock_style", style.name).apply()
     }
 
+    fun setDockCornerRadius(radius: Float) {
+        _dockCornerRadius.value = radius
+        prefs.edit().putFloat("dock_corner_radius", radius).apply()
+    }
+
     fun setSearchEngineUrl(url: String) {
         _searchEngineUrl.value = url
         prefs.edit().putString("search_engine_url", url).apply()
@@ -2088,6 +1891,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setAmoledBlack(enabled: Boolean) {
         _isAmoledBlack.value = enabled
         prefs.edit().putBoolean("amoled_black", enabled).apply()
+    }
+
+    fun setShowStatusBar(enabled: Boolean) {
+        _showStatusBar.value = enabled
+        prefs.edit().putBoolean("show_status_bar", enabled).apply()
+    }
+
+    fun setShowNavigationBar(enabled: Boolean) {
+        _showNavigationBar.value = enabled
+        prefs.edit().putBoolean("show_navigation_bar", enabled).apply()
     }
 
     fun resetLiquidGlassParams() {
@@ -2160,6 +1973,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             libraryShape = _libraryShape.value.name,
             searchEngineUrl = _searchEngineUrl.value,
             autoAddAppsToHome = _autoAddAppsToHome.value,
+            showStatusBar = _showStatusBar.value,
+            showNavigationBar = _showNavigationBar.value,
             pageSize = pageSize,
             password = getPassword(),
             hiddenPackages = hiddenPackages,
@@ -2201,6 +2016,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             setShowMinusOnePage(settings.optBoolean("show_minus_one", true))
             setShowAppLibrary(settings.optBoolean("show_app_library", true))
             setAutoAddAppsToHome(settings.optBoolean("auto_add_apps_to_home", true))
+            setShowStatusBar(settings.optBoolean("show_status_bar", true))
+            setShowNavigationBar(settings.optBoolean("show_navigation_bar", true))
 
             val savedStyle = settings.optString("icon_style", "STANDARD")
             _iconStyle.value = try { IconStyle.valueOf(savedStyle) } catch(e: Exception) { IconStyle.STANDARD }

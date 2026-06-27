@@ -37,6 +37,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.asImageBitmap
@@ -379,7 +380,8 @@ fun AppLibraryFolder(
                 Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                         val lockShape = if (libraryShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(15.1.dp)
-                        val lockColor = if (isSystemInDarkTheme()) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
+                        val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+                        val lockColor = if (isDark) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
                         if (isLocked) Box(modifier = Modifier.size(internalIconSize).background(lockColor, lockShape).clickable { onMoreClick() })
                         else apps.getOrNull(0)?.let { app ->
                             LibraryItemWithMenu(app, name, iconShape, internalIconSize, onAppClick)
@@ -387,7 +389,8 @@ fun AppLibraryFolder(
                     }
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                         val lockShape = if (libraryShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(15.1.dp)
-                        val lockColor = if (isSystemInDarkTheme()) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
+                        val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+                        val lockColor = if (isDark) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
                         if (isLocked) Box(modifier = Modifier.size(internalIconSize).background(lockColor, lockShape).clickable { onMoreClick() })
                         else apps.getOrNull(1)?.let { app ->
                             LibraryItemWithMenu(app, name, iconShape, internalIconSize, onAppClick)
@@ -397,7 +400,8 @@ fun AppLibraryFolder(
                 Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                         val lockShape = if (libraryShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(15.1.dp)
-                        val lockColor = if (isSystemInDarkTheme()) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
+                        val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+                        val lockColor = if (isDark) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
                         if (isLocked) Box(modifier = Modifier.size(internalIconSize).background(lockColor, lockShape).clickable { onMoreClick() })
                         else apps.getOrNull(2)?.let { app ->
                             LibraryItemWithMenu(app, name, iconShape, internalIconSize, onAppClick)
@@ -405,7 +409,8 @@ fun AppLibraryFolder(
                     }
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                         val lockShape = if (libraryShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(15.1.dp)
-                        val lockColor = if (isSystemInDarkTheme()) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
+                        val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+                        val lockColor = if (isDark) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
                         if (isLocked) Box(modifier = Modifier.size(internalIconSize).background(lockColor, lockShape).clickable { onMoreClick() })
                         else if (apps.size > 4) Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.2f), lockShape).clickable { onMoreClick() }, contentAlignment = Alignment.Center) { Text("+${apps.size - 3}", color = Color.White, style = MaterialTheme.typography.headlineSmall) }
                         else apps.getOrNull(3)?.let { app ->

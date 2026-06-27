@@ -32,17 +32,18 @@ class NotificationService : NotificationListenerService() {
         private var activeController: MediaController? = null
 
         fun sendMediaCommand(command: String) {
+            val controller = activeController ?: return
             when (command) {
                 "play_pause" -> {
-                    val state = activeController?.playbackState?.state
-                    if (state == PlaybackState.STATE_PLAYING) {
-                        activeController?.transportControls?.pause()
+                    val state = controller.playbackState?.state
+                    if (state == PlaybackState.STATE_PLAYING || state == PlaybackState.STATE_BUFFERING) {
+                        controller.transportControls.pause()
                     } else {
-                        activeController?.transportControls?.play()
+                        controller.transportControls.play()
                     }
                 }
-                "next" -> activeController?.transportControls?.skipToNext()
-                "previous" -> activeController?.transportControls?.skipToPrevious()
+                "next" -> controller.transportControls.skipToNext()
+                "previous" -> controller.transportControls.skipToPrevious()
             }
         }
     }
@@ -55,6 +56,12 @@ class NotificationService : NotificationListenerService() {
         override fun onMetadataChanged(metadata: MediaMetadata?) {
             updateMediaInfo()
         }
+
+        override fun onSessionDestroyed() {
+            activeController?.unregisterCallback(this)
+            activeController = null
+            findActiveMediaSession()
+        }
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
@@ -65,14 +72,18 @@ class NotificationService : NotificationListenerService() {
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
         updateCounts()
         if (sbn != null && sbn.packageName == activeController?.packageName) {
-            val stillHasMedia = activeNotifications?.any { 
-                it.packageName == sbn.packageName && it.notification.extras.containsKey(Notification.EXTRA_MEDIA_SESSION) 
-            } ?: false
-            
+            val stillHasMedia = try {
+                activeNotifications?.any {
+                    it.packageName == sbn.packageName && it.notification.extras.containsKey(Notification.EXTRA_MEDIA_SESSION)
+                } ?: false
+            } catch (e: SecurityException) {
+                false
+            }
+
             if (!stillHasMedia) {
                 activeController?.unregisterCallback(controllerCallback)
                 activeController = null
-                updateMediaInfo()
+                findActiveMediaSession()
             }
         }
     }
@@ -83,8 +94,13 @@ class NotificationService : NotificationListenerService() {
     }
 
     private fun updateCounts() {
-        val activeNotifications = activeNotifications ?: return
-        val counts = activeNotifications
+        val activeNotifs = try {
+            activeNotifications
+        } catch (e: SecurityException) {
+            null
+        } ?: return
+
+        val counts = activeNotifs
             .filter { !it.isOngoing && it.packageName != packageName }
             .groupBy { it.packageName }
             .mapValues { it.value.size }
@@ -94,31 +110,52 @@ class NotificationService : NotificationListenerService() {
     private fun checkMediaNotification(sbn: StatusBarNotification?) {
         val token = sbn?.notification?.extras?.get(Notification.EXTRA_MEDIA_SESSION) as? MediaSession.Token
         if (token != null) {
-            setupMediaController(token, sbn.packageName)
+            val currentIsPlaying = activeController?.playbackState?.state == PlaybackState.STATE_PLAYING
+            val newController = MediaController(this, token)
+            val newIsPlaying = newController.playbackState?.state == PlaybackState.STATE_PLAYING
+
+            // 優先保留正在播放的 Session，或是如果是同一個 App 的更新則替換
+            if (activeController == null || newIsPlaying || (activeController?.packageName == sbn.packageName) || !currentIsPlaying) {
+                setupMediaController(token)
+            }
         } else if (sbn?.packageName == activeController?.packageName) {
             updateMediaInfo()
         }
     }
 
     private fun findActiveMediaSession() {
-        val activeNotifications = activeNotifications ?: return
-        for (sbn in activeNotifications) {
+        val activeNotifs = try {
+            activeNotifications
+        } catch (e: SecurityException) {
+            null
+        } ?: return
+
+        var foundToken: MediaSession.Token? = null
+
+        for (sbn in activeNotifs) {
             val token = sbn.notification?.extras?.get(Notification.EXTRA_MEDIA_SESSION) as? MediaSession.Token
             if (token != null) {
-                setupMediaController(token, sbn.packageName)
-                // Don't return yet, continue to find the one that is actually playing
                 val controller = MediaController(this, token)
                 if (controller.playbackState?.state == PlaybackState.STATE_PLAYING) {
-                    setupMediaController(token, sbn.packageName)
+                    setupMediaController(token)
                     return
+                }
+                if (foundToken == null) {
+                    foundToken = token
                 }
             }
         }
+
+        if (foundToken != null) {
+            setupMediaController(foundToken)
+        } else {
+            activeController = null
+            updateMediaInfo()
+        }
     }
 
-    private fun setupMediaController(token: MediaSession.Token, pkg: String) {
-        // Even if same package, the token might have changed
-        if (activeController?.packageName == pkg && activeController?.sessionToken == token) {
+    private fun setupMediaController(token: MediaSession.Token) {
+        if (activeController?.sessionToken == token) {
             updateMediaInfo()
             return
         }
@@ -138,19 +175,19 @@ class NotificationService : NotificationListenerService() {
 
         val metadata = controller.metadata
         val state = controller.playbackState
-        
-        // Try to get album art from metadata, then fallback to notification large icon
-        var art = metadata?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART) 
-               ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_ART)
+
+        var art = metadata?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
+            ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_ART)
 
         if (art == null) {
-            // Fallback: search notifications for this package to find a large icon
-            val sbn = activeNotifications?.find { it.packageName == controller.packageName }
-            val iconDrawable = sbn?.notification?.getLargeIcon()?.loadDrawable(this)
-            if (iconDrawable != null) {
-                try {
+            try {
+                val activeNotifs = activeNotifications
+                val sbn = activeNotifs?.find { it.packageName == controller.packageName }
+                val iconDrawable = sbn?.notification?.getLargeIcon()?.loadDrawable(this)
+                if (iconDrawable != null) {
                     art = iconDrawable.toBitmap()
-                } catch (e: Exception) {}
+                }
+            } catch (e: Exception) {
             }
         }
 
@@ -158,7 +195,7 @@ class NotificationService : NotificationListenerService() {
             title = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE) ?: "Unknown Title",
             artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: "Unknown Artist",
             albumArt = art,
-            isPlaying = state?.state == PlaybackState.STATE_PLAYING,
+            isPlaying = state?.state == PlaybackState.STATE_PLAYING || state?.state == PlaybackState.STATE_BUFFERING,
             packageName = controller.packageName
         )
     }

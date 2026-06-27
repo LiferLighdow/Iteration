@@ -11,6 +11,9 @@ import android.os.Bundle
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -65,6 +68,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Save
@@ -1237,34 +1241,60 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
             item {
                 Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                     Text("Blur radius: ${(blurRadius * 5).toInt()}")
-                    Slider(
-                        value = (blurRadius * 5).coerceIn(0f, 100f),
-                        onValueChange = { viewModel.setLiquidGlassBlur(it / 5f) },
-                        valueRange = 0f..100f,
-                        steps = 99
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { viewModel.setLiquidGlassBlur(((blurRadius * 5 - 1f).coerceAtLeast(0f)) / 5f) }) {
+                            Icon(Icons.Default.Remove, contentDescription = "Decrease")
+                        }
+                        Slider(
+                            value = (blurRadius * 5).coerceIn(0f, 100f),
+                            onValueChange = { viewModel.setLiquidGlassBlur(it / 5f) },
+                            valueRange = 0f..100f,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(onClick = { viewModel.setLiquidGlassBlur(((blurRadius * 5 + 1f).coerceAtMost(100f)) / 5f) }) {
+                            Icon(Icons.Default.Add, contentDescription = "Increase")
+                        }
+                    }
                 }
             }
 
             item {
                 Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                     Text("Refraction height: ${refractionHeight.toInt()}")
-                    Slider(
-                        value = refractionHeight,
-                        onValueChange = { viewModel.setLiquidGlassRefractionHeight(it) },
-                        valueRange = 0f..100f
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { viewModel.setLiquidGlassRefractionHeight((refractionHeight - 1f).coerceAtLeast(0f)) }) {
+                            Icon(Icons.Default.Remove, contentDescription = "Decrease")
+                        }
+                        Slider(
+                            value = refractionHeight,
+                            onValueChange = { viewModel.setLiquidGlassRefractionHeight(it) },
+                            valueRange = 0f..100f,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(onClick = { viewModel.setLiquidGlassRefractionHeight((refractionHeight + 1f).coerceAtMost(100f)) }) {
+                            Icon(Icons.Default.Add, contentDescription = "Increase")
+                        }
+                    }
                 }
             }
 
             item {
                 Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                     Text("Refraction amount: ${refractionAmount.toInt()}")
-                    Slider(
-                        value = refractionAmount,
-                        onValueChange = { viewModel.setLiquidGlassRefractionAmount(it) },
-                        valueRange = 0f..100f
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { viewModel.setLiquidGlassRefractionAmount((refractionAmount - 1f).coerceAtLeast(0f)) }) {
+                            Icon(Icons.Default.Remove, contentDescription = "Decrease")
+                        }
+                        Slider(
+                            value = refractionAmount,
+                            onValueChange = { viewModel.setLiquidGlassRefractionAmount(it) },
+                            valueRange = 0f..100f,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(onClick = { viewModel.setLiquidGlassRefractionAmount((refractionAmount + 1f).coerceAtMost(100f)) }) {
+                            Icon(Icons.Default.Add, contentDescription = "Increase")
+                        }
+                    }
                 }
             }
 
@@ -1966,11 +1996,37 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
     val iconShape by viewModel.iconShape.collectAsState()
     val desktopRows by viewModel.desktopRows.collectAsState()
     val dockStyle by viewModel.dockStyle.collectAsState()
+    val dockCornerRadius by viewModel.dockCornerRadius.collectAsState()
     val showMinusOnePage by viewModel.showMinusOnePage.collectAsState()
     val showAppLibrary by viewModel.showAppLibrary.collectAsState()
     val autoAddAppsToHome by viewModel.autoAddAppsToHome.collectAsState()
+    val showStatusBar by viewModel.showStatusBar.collectAsState()
+    val showNavigationBar by viewModel.showNavigationBar.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
     val isAmoledBlack by viewModel.isAmoledBlack.collectAsState()
+
+    val context = LocalContext.current
+    val window = (context as? ComponentActivity)?.window
+
+    LaunchedEffect(showStatusBar, showNavigationBar) {
+        window?.let { win ->
+            val windowInsetsController = WindowCompat.getInsetsController(win, win.decorView)
+            windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            
+            if (showStatusBar) {
+                windowInsetsController.show(WindowInsetsCompat.Type.statusBars())
+            } else {
+                windowInsetsController.hide(WindowInsetsCompat.Type.statusBars())
+            }
+
+            if (showNavigationBar) {
+                windowInsetsController.show(WindowInsetsCompat.Type.navigationBars())
+            } else {
+                windowInsetsController.hide(WindowInsetsCompat.Type.navigationBars())
+            }
+        }
+    }
+
     val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp)
 
     var showAppPickerForSlot by remember { mutableStateOf<Int?>(null) }
@@ -2037,6 +2093,34 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
                         )
                     },
                     modifier = Modifier.clickable { viewModel.setAutoAddAppsToHome(!autoAddAppsToHome) }
+                )
+            }
+
+            item {
+                ListItem(
+                    headlineContent = { Text("Show Status Bar") },
+                    supportingContent = { Text("Show or hide the system status bar") },
+                    trailingContent = {
+                        Switch(
+                            checked = showStatusBar,
+                            onCheckedChange = { viewModel.setShowStatusBar(it) }
+                        )
+                    },
+                    modifier = Modifier.clickable { viewModel.setShowStatusBar(!showStatusBar) }
+                )
+            }
+
+            item {
+                ListItem(
+                    headlineContent = { Text("Show Navigation Bar Handle") },
+                    supportingContent = { Text("Show or hide the bottom gesture navigation handle") },
+                    trailingContent = {
+                        Switch(
+                            checked = showNavigationBar,
+                            onCheckedChange = { viewModel.setShowNavigationBar(it) }
+                        )
+                    },
+                    modifier = Modifier.clickable { viewModel.setShowNavigationBar(!showNavigationBar) }
                 )
             }
 
@@ -2123,7 +2207,11 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
 
             item {
                 var expandedStyle by remember { mutableStateOf(false) }
-                val styleOptions = listOf(DockStyle.MODERN to "Modern (Floating)", DockStyle.CLASSIC to "Classic (Full Width)")
+                val styleOptions = listOf(
+                    DockStyle.MODERN to "Modern (Floating)",
+                    DockStyle.CLASSIC to "Classic (Full Width)",
+                    DockStyle.PLATFORM to "Platform (3D Glass)"
+                )
                 val currentStyleLabel = styleOptions.find { it.first == dockStyle }?.second ?: "Modern"
 
                 ListItem(
@@ -2149,6 +2237,28 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
                         }
                     }
                 )
+            }
+
+            if (dockStyle == DockStyle.MODERN) {
+                item {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                        Text("Dock Corner Radius: ${dockCornerRadius.toInt()}")
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = { viewModel.setDockCornerRadius((dockCornerRadius - 1f).coerceAtLeast(0f)) }) {
+                                Icon(Icons.Default.Remove, contentDescription = "Decrease")
+                            }
+                            Slider(
+                                value = dockCornerRadius,
+                                onValueChange = { viewModel.setDockCornerRadius(it) },
+                                valueRange = 0f..100f,
+                                modifier = Modifier.weight(1f)
+                            )
+                            IconButton(onClick = { viewModel.setDockCornerRadius((dockCornerRadius + 1f).coerceAtMost(100f)) }) {
+                                Icon(Icons.Default.Add, contentDescription = "Increase")
+                            }
+                        }
+                    }
+                }
             }
 
             item { HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp)) }
@@ -2221,7 +2331,7 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
                         headlineContent = { Text(app?.label ?: "Empty Slot ${index + 1}") },
                         supportingContent = { Text(if (pkgName.isEmpty()) "Tap to select an app" else pkgName) },
                         leadingContent = {
-                            val appIcon = if (app != null) viewModel.getIcon(app.packageName) else null
+                            val appIcon = if (app != null) viewModel.getIcon(app.uniqueId) else null
                             if (appIcon != null) {
                                 Image(
                                     bitmap = appIcon,

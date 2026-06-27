@@ -206,6 +206,8 @@ object ConfigSerializer {
         libraryShape: String,
         searchEngineUrl: String,
         autoAddAppsToHome: Boolean,
+        showStatusBar: Boolean,
+        showNavigationBar: Boolean,
         pageSize: Int,
         // 新增項目
         glassParams: Map<String, Any>,
@@ -248,6 +250,8 @@ object ConfigSerializer {
         settings.put("library_shape", libraryShape)
         settings.put("search_engine_url", searchEngineUrl)
         settings.put("auto_add_apps_to_home", autoAddAppsToHome)
+        settings.put("show_status_bar", showStatusBar)
+        settings.put("show_navigation_bar", showNavigationBar)
         settings.put("theme_mode", themeMode)
         settings.put("amoled_black", isAmoledBlack)
         settings.put("page_size", pageSize)

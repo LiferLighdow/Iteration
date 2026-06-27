@@ -43,6 +43,7 @@ fun Dock(
     isLiquidGlass: Boolean = false,
     backdrop: Backdrop,
     dockStyle: DockStyle = DockStyle.MODERN,
+    dockCornerRadius: Float = 42f,
     iconShape: IconShape = IconShape.DEFAULT,
     blurRadius: Float = 0f,
     refractionHeight: Float = 24f,
@@ -53,43 +54,92 @@ fun Dock(
     onLongClick: (Int) -> Unit,
     onDeleteClick: ((AppModel) -> Unit)? = null
 ) {
-    // 獲取導覽列（小白條）的高度
     val navPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    
+    // 容器總高度
+    val totalHeight = when (dockStyle) {
+        DockStyle.CLASSIC -> 94.dp + navPadding
+        DockStyle.PLATFORM -> 90.dp + navPadding
+        else -> 100.dp + navPadding // Modern 恢復 100dp
+    }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .then(
-                if (dockStyle == DockStyle.MODERN)
-                    Modifier.padding(start = 12.dp, end = 12.dp, bottom = 4.dp + navPadding) 
-                else 
-                    Modifier // Classic 模式下背景直接貼底
-            )
-            .height(if (dockStyle == DockStyle.CLASSIC) 94.dp + navPadding else 100.dp)
-            // 關鍵：將所有背景、模糊、折射邏輯統一交給 liquidGlassDock
-            .liquidGlassDock(
-                isLiquidGlass = isLiquidGlass,
-                backdrop = backdrop,
-                dockStyle = dockStyle,
-                cornerRadius = 42.dp,
-                blurRadius = blurRadius,
-                refractionHeight = refractionHeight,
-                refractionAmount = refractionAmount,
-                chromaticAberration = chromaticAberration
-            ),
-        contentAlignment = Alignment.Center
+            .height(totalHeight),
+        contentAlignment = Alignment.BottomCenter
     ) {
-        // 內容層：不受任何模糊影響
+        // 1. 背景層
+        when (dockStyle) {
+            DockStyle.MODERN -> {
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 12.dp)
+                        .padding(bottom = 4.dp + navPadding)
+                        .fillMaxSize() // 讓 Modern 背景填滿容器（減去 padding）
+                        .liquidGlassDock(
+                            isLiquidGlass = isLiquidGlass,
+                            backdrop = backdrop,
+                            dockStyle = dockStyle,
+                            cornerRadius = dockCornerRadius.dp,
+                            blurRadius = blurRadius,
+                            refractionHeight = refractionHeight,
+                            refractionAmount = refractionAmount,
+                            chromaticAberration = chromaticAberration
+                        )
+                )
+            }
+            DockStyle.CLASSIC -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .liquidGlassDock(
+                            isLiquidGlass = isLiquidGlass,
+                            backdrop = backdrop,
+                            dockStyle = dockStyle,
+                            blurRadius = blurRadius,
+                            refractionHeight = refractionHeight,
+                            refractionAmount = refractionAmount,
+                            chromaticAberration = chromaticAberration
+                        )
+                )
+            }
+            DockStyle.PLATFORM -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp + navPadding)
+                        .liquidGlassDock(
+                            isLiquidGlass = isLiquidGlass,
+                            backdrop = backdrop,
+                            dockStyle = dockStyle,
+                            blurRadius = blurRadius,
+                            refractionHeight = refractionHeight,
+                            refractionAmount = refractionAmount,
+                            chromaticAberration = chromaticAberration
+                        )
+                )
+            }
+        }
+
+        // 2. 內容層 (App 圖示)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .then(if (dockStyle == DockStyle.CLASSIC) Modifier.padding(bottom = navPadding) else Modifier)
+                .padding(bottom = when(dockStyle) {
+                    DockStyle.PLATFORM -> 20.dp + navPadding
+                    DockStyle.MODERN -> 22.dp + navPadding
+                    else -> 10.dp + navPadding
+                })
                 .padding(horizontal = 12.dp),
             horizontalArrangement = Arrangement.SpaceAround,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.Bottom
         ) {
             apps.forEachIndexed { index, app ->
-                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
                     val infiniteTransition = rememberInfiniteTransition(label = "jiggle")
                     val rotation by infiniteTransition.animateFloat(
                         initialValue = -2.5f, targetValue = 2.5f,
@@ -97,7 +147,6 @@ fun Dock(
                     )
                     
                     val viewModel: MainViewModel = viewModel()
-                    val mContext = LocalContext.current
                     var showContextMenu by remember { mutableStateOf(false) }
                     val shortcuts = remember(showContextMenu) { if (showContextMenu && app.packageName.isNotEmpty()) viewModel.getShortcuts(app.packageName) else emptyList() }
 
@@ -111,6 +160,7 @@ fun Dock(
                         refractionAmount = refractionAmount,
                         chromaticAberration = chromaticAberration,
                         isEditMode = isEditMode,
+                        showReflection = dockStyle == DockStyle.PLATFORM,
                         onDeleteClick = { onDeleteClick?.invoke(app) },
                         getIcon = { pkg -> viewModel.getIcon(pkg) },
                         modifier = Modifier.graphicsLayer {
@@ -161,22 +211,6 @@ fun Dock(
                             leadingIcon = { Icon(Icons.Default.Settings, null) },
                             onClick = { onLongClick(index); showContextMenu = false }
                         )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.menu_uninstall)) },
-                            leadingIcon = { Icon(Icons.Default.Delete, null) },
-                            onClick = {
-                                try {
-                                    val intent = Intent(Intent.ACTION_DELETE).apply {
-                                        data = Uri.fromParts("package", app.packageName, null)
-                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                    }
-                                    mContext.startActivity(intent)
-                                } catch (e: Exception) {
-                                    Log.e("Iteration", "Uninstall failed", e)
-                                }
-                                showContextMenu = false
-                            }
-                        )
                     }
                 }
             }
@@ -219,7 +253,7 @@ fun SearchPill(
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text(
-                text = stringResource(R.string.search_hint_short), // "Search"
+                text = stringResource(R.string.search_hint_short),
                 style = MaterialTheme.typography.labelSmall,
                 fontSize = 11.sp,
                 color = Color.White.copy(alpha = 0.8f)

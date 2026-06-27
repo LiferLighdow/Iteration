@@ -1,5 +1,7 @@
 package com.liferlighdow.iteration.ui
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -19,6 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Shadow
@@ -37,6 +40,10 @@ import com.liferlighdow.iteration.viewmodel.MainViewModel
 import com.liferlighdow.iteration.service.NotificationService
 import com.liferlighdow.iteration.data.AppModel
 
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Brush
+
 @Composable
 fun AppItem(
     app: AppModel,
@@ -52,6 +59,7 @@ fun AppItem(
     refractionAmount: Float = 48f,
     chromaticAberration: Boolean = true,
     isEditMode: Boolean = false,
+    showReflection: Boolean = false,
     onAppClick: (() -> Unit)? = null,
     onDeleteClick: (() -> Unit)? = null,
     getIcon: @Composable (String) -> ImageBitmap? = { null }
@@ -66,10 +74,7 @@ fun AppItem(
         } else null
     }
     
-    // 優先使用 viewModel 的 icon，若沒有則使用傳入的 getIcon (用於資料夾與拖曳預覽)
     val displayIcon = appIcon ?: if (!app.isFolder) getIcon(app.uniqueId) else null
-
-    // 計算通知數量：若是資料夾，則加總內部所有 App 的數量
     val count = if (app.isFolder) {
         app.folderItems.sumOf { notificationCounts[it.packageName] ?: 0 }
     } else {
@@ -90,95 +95,132 @@ fun AppItem(
             ),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(contentAlignment = Alignment.TopEnd) {
-            if (app.packageName.isEmpty() && !app.isFolder) {
-                // Dock 空位顯示添加圖示
-                Box(
-                    modifier = Modifier
-                        .size(iconSize)
-                        .clip(currentShape)
-                        .background(glassFallbackColor(0.2f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = null, tint = Color.White.copy(alpha = 0.7f))
-                }
-            } else if (app.isFolder) {
-                Box(
-                    modifier = Modifier
-                        .size(iconSize)
-                        .liquidGlass(
-                            enabled = isLiquidGlass,
-                            backdrop = backdrop,
-                            cornerRadius = if (libraryShape == IconShape.CIRCLE) iconSize / 2f else iconSize * 0.238f,
-                            blurRadius = blurRadius,
-                            refractionHeight = refractionHeight,
-                            refractionAmount = refractionAmount,
-                            chromaticAberration = chromaticAberration
-                        )
-                        .padding(4.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { 
-                            FolderPreviewIcon(app.folderItems.getOrNull(0), iconSize / 2.5f, iconShape, getIcon)
-                            FolderPreviewIcon(app.folderItems.getOrNull(1), iconSize / 2.5f, iconShape, getIcon) 
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { 
-                            FolderPreviewIcon(app.folderItems.getOrNull(2), iconSize / 2.5f, iconShape, getIcon)
-                            FolderPreviewIcon(app.folderItems.getOrNull(3), iconSize / 2.5f, iconShape, getIcon) 
-                        }
-                    }
-                }
-            } else if (displayIcon != null) {
+        Box(contentAlignment = Alignment.Center) {
+            // Reflection
+            if (showReflection && !app.isFolder && displayIcon != null) {
                 Image(
                     bitmap = displayIcon,
                     contentDescription = null,
                     modifier = Modifier
+                        .offset(y = iconSize * 0.7f)
                         .size(iconSize)
+                        .graphicsLayer {
+                            rotationX = 180f
+                            alpha = 0.3f
+                        }
                         .clip(currentShape)
-                        .border(
-                            width = 0.5.dp,
-                            color = Color.White.copy(alpha = 0.3f),
-                            shape = currentShape
-                        ),
+                        .drawBehind {
+                            drawRect(
+                                Brush.verticalGradient(
+                                    colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.5f)),
+                                    startY = 0f,
+                                    endY = size.height
+                                )
+                            )
+                        },
                     contentScale = ContentScale.FillBounds
                 )
             }
 
-            // 編輯模式下的叉叉按鈕
-            if (isEditMode && (app.packageName.isNotEmpty() || app.isFolder)) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .offset(x = (-6).dp, y = (-6).dp)
-                        .size(24.dp)
-                        .background(Color.Gray.copy(alpha = 0.9f), CircleShape)
-                        .clickable { onDeleteClick?.invoke() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.Close,
-                        contentDescription = "Delete",
-                        tint = Color.White,
-                        modifier = Modifier.size(16.dp)
-                    )
+            Box(contentAlignment = Alignment.TopEnd) {
+                // 使用 Crossfade 處理圖示切換，解決載入一半或殘影問題
+                Crossfade(
+                    targetState = displayIcon,
+                    animationSpec = tween(300),
+                    label = "IconFade"
+                ) { targetBitmap ->
+                    if (app.packageName.isEmpty() && !app.isFolder) {
+                        Box(
+                            modifier = Modifier
+                                .size(iconSize)
+                                .clip(currentShape)
+                                .background(glassFallbackColor(0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null, tint = Color.White.copy(alpha = 0.7f))
+                        }
+                    } else if (app.isFolder) {
+                        Box(
+                            modifier = Modifier
+                                .size(iconSize)
+                                .liquidGlass(
+                                    enabled = isLiquidGlass,
+                                    backdrop = backdrop,
+                                    cornerRadius = if (libraryShape == IconShape.CIRCLE) iconSize / 2f else iconSize * 0.238f,
+                                    blurRadius = blurRadius,
+                                    refractionHeight = refractionHeight,
+                                    refractionAmount = refractionAmount,
+                                    chromaticAberration = chromaticAberration
+                                )
+                                .padding(4.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { 
+                                    FolderPreviewIcon(app.folderItems.getOrNull(0), iconSize / 2.5f, iconShape, getIcon)
+                                    FolderPreviewIcon(app.folderItems.getOrNull(1), iconSize / 2.5f, iconShape, getIcon) 
+                                }
+                                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { 
+                                    FolderPreviewIcon(app.folderItems.getOrNull(2), iconSize / 2.5f, iconShape, getIcon)
+                                    FolderPreviewIcon(app.folderItems.getOrNull(3), iconSize / 2.5f, iconShape, getIcon) 
+                                }
+                            }
+                        }
+                    } else if (targetBitmap != null) {
+                        Image(
+                            bitmap = targetBitmap,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(iconSize)
+                                .clip(currentShape)
+                                .border(
+                                    width = 0.5.dp,
+                                    color = Color.White.copy(alpha = 0.3f),
+                                    shape = currentShape
+                                ),
+                            contentScale = ContentScale.FillBounds
+                        )
+                    } else {
+                        // 佔位符，防止圖示區域塌陷
+                        Box(modifier = Modifier.size(iconSize))
+                    }
                 }
-            }
 
-            if (count > 0) {
-                Box(
-                    modifier = Modifier
-                        .offset(x = 4.dp, y = (-4).dp)
-                        .size(20.dp)
-                        .background(Color.Red, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = if (count > 99) "99+" else count.toString(),
-                        color = Color.White,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontSize = if (count > 9) 9.sp else 11.sp
-                    )
+                // 編輯模式下的叉叉按鈕
+                if (isEditMode && (app.packageName.isNotEmpty() || app.isFolder)) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .offset(x = (-6).dp, y = (-6).dp)
+                            .size(24.dp)
+                            .background(Color.Gray.copy(alpha = 0.9f), CircleShape)
+                            .clickable { onDeleteClick?.invoke() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Delete",
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+
+                if (count > 0) {
+                    Box(
+                        modifier = Modifier
+                            .offset(x = 4.dp, y = (-4).dp)
+                            .size(20.dp)
+                            .background(Color.Red, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (count > 99) "99+" else count.toString(),
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontSize = if (count > 9) 9.sp else 11.sp
+                        )
+                    }
                 }
             }
         }

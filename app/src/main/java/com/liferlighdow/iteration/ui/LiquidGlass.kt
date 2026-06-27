@@ -1,14 +1,23 @@
 package com.liferlighdow.iteration.ui
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.drawBackdrop
@@ -18,7 +27,8 @@ import com.kyant.backdrop.effects.vibrancy
 
 @Composable
 fun glassFallbackColor(alpha: Float = 0.3f): Color {
-    return if (isSystemInDarkTheme()) Color.Black.copy(alpha = alpha) else Color.White.copy(alpha = alpha)
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    return if (isDark) Color.Black.copy(alpha = alpha) else Color.White.copy(alpha = alpha)
 }
 
 /**
@@ -77,6 +87,19 @@ fun Modifier.liquidGlass(
     }
 }
 
+class PlatformDockShape : Shape {
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
+        val path = Path().apply {
+            moveTo(size.width * 0.06f, 0f)
+            lineTo(size.width * 0.94f, 0f)
+            lineTo(size.width, size.height)
+            lineTo(0f, size.height)
+            close()
+        }
+        return Outline.Generic(path)
+    }
+}
+
 fun Modifier.liquidGlassDock(
     isLiquidGlass: Boolean,
     backdrop: Backdrop,
@@ -86,12 +109,69 @@ fun Modifier.liquidGlassDock(
     refractionHeight: Float = 24f,
     refractionAmount: Float = 48f,
     chromaticAberration: Boolean = true
-): Modifier = this.liquidGlass(
-    enabled = isLiquidGlass,
-    backdrop = backdrop,
-    cornerRadius = if (dockStyle == DockStyle.CLASSIC) 0.dp else cornerRadius,
-    blurRadius = blurRadius,
-    refractionHeight = refractionHeight,
-    refractionAmount = refractionAmount,
-    chromaticAberration = chromaticAberration
-)
+): Modifier = composed {
+    val fallbackColor = glassFallbackColor()
+    
+    val shape = remember(dockStyle, cornerRadius) {
+        when (dockStyle) {
+            DockStyle.CLASSIC -> RoundedCornerShape(0.dp)
+            DockStyle.MODERN -> RoundedCornerShape(cornerRadius)
+            DockStyle.PLATFORM -> PlatformDockShape()
+        }
+    }
+
+    if (!isLiquidGlass || (dockStyle != DockStyle.PLATFORM && backdrop == null)) {
+        this.drawBehind {
+            if (dockStyle == DockStyle.PLATFORM) {
+                val path = Path().apply {
+                    moveTo(size.width * 0.06f, 0f)
+                    lineTo(size.width * 0.94f, 0f)
+                    lineTo(size.width, size.height)
+                    lineTo(0f, size.height)
+                    close()
+                }
+                drawPath(path, Color.White.copy(alpha = 0.2f))
+            } else {
+                val cr = if (dockStyle == DockStyle.CLASSIC) 0f else cornerRadius.toPx()
+                drawRoundRect(
+                    color = fallbackColor,
+                    cornerRadius = CornerRadius(cr, cr)
+                )
+            }
+        }
+    } else {
+        this.drawBackdrop(
+            backdrop = backdrop,
+            shape = { shape },
+            effects = {
+                if (blurRadius > 0f) {
+                    blur(radius = blurRadius.dp.toPx())
+                }
+                // 修正：lens 效果不支持自定義 Path 形狀 (PlatformDockShape)，會導致閃退
+                // 因此在 PLATFORM 樣式下跳過 lens 效果
+                if (dockStyle != DockStyle.PLATFORM && (refractionHeight > 0f || refractionAmount > 0f)) {
+                    lens(
+                        refractionHeight = refractionHeight.dp.toPx(),
+                        refractionAmount = refractionAmount.dp.toPx(),
+                        depthEffect = false,
+                        chromaticAberration = chromaticAberration
+                    )
+                }
+                if (refractionHeight > 0f || refractionAmount > 0f) {
+                    vibrancy()
+                }
+            },
+            onDrawSurface = {
+                // Platform style adds a highlight line at the top
+                if (dockStyle == DockStyle.PLATFORM) {
+                    drawLine(
+                        color = Color.White.copy(alpha = 0.5f),
+                        start = Offset(size.width * 0.06f, 0f),
+                        end = Offset(size.width * 0.94f, 0f),
+                        strokeWidth = 2f
+                    )
+                }
+            }
+        )
+    }
+}
