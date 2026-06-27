@@ -213,7 +213,7 @@ fun BatteryWidget(
             }
 
             Text(
-                text = if (isCharging) "Charging" else "Discharging",
+                text = if (isCharging) stringResource(R.string.charging) else stringResource(R.string.discharging),
                 style = MaterialTheme.typography.labelSmall,
                 color = contentColor.copy(alpha = 0.7f)
             )
@@ -341,10 +341,10 @@ fun AnalogClockWidget(
             }
 
             // 4 Numbers (12, 3, 6, 9)
-            Text("12", modifier = Modifier.align(Alignment.TopCenter).padding(top = 18.dp), color = contentColor, style = MaterialTheme.typography.labelSmall)
-            Text("6", modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 18.dp), color = contentColor, style = MaterialTheme.typography.labelSmall)
-            Text("3", modifier = Modifier.align(Alignment.CenterEnd).padding(end = 18.dp), color = contentColor, style = MaterialTheme.typography.labelSmall)
-            Text("9", modifier = Modifier.align(Alignment.CenterStart).padding(start = 18.dp), color = contentColor, style = MaterialTheme.typography.labelSmall)
+            Text(stringResource(R.string.clock_12), modifier = Modifier.align(Alignment.TopCenter).padding(top = 18.dp), color = contentColor, style = MaterialTheme.typography.labelSmall)
+            Text(stringResource(R.string.clock_6), modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 18.dp), color = contentColor, style = MaterialTheme.typography.labelSmall)
+            Text(stringResource(R.string.clock_3), modifier = Modifier.align(Alignment.CenterEnd).padding(end = 18.dp), color = contentColor, style = MaterialTheme.typography.labelSmall)
+            Text(stringResource(R.string.clock_9), modifier = Modifier.align(Alignment.CenterStart).padding(start = 18.dp), color = contentColor, style = MaterialTheme.typography.labelSmall)
         }
     }
 }
@@ -382,7 +382,7 @@ fun StackWidget(
     ) {
         if (stackItems.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Empty Stack\nLong press to add", color = Color.White.copy(alpha = 0.6f), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelSmall)
+                Text(stringResource(R.string.empty_stack_hint), color = Color.White.copy(alpha = 0.6f), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelSmall)
             }
         } else {
             VerticalPager(
@@ -438,7 +438,7 @@ fun WidgetStackPickerDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 LazyColumn(modifier = Modifier.weight(1f)) {
-                    item { Text("Current Stack", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary) }
+                    item { Text(stringResource(R.string.current_stack), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary) }
                     items(children.size) { index ->
                         val item = children[index]
                         var showItemMenu by remember { mutableStateOf(false) }
@@ -449,7 +449,7 @@ fun WidgetStackPickerDialog(
                             },
                             supportingContent = {
                                 if (item.type !is WidgetType.Photo) {
-                                    Text("Mode: ${item.displayMode.name}", style = MaterialTheme.typography.labelSmall)
+                                    Text(stringResource(R.string.widget_mode_format, item.displayMode.name), style = MaterialTheme.typography.labelSmall)
                                 }
                             },
                             trailingContent = {
@@ -494,7 +494,7 @@ fun WidgetStackPickerDialog(
 
                                             if (item.type is WidgetType.Photo) {
                                                 DropdownMenuItem(
-                                                    text = { Text("Choose Picture") },
+                                                    text = { Text(stringResource(R.string.choose_picture)) },
                                                     leadingIcon = { Icon(Icons.Default.AddAPhoto, null, tint = MaterialTheme.colorScheme.primary) },
                                                     onClick = {
                                                         photoTargetId = item.id
@@ -506,7 +506,7 @@ fun WidgetStackPickerDialog(
 
                                             if (item.type is WidgetType.Note) {
                                                 DropdownMenuItem(
-                                                    text = { Text("Edit Note") },
+                                                    text = { Text(stringResource(R.string.edit_note)) },
                                                     leadingIcon = { Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary) },
                                                     onClick = {
                                                         noteToEditInStack = index to item
@@ -518,7 +518,7 @@ fun WidgetStackPickerDialog(
                                             if (item.type is WidgetType.Weather) {
                                                 val currentProvider by viewModel.weatherProvider.collectAsState()
                                                 DropdownMenuItem(
-                                                    text = { Text("Choose Location") },
+                                                    text = { Text(stringResource(R.string.choose_location)) },
                                                     leadingIcon = { Icon(Icons.Default.LocationOn, null, tint = MaterialTheme.colorScheme.primary) },
                                                     onClick = {
                                                         showLocationSearch = true
@@ -526,7 +526,7 @@ fun WidgetStackPickerDialog(
                                                     }
                                                 )
                                                 DropdownMenuItem(
-                                                    text = { Text(if (currentProvider == WeatherProvider.MET_NORWAY) "Use Open-Meteo" else "Use MET Norway") },
+                                                    text = { Text(stringResource(if (currentProvider == WeatherProvider.MET_NORWAY) R.string.use_open_meteo else R.string.use_met_norway)) },
                                                     leadingIcon = { Icon(Icons.Default.Cloud, null, tint = MaterialTheme.colorScheme.primary) },
                                                     onClick = {
                                                         viewModel.setWeatherProvider(if (currentProvider == WeatherProvider.MET_NORWAY) WeatherProvider.OPEN_METEO else WeatherProvider.MET_NORWAY)
@@ -536,7 +536,7 @@ fun WidgetStackPickerDialog(
                                             }
                                             HorizontalDivider()
                                             DropdownMenuItem(
-                                                text = { Text("Remove", color = MaterialTheme.colorScheme.error) },
+                                                text = { Text(stringResource(R.string.remove), color = MaterialTheme.colorScheme.error) },
                                                 leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
                                                 onClick = {
                                                     children = children.filterIndexed { i, _ -> i != index }
@@ -551,7 +551,7 @@ fun WidgetStackPickerDialog(
                     }
 
                     item { HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp)) }
-                    item { Text("Available Widgets", style = MaterialTheme.typography.labelMedium) }
+                    item { Text(stringResource(R.string.available_widgets), style = MaterialTheme.typography.labelMedium) }
 
                     val available = listOf(
                         Triple(WidgetType.Battery, R.string.widget_battery, Icons.Default.BatteryStd),
@@ -577,8 +577,8 @@ fun WidgetStackPickerDialog(
                         val (type, labelRes, icon) = availableFiltered[idx]
                         val label = if (labelRes != null) stringResource(labelRes) else {
                             when (type) {
-                                is WidgetType.Note -> if (type.isWide) "Wide Note" else "Note"
-                                is WidgetType.Weather -> if (type.isWide) "Weather Forecast" else "Weather"
+                                is WidgetType.Note -> if (type.isWide) stringResource(R.string.widget_note_wide) else stringResource(R.string.widget_note)
+                                is WidgetType.Weather -> if (type.isWide) stringResource(R.string.widget_weather_forecast) else stringResource(R.string.widget_weather)
                                 else -> ""
                             }
                         }
@@ -632,13 +632,13 @@ fun WidgetStackPickerDialog(
 
         AlertDialog(
             onDismissRequest = { noteToEditInStack = null },
-            title = { Text("Edit Note") },
+            title = { Text(stringResource(R.string.edit_note)) },
             text = {
                 OutlinedTextField(
                     value = text,
                     onValueChange = { text = it },
                     modifier = Modifier.fillMaxWidth().height(150.dp),
-                    placeholder = { Text("Enter your note here...") }
+                    placeholder = { Text(stringResource(R.string.note_placeholder)) }
                 )
             },
             confirmButton = {
@@ -734,14 +734,14 @@ fun StandardMusicWidget(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = mediaInfo?.title ?: "No Music Playing",
+                        text = mediaInfo?.title ?: stringResource(R.string.no_music_playing),
                         style = MaterialTheme.typography.titleSmall,
                         color = contentColor,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = mediaInfo?.artist ?: "Unknown Artist",
+                        text = mediaInfo?.artist ?: stringResource(R.string.unknown_artist),
                         style = MaterialTheme.typography.labelSmall,
                         color = contentColor.copy(alpha = 0.7f),
                         maxLines = 1,
@@ -891,14 +891,14 @@ fun WideMusicWidget(
                 ) {
                     Column {
                         Text(
-                            text = mediaInfo?.title ?: "No Music Playing",
+                            text = mediaInfo?.title ?: stringResource(R.string.no_music_playing),
                             style = MaterialTheme.typography.titleMedium,
                             color = contentColor,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = mediaInfo?.artist ?: "Unknown Artist",
+                            text = mediaInfo?.artist ?: stringResource(R.string.unknown_artist),
                             style = MaterialTheme.typography.bodyMedium,
                             color = contentColor.copy(alpha = 0.7f),
                             maxLines = 1,
@@ -1416,7 +1416,7 @@ fun WideCalendarWidget(
                 // Right part: Events
                 if (events.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(text = "No events today", style = MaterialTheme.typography.bodyMedium, color = contentColor.copy(alpha = 0.5f))
+                        Text(text = stringResource(R.string.no_events_today), style = MaterialTheme.typography.bodyMedium, color = contentColor.copy(alpha = 0.5f))
                     }
                 } else {
                     LazyColumn(
@@ -1524,7 +1524,7 @@ fun LocationSearchDialog(
             shape = RoundedCornerShape(28.dp)
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
-                Text("Choose Location", style = MaterialTheme.typography.headlineSmall)
+                Text(stringResource(R.string.choose_location), style = MaterialTheme.typography.headlineSmall)
                 Spacer(Modifier.height(8.dp))
 
                 // 使用 IP 定位按鈕
@@ -1539,7 +1539,7 @@ fun LocationSearchDialog(
                 ) {
                     Icon(Icons.Default.MyLocation, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Use IP Location (Automatic)")
+                    Text(stringResource(R.string.ip_location_auto))
                 }
 
                 Spacer(Modifier.height(16.dp))
@@ -1575,7 +1575,7 @@ fun LocationSearchDialog(
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Search city...") },
+                    placeholder = { Text(stringResource(R.string.search_city_hint)) },
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp)
                 )
@@ -1596,7 +1596,7 @@ fun LocationSearchDialog(
 
                         ListItem(
                             headlineContent = { Text(name) },
-                            supportingContent = { Text("$admin, $country") },
+                            supportingContent = { Text(stringResource(R.string.location_admin_country, admin, country)) },
                             modifier = Modifier.clickable {
                                 viewModel.updateLocation(lat, lon, name)
                                 onDismiss()
@@ -1620,13 +1620,13 @@ fun NoteEditDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Edit Note") },
+        title = { Text(stringResource(R.string.edit_note)) },
         text = {
             OutlinedTextField(
                 value = text,
                 onValueChange = { text = it },
                 modifier = Modifier.fillMaxWidth().height(150.dp),
-                placeholder = { Text("Enter your note here...") }
+                placeholder = { Text(stringResource(R.string.note_placeholder)) }
             )
         },
         confirmButton = {
@@ -1700,7 +1700,7 @@ fun WeatherWidget(
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Default.CloudOff, null, tint = contentColor.copy(alpha = 0.5f))
-                    Text("Network Disabled", color = contentColor.copy(alpha = 0.5f), style = MaterialTheme.typography.labelSmall)
+                    Text(stringResource(R.string.network_disabled), color = contentColor.copy(alpha = 0.5f), style = MaterialTheme.typography.labelSmall)
                 }
             }
         } else if (weatherInfo == null) {
@@ -1709,7 +1709,7 @@ fun WeatherWidget(
                     CircularProgressIndicator(color = contentColor, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        weatherError ?: "Loading Weather...",
+                        weatherError ?: stringResource(R.string.loading_weather),
                         color = contentColor,
                         style = MaterialTheme.typography.labelSmall,
                         textAlign = TextAlign.Center,
@@ -1717,7 +1717,7 @@ fun WeatherWidget(
                     )
                     if (weatherError != null) {
                         Text(
-                            "Tap to Retry",
+                            stringResource(R.string.tap_to_retry),
                             color = contentColor.copy(alpha = 0.8f),
                             style = MaterialTheme.typography.labelSmall,
                             modifier = Modifier
@@ -1840,7 +1840,7 @@ fun WidgetPickerDialog(onDismiss: () -> Unit, onWidgetSelected: (WidgetType) -> 
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Customize your home screen with powerful extensions",
+                        text = stringResource(R.string.widget_picker_desc),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1873,21 +1873,21 @@ fun WidgetPickerDialog(onDismiss: () -> Unit, onWidgetSelected: (WidgetType) -> 
                     items(widgets) { (type, labelRes, icon) ->
                         val label = if (labelRes != null) stringResource(labelRes) else {
                             when (type) {
-                                is WidgetType.Note -> if (type.isWide) "Wide Note" else "Note"
-                                is WidgetType.Stack -> "Wide Widget Stacker"
-                                is WidgetType.Weather -> "Weather Forecast"
+                                is WidgetType.Note -> if (type.isWide) stringResource(R.string.widget_note_wide) else stringResource(R.string.widget_note)
+                                is WidgetType.Stack -> if (type.isWide) stringResource(R.string.widget_stacker_wide) else stringResource(R.string.widget_stacker)
+                                is WidgetType.Weather -> stringResource(R.string.widget_weather_forecast)
                                 else -> ""
                             }
                         }
                         
                         val desc = when (type) {
-                            is WidgetType.Battery -> "Monitor system battery level"
-                            is WidgetType.Clock -> "Elegant analog time display"
-                            is WidgetType.Calendar -> if (type.isWide) "View your daily schedule" else "Quick date overview"
-                            is WidgetType.Photo -> "Display your favorite memories"
-                            is WidgetType.Music -> "Control active media sessions"
-                            is WidgetType.Note -> "Quickly jot down thoughts"
-                            is WidgetType.Stack -> if (type.isWide) "Swipe through wide widgets" else "Stacked functional blocks"
+                            is WidgetType.Battery -> stringResource(R.string.desc_battery)
+                            is WidgetType.Clock -> stringResource(R.string.desc_clock)
+                            is WidgetType.Calendar -> if (type.isWide) stringResource(R.string.desc_calendar_wide) else stringResource(R.string.desc_calendar)
+                            is WidgetType.Photo -> stringResource(R.string.desc_photo)
+                            is WidgetType.Music -> stringResource(R.string.desc_music)
+                            is WidgetType.Note -> stringResource(R.string.desc_note)
+                            is WidgetType.Stack -> if (type.isWide) stringResource(R.string.desc_stack_wide) else stringResource(R.string.desc_stack)
                             else -> ""
                         }
 

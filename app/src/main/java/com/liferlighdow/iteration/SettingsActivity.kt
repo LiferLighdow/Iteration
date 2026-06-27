@@ -65,6 +65,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
@@ -192,7 +193,7 @@ class SettingsActivity : ComponentActivity() {
 }
 
 enum class SettingsPage {
-    MAIN, HIDE_APPS, RENAME_APPS, CHANGE_ICON, APP_LIBRARY, ICON_THEME, DOCK, LIQUID_GLASS, GESTURES, SEARCH, PERMISSIONS, MANUALS, GLOBAL_SEARCH_MANUAL, ICON_ENGINE_MANUAL
+    MAIN, HIDE_APPS, RENAME_APPS, CHANGE_ICON, APP_LIBRARY, ICON_THEME, DOCK, LIQUID_GLASS, GESTURES, SEARCH, PERMISSIONS, MANUALS, GLOBAL_SEARCH_MANUAL, ICON_ENGINE_MANUAL, LANGUAGE
 }
 
 @Composable
@@ -221,7 +222,8 @@ fun SettingsNavigation() {
             onNavigateToGestures = { currentPage = SettingsPage.GESTURES },
             onNavigateToSearch = { currentPage = SettingsPage.SEARCH },
             onNavigateToPermissions = { currentPage = SettingsPage.PERMISSIONS },
-            onNavigateToManuals = { currentPage = SettingsPage.MANUALS }
+            onNavigateToManuals = { currentPage = SettingsPage.MANUALS },
+            onNavigateToLanguage = { currentPage = SettingsPage.LANGUAGE }
         )
         SettingsPage.HIDE_APPS -> HideAppsScreen(onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.RENAME_APPS -> RenameAppsScreen(onBack = { currentPage = SettingsPage.MAIN })
@@ -247,6 +249,7 @@ fun SettingsNavigation() {
         SettingsPage.ICON_ENGINE_MANUAL -> com.liferlighdow.iteration.ui.IconEngineManualScreen(onBack = {
             currentPage = SettingsPage.MANUALS
         })
+        SettingsPage.LANGUAGE -> LanguageSettingsScreen(onBack = { currentPage = SettingsPage.MAIN })
     }
 }
 
@@ -337,7 +340,8 @@ fun SettingsMainScreen(
     onNavigateToGestures: () -> Unit,
     onNavigateToSearch: () -> Unit,
     onNavigateToPermissions: () -> Unit,
-    onNavigateToManuals: () -> Unit
+    onNavigateToManuals: () -> Unit,
+    onNavigateToLanguage: () -> Unit
 ) {
     val viewModel: MainViewModel = viewModel()
     val context = LocalContext.current
@@ -346,23 +350,24 @@ fun SettingsMainScreen(
     // 定義所有設定項的元數據，以便進行搜尋
     val allSettingsItems = remember {
         listOf(
-            SettingsMetadata("Icon Theme", "Styles, shapes, and icon packs", Icons.Default.Palette, Color(0xFF4285F4), onNavigateToIconTheme),
-            SettingsMetadata("Liquid Glass", "Real-time glassmorphism effects", Icons.Default.BlurOn, Color(0xFF34A853), {
+            SettingsMetadata(context.getString(R.string.settings_icon_theme), context.getString(R.string.settings_icon_theme_desc), Icons.Default.Palette, Color(0xFF4285F4), onNavigateToIconTheme),
+            SettingsMetadata(context.getString(R.string.liquid_glass_title), context.getString(R.string.settings_liquid_glass_desc), Icons.Default.BlurOn, Color(0xFF34A853), {
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) onNavigateToLiquidGlass() 
                 else {} // 會觸發 Dialog 的邏輯在下面處理
             }, isLiquidGlass = true),
-            SettingsMetadata("Home Screen", "Grid, Dock, and menu options", Icons.Default.Dashboard, Color(0xFFFBBC04), onNavigateToDock),
+            SettingsMetadata(context.getString(R.string.settings_home_screen), context.getString(R.string.settings_home_screen_desc), Icons.Default.Dashboard, Color(0xFFFBBC04), onNavigateToDock),
             SettingsMetadata(context.getString(R.string.settings_library), context.getString(R.string.settings_library_desc), Icons.Default.Apps, Color(0xFFEA4335), onNavigateToAppLibrary),
             SettingsMetadata(context.getString(R.string.settings_gestures), context.getString(R.string.settings_gestures_desc), Icons.Default.TouchApp, Color(0xFF9C27B0), onNavigateToGestures),
             SettingsMetadata(context.getString(R.string.settings_search), context.getString(R.string.settings_search_desc), Icons.Default.Search, Color(0xFF00ACC1), onNavigateToSearch),
             SettingsMetadata(context.getString(R.string.settings_permissions), context.getString(R.string.settings_permissions_desc), Icons.Default.Security, Color(0xFF607D8B), onNavigateToPermissions),
-            SettingsMetadata("User Manual", "Learn how to use Iteration Launcher", Icons.AutoMirrored.Filled.MenuBook, Color(0xFFFF9800), onNavigateToManuals),
+            SettingsMetadata(context.getString(R.string.settings_language), context.getString(R.string.language_system_default), Icons.Default.Language, Color(0xFF3F51B5), onNavigateToLanguage),
+            SettingsMetadata(context.getString(R.string.user_manual_title), context.getString(R.string.user_manual_desc), Icons.AutoMirrored.Filled.MenuBook, Color(0xFFFF9800), onNavigateToManuals),
             SettingsMetadata(context.getString(R.string.settings_hide_apps), context.getString(R.string.settings_hide_apps_desc), Icons.Default.VisibilityOff, Color(0xFF795548), {
                 if (viewModel.getPassword().isEmpty()) onNavigateToHideApps() else {} // 觸發 PasswordGate
             }, isHideApps = true),
             SettingsMetadata(context.getString(R.string.settings_rename_apps), context.getString(R.string.settings_rename_apps_desc), Icons.Default.Edit, Color(0xFF673AB7), onNavigateToRenameApps),
             SettingsMetadata(context.getString(R.string.settings_export), context.getString(R.string.settings_backup_restore_desc), Icons.Default.Backup, Color(0xFF4CAF50), { /* Launcher Logic */ }, isExport = true),
-            SettingsMetadata(context.getString(R.string.settings_import), "Restore from backup file", Icons.Default.Restore, Color(0xFF03A9F4), { /* Launcher Logic */ }, isImport = true),
+            SettingsMetadata(context.getString(R.string.settings_import), context.getString(R.string.import_from_backup), Icons.Default.Restore, Color(0xFF03A9F4), { /* Launcher Logic */ }, isImport = true),
             SettingsMetadata(context.getString(R.string.settings_restart_launcher), context.getString(R.string.settings_restart_desc), Icons.Default.RestartAlt, Color.Red, { /* Launcher Logic */ }, isRestart = true)
         )
     }
@@ -385,7 +390,7 @@ fun SettingsMainScreen(
                 }
                 Toast.makeText(context, context.getString(R.string.export_success), Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
-                Toast.makeText(context, "Export failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.export_failed, e.message), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -404,7 +409,7 @@ fun SettingsMainScreen(
                     }
                 }
             } catch (e: Exception) {
-                Toast.makeText(context, "Import failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.import_failed_msg, e.message), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -446,7 +451,7 @@ fun SettingsMainScreen(
                 if (filteredItems.isEmpty()) {
                     item {
                         Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                            Text("No results found for \"$searchQuery\"", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.no_results_found, searchQuery), color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 } else {
@@ -486,7 +491,7 @@ fun SettingsMainScreen(
                 // --- 標準模式：原有的卡片佈局 ---
                 item {
                     Text(
-                        "Personalization",
+                        stringResource(R.string.customization),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(start = 32.dp, top = 16.dp, bottom = 8.dp)
@@ -495,16 +500,16 @@ fun SettingsMainScreen(
                 item {
                     SettingsGroup {
                         SettingsItem(
-                            headline = "Icon Theme",
-                            supporting = "Styles, shapes, and icon packs",
+                            headline = stringResource(R.string.settings_icon_theme),
+                            supporting = stringResource(R.string.settings_icon_theme_desc),
                             icon = Icons.Default.Palette,
                             iconColor = Color(0xFF4285F4),
                             onClick = onNavigateToIconTheme
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                         SettingsItem(
-                            headline = "Liquid Glass",
-                            supporting = "Real-time glassmorphism effects",
+                            headline = stringResource(R.string.liquid_glass_title),
+                            supporting = stringResource(R.string.settings_liquid_glass_desc),
                             icon = Icons.Default.BlurOn,
                             iconColor = Color(0xFF34A853),
                             onClick = {
@@ -520,7 +525,7 @@ fun SettingsMainScreen(
 
                 item {
                     Text(
-                        "Desktop & Layout",
+                        stringResource(R.string.settings_home_screen),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(start = 32.dp, top = 16.dp, bottom = 8.dp)
@@ -529,8 +534,8 @@ fun SettingsMainScreen(
                 item {
                     SettingsGroup {
                         SettingsItem(
-                            headline = "Home Screen",
-                            supporting = "Grid, Dock, and menu options",
+                            headline = stringResource(R.string.settings_home_screen),
+                            supporting = stringResource(R.string.settings_home_screen_desc),
                             icon = Icons.Default.Dashboard,
                             iconColor = Color(0xFFFBBC04),
                             onClick = onNavigateToDock
@@ -548,7 +553,7 @@ fun SettingsMainScreen(
 
                 item {
                     Text(
-                        "System & Interaction",
+                        stringResource(R.string.system_interaction),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(start = 32.dp, top = 16.dp, bottom = 8.dp)
@@ -579,12 +584,29 @@ fun SettingsMainScreen(
                             iconColor = Color(0xFF607D8B),
                             onClick = onNavigateToPermissions
                         )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        
+                        var expandedLang by remember { mutableStateOf(false) }
+                        val appLanguage by viewModel.appLanguage.collectAsState()
+                        val langOptions = listOf(
+                            "" to stringResource(R.string.language_system_default),
+                            "en" to stringResource(R.string.language_english)
+                        )
+                        val currentLangLabel = langOptions.find { it.first == appLanguage }?.second ?: stringResource(R.string.language_system_default)
+
+                        SettingsItem(
+                            headline = stringResource(R.string.settings_language),
+                            supporting = if (appLanguage == "") stringResource(R.string.language_system_default_desc) else currentLangLabel,
+                            icon = Icons.Default.Language,
+                            iconColor = Color(0xFF3F51B5),
+                            onClick = onNavigateToLanguage
+                        )
                     }
                 }
 
                 item {
                     Text(
-                        "Privacy & Content",
+                        stringResource(R.string.security_section),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(start = 32.dp, top = 16.dp, bottom = 8.dp)
@@ -615,7 +637,7 @@ fun SettingsMainScreen(
 
                 item {
                     Text(
-                        "Help & Feedback",
+                        stringResource(R.string.user_manual_title),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(start = 32.dp, top = 16.dp, bottom = 8.dp)
@@ -624,8 +646,8 @@ fun SettingsMainScreen(
                 item {
                     SettingsGroup {
                         SettingsItem(
-                            headline = "User Manual",
-                            supporting = "Discover powerful features and hidden tips",
+                            headline = stringResource(R.string.user_manual_title),
+                            supporting = stringResource(R.string.user_manual_desc),
                             icon = Icons.AutoMirrored.Filled.MenuBook,
                             iconColor = Color(0xFFFF9800),
                             onClick = onNavigateToManuals
@@ -635,7 +657,7 @@ fun SettingsMainScreen(
 
                 item {
                     Text(
-                        "Backup & Maintenance",
+                        stringResource(R.string.settings_backup_restore),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(start = 32.dp, top = 16.dp, bottom = 4.dp)
@@ -659,7 +681,7 @@ fun SettingsMainScreen(
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                         SettingsItem(
                             headline = stringResource(R.string.settings_import),
-                            supporting = "Restore from backup file",
+                            supporting = stringResource(R.string.import_from_backup),
                             icon = Icons.Default.Restore,
                             iconColor = Color(0xFF03A9F4),
                             onClick = { importLauncher.launch("application/json") }
@@ -709,13 +731,13 @@ fun SettingsMainScreen(
         AlertDialog(
             onDismissRequest = { showApiWarningDialog = false },
             icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
-            title = { Text("Compatibility Warning") },
+            title = { Text(stringResource(R.string.compat_warning_title)) },
             text = { 
-                Text("Liquid Glass effects rely on system APIs introduced in Android 12.\n\nYour current device (API ${android.os.Build.VERSION.SDK_INT}) does not support these advanced rendering features.") 
+                Text(stringResource(R.string.compat_warning_msg, android.os.Build.VERSION.SDK_INT)) 
             },
             confirmButton = {
                 TextButton(onClick = { showApiWarningDialog = false }) {
-                    Text("I Understand")
+                    Text(stringResource(R.string.understand))
                 }
             }
         )
@@ -745,7 +767,7 @@ fun SettingsMainScreen(
                     )
                     if (isError) {
                         Text(
-                            text = "Incorrect password",
+                            text = stringResource(R.string.incorrect_password),
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodySmall
                         )
@@ -776,6 +798,7 @@ fun SettingsMainScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
+    val context = LocalContext.current
     val viewModel: MainViewModel = viewModel()
     val isThemedIconsEnabled by viewModel.isThemedIconsEnabled.collectAsState()
     val currentStyle by viewModel.iconStyle.collectAsState()
@@ -786,10 +809,18 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
     var showStyleInfoDialog by remember { mutableStateOf(false) }
     var showClearCacheDialog by remember { mutableStateOf(false) }
 
+    val styles = listOf(
+        IconStyle.STANDARD to stringResource(R.string.style_standard),
+        IconStyle.BLACK to stringResource(R.string.style_black),
+        IconStyle.WHITE to stringResource(R.string.style_white),
+        IconStyle.GLASS to stringResource(R.string.style_glass),
+        IconStyle.CUSTOM to stringResource(R.string.style_custom)
+    )
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Icon Theme") },
+                title = { Text(stringResource(R.string.icon_theme_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
@@ -802,7 +833,7 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
         LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
             item {
                 Text(
-                    text = "Customization",
+                    text = stringResource(R.string.customization),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -820,8 +851,8 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
             item {
                 var expanded by remember { mutableStateOf(false) }
                 ListItem(
-                    headlineContent = { Text("Change Icon Shape") },
-                    supportingContent = { Text(if (currentShape == IconShape.CIRCLE) "Circle" else "Default") },
+                    headlineContent = { Text(stringResource(R.string.change_icon_shape)) },
+                    supportingContent = { Text(if (currentShape == IconShape.CIRCLE) stringResource(R.string.shape_circle) else stringResource(R.string.shape_default)) },
                     trailingContent = {
                         Box {
                             IconButton(onClick = { expanded = true }) {
@@ -829,11 +860,11 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
                             }
                             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                                 DropdownMenuItem(
-                                    text = { Text("Default") },
+                                    text = { Text(stringResource(R.string.shape_default)) },
                                     onClick = { viewModel.setIconShape(IconShape.DEFAULT); expanded = false }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Circle") },
+                                    text = { Text(stringResource(R.string.shape_circle)) },
                                     onClick = { viewModel.setIconShape(IconShape.CIRCLE); expanded = false }
                                 )
                             }
@@ -847,7 +878,7 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
 
             item {
                 Text(
-                    text = "Icon Pack",
+                    text = stringResource(R.string.icon_pack),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -862,12 +893,12 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
                 }
 
                 val currentPackName = remember(currentIconPack, iconPacks) {
-                    if (currentIconPack.isEmpty()) "Default"
-                    else iconPacks.find { it.packageName == currentIconPack }?.label ?: "Unknown"
+                    if (currentIconPack.isEmpty()) context.getString(R.string.shape_default)
+                    else iconPacks.find { it.packageName == currentIconPack }?.label ?: context.getString(R.string.unknown)
                 }
 
                 ListItem(
-                    headlineContent = { Text("Current Pack") },
+                    headlineContent = { Text(stringResource(R.string.current_pack)) },
                     supportingContent = { Text(currentPackName) },
                     trailingContent = { Icon(Icons.Default.ChevronRight, null) },
                     modifier = Modifier.clickable { showIconPackPicker = true }
@@ -878,8 +909,8 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
 
             item {
                 ListItem(
-                    headlineContent = { Text("Themed Icons (M3)") },
-                    supportingContent = { Text("Apply dynamic colors from your wallpaper to icons") },
+                    headlineContent = { Text(stringResource(R.string.themed_icons_m3_title)) },
+                    supportingContent = { Text(stringResource(R.string.themed_icons_m3_desc)) },
                     trailingContent = {
                         Switch(
                             enabled = currentIconPack.isEmpty(),
@@ -901,7 +932,7 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Iteration Style",
+                        text = stringResource(R.string.iteration_style),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.weight(1f)
@@ -912,7 +943,7 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
                     ) {
                         Icon(
                             Icons.Default.Info, 
-                            contentDescription = "Compatibility Info",
+                            contentDescription = stringResource(R.string.compatibility_info),
                             tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
                             modifier = Modifier.size(18.dp)
                         )
@@ -925,8 +956,8 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
                 val excludedApps by viewModel.excludedThemedPackages.collectAsState()
                 
                 ListItem(
-                    headlineContent = { Text("Custom Exclusions") },
-                    supportingContent = { Text("${excludedApps.size} apps will never apply styles or icon packs") },
+                    headlineContent = { Text(stringResource(R.string.custom_exclusions)) },
+                    supportingContent = { Text(stringResource(R.string.custom_exclusions_desc, excludedApps.size)) },
                     trailingContent = { Icon(Icons.Default.Settings, null, tint = MaterialTheme.colorScheme.primary) },
                     modifier = Modifier.clickable { showExclusionPicker = true }
                 )
@@ -942,14 +973,6 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
                     )
                 }
             }
-
-            val styles = listOf(
-                IconStyle.STANDARD to "Standard",
-                IconStyle.BLACK to "Black",
-                IconStyle.WHITE to "White",
-                IconStyle.GLASS to "Glass",
-                IconStyle.CUSTOM to "Custom"
-            )
 
             items(styles) { (style, label) ->
                 var showCustomPicker by remember { mutableStateOf(false) }
@@ -987,7 +1010,7 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
             if (currentIconPack.isNotEmpty()) {
                 item {
                     Text(
-                        text = "Note: Iteration styles and Themed Icons are disabled when an Icon Pack is active.",
+                        text = stringResource(R.string.icon_pack_disabled_note),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.padding(16.dp)
@@ -999,7 +1022,7 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
 
             item {
                 Text(
-                    text = "Maintenance",
+                    text = stringResource(R.string.maintenance),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -1008,8 +1031,8 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
 
             item {
                 ListItem(
-                    headlineContent = { Text("Clear Icon Cache") },
-                    supportingContent = { Text("Force re-generation of all application icons") },
+                    headlineContent = { Text(stringResource(R.string.clear_icon_cache_title)) },
+                    supportingContent = { Text(stringResource(R.string.clear_icon_cache_desc)) },
                     trailingContent = { Icon(Icons.Default.Refresh, null, tint = MaterialTheme.colorScheme.primary) },
                     modifier = Modifier.clickable { showClearCacheDialog = true }
                 )
@@ -1020,8 +1043,8 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
     if (showClearCacheDialog) {
         AlertDialog(
             onDismissRequest = { showClearCacheDialog = false },
-            title = { Text("Clear Icon Cache?") },
-            text = { Text("This will delete all processed icon previews and re-generate them. Use this if icons are not displaying correctly or after changing system settings.") },
+            title = { Text(stringResource(R.string.clear_icon_cache_confirm_title)) },
+            text = { Text(stringResource(R.string.clear_icon_cache_confirm_msg)) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -1030,12 +1053,12 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text("Clear")
+                    Text(stringResource(R.string.clear))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showClearCacheDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -1045,24 +1068,24 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
         AlertDialog(
             onDismissRequest = { showStyleInfoDialog = false },
             icon = { Icon(Icons.Default.Info, contentDescription = null) },
-            title = { Text("Iteration Style Compatibility") },
+            title = { Text(stringResource(R.string.style_compatibility_title)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     val sdk = android.os.Build.VERSION.SDK_INT
-                    Text("Different Android versions provide varying levels of icon precision:", style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.android_version_precision), style = MaterialTheme.typography.bodyMedium)
                     
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                     
-                    CompatibilityRow("Android 13+", "Perfect", "Native monochrome layer support (finest detail).", sdk >= 33)
-                    CompatibilityRow("Android 12", "High", "Adaptive layer filtering with native system colors.", sdk == 31 || sdk == 32)
-                    CompatibilityRow("Android 8-11", "Good", "Adaptive layer filtering with manual color analysis.", sdk in 26..30)
-                    CompatibilityRow("Android 6-7", "Basic", "Legacy whole-icon tinting.", sdk in 23..25)
+                    CompatibilityRow(stringResource(R.string.android_13_plus), stringResource(R.string.precision_perfect), stringResource(R.string.precision_perfect_desc), sdk >= 33)
+                    CompatibilityRow(stringResource(R.string.android_12), stringResource(R.string.precision_high), stringResource(R.string.precision_high_desc), sdk == 31 || sdk == 32)
+                    CompatibilityRow(stringResource(R.string.android_8_11), stringResource(R.string.precision_good), stringResource(R.string.precision_good_desc), sdk in 26..30)
+                    CompatibilityRow(stringResource(R.string.android_6_7), stringResource(R.string.precision_basic), stringResource(R.string.precision_basic_desc), sdk in 23..25)
                     
-                    Text("\nNote: Iteration presets (Black, White, Glass, Custom) work on all supported versions.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                    Text(stringResource(R.string.iteration_presets_note), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showStyleInfoDialog = false }) { Text("Got it") }
+                TextButton(onClick = { showStyleInfoDialog = false }) { Text(stringResource(R.string.got_it)) }
             }
         )
     }
@@ -1096,12 +1119,12 @@ fun IconPackPickerDialog(onDismiss: () -> Unit, onPackSelected: (String) -> Unit
             shape = RoundedCornerShape(16.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Select Icon Pack", style = MaterialTheme.typography.headlineSmall)
+                Text(stringResource(R.string.select_icon_pack), style = MaterialTheme.typography.headlineSmall)
                 Spacer(modifier = Modifier.height(16.dp))
                 LazyColumn {
                     item {
                         ListItem(
-                            headlineContent = { Text("Default (System + Iteration Style)") },
+                            headlineContent = { Text(stringResource(R.string.default_style_desc)) },
                             modifier = Modifier.clickable { onPackSelected("") }
                         )
                     }
@@ -1150,7 +1173,7 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Liquid Glass") },
+                title = { Text(stringResource(R.string.liquid_glass_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
@@ -1161,7 +1184,7 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
                         viewModel.resetLiquidGlassParams()
                         glassOffset = androidx.compose.ui.geometry.Offset.Zero
                     }) {
-                        Text("Reset", color = MaterialTheme.colorScheme.primary)
+                        Text(stringResource(R.string.reset), color = MaterialTheme.colorScheme.primary)
                     }
                 }
             )
@@ -1221,7 +1244,7 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
 
                     // 指引文字
                     Text(
-                        "Drag the glass to preview",
+                        stringResource(R.string.drag_to_preview),
                         style = MaterialTheme.typography.labelSmall,
                         color = Color.White.copy(alpha = 0.5f),
                         modifier = Modifier.align(Alignment.BottomCenter).padding(8.dp)
@@ -1231,7 +1254,7 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
 
             item {
                 Text(
-                    text = "Visual Effects",
+                    text = stringResource(R.string.visual_effects),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -1240,10 +1263,10 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
 
             item {
                 Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Text("Blur radius: ${(blurRadius * 5).toInt()}")
+                    Text(stringResource(R.string.blur_radius_label, (blurRadius * 5).toInt()))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = { viewModel.setLiquidGlassBlur(((blurRadius * 5 - 1f).coerceAtLeast(0f)) / 5f) }) {
-                            Icon(Icons.Default.Remove, contentDescription = "Decrease")
+                            Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.decrease))
                         }
                         Slider(
                             value = (blurRadius * 5).coerceIn(0f, 100f),
@@ -1252,7 +1275,7 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
                             modifier = Modifier.weight(1f)
                         )
                         IconButton(onClick = { viewModel.setLiquidGlassBlur(((blurRadius * 5 + 1f).coerceAtMost(100f)) / 5f) }) {
-                            Icon(Icons.Default.Add, contentDescription = "Increase")
+                            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.increase))
                         }
                     }
                 }
@@ -1260,10 +1283,10 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
 
             item {
                 Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Text("Refraction height: ${refractionHeight.toInt()}")
+                    Text(stringResource(R.string.refraction_height_label, refractionHeight.toInt()))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = { viewModel.setLiquidGlassRefractionHeight((refractionHeight - 1f).coerceAtLeast(0f)) }) {
-                            Icon(Icons.Default.Remove, contentDescription = "Decrease")
+                            Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.decrease))
                         }
                         Slider(
                             value = refractionHeight,
@@ -1272,7 +1295,7 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
                             modifier = Modifier.weight(1f)
                         )
                         IconButton(onClick = { viewModel.setLiquidGlassRefractionHeight((refractionHeight + 1f).coerceAtMost(100f)) }) {
-                            Icon(Icons.Default.Add, contentDescription = "Increase")
+                            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.increase))
                         }
                     }
                 }
@@ -1280,10 +1303,10 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
 
             item {
                 Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Text("Refraction amount: ${refractionAmount.toInt()}")
+                    Text(stringResource(R.string.refraction_amount_label, refractionAmount.toInt()))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = { viewModel.setLiquidGlassRefractionAmount((refractionAmount - 1f).coerceAtLeast(0f)) }) {
-                            Icon(Icons.Default.Remove, contentDescription = "Decrease")
+                            Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.decrease))
                         }
                         Slider(
                             value = refractionAmount,
@@ -1292,7 +1315,7 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
                             modifier = Modifier.weight(1f)
                         )
                         IconButton(onClick = { viewModel.setLiquidGlassRefractionAmount((refractionAmount + 1f).coerceAtMost(100f)) }) {
-                            Icon(Icons.Default.Add, contentDescription = "Increase")
+                            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.increase))
                         }
                     }
                 }
@@ -1300,7 +1323,7 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
 
             item {
                 ListItem(
-                    headlineContent = { Text("Chromatic aberration") },
+                    headlineContent = { Text(stringResource(R.string.chromatic_aberration)) },
                     trailingContent = {
                         Switch(
                             checked = chromaticAberration,
@@ -1315,8 +1338,8 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
 
             item {
                 ListItem(
-                    headlineContent = { Text("Enable Liquid Glass") },
-                    supportingContent = { Text("Master switch for real-time glass effects") },
+                    headlineContent = { Text(stringResource(R.string.enable_liquid_glass_title)) },
+                    supportingContent = { Text(stringResource(R.string.enable_liquid_glass_desc)) },
                     trailingContent = {
                         Switch(
                             checked = isLiquidGlassEnabled,
@@ -1330,7 +1353,7 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
             if (isLiquidGlassEnabled) {
                 item {
                     Text(
-                        text = "Apply to",
+                        text = stringResource(R.string.apply_to),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -1338,8 +1361,8 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
                 }
                 item {
                     ListItem(
-                        headlineContent = { Text("Dock") },
-                        supportingContent = { Text("Enable glass effect for the home screen dock") },
+                        headlineContent = { Text(stringResource(R.string.glass_dock)) },
+                        supportingContent = { Text(stringResource(R.string.glass_dock_desc)) },
                         trailingContent = {
                             Switch(
                                 checked = isLiquidGlassDockEnabled,
@@ -1351,8 +1374,8 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
                 }
                 item {
                     ListItem(
-                        headlineContent = { Text("Folders") },
-                        supportingContent = { Text("Enable glass effect for home screen folders") },
+                        headlineContent = { Text(stringResource(R.string.glass_folders_home)) },
+                        supportingContent = { Text(stringResource(R.string.glass_folders_home_desc)) },
                         trailingContent = {
                             Switch(
                                 checked = isLiquidGlassHomeFolderEnabled,
@@ -1364,8 +1387,8 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
                 }
                 item {
                     ListItem(
-                        headlineContent = { Text("Global Search Bar") },
-                        supportingContent = { Text("Enable glass effect for the swipe-down search bar") },
+                        headlineContent = { Text(stringResource(R.string.glass_search_global)) },
+                        supportingContent = { Text(stringResource(R.string.glass_search_global_desc)) },
                         trailingContent = {
                             Switch(
                                 checked = isLiquidGlassGlobalSearchEnabled,
@@ -1377,8 +1400,8 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
                 }
                 item {
                     ListItem(
-                        headlineContent = { Text("Widgets") },
-                        supportingContent = { Text("Enable glass effect for home screen widgets in Glass mode") },
+                        headlineContent = { Text(stringResource(R.string.glass_widgets)) },
+                        supportingContent = { Text(stringResource(R.string.glass_widgets_desc)) },
                         trailingContent = {
                             Switch(
                                 checked = isLiquidGlassWidgetsEnabled,
@@ -1391,7 +1414,7 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
 
                 item {
                     Text(
-                        text = "App Library",
+                        text = stringResource(R.string.app_library),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -1399,8 +1422,8 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
                 }
                 item {
                     ListItem(
-                        headlineContent = { Text("Folders") },
-                        supportingContent = { Text("Enable glass effect for app library folders") },
+                        headlineContent = { Text(stringResource(R.string.glass_folders_library)) },
+                        supportingContent = { Text(stringResource(R.string.glass_folders_library_desc)) },
                         trailingContent = {
                             Switch(
                                 checked = isLiquidGlassAppLibraryFolderEnabled,
@@ -1412,8 +1435,8 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
                 }
                 item {
                     ListItem(
-                        headlineContent = { Text("Search Bar") },
-                        supportingContent = { Text("Enable glass effect for the app library search bar") },
+                        headlineContent = { Text(stringResource(R.string.glass_search_library)) },
+                        supportingContent = { Text(stringResource(R.string.glass_search_library_desc)) },
                         trailingContent = {
                             Switch(
                                 checked = isLiquidGlassAppLibrarySearchEnabled,
@@ -1476,7 +1499,7 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
         LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
             item {
                 Text(
-                    "Appearance",
+                    stringResource(R.string.appearance),
                     style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     color = MaterialTheme.colorScheme.primary
@@ -1485,8 +1508,8 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
             item {
                 var expanded by remember { mutableStateOf(false) }
                 ListItem(
-                    headlineContent = { Text("Folder Shape") },
-                    supportingContent = { Text(if (libraryShape == IconShape.CIRCLE) "Circle" else "Default") },
+                    headlineContent = { Text(stringResource(R.string.folder_shape)) },
+                    supportingContent = { Text(if (libraryShape == IconShape.CIRCLE) stringResource(R.string.shape_circle) else stringResource(R.string.shape_default)) },
                     trailingContent = {
                         Box {
                             IconButton(onClick = { expanded = true }) {
@@ -1494,11 +1517,11 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
                             }
                             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                                 DropdownMenuItem(
-                                    text = { Text("Default") },
+                                    text = { Text(stringResource(R.string.shape_default)) },
                                     onClick = { viewModel.setLibraryShape(IconShape.DEFAULT); expanded = false }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Circle") },
+                                    text = { Text(stringResource(R.string.shape_circle)) },
                                     onClick = { viewModel.setLibraryShape(IconShape.CIRCLE); expanded = false }
                                 )
                             }
@@ -1511,7 +1534,7 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
             item {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 Text(
-                    "Managed Folders (Ordered)", 
+                    stringResource(R.string.managed_folders_ordered), 
                     style = MaterialTheme.typography.titleSmall, 
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     color = MaterialTheme.colorScheme.primary
@@ -1521,7 +1544,7 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
             if (userCategories.isEmpty()) {
                 item {
                     Text(
-                        "No folders managed yet. Default folders are shown at the end of the list.",
+                        stringResource(R.string.no_folders_managed),
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(16.dp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1535,22 +1558,22 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
                     trailingContent = {
                         Row {
                             IconButton(onClick = { categoryToRename = category; renameInput = category }) {
-                                Icon(Icons.Default.Edit, contentDescription = "Rename", tint = MaterialTheme.colorScheme.primary)
+                                Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.rename), tint = MaterialTheme.colorScheme.primary)
                             }
                             IconButton(
                                 enabled = index > 0,
                                 onClick = { viewModel.moveUserCategory(index, index - 1) }
                             ) {
-                                Icon(Icons.Default.ArrowUpward, contentDescription = "Move Up", tint = if (index > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline)
+                                Icon(Icons.Default.ArrowUpward, contentDescription = stringResource(R.string.move_up), tint = if (index > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline)
                             }
                             IconButton(
                                 enabled = index < userCategories.size - 1,
                                 onClick = { viewModel.moveUserCategory(index, index + 1) }
                             ) {
-                                Icon(Icons.Default.ArrowDownward, contentDescription = "Move Down", tint = if (index < userCategories.size - 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline)
+                                Icon(Icons.Default.ArrowDownward, contentDescription = stringResource(R.string.move_down), tint = if (index < userCategories.size - 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline)
                             }
                             IconButton(onClick = { viewModel.deleteUserCategory(category) }) {
-                                Icon(Icons.Default.Close, contentDescription = "Remove from list", tint = MaterialTheme.colorScheme.error)
+                                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.remove_from_list), tint = MaterialTheme.colorScheme.error)
                             }
                         }
                     }
@@ -1561,7 +1584,7 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
                 item {
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                     Text(
-                        "Default / Existing Folders", 
+                        stringResource(R.string.default_existing_folders), 
                         style = MaterialTheme.typography.titleSmall, 
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                         color = MaterialTheme.colorScheme.primary
@@ -1571,14 +1594,14 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
                 items(unhandledCategories) { category ->
                     ListItem(
                         headlineContent = { Text(category) },
-                        supportingContent = { Text("App Library folder detected") },
+                        supportingContent = { Text(stringResource(R.string.library_folder_detected)) },
                         trailingContent = {
                             Row {
                                 IconButton(onClick = { categoryToRename = category; renameInput = category }) {
-                                    Icon(Icons.Default.Edit, contentDescription = "Rename", tint = MaterialTheme.colorScheme.primary)
+                                    Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.rename), tint = MaterialTheme.colorScheme.primary)
                                 }
                                 Button(onClick = { viewModel.addUserCategory(category) }) {
-                                    Text("Manage")
+                                    Text(stringResource(R.string.manage))
                                 }
                             }
                         }
@@ -1603,7 +1626,7 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
             items(filteredApps, key = { it.uniqueId }) { app ->
                 ListItem(
                     headlineContent = { Text(app.label) },
-                    supportingContent = { Text("Folder: ${app.displayCategory}") },
+                    supportingContent = { Text(stringResource(R.string.folder_label_format, app.displayCategory)) },
                     leadingContent = {
                         val appIcon = viewModel.getIcon(app.uniqueId)
                         if (appIcon != null) {
@@ -1643,12 +1666,12 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
         if (categoryToRename != null) {
             AlertDialog(
                 onDismissRequest = { categoryToRename = null },
-                title = { Text("Rename Folder") },
+                title = { Text(stringResource(R.string.folder_delete_confirm_title)) },
                 text = {
                     OutlinedTextField(
                         value = renameInput,
                         onValueChange = { renameInput = it },
-                        label = { Text("New Name") },
+                        label = { Text(stringResource(R.string.new_name_label)) },
                         singleLine = true
                     )
                 },
@@ -1656,10 +1679,10 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
                     Button(onClick = {
                         viewModel.renameCategory(categoryToRename!!, renameInput)
                         categoryToRename = null
-                    }) { Text("Save") }
+                    }) { Text(stringResource(R.string.save)) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { categoryToRename = null }) { Text("Cancel") }
+                    TextButton(onClick = { categoryToRename = null }) { Text(stringResource(R.string.cancel)) }
                 }
             )
         }
@@ -1940,12 +1963,12 @@ fun HideAppsScreen(onBack: () -> Unit) {
                         FilterChip(
                             selected = appFilter == AppFilter.ALL,
                             onClick = { appFilter = AppFilter.ALL },
-                            label = { Text("All") }
+                            label = { Text(stringResource(R.string.all_label)) }
                         )
                         FilterChip(
                             selected = appFilter == AppFilter.HIDDEN,
                             onClick = { appFilter = AppFilter.HIDDEN },
-                            label = { Text("Hidden") },
+                            label = { Text(stringResource(R.string.hidden_label)) },
                             leadingIcon = {
                                 if (appFilter == AppFilter.HIDDEN) {
                                     Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -1955,7 +1978,7 @@ fun HideAppsScreen(onBack: () -> Unit) {
                         FilterChip(
                             selected = appFilter == AppFilter.VISIBLE,
                             onClick = { appFilter = AppFilter.VISIBLE },
-                            label = { Text("Visible") },
+                            label = { Text(stringResource(R.string.visible_label)) },
                             leadingIcon = {
                                 if (appFilter == AppFilter.VISIBLE) {
                                     Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -2034,7 +2057,7 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Desktop Settings") },
+                title = { Text(stringResource(R.string.desktop_settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
@@ -2047,7 +2070,7 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
         LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize().padding(16.dp)) {
             item {
                 Text(
-                    "Layout Settings",
+                    stringResource(R.string.layout_settings),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(bottom = 16.dp)
@@ -2056,8 +2079,8 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
 
             item {
                 ListItem(
-                    headlineContent = { Text("Show Minus One Page") },
-                    supportingContent = { Text("Toggle the widget page on the left") },
+                    headlineContent = { Text(stringResource(R.string.show_minus_one)) },
+                    supportingContent = { Text(stringResource(R.string.show_minus_one_desc)) },
                     trailingContent = {
                         Switch(
                             checked = showMinusOnePage,
@@ -2070,8 +2093,8 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
 
             item {
                 ListItem(
-                    headlineContent = { Text("Show App Library") },
-                    supportingContent = { Text("Toggle the app library page on the right") },
+                    headlineContent = { Text(stringResource(R.string.show_library)) },
+                    supportingContent = { Text(stringResource(R.string.show_library_desc)) },
                     trailingContent = {
                         Switch(
                             checked = showAppLibrary,
@@ -2098,8 +2121,8 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
 
             item {
                 ListItem(
-                    headlineContent = { Text("Show Status Bar") },
-                    supportingContent = { Text("Show or hide the system status bar") },
+                    headlineContent = { Text(stringResource(R.string.show_status_bar)) },
+                    supportingContent = { Text(stringResource(R.string.show_status_bar_desc)) },
                     trailingContent = {
                         Switch(
                             checked = showStatusBar,
@@ -2112,8 +2135,8 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
 
             item {
                 ListItem(
-                    headlineContent = { Text("Show Navigation Bar Handle") },
-                    supportingContent = { Text("Show or hide the bottom gesture navigation handle") },
+                    headlineContent = { Text(stringResource(R.string.show_nav_handle)) },
+                    supportingContent = { Text(stringResource(R.string.show_nav_handle_desc)) },
                     trailingContent = {
                         Switch(
                             checked = showNavigationBar,
@@ -2139,7 +2162,7 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
                     trailingContent = {
                         Box {
                             TextButton(onClick = { expanded = true }) {
-                                Text("Change")
+                                Text(stringResource(R.string.change))
                                 Icon(Icons.Default.ArrowDropDown, null)
                             }
                             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
@@ -2161,8 +2184,8 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
 
             item {
                 ListItem(
-                    headlineContent = { Text("AMOLED Pure Black") },
-                    supportingContent = { Text("Force pure black background in dark mode") },
+                    headlineContent = { Text(stringResource(R.string.amoled_black)) },
+                    supportingContent = { Text(stringResource(R.string.amoled_black_desc)) },
                     trailingContent = {
                         Switch(
                             checked = isAmoledBlack,
@@ -2177,16 +2200,21 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
 
             item {
                 var expanded by remember { mutableStateOf(false) }
-                val options = listOf(0 to "Auto (Adaptive)", 5 to "4 x 5", 6 to "4 x 6", 7 to "4 x 7")
-                val currentLabel = options.find { it.first == desktopRows }?.second ?: "Auto (Adaptive)"
+                val options = listOf(
+                    0 to stringResource(R.string.auto_adaptive), 
+                    5 to stringResource(R.string.layout_4x5), 
+                    6 to stringResource(R.string.layout_4x6), 
+                    7 to stringResource(R.string.layout_4x7)
+                )
+                val currentLabel = options.find { it.first == desktopRows }?.second ?: stringResource(R.string.auto_adaptive)
 
                 ListItem(
-                    headlineContent = { Text("Layout Rows") },
-                    supportingContent = { Text("Current: $currentLabel") },
+                    headlineContent = { Text(stringResource(R.string.layout_rows)) },
+                    supportingContent = { Text(stringResource(R.string.layout_rows_current, currentLabel)) },
                     trailingContent = {
                         Box {
                             TextButton(onClick = { expanded = true }) {
-                                Text("Change")
+                                Text(stringResource(R.string.change))
                                 Icon(Icons.Default.ArrowDropDown, null)
                             }
                             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
@@ -2208,19 +2236,19 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
             item {
                 var expandedStyle by remember { mutableStateOf(false) }
                 val styleOptions = listOf(
-                    DockStyle.MODERN to "Modern (Floating)",
-                    DockStyle.CLASSIC to "Classic (Full Width)",
-                    DockStyle.PLATFORM to "Platform (3D Glass)"
+                    DockStyle.MODERN to stringResource(R.string.dock_style_modern),
+                    DockStyle.CLASSIC to stringResource(R.string.dock_style_classic),
+                    DockStyle.PLATFORM to stringResource(R.string.dock_style_platform)
                 )
-                val currentStyleLabel = styleOptions.find { it.first == dockStyle }?.second ?: "Modern"
+                val currentStyleLabel = styleOptions.find { it.first == dockStyle }?.second ?: stringResource(R.string.dock_style_modern)
 
                 ListItem(
-                    headlineContent = { Text("Dock Style") },
-                    supportingContent = { Text("Current: $currentStyleLabel") },
+                    headlineContent = { Text(stringResource(R.string.dock_style)) },
+                    supportingContent = { Text(stringResource(R.string.dock_style_current, currentStyleLabel)) },
                     trailingContent = {
                         Box {
                             TextButton(onClick = { expandedStyle = true }) {
-                                Text("Change")
+                                Text(stringResource(R.string.change))
                                 Icon(Icons.Default.ArrowDropDown, null)
                             }
                             DropdownMenu(expanded = expandedStyle, onDismissRequest = { expandedStyle = false }) {
@@ -2242,10 +2270,10 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
             if (dockStyle == DockStyle.MODERN) {
                 item {
                     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                        Text("Dock Corner Radius: ${dockCornerRadius.toInt()}")
+                        Text(stringResource(R.string.dock_radius_label, dockCornerRadius.toInt()))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             IconButton(onClick = { viewModel.setDockCornerRadius((dockCornerRadius - 1f).coerceAtLeast(0f)) }) {
-                                Icon(Icons.Default.Remove, contentDescription = "Decrease")
+                                Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.decrease))
                             }
                             Slider(
                                 value = dockCornerRadius,
@@ -2254,7 +2282,7 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
                                 modifier = Modifier.weight(1f)
                             )
                             IconButton(onClick = { viewModel.setDockCornerRadius((dockCornerRadius + 1f).coerceAtMost(100f)) }) {
-                                Icon(Icons.Default.Add, contentDescription = "Increase")
+                                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.increase))
                             }
                         }
                     }
@@ -2309,7 +2337,7 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
 
             item {
                 Text(
-                    "Dock Apps",
+                    stringResource(R.string.dock_apps),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(bottom = 16.dp)
@@ -2328,8 +2356,8 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     ListItem(
-                        headlineContent = { Text(app?.label ?: "Empty Slot ${index + 1}") },
-                        supportingContent = { Text(if (pkgName.isEmpty()) "Tap to select an app" else pkgName) },
+                        headlineContent = { Text(app?.label ?: stringResource(R.string.empty_slot, index + 1)) },
+                        supportingContent = { Text(if (pkgName.isEmpty()) stringResource(R.string.tap_to_select_app) else pkgName) },
                         leadingContent = {
                             val appIcon = if (app != null) viewModel.getIcon(app.uniqueId) else null
                             if (appIcon != null) {
@@ -2350,7 +2378,7 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
                         trailingContent = {
                             if (pkgName.isNotEmpty()) {
                                 IconButton(onClick = { viewModel.updateDockApp(index, "") }) {
-                                    Icon(Icons.Default.Delete, contentDescription = "Remove", tint = MaterialTheme.colorScheme.error)
+                                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.remove), tint = MaterialTheme.colorScheme.error)
                                 }
                             }
                         }
@@ -2662,14 +2690,14 @@ fun MultiAppExclusionPickerDialog(
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "Style Exclusions",
+                        stringResource(R.string.style_exclusions),
                         style = MaterialTheme.typography.headlineSmall,
                         modifier = Modifier.weight(1f)
                     )
-                    TextButton(onClick = onDismiss) { Text("Done") }
+                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.done)) }
                 }
                 Text(
-                    "Selected apps will always use their original colorful icons.",
+                    stringResource(R.string.style_exclusions_desc),
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
@@ -2679,7 +2707,7 @@ fun MultiAppExclusionPickerDialog(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
                     modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                    placeholder = { Text("Search apps...") },
+                    placeholder = { Text(stringResource(R.string.search_apps_hint)) },
                     leadingIcon = { Icon(Icons.Default.Search, null, tint = MaterialTheme.colorScheme.primary) },
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp)
@@ -2826,7 +2854,7 @@ fun IconCropperDialog(uri: Uri, onDismiss: () -> Unit, onConfirm: (Bitmap) -> Un
                         }
                     }
                 } else {
-                    Text("Failed to load image")
+                    Text(stringResource(R.string.failed_to_load_image))
                 }
             }
         },
@@ -2907,7 +2935,7 @@ fun CustomIconStylePickerDialog(
         onDismissRequest = onDismiss,
         title = { 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Custom Style", modifier = Modifier.weight(1f))
+                Text(stringResource(R.string.custom_style_title), modifier = Modifier.weight(1f))
                 if (previewBitmap != null) {
                     Image(
                         bitmap = previewBitmap!!,
@@ -2922,9 +2950,9 @@ fun CustomIconStylePickerDialog(
         text = {
             LazyColumn {
                 item {
-                    Text("Background Settings", style = MaterialTheme.typography.titleSmall)
+                    Text(stringResource(R.string.background_settings), style = MaterialTheme.typography.titleSmall)
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Use Original Background", modifier = Modifier.weight(1f))
+                        Text(stringResource(R.string.use_original_bg), modifier = Modifier.weight(1f))
                         Switch(checked = useOriginalBg, onCheckedChange = { viewModel.setCustomIconUseOriginalBg(it) })
                     }
                     if (!useOriginalBg) {
@@ -2933,14 +2961,14 @@ fun CustomIconStylePickerDialog(
                             onColorChanged = { viewModel.setCustomIconBgColor(it) }
                         )
                     } else {
-                        Text("Background color disabled while using original background", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(vertical = 8.dp))
+                        Text(stringResource(R.string.bg_disabled_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(vertical = 8.dp))
                     }
                     
                     Spacer(modifier = Modifier.height(16.dp))
                     
-                    Text("Foreground Settings", style = MaterialTheme.typography.titleSmall, color = if (useOriginal) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface)
+                    Text(stringResource(R.string.foreground_settings), style = MaterialTheme.typography.titleSmall, color = if (useOriginal) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface)
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Use Original Icon (Color)", modifier = Modifier.weight(1f))
+                        Text(stringResource(R.string.use_original_icon), modifier = Modifier.weight(1f))
                         Switch(checked = useOriginal, onCheckedChange = { viewModel.setCustomIconUseOriginal(it) })
                     }
                     if (!useOriginal) {
@@ -2949,13 +2977,13 @@ fun CustomIconStylePickerDialog(
                             onColorChanged = { viewModel.setCustomIconFgColor(it) }
                         )
                     } else {
-                        Text("Foreground color disabled while using original icon", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(vertical = 8.dp))
+                        Text(stringResource(R.string.fg_disabled_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(vertical = 8.dp))
                     }
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Done") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.done)) }
         }
     )
 }
@@ -2996,7 +3024,7 @@ fun CompatibilityRow(version: String, level: String, desc: String, isCurrentDevi
                     border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                 ) {
                     Text(
-                        "Your Device",
+                        stringResource(R.string.your_device),
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                         style = MaterialTheme.typography.labelSmall,
                         color = Color.Black,
@@ -3063,9 +3091,9 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
         LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
             item {
                 ListItem(
-                    headlineContent = { Text("Network Access & Usage") },
+                    headlineContent = { Text(stringResource(R.string.network_access_usage)) },
                     supportingContent = { 
-                        Text(if (isSystemNetworkEnabled) "Connected / Access Granted" else "No internet or access restricted")
+                        Text(if (isSystemNetworkEnabled) stringResource(R.string.network_connected) else stringResource(R.string.network_restricted))
                     },
                     trailingContent = {
                         Icon(Icons.Default.ChevronRight, contentDescription = null)
@@ -3089,8 +3117,8 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
             }
             item {
                 ListItem(
-                    headlineContent = { Text("Internal Network Toggle") },
-                    supportingContent = { Text("Allow Iteration to perform background network tasks") },
+                    headlineContent = { Text(stringResource(R.string.internal_network_toggle)) },
+                    supportingContent = { Text(stringResource(R.string.internal_network_desc)) },
                     trailingContent = {
                         Switch(
                             checked = isNetworkEnabled,
@@ -3160,12 +3188,12 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 PaddingRemaining(16.dp) {
                     Text(
-                        "Privacy Note",
+                        stringResource(R.string.privacy_note),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.primary
                     )
                     Text(
-                        "Iteration Launcher processes all data locally on your device. Your contacts and notifications are never uploaded to any server.",
+                        stringResource(R.string.privacy_note_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -3268,7 +3296,7 @@ fun SearchSettingsScreen(onBack: () -> Unit) {
                         value = customUrl,
                         onValueChange = { customUrl = it },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("https://example.com/search?q=") },
+                        placeholder = { Text(stringResource(R.string.search_url_placeholder)) },
                         singleLine = true,
                         trailingIcon = {
                             if (customUrl != currentSearchEngineUrl) {
@@ -3279,6 +3307,60 @@ fun SearchSettingsScreen(onBack: () -> Unit) {
                         }
                     )
                 }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LanguageSettingsScreen(onBack: () -> Unit) {
+    val viewModel: MainViewModel = viewModel()
+    val appLanguage by viewModel.appLanguage.collectAsState()
+    
+    val langOptions = listOf(
+        "" to stringResource(R.string.language_system_default),
+        "en" to stringResource(R.string.language_english),
+        "zh-TW" to stringResource(R.string.language_chinese_tw)
+    )
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.settings_language)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+            item {
+                PaddingRemaining(16.dp) {
+                    Text(
+                        stringResource(R.string.settings_language),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        stringResource(R.string.language_system_default_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            items(langOptions) { (code, label) ->
+                val isSelected = appLanguage == code
+                ListItem(
+                    headlineContent = { Text(label) },
+                    leadingContent = {
+                        RadioButton(selected = isSelected, onClick = { viewModel.setAppLanguage(code) })
+                    },
+                    modifier = Modifier.clickable { viewModel.setAppLanguage(code) }
+                )
             }
         }
     }
@@ -3329,7 +3411,7 @@ fun ColorPicker(
                     } catch (e: Exception) {}
                 }
             },
-            label = { Text("Hex (AARRGGBB)") },
+            label = { Text(stringResource(R.string.hex_color_label)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp)
@@ -3337,16 +3419,16 @@ fun ColorPicker(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Text("Hue: ${h.toInt()}", style = MaterialTheme.typography.labelSmall)
+        Text(stringResource(R.string.hue, h.toInt()), style = MaterialTheme.typography.labelSmall)
         Slider(value = h, onValueChange = { h = it; onColorChanged(android.graphics.Color.HSVToColor((a * 255).toInt(), floatArrayOf(h, s, v))) }, valueRange = 0f..360f)
         
-        Text("Saturation: ${(s * 100).toInt()}%", style = MaterialTheme.typography.labelSmall)
+        Text(stringResource(R.string.saturation, (s * 100).toInt()), style = MaterialTheme.typography.labelSmall)
         Slider(value = s, onValueChange = { s = it; onColorChanged(android.graphics.Color.HSVToColor((a * 255).toInt(), floatArrayOf(h, s, v))) }, valueRange = 0f..1f)
         
-        Text("Brightness: ${(v * 100).toInt()}%", style = MaterialTheme.typography.labelSmall)
+        Text(stringResource(R.string.brightness, (v * 100).toInt()), style = MaterialTheme.typography.labelSmall)
         Slider(value = v, onValueChange = { v = it; onColorChanged(android.graphics.Color.HSVToColor((a * 255).toInt(), floatArrayOf(h, s, v))) }, valueRange = 0f..1f)
         
-        Text("Alpha: ${(a * 100).toInt()}%", style = MaterialTheme.typography.labelSmall)
+        Text(stringResource(R.string.alpha, (a * 100).toInt()), style = MaterialTheme.typography.labelSmall)
         Slider(value = a, onValueChange = { a = it; onColorChanged(android.graphics.Color.HSVToColor((a * 255).toInt(), floatArrayOf(h, s, v))) }, valueRange = 0f..1f)
     }
 }

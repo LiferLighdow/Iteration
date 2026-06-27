@@ -25,6 +25,8 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toBitmap
+import androidx.core.os.LocaleListCompat
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.liferlighdow.iteration.utils.GestureAction
@@ -192,6 +194,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _showMinusOnePage = MutableStateFlow(prefs.getBoolean("show_minus_one", true))
     val showMinusOnePage = _showMinusOnePage.asStateFlow()
+
+    private val _appLanguage = MutableStateFlow(prefs.getString("app_language", "") ?: "")
+    val appLanguage = _appLanguage.asStateFlow()
+
+    init {
+        // Apply saved language on startup
+        val savedLang = _appLanguage.value
+        val appLocale: LocaleListCompat = if (savedLang.isEmpty()) {
+            LocaleListCompat.getEmptyLocaleList()
+        } else {
+            LocaleListCompat.forLanguageTags(savedLang)
+        }
+        AppCompatDelegate.setApplicationLocales(appLocale)
+    }
 
     private var currentStyleSuffix = "default"
     private var themeColorsCache: ColorScheme? = null
@@ -1903,6 +1919,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         prefs.edit().putBoolean("show_navigation_bar", enabled).apply()
     }
 
+    fun setAppLanguage(languageCode: String) {
+        _appLanguage.value = languageCode
+        prefs.edit().putString("app_language", languageCode).apply()
+        
+        val appLocale: LocaleListCompat = if (languageCode.isEmpty()) {
+            LocaleListCompat.getEmptyLocaleList()
+        } else {
+            LocaleListCompat.forLanguageTags(languageCode)
+        }
+        AppCompatDelegate.setApplicationLocales(appLocale)
+    }
+
     fun resetLiquidGlassParams() {
         setLiquidGlassBlur(0f)
         setLiquidGlassRefractionHeight(24f)
@@ -1991,6 +2019,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             appearance = appearance,
             favorites = _favoritePackages.value,
             themeMode = _themeMode.value.name,
+            appLanguage = _appLanguage.value,
             isAmoledBlack = _isAmoledBlack.value,
             excludedThemed = _excludedThemedPackages.value,
             homeMenuOptions = _homeMenuOptions.value,
@@ -2069,6 +2098,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             val savedThemeMode = settings.optString("theme_mode", "FOLLOW_SYSTEM")
             setThemeMode(try { ThemeMode.valueOf(savedThemeMode) } catch (e: Exception) { ThemeMode.FOLLOW_SYSTEM })
+            
+            val savedLang = settings.optString("app_language", "")
+            setAppLanguage(savedLang)
+
             setAmoledBlack(settings.optBoolean("amoled_black", false))
 
             root.optJSONObject("custom_icon_settings")?.let { ci ->

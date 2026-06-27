@@ -243,7 +243,7 @@ fun MinusOnePage(
                         }
                         if (widget.type is WidgetType.Note) {
                             DropdownMenuItem(
-                                text = { Text("Edit Note") },
+                                text = { Text(stringResource(R.string.edit_note)) },
                                 leadingIcon = { Icon(Icons.Default.Edit, null) },
                                 onClick = {
                                     noteToEdit = widget
@@ -255,7 +255,7 @@ fun MinusOnePage(
                             val currentProvider by viewModel.weatherProvider.collectAsState()
                             
                             DropdownMenuItem(
-                                text = { Text("Choose Location") },
+                                text = { Text(stringResource(R.string.choose_location)) },
                                 leadingIcon = { Icon(Icons.Default.LocationOn, null) },
                                 onClick = {
                                     weatherToEdit = widget
@@ -264,7 +264,7 @@ fun MinusOnePage(
                             )
 
                             DropdownMenuItem(
-                                text = { Text(if (currentProvider == WeatherProvider.MET_NORWAY) "Use Open-Meteo" else "Use MET Norway") },
+                                text = { Text(stringResource(if (currentProvider == WeatherProvider.MET_NORWAY) R.string.use_open_meteo else R.string.use_met_norway)) },
                                 leadingIcon = { Icon(Icons.Default.Cloud, null) },
                                 onClick = {
                                     viewModel.setWeatherProvider(

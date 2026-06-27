@@ -75,7 +75,7 @@ fun Dock(
                 Box(
                     modifier = Modifier
                         .padding(horizontal = 12.dp)
-                        .padding(bottom = 4.dp + navPadding)
+                        .padding(bottom = navPadding)
                         .fillMaxSize() // 讓 Modern 背景填滿容器（減去 padding）
                         .liquidGlassDock(
                             isLiquidGlass = isLiquidGlass,
@@ -127,9 +127,8 @@ fun Dock(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = when(dockStyle) {
-                    DockStyle.PLATFORM -> 20.dp + navPadding
-                    DockStyle.MODERN -> 22.dp + navPadding
-                    else -> 10.dp + navPadding
+                    DockStyle.CLASSIC -> 10.dp + navPadding
+                    else -> 20.dp + navPadding
                 })
                 .padding(horizontal = 12.dp),
             horizontalArrangement = Arrangement.SpaceAround,
@@ -207,7 +206,7 @@ fun Dock(
                             HorizontalDivider()
                         }
                         DropdownMenuItem(
-                            text = { Text("Replace App") },
+                            text = { Text(stringResource(R.string.replace_app)) },
                             leadingIcon = { Icon(Icons.Default.Settings, null) },
                             onClick = { onLongClick(index); showContextMenu = false }
                         )

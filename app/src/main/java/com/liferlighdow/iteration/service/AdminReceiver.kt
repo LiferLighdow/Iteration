@@ -4,16 +4,17 @@ import android.app.admin.DeviceAdminReceiver
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
+import com.liferlighdow.iteration.R
 
 class AdminReceiver : DeviceAdminReceiver() {
     override fun onEnabled(context: Context, intent: Intent) {
         super.onEnabled(context, intent)
-        Toast.makeText(context, "Iteration: Admin Enabled", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.admin_enabled), Toast.LENGTH_SHORT).show()
     }
 
     override fun onDisabled(context: Context, intent: Intent) {
         super.onDisabled(context, intent)
-        Toast.makeText(context, "Iteration: Admin Disabled", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.admin_disabled), Toast.LENGTH_SHORT).show()
     }
 
     override fun onReceive(context: Context, intent: Intent) {

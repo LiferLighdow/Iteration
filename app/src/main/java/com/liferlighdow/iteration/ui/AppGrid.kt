@@ -554,7 +554,7 @@ private fun WidgetGridItem(
             }
             if (app.widget?.type is WidgetType.Note) {
                 DropdownMenuItem(
-                    text = { Text("Edit Note") },
+                    text = { Text(stringResource(R.string.edit_note)) },
                     leadingIcon = { Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary) },
                     onClick = {
                         onUpdateNoteToEdit(app.widget!!)
@@ -566,7 +566,7 @@ private fun WidgetGridItem(
                 val currentProvider by viewModel.weatherProvider.collectAsState()
                 
                 DropdownMenuItem(
-                    text = { Text("Choose Location") },
+                    text = { Text(stringResource(R.string.choose_location)) },
                     leadingIcon = { Icon(Icons.Default.LocationOn, null, tint = MaterialTheme.colorScheme.primary) },
                     onClick = {
                         onUpdateWeatherToEdit(app.widget!!)
@@ -575,7 +575,7 @@ private fun WidgetGridItem(
                 )
                 
                 DropdownMenuItem(
-                    text = { Text(if (currentProvider == WeatherProvider.MET_NORWAY) "Use Open-Meteo" else "Use MET Norway") },
+                    text = { Text(stringResource(if (currentProvider == WeatherProvider.MET_NORWAY) R.string.use_open_meteo else R.string.use_met_norway)) },
                     leadingIcon = { Icon(Icons.Default.Cloud, null, tint = MaterialTheme.colorScheme.primary) },
                     onClick = {
                         viewModel.setWeatherProvider(

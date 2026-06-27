@@ -45,6 +45,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.liferlighdow.iteration.utils.IconShape
 import com.liferlighdow.iteration.viewmodel.MainViewModel
 import com.liferlighdow.iteration.R
+import com.liferlighdow.iteration.SettingsActivity
 import org.json.JSONArray
 import com.liferlighdow.iteration.data.AppModel
 import kotlinx.coroutines.Dispatchers
@@ -144,12 +145,12 @@ fun GlobalSearchOverlay(
                     }
                 } else {
                     withContext(Dispatchers.Main) {
-                        translationResult = "Service Unavailable (${conn.responseCode})"
+                        translationResult = mContext.getString(R.string.service_unavailable, conn.responseCode)
                     }
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    translationResult = "Error: ${e.message ?: "Unknown"}"
+                    translationResult = mContext.getString(R.string.error_format, e.message ?: mContext.getString(R.string.unknown_error))
                 }
             } finally {
                 withContext(Dispatchers.Main) {
@@ -249,6 +250,11 @@ fun GlobalSearchOverlay(
                     q.any { it.isDigit() } && keywords.any { q.contains(it) }
                 }
 
+                val isLauncherSettingQuery = remember(query) {
+                    val q = query.lowercase().trim()
+                    q == "setting" || q == "settings" || q == "launcher settings" || q == "launcher setting" || q == "設定"
+                }
+
                 val viewModel: MainViewModel = viewModel()
     val favoritePackages by viewModel.favoritePackages.collectAsState()
     val searchEngineUrl by viewModel.searchEngineUrl.collectAsState()
@@ -301,7 +307,7 @@ fun GlobalSearchOverlay(
                                     .padding(vertical = 8.dp)
                                     .clickable {
                                         clipboardManager.setText(AnnotatedString(mathResult!!))
-                                        Toast.makeText(mContext, "Result copied: $mathResult", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(mContext, mContext.getString(R.string.result_copied, mathResult), Toast.LENGTH_SHORT).show()
                                     },
                                 shape = RoundedCornerShape(24.dp),
                                 colors = CardDefaults.cardColors(containerColor = glassFallbackColor(
@@ -316,7 +322,7 @@ fun GlobalSearchOverlay(
                                     }
                                     Spacer(modifier = Modifier.width(16.dp))
                                     Column {
-                                        Text("Calculator", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f))
+                                        Text(stringResource(R.string.calculator), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f))
                                         Text(text = mathResult ?: "", style = MaterialTheme.typography.headlineMedium, color = Color.White, fontWeight = FontWeight.Bold)
                                     }
                                     Spacer(modifier = Modifier.weight(1f))
@@ -329,14 +335,14 @@ fun GlobalSearchOverlay(
                     // 1.5 單位換算卡片
                     if (query.isNotBlank() && unitResult != null) {
                         item {
-                            UnitConverterCard(unitResult, mContext, clipboardManager, "Unit Converter", Icons.AutoMirrored.Filled.CompareArrows, MaterialTheme.colorScheme.secondary)
+                            UnitConverterCard(unitResult, mContext, clipboardManager, stringResource(R.string.unit_converter), Icons.AutoMirrored.Filled.CompareArrows, MaterialTheme.colorScheme.secondary)
                         }
                     }
 
                     // 1.6 匯率換算卡片 (直接顯示結果)
                     if (query.isNotBlank() && currencyResult != null) {
                         item {
-                            UnitConverterCard(currencyResult!!, mContext, clipboardManager, "Currency Converter", Icons.Default.CurrencyExchange, Color(0xFF4CAF50))
+                            UnitConverterCard(currencyResult!!, mContext, clipboardManager, stringResource(R.string.currency_converter), Icons.Default.CurrencyExchange, Color(0xFF4CAF50))
                         }
                     }
 
@@ -350,7 +356,7 @@ fun GlobalSearchOverlay(
                                     .clickable {
                                         translationResult?.let {
                                             clipboardManager.setText(AnnotatedString(it))
-                                            Toast.makeText(mContext, "Translation copied", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(mContext, mContext.getString(R.string.translation_copied), Toast.LENGTH_SHORT).show()
                                         }
                                     },
                                 shape = RoundedCornerShape(24.dp),
@@ -366,7 +372,7 @@ fun GlobalSearchOverlay(
                                     }
                                     Spacer(modifier = Modifier.width(16.dp))
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text("Translator", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f))
+                                        Text(stringResource(R.string.translator), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f))
                                         if (isTranslating) {
                                             LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(2.dp).padding(top = 8.dp), color = Color.White)
                                         } else {
@@ -377,6 +383,38 @@ fun GlobalSearchOverlay(
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Icon(Icons.Default.ContentCopy, null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
                                     }
+                                }
+                            }
+                        }
+                    }
+
+                    // 1.8 Launcher Settings Card
+                    if (query.isNotBlank() && isLauncherSettingQuery) {
+                        item {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp)
+                                    .clickable {
+                                        val intent = Intent(mContext, SettingsActivity::class.java)
+                                        mContext.startActivity(intent)
+                                        onDismiss()
+                                    },
+                                shape = RoundedCornerShape(24.dp),
+                                colors = CardDefaults.cardColors(containerColor = glassFallbackColor(0.15f)),
+                                border = BorderStroke(1.dp, glassFallbackColor(0.1f))
+                            ) {
+                                Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Box(modifier = Modifier.size(48.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f), CircleShape), contentAlignment = Alignment.Center) {
+                                        Icon(Icons.Default.Settings, null, tint = Color.White)
+                                    }
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                    Column {
+                                        Text(stringResource(R.string.system_category), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f))
+                                        Text(text = stringResource(R.string.menu_launcher_settings), style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.Medium)
+                                    }
+                                    Spacer(modifier = Modifier.weight(1f))
+                                    Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
                                 }
                             }
                         }
@@ -533,7 +571,7 @@ fun GlobalSearchOverlay(
                         }
                         if (isEquation) {
                             item {
-                                SearchLinkItem("Solve Equation (WolframAlpha)", Icons.Default.Functions) {
+                                SearchLinkItem(stringResource(R.string.solve_equation), Icons.Default.Functions) {
                                     val encodedQuery = URLEncoder.encode(query, "UTF-8")
                                     mContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.wolframalpha.com/input/?i=$encodedQuery")))
                                     onDismiss()
@@ -542,7 +580,7 @@ fun GlobalSearchOverlay(
                         }
                         if (isConversion) {
                             item {
-                                SearchLinkItem("Convert Currency & Units (Google)", Icons.Default.CurrencyExchange) {
+                                SearchLinkItem(stringResource(R.string.convert_currency_units), Icons.Default.CurrencyExchange) {
                                     val encodedQuery = URLEncoder.encode(query, "UTF-8")
                                     mContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=$encodedQuery")))
                                     onDismiss()
@@ -600,7 +638,7 @@ private fun UnitConverterCard(
             .padding(vertical = 8.dp)
             .clickable {
                 clipboard.setText(AnnotatedString(result))
-                Toast.makeText(context, "Result copied: $result", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.result_copied, result), Toast.LENGTH_SHORT).show()
             },
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = glassFallbackColor(0.15f)),

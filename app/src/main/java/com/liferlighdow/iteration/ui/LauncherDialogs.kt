@@ -37,8 +37,10 @@ fun LauncherOverlays(
     showDesktopMenu: Boolean,
     onDismissDesktopMenu: () -> Unit,
     showCreateFolderDialog: Boolean,
+    onShowCreateFolder: () -> Unit,
     onDismissCreateFolder: () -> Unit,
     showDeleteFolderConfirm: Boolean,
+    onShowDeleteFolderConfirm: () -> Unit,
     onDismissDeleteFolder: () -> Unit,
     showDeletePageConfirm: Boolean,
     onDismissDeletePage: () -> Unit,
@@ -85,7 +87,7 @@ fun LauncherOverlays(
         onAddWidgetClick = { onAddWidgetClick(currentPage) },
         onCreateFolderClick = {
             onDismissDesktopMenu()
-            onDismissCreateFolder()
+            onShowCreateFolder()
         },
         onWallpaperClick = onWallpaperClick,
         onSetDefaultClick = {
@@ -157,7 +159,7 @@ fun LauncherOverlays(
         AlertDialog(
             onDismissRequest = onDismissDeletePage,
             title = { Text(stringResource(R.string.menu_delete_page)) },
-            text = { Text("This page still contains content. Are you sure you want to delete it? This will remove all icons and components from the page.") },
+            text = { Text(stringResource(R.string.delete_page_warning_msg)) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -228,7 +230,7 @@ fun LauncherOverlays(
         isLiquidGlassHomeFolderEnabled = isLiquidGlassHomeFolderEnabled,
         onAppClick = onAppClick,
         onDismiss = onDismissFolder,
-        onDeleteFolderClick = { onDismissDeleteFolder() },
+        onDeleteFolderClick = { onShowDeleteFolderConfirm() },
         onEditApp = { onDismissAppEdit() }
     )
 
@@ -331,7 +333,7 @@ fun QuickEditDialog(
                 )
 
                 ListItem(
-                    headlineContent = { Text(if (app.isHidden) "Unhide" else "Hide") },
+                    headlineContent = { Text(stringResource(if (app.isHidden) R.string.unhide else R.string.hide)) },
                     leadingContent = { Icon(if (app.isHidden) Icons.Default.Visibility else Icons.Default.VisibilityOff, null) },
                     modifier = Modifier.clickable { 
                         viewModel.toggleHiddenApp(app.packageName)
@@ -368,14 +370,14 @@ fun MultiAppPickerDialog(
             shape = RoundedCornerShape(28.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text(text = "Manage Apps", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(8.dp))
+                Text(text = stringResource(R.string.menu_manage_apps), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(8.dp))
                 
                 var query by remember { mutableStateOf("") }
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
                     modifier = Modifier.fillMaxWidth().padding(8.dp),
-                    placeholder = { Text("Search...") },
+                    placeholder = { Text(stringResource(R.string.search_hint_general)) },
                     leadingIcon = { Icon(Icons.Default.Search, null) },
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp)

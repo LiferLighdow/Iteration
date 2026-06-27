@@ -16,7 +16,7 @@
 
 ---
 
-**Iteration** is a high-performance, minimalist Android launcher built from the ground up using **Jetpack Compose**. It bridges the gap between fluid, intuitive UI patterns and the robust flexibility of the Android ecosystem. Optimized for the latest **Android 12 (API 31)** through **Android 17 (API 37)**.
+**Iteration** is a high-performance, minimalist Android launcher built from the ground up using **Jetpack Compose**. It bridges the gap between fluid, intuitive UI patterns and the robust flexibility of the Android ecosystem. Minimum <strong>Android 6 (API 23)</strong> supported. Optimized for the latest **Android 12 (API 31)** through **Android 17 (API 37)**.
 
 ---
 
@@ -71,6 +71,14 @@
     *   **Discoverable Power**: Step-by-step guides for Global Search, hidden gestures, and advanced tools.
     *   **Modular Design**: Expanding library of "manual books" to help you master every corner of the launcher.
 
+### 🌍 Globalization & Localization (V3.0 Major Update)
+*   **Complete Resource Migration**: 100% of UI strings, Toasts, menus, and descriptions have been migrated from hardcoded code to `strings.xml`.
+*   **Multi-Language Support**:
+    *   **English**: Default global language.
+    *   **Traditional Chinese (繁體中文)**: Fully translated and native-ready.
+*   **Dedicated Language Settings**: A new, independent configuration page to switch between **System Default**, **English**, and **Traditional Chinese**.
+*   **Dynamic Locale Switching**: Real-time interface updates using `AppCompatDelegate` and `LocaleListCompat` without requiring a full device restart.
+
 ### 🎭 App Experience & Shortcuts
 *   **App Shortcuts (Quick Actions)**: Access Android's native app shortcuts directly.
     *   **Universal Access**: Long-press any icon on the **Home Screen**, **Dock**, inside **Folders**, or the **App Library**.
@@ -104,11 +112,12 @@
 *   **Component-Based UI**: UI logic is strictly separated into atomic files (`Dock.kt`, `AppGrid.kt`, `FolderOverlay.kt`, etc.).
 *   **State-Driven Overlays**: All overlays are managed via robust `StateFlow` orchestration for smooth transitions and crash-free state handovers.
 *   **Action Proxy Pattern**: System-level interactions are encapsulated in `LauncherActions.kt`, separating user intent from execution logic.
+*   **Milestone 3.0 Stability**: Major bug fixes including folder creation logic, delete confirmation reliability, and Settings navigation state management.
 
 ### 🚀 High-Performance Rendering
 *   **Linear Animation Engine**: Real-time interpolation of UI elements based on Pager scroll fractions, replacing binary visibility states with fluid transitions.
 *   **Collision-Free Gestures**: Custom-built `awaitPointerEventScope` logic ensuring widgets and the Pager coexist perfectly.
-*   **V10 Icon Cache Engine**: Robust multi-level caching (LruCache + Disk) that forces regeneration only when style parameters change.
+*   **V13 Icon Cache Engine**: Enhanced multi-level caching (LruCache + Disk) with ID Unification Mechanism for perfect icon synchronization across all UI layers.
 *   **Full Configuration Backup**: JSON-based serialization including Desktop Layout, Liquid Glass parameters, Gesture mappings, and search engine choices.
 
 ---

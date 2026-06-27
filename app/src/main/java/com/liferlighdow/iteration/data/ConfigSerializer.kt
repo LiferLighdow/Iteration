@@ -215,6 +215,7 @@ object ConfigSerializer {
         appearance: Map<String, Any>,
         favorites: Set<String>,
         themeMode: String,
+        appLanguage: String,
         isAmoledBlack: Boolean,
         excludedThemed: Set<String>,
         homeMenuOptions: Set<String>,
@@ -253,6 +254,7 @@ object ConfigSerializer {
         settings.put("show_status_bar", showStatusBar)
         settings.put("show_navigation_bar", showNavigationBar)
         settings.put("theme_mode", themeMode)
+        settings.put("app_language", appLanguage)
         settings.put("amoled_black", isAmoledBlack)
         settings.put("page_size", pageSize)
 

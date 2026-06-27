@@ -7,6 +7,7 @@ import android.content.pm.LauncherApps
 import android.os.Build
 import android.util.Log
 import android.widget.Toast
+import com.liferlighdow.iteration.R
 
 /**
  * 接收並處理來自第三方 App (如 Hermit) 的捷徑安裝請求。
@@ -17,7 +18,7 @@ class ShortcutReceiver : BroadcastReceiver() {
         Log.e("ShortcutReceiver", "!!!!! Received action: $action")
         
         // 彈出 Toast 讓我們知道 Receiver 真的有被觸發
-        Toast.makeText(context, "Shortcut Action: $action", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.shortcut_action, action), Toast.LENGTH_SHORT).show()
 
         when (action) {
             "com.android.launcher.action.INSTALL_SHORTCUT" -> {

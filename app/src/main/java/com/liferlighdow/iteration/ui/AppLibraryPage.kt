@@ -231,9 +231,9 @@ fun AppLibraryPage(
                                 DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                                     DropdownMenuItem(text = { Text(stringResource(R.string.menu_add_to_home)) }, leadingIcon = { Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.primary) }, onClick = { viewModel.addAppToHome(app.uniqueId); showMenu = false })
                                     DropdownMenuItem(text = { Text(stringResource(R.string.rename)) }, leadingIcon = { Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary) }, onClick = { appToRename = app; newLabelText = app.label; showMenu = false })
-                                    DropdownMenuItem(text = { Text(if (app.isHidden) "Unhide" else "Hide") }, leadingIcon = { Icon(if (app.isHidden) Icons.Default.Visibility else Icons.Default.VisibilityOff, null, tint = MaterialTheme.colorScheme.primary) }, onClick = { viewModel.toggleHiddenApp(app.uniqueId); showMenu = false })
+                                    DropdownMenuItem(text = { Text(stringResource(if (app.isHidden) R.string.unhide else R.string.hide)) }, leadingIcon = { Icon(if (app.isHidden) Icons.Default.Visibility else Icons.Default.VisibilityOff, null, tint = MaterialTheme.colorScheme.primary) }, onClick = { viewModel.toggleHiddenApp(app.uniqueId); showMenu = false })
                                     DropdownMenuItem(
-                                        text = { Text("App Info") },
+                                        text = { Text(stringResource(R.string.menu_app_info)) },
                                         leadingIcon = { Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary) },
                                         onClick = {
                                             val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
@@ -412,7 +412,7 @@ fun AppLibraryFolder(
                         val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
                         val lockColor = if (isDark) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
                         if (isLocked) Box(modifier = Modifier.size(internalIconSize).background(lockColor, lockShape).clickable { onMoreClick() })
-                        else if (apps.size > 4) Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.2f), lockShape).clickable { onMoreClick() }, contentAlignment = Alignment.Center) { Text("+${apps.size - 3}", color = Color.White, style = MaterialTheme.typography.headlineSmall) }
+                        else if (apps.size > 4) Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.2f), lockShape).clickable { onMoreClick() }, contentAlignment = Alignment.Center) { Text(stringResource(R.string.plus_more, apps.size - 3), color = Color.White, style = MaterialTheme.typography.headlineSmall) }
                         else apps.getOrNull(3)?.let { app ->
                             LibraryItemWithMenu(app, name, iconShape, internalIconSize, onAppClick)
                         }
@@ -495,12 +495,12 @@ fun LibraryItemWithMenu(
                 onClick = { showRenameDialog = true; showMenu = false }
             )
             DropdownMenuItem(
-                text = { Text("Hide") },
-                leadingIcon = { Icon(Icons.Default.VisibilityOff, null) },
+                text = { Text(stringResource(if (app.isHidden) R.string.unhide else R.string.hide)) },
+                leadingIcon = { Icon(if (app.isHidden) Icons.Default.Visibility else Icons.Default.VisibilityOff, null) },
                 onClick = { viewModel.toggleHiddenApp(app.packageName); showMenu = false }
             )
             DropdownMenuItem(
-                text = { Text("App Info") },
+                text = { Text(stringResource(R.string.menu_app_info)) },
                 leadingIcon = { Icon(Icons.Default.Info, null) },
                 onClick = {
                     val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
@@ -517,7 +517,7 @@ fun LibraryItemWithMenu(
                 leadingIcon = { Icon(Icons.Default.Delete, null) },
                 onClick = {
                     Log.d("Iteration", "Uninstalling: ${app.packageName}")
-                    Toast.makeText(mContext, "Uninstalling ${app.label}...", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(mContext, mContext.getString(R.string.uninstalling_app, app.label), Toast.LENGTH_SHORT).show()
                     try {
                         val intent = Intent(Intent.ACTION_DELETE).apply {
                             data = Uri.fromParts("package", app.packageName, null)
@@ -536,12 +536,12 @@ fun LibraryItemWithMenu(
     if (showRenameDialog) {
         AlertDialog(
             onDismissRequest = { showRenameDialog = false },
-            title = { Text("Rename App") },
+            title = { Text(stringResource(R.string.rename_app)) },
             text = {
                 OutlinedTextField(
                     value = renameText,
                     onValueChange = { renameText = it },
-                    label = { Text("New Label") },
+                    label = { Text(stringResource(R.string.new_label_hint)) },
                     singleLine = true
                 )
             },
