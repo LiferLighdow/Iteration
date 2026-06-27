@@ -175,7 +175,7 @@
     <string name="gesture_action_open_global_search">開啟全域搜尋</string>
     <string name="gesture_action_open_desktop_menu">打開桌面選單</string>
     <string name="gesture_action_open_notifications">開啟通知</string>
-    <string name="gesture_double_tap_dialog_title">點兩校要幹嘛呢？主人~</string>
+    <string name="gesture_double_tap_dialog_title">點兩下要幹嘛呢？主人~</string>
     <string name="gesture_swipe_up_dialog_title">往上滑要幹嘛呢？主人~</string>
     <string name="gesture_swipe_down_dialog_title">往下滑要幹嘛呢？主人~</string>
     <string name="gesture_long_press_dialog_title">按這麼久要幹嘛？主人</string>

@@ -3,7 +3,7 @@ package com.liferlighdow.iteration
 import android.content.Intent
 import android.os.Bundle
 import android.view.WindowManager
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
@@ -23,7 +23,7 @@ import com.liferlighdow.iteration.ui.LauncherScreen
 import com.liferlighdow.iteration.ui.ThemeMode
 import com.liferlighdow.iteration.viewmodel.MainViewModel
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER)

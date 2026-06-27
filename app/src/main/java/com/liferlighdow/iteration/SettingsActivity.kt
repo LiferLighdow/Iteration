@@ -10,7 +10,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import android.widget.Toast
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -172,7 +172,7 @@ data class SettingsMetadata(
     val isRestart: Boolean = false
 )
 
-class SettingsActivity : ComponentActivity() {
+class SettingsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -212,7 +212,7 @@ fun SettingsNavigation() {
 
     when (currentPage) {
         SettingsPage.MAIN -> SettingsMainScreen(
-            onBack = { (context as? ComponentActivity)?.finish() },
+            onBack = { (context as? AppCompatActivity)?.finish() },
             onNavigateToHideApps = { currentPage = SettingsPage.HIDE_APPS },
             onNavigateToRenameApps = { currentPage = SettingsPage.RENAME_APPS },
             onNavigateToAppLibrary = { currentPage = SettingsPage.APP_LIBRARY },
@@ -586,11 +586,11 @@ fun SettingsMainScreen(
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                         
-                        var expandedLang by remember { mutableStateOf(false) }
                         val appLanguage by viewModel.appLanguage.collectAsState()
                         val langOptions = listOf(
                             "" to stringResource(R.string.language_system_default),
-                            "en" to stringResource(R.string.language_english)
+                            "en" to stringResource(R.string.language_english),
+                            "zh-TW" to stringResource(R.string.language_chinese_tw)
                         )
                         val currentLangLabel = langOptions.find { it.first == appLanguage }?.second ?: stringResource(R.string.language_system_default)
 
@@ -2029,7 +2029,7 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
     val isAmoledBlack by viewModel.isAmoledBlack.collectAsState()
 
     val context = LocalContext.current
-    val window = (context as? ComponentActivity)?.window
+    val window = (context as? AppCompatActivity)?.window
 
     LaunchedEffect(showStatusBar, showNavigationBar) {
         window?.let { win ->
@@ -2991,14 +2991,18 @@ fun CustomIconStylePickerDialog(
 
 @Composable
 fun CompatibilityRow(version: String, level: String, desc: String, isCurrentDevice: Boolean = false) {
+    val perfect = stringResource(R.string.precision_perfect)
+    val high = stringResource(R.string.precision_high)
+    val good = stringResource(R.string.precision_good)
+
     Column(modifier = Modifier.padding(vertical = 4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(version, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.width(90.dp))
             Surface(
                 color = when(level) {
-                    "Perfect" -> Color(0xFF4CAF50).copy(alpha = 0.2f)
-                    "High" -> Color(0xFF2196F3).copy(alpha = 0.2f)
-                    "Good" -> Color(0xFFFF9800).copy(alpha = 0.2f)
+                    perfect, "Perfect" -> Color(0xFF4CAF50).copy(alpha = 0.2f)
+                    high, "High" -> Color(0xFF2196F3).copy(alpha = 0.2f)
+                    good, "Good" -> Color(0xFFFF9800).copy(alpha = 0.2f)
                     else -> Color.Gray.copy(alpha = 0.2f)
                 },
                 shape = RoundedCornerShape(4.dp)
@@ -3008,10 +3012,10 @@ fun CompatibilityRow(version: String, level: String, desc: String, isCurrentDevi
                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                     style = MaterialTheme.typography.labelSmall,
                     color = when(level) {
-                        "Perfect" -> Color(0xFF2E7D32)
-                        "High" -> Color(0xFF1565C0)
-                        "Good" -> Color(0xFFE65100)
-                        else -> Color.DarkGray
+                        perfect, "Perfect" -> Color(0xFF2E7D32)
+                        high, "High" -> Color(0xFF1565C0)
+                        good, "Good" -> Color(0xFFE65100)
+                        else -> Color.Black
                     }
                 )
             }
