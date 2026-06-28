@@ -232,6 +232,8 @@
 
     <!-- Settings - Liquid Glass -->
     <string name="liquid_glass_title">Liquid Glass</string>
+    <string name="liquid_glass_workshop_title">Workshop</string>
+    <string name="liquid_glass_workshop_unavailable">Workshop Unavailable</string>
     <string name="blur_radius_label">Blur radius: %1$d</string>
     <string name="refraction_height_label">Refraction height: %1$d</string>
     <string name="refraction_amount_label">Refraction amount: %1$d</string>

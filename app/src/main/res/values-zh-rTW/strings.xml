@@ -203,6 +203,8 @@
     <string name="got_it">朕知道了</string>
     <string name="default_style_desc">預設（系統 + 進化造型）</string>
     <string name="liquid_glass_title">即時動態液態玻璃</string>
+    <string name="liquid_glass_workshop_title">工作坊</string>
+    <string name="liquid_glass_workshop_unavailable">工作坊目前不可用喔~</string>
     <string name="blur_radius_label">模糊半徑參數：%1$d</string>
     <string name="refraction_height_label">折射高度參數：%1$d</string>
     <string name="refraction_amount_label">折射率參數：%1$d</string>

@@ -347,13 +347,20 @@ fun SettingsMainScreen(
     val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
 
+    var showRestartDialog by remember { mutableStateOf(false) }
+    var showPasswordGate by remember { mutableStateOf(false) }
+    var showApiWarningDialog by remember { mutableStateOf(false) }
+
     // 定義所有設定項的元數據，以便進行搜尋
     val allSettingsItems = remember {
         listOf(
             SettingsMetadata(context.getString(R.string.settings_icon_theme), context.getString(R.string.settings_icon_theme_desc), Icons.Default.Palette, Color(0xFF4285F4), onNavigateToIconTheme),
             SettingsMetadata(context.getString(R.string.liquid_glass_title), context.getString(R.string.settings_liquid_glass_desc), Icons.Default.BlurOn, Color(0xFF34A853), {
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) onNavigateToLiquidGlass() 
-                else {} // 會觸發 Dialog 的邏輯在下面處理
+                if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) {
+                    showApiWarningDialog = true
+                } else {
+                    onNavigateToLiquidGlass()
+                }
             }, isLiquidGlass = true),
             SettingsMetadata(context.getString(R.string.settings_home_screen), context.getString(R.string.settings_home_screen_desc), Icons.Default.Dashboard, Color(0xFFFBBC04), onNavigateToDock),
             SettingsMetadata(context.getString(R.string.settings_library), context.getString(R.string.settings_library_desc), Icons.Default.Apps, Color(0xFFEA4335), onNavigateToAppLibrary),
@@ -414,10 +421,6 @@ fun SettingsMainScreen(
         }
     }
 
-    var showRestartDialog by remember { mutableStateOf(false) }
-    var showPasswordGate by remember { mutableStateOf(false) }
-    var showApiWarningDialog by remember { mutableStateOf(false) }
-
     Scaffold(
         topBar = {
             Column(modifier = Modifier.statusBarsPadding()) {
@@ -466,8 +469,11 @@ fun SettingsMainScreen(
                                     onClick = {
                                         when {
                                             item.isLiquidGlass -> {
-                                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) onNavigateToLiquidGlass()
-                                                else showApiWarningDialog = true
+                                                if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) {
+                                                    showApiWarningDialog = true
+                                                } else {
+                                                    onNavigateToLiquidGlass()
+                                                }
                                             }
                                             item.isHideApps -> {
                                                 if (viewModel.getPassword().isEmpty()) onNavigateToHideApps()
@@ -513,10 +519,10 @@ fun SettingsMainScreen(
                             icon = Icons.Default.BlurOn,
                             iconColor = Color(0xFF34A853),
                             onClick = {
-                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                                    onNavigateToLiquidGlass()
-                                } else {
+                                if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) {
                                     showApiWarningDialog = true
+                                } else {
+                                    onNavigateToLiquidGlass()
                                 }
                             }
                         )
@@ -700,6 +706,30 @@ fun SettingsMainScreen(
         }
     }
 
+    if (showApiWarningDialog) {
+        AlertDialog(
+            onDismissRequest = { showApiWarningDialog = false },
+            icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text(stringResource(R.string.compat_warning_title)) },
+            text = { 
+                Text(stringResource(R.string.compat_warning_msg, android.os.Build.VERSION.SDK_INT)) 
+            },
+            confirmButton = {
+                TextButton(onClick = { 
+                    showApiWarningDialog = false 
+                    onNavigateToLiquidGlass()
+                }) {
+                    Text(stringResource(R.string.understand))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showApiWarningDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
     if (showRestartDialog) {
         AlertDialog(
             onDismissRequest = { showRestartDialog = false },
@@ -722,22 +752,6 @@ fun SettingsMainScreen(
             dismissButton = {
                 TextButton(onClick = { showRestartDialog = false }) {
                     Text(stringResource(R.string.cancel))
-                }
-            }
-        )
-    }
-
-    if (showApiWarningDialog) {
-        AlertDialog(
-            onDismissRequest = { showApiWarningDialog = false },
-            icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
-            title = { Text(stringResource(R.string.compat_warning_title)) },
-            text = { 
-                Text(stringResource(R.string.compat_warning_msg, android.os.Build.VERSION.SDK_INT)) 
-            },
-            confirmButton = {
-                TextButton(onClick = { showApiWarningDialog = false }) {
-                    Text(stringResource(R.string.understand))
                 }
             }
         )
@@ -1151,6 +1165,7 @@ fun IconPackPickerDialog(onDismiss: () -> Unit, onPackSelected: (String) -> Unit
 @Composable
 fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
     val viewModel: MainViewModel = viewModel()
+    // ... (保持原本的 collectAsState 不變)
     val isLiquidGlassEnabled by viewModel.isLiquidGlassEnabled.collectAsState()
     val isLiquidGlassDockEnabled by viewModel.isLiquidGlassDockEnabled.collectAsState()
     val isLiquidGlassHomeFolderEnabled by viewModel.isLiquidGlassHomeFolderEnabled.collectAsState()
@@ -1169,7 +1184,7 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
 
     // 拖動狀態
     var glassOffset by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
-
+    
     Scaffold(
         topBar = {
             TopAppBar(
@@ -1180,161 +1195,193 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
                     }
                 },
                 actions = {
-                    TextButton(onClick = {
-                        viewModel.resetLiquidGlassParams()
-                        glassOffset = androidx.compose.ui.geometry.Offset.Zero
-                    }) {
-                        Text(stringResource(R.string.reset), color = MaterialTheme.colorScheme.primary)
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                        TextButton(onClick = {
+                            viewModel.resetLiquidGlassParams()
+                            glassOffset = androidx.compose.ui.geometry.Offset.Zero
+                        }) {
+                            Text(stringResource(R.string.reset), color = MaterialTheme.colorScheme.primary)
+                        }
                     }
                 }
             )
         }
     ) { innerPadding ->
         LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-            item {
-                // Preview Area
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(300.dp)
-                        .padding(16.dp)
-                        .clip(RoundedCornerShape(24.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    // Background: Wallpaper
-                    if (rawWallpaper != null) {
-                        Image(
-                            bitmap = rawWallpaper!!,
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .layerBackdrop(backdrop)
-                        )
-                    } else {
-                        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant))
-                    }
-
-                    // Liquid Glass Preview Box (Free Dragging)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                item {
+                    // Preview Area (Workshop)
+                    Text(
+                        text = stringResource(R.string.liquid_glass_workshop_title),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = 32.dp, end = 32.dp, top = 16.dp)
+                    )
                     Box(
                         modifier = Modifier
-                            .offset {
-                                androidx.compose.ui.unit.IntOffset(
-                                    glassOffset.x.roundToInt(),
-                                    glassOffset.y.roundToInt()
-                                )
-                            }
-                            .size(150.dp)
-                            .pointerInput(Unit) {
-                                detectDragGestures { change, dragAmount ->
-                                    change.consume()
-                                    glassOffset += dragAmount
-                                }
-                            }
-                            .liquidGlass(
-                                enabled = true,
-                                backdrop = backdrop,
-                                cornerRadius = 32.dp,
-                                blurRadius = blurRadius,
-                                refractionHeight = refractionHeight,
-                                refractionAmount = refractionAmount,
-                                chromaticAberration = chromaticAberration
+                            .fillMaxWidth()
+                            .height(300.dp)
+                            .padding(16.dp)
+                            .clip(RoundedCornerShape(24.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        // Background: Wallpaper
+                        if (rawWallpaper != null) {
+                            Image(
+                                bitmap = rawWallpaper!!,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .layerBackdrop(backdrop)
                             )
-                    )
+                        } else {
+                            Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant))
+                        }
 
-                    // 指引文字
+                        // Liquid Glass Preview Box (Free Dragging)
+                        Box(
+                            modifier = Modifier
+                                .offset {
+                                    androidx.compose.ui.unit.IntOffset(
+                                        glassOffset.x.roundToInt(),
+                                        glassOffset.y.roundToInt()
+                                    )
+                                }
+                                .size(150.dp)
+                                .pointerInput(Unit) {
+                                    detectDragGestures { change, dragAmount ->
+                                        change.consume()
+                                        glassOffset += dragAmount
+                                    }
+                                }
+                                .liquidGlass(
+                                    enabled = true,
+                                    backdrop = backdrop,
+                                    cornerRadius = 32.dp,
+                                    blurRadius = blurRadius,
+                                    refractionHeight = refractionHeight,
+                                    refractionAmount = refractionAmount,
+                                    chromaticAberration = chromaticAberration
+                                )
+                        )
+
+                        // 指引文字
+                        Text(
+                            stringResource(R.string.drag_to_preview),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White.copy(alpha = 0.5f),
+                            modifier = Modifier.align(Alignment.BottomCenter).padding(8.dp)
+                        )
+                    }
+                }
+
+                item {
                     Text(
-                        stringResource(R.string.drag_to_preview),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.White.copy(alpha = 0.5f),
-                        modifier = Modifier.align(Alignment.BottomCenter).padding(8.dp)
+                        text = stringResource(R.string.visual_effects),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                     )
                 }
-            }
 
-            item {
-                Text(
-                    text = stringResource(R.string.visual_effects),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
-            }
-
-            item {
-                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Text(stringResource(R.string.blur_radius_label, (blurRadius * 5).toInt()))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = { viewModel.setLiquidGlassBlur(((blurRadius * 5 - 1f).coerceAtLeast(0f)) / 5f) }) {
-                            Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.decrease))
+                item {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                        Text(stringResource(R.string.blur_radius_label, (blurRadius * 5).toInt()))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = { viewModel.setLiquidGlassBlur(((blurRadius * 5 - 1f).coerceAtLeast(0f)) / 5f) }) {
+                                Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.decrease))
+                            }
+                            Slider(
+                                value = (blurRadius * 5).coerceIn(0f, 100f),
+                                onValueChange = { viewModel.setLiquidGlassBlur(it / 5f) },
+                                valueRange = 0f..100f,
+                                modifier = Modifier.weight(1f)
+                            )
+                            IconButton(onClick = { viewModel.setLiquidGlassBlur(((blurRadius * 5 + 1f).coerceAtMost(100f)) / 5f) }) {
+                                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.increase))
+                            }
                         }
-                        Slider(
-                            value = (blurRadius * 5).coerceIn(0f, 100f),
-                            onValueChange = { viewModel.setLiquidGlassBlur(it / 5f) },
-                            valueRange = 0f..100f,
-                            modifier = Modifier.weight(1f)
-                        )
-                        IconButton(onClick = { viewModel.setLiquidGlassBlur(((blurRadius * 5 + 1f).coerceAtMost(100f)) / 5f) }) {
-                            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.increase))
+                    }
+                }
+
+                item {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                        Text(stringResource(R.string.refraction_height_label, refractionHeight.toInt()))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = { viewModel.setLiquidGlassRefractionHeight((refractionHeight - 1f).coerceAtLeast(0f)) }) {
+                                Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.decrease))
+                            }
+                            Slider(
+                                value = refractionHeight,
+                                onValueChange = { viewModel.setLiquidGlassRefractionHeight(it) },
+                                valueRange = 0f..100f,
+                                modifier = Modifier.weight(1f)
+                            )
+                            IconButton(onClick = { viewModel.setLiquidGlassRefractionHeight((refractionHeight + 1f).coerceAtMost(100f)) }) {
+                                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.increase))
+                            }
+                        }
+                    }
+                }
+
+                item {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                        Text(stringResource(R.string.refraction_amount_label, refractionAmount.toInt()))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = { viewModel.setLiquidGlassRefractionAmount((refractionAmount - 1f).coerceAtLeast(0f)) }) {
+                                Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.decrease))
+                            }
+                            Slider(
+                                value = refractionAmount,
+                                onValueChange = { viewModel.setLiquidGlassRefractionAmount(it) },
+                                valueRange = 0f..100f,
+                                modifier = Modifier.weight(1f)
+                            )
+                            IconButton(onClick = { viewModel.setLiquidGlassRefractionAmount((refractionAmount + 1f).coerceAtMost(100f)) }) {
+                                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.increase))
+                            }
+                        }
+                    }
+                }
+
+                item {
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.chromatic_aberration)) },
+                        trailingContent = {
+                            Switch(
+                                checked = chromaticAberration,
+                                onCheckedChange = { viewModel.setLiquidGlassChromaticAberration(it) }
+                            )
+                        },
+                        modifier = Modifier.clickable { viewModel.setLiquidGlassChromaticAberration(!chromaticAberration) }
+                    )
+                }
+
+                item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
+            } else {
+                item {
+                    // 對於 API < 31 的用戶，顯示一個簡單的說明卡片代替工作坊與參數調整
+                    Surface(
+                        modifier = Modifier.padding(16.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                stringResource(R.string.liquid_glass_workshop_unavailable),
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                stringResource(R.string.compat_warning_msg, android.os.Build.VERSION.SDK_INT),
+                                style = MaterialTheme.typography.bodySmall
+                            )
                         }
                     }
                 }
             }
-
-            item {
-                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Text(stringResource(R.string.refraction_height_label, refractionHeight.toInt()))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = { viewModel.setLiquidGlassRefractionHeight((refractionHeight - 1f).coerceAtLeast(0f)) }) {
-                            Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.decrease))
-                        }
-                        Slider(
-                            value = refractionHeight,
-                            onValueChange = { viewModel.setLiquidGlassRefractionHeight(it) },
-                            valueRange = 0f..100f,
-                            modifier = Modifier.weight(1f)
-                        )
-                        IconButton(onClick = { viewModel.setLiquidGlassRefractionHeight((refractionHeight + 1f).coerceAtMost(100f)) }) {
-                            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.increase))
-                        }
-                    }
-                }
-            }
-
-            item {
-                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Text(stringResource(R.string.refraction_amount_label, refractionAmount.toInt()))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = { viewModel.setLiquidGlassRefractionAmount((refractionAmount - 1f).coerceAtLeast(0f)) }) {
-                            Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.decrease))
-                        }
-                        Slider(
-                            value = refractionAmount,
-                            onValueChange = { viewModel.setLiquidGlassRefractionAmount(it) },
-                            valueRange = 0f..100f,
-                            modifier = Modifier.weight(1f)
-                        )
-                        IconButton(onClick = { viewModel.setLiquidGlassRefractionAmount((refractionAmount + 1f).coerceAtMost(100f)) }) {
-                            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.increase))
-                        }
-                    }
-                }
-            }
-
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.chromatic_aberration)) },
-                    trailingContent = {
-                        Switch(
-                            checked = chromaticAberration,
-                            onCheckedChange = { viewModel.setLiquidGlassChromaticAberration(it) }
-                        )
-                    },
-                    modifier = Modifier.clickable { viewModel.setLiquidGlassChromaticAberration(!chromaticAberration) }
-                )
-            }
-
-            item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
 
             item {
                 ListItem(

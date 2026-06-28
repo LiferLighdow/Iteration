@@ -257,7 +257,8 @@ fun LauncherScreen(
     val librarySearchQuery by viewModel.searchQuery.collectAsState()
     val libraryCategory by viewModel.selectedCategory.collectAsState()
     val isLibrarySearchFocused by viewModel.isLibrarySearchFocused.collectAsState()
-    val isLibraryInSearchMode = isAppLibraryPage && (isLibrarySearchFocused || librarySearchQuery.isNotEmpty() || (libraryCategory != null && libraryCategory != "All"))
+    val isImeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+    val isLibraryInSearchMode = isAppLibraryPage && (isLibrarySearchFocused || isImeVisible || librarySearchQuery.isNotEmpty() || (libraryCategory != null && libraryCategory != "All"))
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val density = LocalDensity.current
