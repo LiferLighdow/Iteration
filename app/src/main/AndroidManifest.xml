@@ -59,6 +59,11 @@
             android:screenOrientation="portrait"
             android:parentActivityName=".MainActivity" />
 
+        <activity
+            android:name=".ui.PinShortcutActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Iteration.Translucent" />
+
         <!-- 增加捷徑建立的入口宣告，提升相容性 -->
         <activity
             android:name=".ui.CreateShortcutActivity"

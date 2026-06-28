@@ -26,21 +26,11 @@ class ShortcutReceiver : BroadcastReceiver() {
             }
             "android.content.pm.action.CONFIRM_PIN_SHORTCUT" -> {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    val launcherApps = context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
-                    try {
-                        val pinItemRequest = launcherApps.getPinItemRequest(intent)
-                        if (pinItemRequest != null) {
-                            Log.e("ShortcutReceiver", "Pin request valid. Type: ${pinItemRequest.requestType}")
-                            if (pinItemRequest.isValid) {
-                                val success = pinItemRequest.accept()
-                                Log.e("ShortcutReceiver", "Accept result: $success")
-                            }
-                        } else {
-                            Log.e("ShortcutReceiver", "PinItemRequest is null")
-                        }
-                    } catch (e: Exception) {
-                        Log.e("ShortcutReceiver", "Error parsing PinItemRequest", e)
+                    val pinIntent = Intent(context, com.liferlighdow.iteration.ui.PinShortcutActivity::class.java).apply {
+                        putExtras(intent)
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
                     }
+                    context.startActivity(pinIntent)
                 }
             }
         }

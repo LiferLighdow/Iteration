@@ -16,6 +16,12 @@
     <string name="confirm">確認</string>
     <string name="menu_edit_mode">進入編輯模式</string>
     <string name="menu_add_widget">新增小工具</string>
+    <string name="menu_add_shortcut">新增捷徑</string>
+    <string name="select_shortcut">選擇捷徑</string>
+    <string name="shortcut_created">捷徑已建立</string>
+    <string name="pin_shortcut_title">新增至主畫面</string>
+    <string name="pin_shortcut_msg">按住捷徑即可拖曳到主畫面的任何位置</string>
+    <string name="add_to_home">新增至主畫面</string>
     <string name="menu_new_folder">新增資料夾</string>
     <string name="menu_add_page">新增新分頁</string>
     <string name="menu_delete_page">刪除這一頁</string>

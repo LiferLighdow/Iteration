@@ -19,6 +19,12 @@
     <!-- Launcher Context Menu -->
     <string name="menu_edit_mode">Enter Edit Mode</string>
     <string name="menu_add_widget">Add Widget</string>
+    <string name="menu_add_shortcut">Add Shortcut</string>
+    <string name="select_shortcut">Select Shortcut</string>
+    <string name="shortcut_created">Shortcut Created</string>
+    <string name="pin_shortcut_title">Add to Home Screen</string>
+    <string name="pin_shortcut_msg">Touch and hold the icon to move it around the Home screen.</string>
+    <string name="add_to_home">Add to Home screen</string>
     <string name="menu_new_folder">New Folder</string>
     <string name="menu_add_page">Add New Page</string>
     <string name="menu_delete_page">Delete This Page</string>

@@ -37,20 +37,34 @@ class AppRepository(private val context: Context) {
         // 2. 抓取 Pinned Shortcuts (PWA / 網頁捷徑)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
             try {
+                // 檢查是否具有存取捷徑的權限 (通常需要是預設啟動器)
                 val query = LauncherApps.ShortcutQuery().apply {
                     setQueryFlags(LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED)
                 }
-                val shortcuts = launcherApps.getShortcuts(query, Process.myUserHandle()) ?: emptyList()
-                
-                shortcuts.forEach { shortcut ->
-                    // 避免重複加入已經在列表中的 App 內的普通 Shortcut (這裡只針對網頁捷徑等 Pinned 類型)
-                    // PWA 捷徑通常有自己的 label 和 icon
-                    apps.add(AppModel(
-                        label = (shortcut.shortLabel ?: shortcut.longLabel ?: "Shortcut").toString(),
-                        packageName = shortcut.`package`,
-                        shortcutId = shortcut.id,
-                        displayCategory = "Web Apps"
-                    ))
+
+                val profiles = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    try { launcherApps.profiles } catch (e: Exception) { listOf(android.os.Process.myUserHandle()) }
+                } else {
+                    listOf(android.os.Process.myUserHandle())
+                }
+
+                profiles.forEach { userHandle ->
+                    try {
+                        val shortcuts = launcherApps.getShortcuts(query, userHandle) ?: emptyList()
+                        shortcuts.forEach { shortcut ->
+                            val exists = apps.any { it.packageName == shortcut.`package` && it.shortcutId == shortcut.id }
+                            if (!exists) {
+                                apps.add(AppModel(
+                                    label = (shortcut.shortLabel ?: shortcut.longLabel ?: "Shortcut").toString(),
+                                    packageName = shortcut.`package`,
+                                    shortcutId = shortcut.id,
+                                    displayCategory = "Web Apps"
+                                ))
+                            }
+                        }
+                    } catch (e: SecurityException) {
+                        // 如果不是預設啟動器，會噴 SecurityException，這裡忽略即可
+                    }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()

@@ -3,7 +3,10 @@ package com.liferlighdow.iteration.viewmodel
 import android.Manifest
 import android.app.Application
 import android.app.WallpaperManager
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.LauncherApps
 import android.content.pm.PackageManager
@@ -201,12 +204,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     init {
         // Apply saved language on startup
         val savedLang = _appLanguage.value
-        val appLocale: LocaleListCompat = if (savedLang.isEmpty()) {
-            LocaleListCompat.getEmptyLocaleList()
-        } else {
-            LocaleListCompat.forLanguageTags(savedLang)
+        if (savedLang.isNotEmpty()) {
+            try {
+                val appLocale = LocaleListCompat.forLanguageTags(savedLang)
+                AppCompatDelegate.setApplicationLocales(appLocale)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
-        AppCompatDelegate.setApplicationLocales(appLocale)
     }
 
     private var currentStyleSuffix = "default"
@@ -227,7 +232,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         iconCache[cacheKey]?.let { return it }
 
         // 3. 檢查自定義圖示
-        val fileSafeId = baseId.replace("/", "_").replace(":", "_")
+        val fileSafeId = baseId.replace("/", "_").replace(":", "_").replace("@", "_")
         val customIconFile = File(customIconDir, "$fileSafeId.png")
         if (customIconFile.exists()) {
             return try {
@@ -605,10 +610,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         override fun onShortcutsChanged(packageName: String, shortcuts: List<android.content.pm.ShortcutInfo>, user: UserHandle) {
             refreshApps()
         }
+    }
 
-        private fun refreshApps() {
-            cachedRawApps = null // 清除緩存
-            loadApps()           // 重新讀取
+    private fun refreshApps() {
+        cachedRawApps = null // 清除緩存
+        loadApps()           // 重新讀取
+    }
+
+    private val refreshReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "com.liferlighdow.iteration.ACTION_REFRESH_APPS") {
+                refreshApps()
+            }
         }
     }
 
@@ -642,6 +655,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         checkSystemNetworkStatus()
         // 註冊監聽
         launcherApps.registerCallback(packageCallback)
+        
+        val filter = IntentFilter("com.liferlighdow.iteration.ACTION_REFRESH_APPS")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            getApplication<Application>().registerReceiver(refreshReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            getApplication<Application>().registerReceiver(refreshReceiver, filter)
+        }
     }
 
     override fun onCleared() {
@@ -649,6 +669,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         prefs.unregisterOnSharedPreferenceChangeListener(prefsListener)
         // 取消註冊，避免內存洩漏
         launcherApps.unregisterCallback(packageCallback)
+        getApplication<Application>().unregisterReceiver(refreshReceiver)
     }
 
     private var lastBlurredSignal = -1L
@@ -1051,7 +1072,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setCustomIcon(uniqueId: String, bitmap: Bitmap) {
-        val fileSafeId = uniqueId.replace("/", "_").replace(":", "_")
+        val fileSafeId = uniqueId.replace("/", "_").replace(":", "_").replace("@", "_")
         val file = File(customIconDir, "$fileSafeId.png")
         FileOutputStream(file).use { out ->
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
@@ -1061,7 +1082,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun resetCustomIcon(uniqueId: String) {
-        val fileSafeId = uniqueId.replace("/", "_").replace(":", "_")
+        val fileSafeId = uniqueId.replace("/", "_").replace(":", "_").replace("@", "_")
         val file = File(customIconDir, "$fileSafeId.png")
         if (file.exists()) file.delete()
         iconCache.remove(uniqueId) // 清除快取
@@ -1278,7 +1299,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     rawApps.map { app ->
                         async {
                             semaphore.withPermit {
-                                val fileSafeId = app.uniqueId.replace("/", "_").replace(":", "_")
+                                val fileSafeId = app.uniqueId.replace("/", "_").replace(":", "_").replace("@", "_")
                                 val customIconFile = File(customIconDir, "$fileSafeId.png")
                                 val legacyCustomIconFile = File(customIconDir, "${app.packageName}.png")
                                 
@@ -1461,11 +1482,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val pm = getApplication<Application>().packageManager
         
         // 優先獲取原始圖示
-        val rawIcon = if (app.isShortcut && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
+        val rawIcon = if (app.isShortcut && app.shortcutId != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
             try {
                 val query = LauncherApps.ShortcutQuery().apply {
                     setPackage(app.packageName)
-                    setShortcutIds(listOf(app.shortcutId!!))
+                    setShortcutIds(listOf(app.shortcutId))
                     setQueryFlags(LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED or LauncherApps.ShortcutQuery.FLAG_MATCH_DYNAMIC or LauncherApps.ShortcutQuery.FLAG_MATCH_MANIFEST)
                 }
                 val shortcuts = launcherApps.getShortcuts(query, Process.myUserHandle())
@@ -1477,12 +1498,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             } catch (e: Exception) {
                 try { pm.getApplicationIcon(app.packageName) } catch (e2: Exception) { null }
             }
-        } else {
+        } else if (app.packageName.isNotEmpty()) {
             try {
                 pm.getApplicationIcon(app.packageName)
             } catch (e: Exception) {
                 null
             }
+        } else {
+            null
         }
 
         // 如果該 App 被設為排除 (Excluded)，不論是否使用圖標包，皆強制回歸原版並僅套用形狀

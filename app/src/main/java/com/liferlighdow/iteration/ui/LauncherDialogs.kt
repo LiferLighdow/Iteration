@@ -16,10 +16,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.core.graphics.drawable.toBitmap
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.liferlighdow.iteration.utils.IconShape
 import com.liferlighdow.iteration.viewmodel.MainViewModel
@@ -47,6 +49,10 @@ fun LauncherOverlays(
     onShowDeletePageConfirm: () -> Unit,
     showWidgetPicker: Boolean,
     onDismissWidgetPicker: () -> Unit,
+    showShortcutPicker: Boolean,
+    onShowShortcutPicker: () -> Unit,
+    onDismissShortcutPicker: () -> Unit,
+    onShortcutAppSelected: (android.content.pm.ActivityInfo) -> Unit,
     showDockPicker: Int?,
     onDismissDockPicker: () -> Unit,
     appToEdit: AppModel?,
@@ -85,6 +91,10 @@ fun LauncherOverlays(
         isMultiplePages = pages.size > 1,
         isDefaultLauncher = isDefaultLauncher,
         onAddWidgetClick = { onAddWidgetClick(currentPage) },
+        onAddShortcutClick = {
+            onDismissDesktopMenu()
+            onShowShortcutPicker()
+        },
         onCreateFolderClick = {
             onDismissDesktopMenu()
             onShowCreateFolder()
@@ -204,6 +214,14 @@ fun LauncherOverlays(
         )
     }
 
+    // 5.1 捷徑選擇器 (Legacy)
+    if (showShortcutPicker) {
+        ShortcutPickerDialog(
+            onDismiss = onDismissShortcutPicker,
+            onAppSelected = onShortcutAppSelected
+        )
+    }
+
     // 6. 快速編輯 App
     if (appToEdit != null) {
         QuickEditDialog(
@@ -236,6 +254,55 @@ fun LauncherOverlays(
 
     // 8. 多選 App (資料夾管理)
     // 注意：這裡假設 MultiAppPickerDialog 也需要 viewModel
+}
+
+@Composable
+fun ShortcutPickerDialog(
+    onDismiss: () -> Unit,
+    onAppSelected: (android.content.pm.ActivityInfo) -> Unit
+) {
+    val context = LocalContext.current
+    val pm = context.packageManager
+    val shortcutApps = remember {
+        val intent = Intent(Intent.ACTION_CREATE_SHORTCUT)
+        pm.queryIntentActivities(intent, 0).map { it.activityInfo }
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier.fillMaxWidth().fillMaxHeight(0.85f),
+            shape = RoundedCornerShape(28.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = stringResource(R.string.select_shortcut),
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.padding(8.dp)
+                )
+
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    items(shortcutApps) { info ->
+                        ListItem(
+                            headlineContent = { Text(info.loadLabel(pm).toString()) },
+                            leadingContent = {
+                                val icon = info.loadIcon(pm)
+                                Image(
+                                    bitmap = icon.toBitmap().asImageBitmap(),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(40.dp)
+                                )
+                            },
+                            modifier = Modifier.clickable { onAppSelected(info) }
+                        )
+                    }
+                }
+                
+                TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        }
+    }
 }
 
 @Composable

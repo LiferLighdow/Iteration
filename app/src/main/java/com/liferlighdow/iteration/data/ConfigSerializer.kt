@@ -21,6 +21,7 @@ object ConfigSerializer {
         obj.put("pkg", item.packageName)
         if (item.isShortcut) {
             obj.put("shortcutId", item.shortcutId)
+            obj.put("intentUri", item.intentUri)
         }
 
         if (item.isFolder) {
@@ -170,11 +171,21 @@ object ConfigSerializer {
             }
             "shortcut" -> {
                 val shortcutId = obj.optString("shortcutId")
-                val baseApp = allInstalled.find { it.packageName == pkg && it.shortcutId == shortcutId } ?: return null
-                baseApp.copy(
-                    label = obj.optString("label", baseApp.label),
-                    isHidden = hiddenPackages.contains(baseApp.uniqueId) || hiddenPackages.contains(pkg)
-                )
+                val intentUri = if (obj.has("intentUri")) obj.getString("intentUri") else null
+                
+                if (intentUri != null) {
+                    AppModel(
+                        label = obj.optString("label"),
+                        packageName = pkg,
+                        intentUri = intentUri
+                    )
+                } else {
+                    val baseApp = allInstalled.find { it.packageName == pkg && it.shortcutId == shortcutId } ?: return null
+                    baseApp.copy(
+                        label = obj.optString("label", baseApp.label),
+                        isHidden = hiddenPackages.contains(baseApp.uniqueId) || hiddenPackages.contains(pkg)
+                    )
+                }
             }
             else -> {
                 val baseApp = allInstalled.find { it.packageName == pkg && !it.isShortcut } ?: return null

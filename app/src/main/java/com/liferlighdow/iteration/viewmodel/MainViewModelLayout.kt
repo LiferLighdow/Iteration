@@ -113,6 +113,28 @@ fun MainViewModel.handleAppDrop(
     reorganizeAllPages(currentPages)
 }
 
+fun MainViewModel.addShortcut(label: String, intent: android.content.Intent, icon: android.graphics.Bitmap?, pageIndex: Int) {
+    val intentUri = intent.toUri(0)
+    val baseUniqueId = "intent_shortcut_${intentUri.hashCode()}"
+    
+    // 1. 先儲存自定義圖示，使用 baseUniqueId (不含時間戳)，讓所有實例共用同一個圖示
+    icon?.let { setCustomIcon(baseUniqueId, it) }
+
+    // 2. 建立帶有時間戳的實例 ID，確保在桌面上的唯一性
+    val instanceUniqueId = "${baseUniqueId}@${System.currentTimeMillis()}"
+    
+    val appModel = AppModel(
+        label = label,
+        packageName = intent.component?.packageName ?: intent.`package` ?: "",
+        intentUri = intentUri,
+        uniqueId = instanceUniqueId
+    )
+    
+    val currentPages = _pages.value.map { it.toMutableList() }.toMutableList()
+    insertAtPage(currentPages, pageIndex, appModel)
+    reorganizeAllPages(currentPages)
+}
+
 fun MainViewModel.addAppToHome(uniqueId: String) {
     val baseApp = _allApps.value.find { it.uniqueId == uniqueId } ?: return
     val newItem = baseApp.copy(uniqueId = "${uniqueId}@${System.currentTimeMillis()}")
