@@ -621,7 +621,6 @@ private fun AppGridItem(
     viewModel: MainViewModel
 ) {
     val mContext = LocalContext.current
-    val shortcuts = remember(showContextMenu) { if (showContextMenu && !app.isFolder) viewModel.getShortcuts(app.packageName) else emptyList() }
     Box {
         AppItem(
             app = app,
@@ -636,19 +635,7 @@ private fun AppGridItem(
             isEditMode = isEditMode,
             getIcon = { pkg -> viewModel.getIcon(pkg) },
             onDeleteClick = {
-                if (app.isFolder) {
-                    viewModel.removeAppFromHome(app.uniqueId)
-                } else {
-                    try {
-                        val intent = Intent(Intent.ACTION_DELETE).apply {
-                            data = Uri.fromParts("package", app.packageName, null)
-                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                        }
-                        mContext.startActivity(intent)
-                    } catch (e: Exception) {
-                        Log.e("Iteration", "Uninstall failed", e)
-                    }
-                }
+                viewModel.removeAppFromHome(app.uniqueId)
             },
             modifier = Modifier.graphicsLayer {
                 alpha = if (app.uniqueId == draggingUniqueId) 0f else 1f
@@ -663,27 +650,6 @@ private fun AppGridItem(
             onDismissRequest = onContextMenuDismiss,
             modifier = Modifier.background(MaterialTheme.colorScheme.surface)
         ) {
-            if (shortcuts.isNotEmpty()) {
-                shortcuts.forEach { shortcut ->
-                    DropdownMenuItem(
-                        text = { Text(shortcut.label) },
-                        leadingIcon = {
-                            shortcut.icon?.let { icon ->
-                                Image(
-                                    bitmap = icon.toBitmap().asImageBitmap(),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                        },
-                        onClick = {
-                            viewModel.launchShortcut(app.packageName, shortcut.id)
-                            onContextMenuDismiss()
-                        }
-                    )
-                }
-                HorizontalDivider()
-            }
             if (menuOptions.contains("delete_home")) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.menu_delete_home)) },

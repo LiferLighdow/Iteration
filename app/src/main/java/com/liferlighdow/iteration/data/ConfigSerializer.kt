@@ -13,16 +13,12 @@ object ConfigSerializer {
         obj.put("type", when {
             item.isFolder -> "folder"
             item.isWidget -> "widget"
-            item.isShortcut -> "shortcut"
             else -> "app"
         })
         obj.put("id", item.uniqueId)
         obj.put("label", item.label)
         obj.put("pkg", item.packageName)
-        if (item.isShortcut) {
-            obj.put("shortcutId", item.shortcutId)
-            obj.put("intentUri", item.intentUri)
-        }
+        obj.put("userId", item.userId)
 
         if (item.isFolder) {
             val children = JSONArray()
@@ -110,6 +106,8 @@ object ConfigSerializer {
     ): AppModel? {
         val type = obj.optString("type", "app")
         val pkg = obj.optString("pkg", "")
+        val id = obj.optString("id", "")
+        val userId = obj.optLong("userId", 0)
 
         return when (type) {
             "folder" -> {
@@ -125,7 +123,7 @@ object ConfigSerializer {
                 AppModel(
                     label = obj.optString("label", "Folder"),
                     isFolder = true,
-                    uniqueId = obj.optString("id", "folder_${System.currentTimeMillis()}"),
+                    uniqueId = id,
                     folderItems = children
                 )
             }
@@ -133,65 +131,33 @@ object ConfigSerializer {
                 val widgetObj = obj.optJSONObject("widget")
                 val widget = if (widgetObj != null) {
                     deserializeWidgetModel(widgetObj)
-                } else {
-                    // 相容舊格式
-                    val wId = obj.optString("widget_id")
-                    val wTypeStr = obj.optString("widget_type")
-                    val wMode = try {
-                        WidgetDisplayMode.valueOf(obj.optString("widget_mode", "GLASS"))
-                    } catch(e: Exception) {
-                        WidgetDisplayMode.GLASS
-                    }
-                    val isWide = obj.optBoolean("is_wide", false)
-                    val wType: WidgetType? = when(wTypeStr) {
-                        "Battery" -> WidgetType.Battery
-                        "Clock" -> WidgetType.Clock
-                        "Calendar" -> WidgetType.Calendar(isWide)
-                        "Photo" -> WidgetType.Photo(isWide)
-                        "Music" -> WidgetType.Music(isWide)
-                        "Note" -> WidgetType.Note(text = obj.optString("note_text", ""), isWide = isWide)
-                        else -> null
-                    }
-                    if (wType == null) null
-                    else WidgetModel(
-                        id = wId,
-                        type = wType,
-                        label = obj.optString("label"),
-                        displayMode = wMode
-                    )
-                }
+                } else null
 
                 if (widget == null) return null
 
                 AppModel(
                     label = obj.optString("label"),
-                    uniqueId = obj.optString("id"),
+                    uniqueId = id,
                     widget = widget
                 )
             }
-            "shortcut" -> {
-                val shortcutId = obj.optString("shortcutId")
-                val intentUri = if (obj.has("intentUri")) obj.getString("intentUri") else null
-                
-                if (intentUri != null) {
-                    AppModel(
-                        label = obj.optString("label"),
-                        packageName = pkg,
-                        intentUri = intentUri
-                    )
-                } else {
-                    val baseApp = allInstalled.find { it.packageName == pkg && it.shortcutId == shortcutId } ?: return null
-                    baseApp.copy(
-                        label = obj.optString("label", baseApp.label),
-                        isHidden = hiddenPackages.contains(baseApp.uniqueId) || hiddenPackages.contains(pkg)
-                    )
-                }
-            }
             else -> {
-                val baseApp = allInstalled.find { it.packageName == pkg && !it.isShortcut } ?: return null
+                // 優先尋找 ID 精準匹配的 App (處理分身)
+                // 注意：存檔時的 ID 可能帶有時間戳，匹配時應先剝離
+                val baseId = if (id.contains("@")) {
+                    val parts = id.split("@")
+                    if (parts.last().length >= 10) id.substringBeforeLast("@") else id
+                } else id
+
+                val baseApp = allInstalled.find { it.uniqueId == baseId }
+                    ?: allInstalled.find { it.packageName == pkg && it.userId == userId }
+                
+                if (baseApp == null) return null
+                
                 baseApp.copy(
-                    label = customLabels[baseApp.uniqueId] ?: customLabels[pkg] ?: baseApp.label,
-                    isHidden = hiddenPackages.contains(pkg)
+                    uniqueId = id, // 保留原始 ID (包含時間戳)
+                    label = customLabels[baseId] ?: customLabels[pkg] ?: baseApp.label,
+                    isHidden = hiddenPackages.contains(baseId) || hiddenPackages.contains(pkg)
                 )
             }
         }
@@ -220,7 +186,6 @@ object ConfigSerializer {
         showStatusBar: Boolean,
         showNavigationBar: Boolean,
         pageSize: Int,
-        // 新增項目
         glassParams: Map<String, Any>,
         gestures: Map<String, String>,
         appearance: Map<String, Any>,
@@ -245,7 +210,6 @@ object ConfigSerializer {
         val root = JSONObject()
         val settings = JSONObject()
 
-        // 1. 基礎設定
         settings.put("themed_icons", themedIcons)
         settings.put("liquid_glass_dock", liquidGlassDock)
         settings.put("liquid_glass_home_folder", liquidGlassHomeFolder)
@@ -269,7 +233,6 @@ object ConfigSerializer {
         settings.put("amoled_black", isAmoledBlack)
         settings.put("page_size", pageSize)
 
-        // 寫入新增的詳細設定
         val glassObj = JSONObject()
         glassParams.forEach { (k, v) -> glassObj.put(k, v) }
         root.put("glass_params", glassObj)
@@ -299,7 +262,6 @@ object ConfigSerializer {
         root.put("custom_icon_settings", customIconObj)
         settings.put("hidden_password", password)
 
-        // 2. App 相關
         val hidden = JSONArray()
         hiddenPackages.forEach { hidden.put(it) }
         root.put("hidden_apps", hidden)
@@ -320,7 +282,6 @@ object ConfigSerializer {
         categoryRenames.forEach { (k, v) -> renames.put(k, v) }
         root.put("category_renames", renames)
 
-        // 3. 佈局
         val pagesArray = JSONArray()
         pages.forEach { page ->
             val pageArray = JSONArray()
@@ -329,19 +290,17 @@ object ConfigSerializer {
         }
         root.put("layout", pagesArray)
 
-        // 4. 負一屏小工具
         val minusOne = JSONArray()
         minusOneWidgets.forEach { widget ->
             minusOne.put(serializeWidgetModel(widget))
         }
         root.put("minus_one_widgets", minusOne)
 
-        // 5. Dock & Stats
         root.put("dock", JSONArray(dockPackageNames))
         root.put("launch_counts", launchCounts ?: "")
 
         root.put("settings", settings)
-        root.put("version", 1)
+        root.put("version", 2) // 升級版本號
         root.put("timestamp", System.currentTimeMillis())
 
         return root.toString(4)

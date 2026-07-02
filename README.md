@@ -24,8 +24,9 @@
 
 ### 🎨 Design & Interaction
 *   **Immersive Edge-to-Edge**: Full transparency support that treats your wallpaper as the primary canvas.
+*   **Bouncy Paging (Fluid Navigation)**: Custom spring physics engine (`DampingRatioLowBouncy`) applied to horizontal paging for an organic, responsive feel.
 *   **Edit Mode (Jiggle Mode)**: iOS-style desktop organization with iconic jiggle animations.
-    *   **Quick Uninstall**: One-tap "X" badges on the top-left of app icons for instant uninstallation while editing.
+    *   **Unified Quick Removal**: One-tap removal badges that intelligently distinguish between home screen removal and system uninstallation based on context.
 *   **Liquid Glass Engine (Enhanced)**: High-performance real-time glassmorphism using the **Backdrop** library.
     *   **Applied Everywhere**: Dock, Home Folders, App Library Categories, Search Bars, and Widgets.
     *   **Customizable Effects**: Adjustable blur radius (0-50), physical refraction height, refraction amount, and chromatic aberration.
@@ -79,16 +80,16 @@
 *   **Dedicated Language Settings**: A new, independent configuration page to switch between **System Default**, **English**, and **Traditional Chinese**.
 *   **Dynamic Locale Switching**: Real-time interface updates using `AppCompatDelegate` and `LocaleListCompat` without requiring a full device restart.
 
-### 🎭 App Experience & Shortcuts
-*   **App Shortcuts (Quick Actions)**: Access Android's native app shortcuts directly.
-    *   **Universal Access**: Long-press any icon on the **Home Screen**, **Dock**, inside **Folders**, or the **App Library**.
-    *   **Native UI**: Displays short labels and native icons for shortcuts (e.g., "New Incognito Tab").
+### 🎭 Industrial-Grade App & Profile Management
+*   **Full Multi-User & Work Profile Support**: Native compatibility with **Work Profiles**, **Parallel Spaces** (Xiaomi Dual Apps, Samsung Secure Folder), and multiple guest profiles.
+*   **Special App Icon Clones (Multi-Entry)**: Advanced support for apps with multiple entry points (`activity-alias`). Handles independent icons and labels for sub-apps within a single package (e.g., `vUtils`, `vCalc`, `vPulse`).
+*   **Zero-Loss App Updates**: Smart persistent ID mechanism ensures app updates don't trigger "New App" desktop placement logic or lose custom label/visibility metadata.
+*   **Auto-Sorted Folders**: Desktop folders are automatically maintained in alphabetical order (A-Z) for consistent organization.
 *   **Icon Customization (The Ultimate System)**:
     *   **Iteration Presets**: Instant application of **Standard**, **Black**, **White**, and **Glass** styles.
     *   **Ultimate Custom Style**: High-precision control using a full **HSV + Alpha color picker**.
     *   **Smart Original Hybrid**: Toggle between custom colors and original app icons/backgrounds independently.
-    *   **Forced Theming**: Apply styles to all apps, bypassing traditional monochrome layer limitations.
-    *   **Icon Pack Support**: Full compatibility with third-party icon packs.
+    *   **IPS (Icon Pack Studio) Advanced Parsing**: Custom XML & binary stream parser for full compatibility with modern dynamic icon packs.
 
 ### 📂 Advanced Folder & Library
 *   **Context-Aware Menus**: Full shortcut and management support inside folders even in non-edit mode.
@@ -117,7 +118,8 @@
 ### 🚀 High-Performance Rendering
 *   **Linear Animation Engine**: Real-time interpolation of UI elements based on Pager scroll fractions, replacing binary visibility states with fluid transitions.
 *   **Collision-Free Gestures**: Custom-built `awaitPointerEventScope` logic ensuring widgets and the Pager coexist perfectly.
-*   **V13 Icon Cache Engine**: Enhanced multi-level caching (LruCache + Disk) with ID Unification Mechanism for perfect icon synchronization across all UI layers.
+*   **Enhanced V13 Icon Engine**: High-fidelity caching system (LruCache + Disk) utilizing a `packageName/activity@userId` composite key. Features advanced "timestamp-stripping" to synchronize icons across the App Library and Desktop.
+*   **Intelligent Self-Healing Cache**: Automatically detects app updates and configuration changes to regenerate outdated cache files using latest rendering algorithms.
 *   **Full Configuration Backup**: JSON-based serialization including Desktop Layout, Liquid Glass parameters, Gesture mappings, and search engine choices.
 
 ---
@@ -128,32 +130,29 @@
 app/src/main/java/com/liferlighdow/iteration/
 │
 ├── data/                 # Data & Configuration Layer
-│   ├── AppModel.kt
-│   ├── AppRepository.kt
-│   ├── AppShortcut.kt
-│   ├── ConfigSerializer.kt
+│   ├── AppModel.kt       # Unified Multi-User Model
+│   ├── AppRepository.kt  # Multi-Entry Activity Resolver
+│   ├── ConfigSerializer.kt # Version-Agnostic Coder
 │   ├── ContactModel.kt
 │   └── WidgetModel.kt
 │
 ├── ui/                   # UI Components & Screens
-│   ├── AppGrid.kt
+│   ├── AppGrid.kt        # Optimized Slot-Based Layout
 │   ├── AppItem.kt
 │   ├── AppLibraryPage.kt
-│   ├── Dock.kt
-│   ├── DockStyle.kt
-│   ├── DynamicTheme.kt
+│   ├── Dock.kt           # Linear Animation Container
 │   ├── FolderOverlay.kt
 │   ├── GlobalSearchOverlay.kt
 │   ├── LauncherBottomBar.kt
 │   ├── LauncherDialogs.kt
-│   ├── LauncherScreen.kt
-│   ├── LiquidGlass.kt
-│   ├── ManualScreens.kt
+│   ├── LauncherScreen.kt # Core Pager Engine
+│   ├── LiquidGlass.kt    # Real-time Refraction
+│   ├── ManualScreens.kt  # Documentation System
 │   └── MinusOnePage.kt
 │
 ├── viewmodel/            # Architecture & State Management
 │   ├── MainViewModel.kt
-│   └── MainViewModelLayout.kt
+│   └── MainViewModelLayout.kt # Desktop Logic Extension
 │
 ├── service/              # System Services & Receivers
 │   ├── AdminReceiver.kt
@@ -162,8 +161,8 @@ app/src/main/java/com/liferlighdow/iteration/
 │
 ├── utils/                # Utility Classes (Icons, Wallpaper, Actions)
 │   ├── GestureAction.kt
-│   ├── IconPackManager.kt
-│   ├── IconProcessor.kt
+│   ├── IconPackManager.kt # Advanced XML & IPS Parser
+│   ├── IconProcessor.kt   # PorterDuff-Masked Renderer
 │   ├── IconShape.kt
 │   ├── IconStyle.kt
 │   ├── LauncherActions.kt

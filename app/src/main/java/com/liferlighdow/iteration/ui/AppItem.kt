@@ -189,7 +189,7 @@ fun AppItem(
                 }
 
                 // 編輯模式下的叉叉按鈕
-                if (isEditMode && (app.packageName.isNotEmpty() || app.isFolder)) {
+                if (isEditMode && (app.packageName.isNotEmpty() || app.isFolder || app.isWidget)) {
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopStart)

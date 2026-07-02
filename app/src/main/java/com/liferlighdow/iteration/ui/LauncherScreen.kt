@@ -14,6 +14,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -38,7 +39,6 @@ import com.liferlighdow.iteration.utils.GestureAction
 import com.liferlighdow.iteration.viewmodel.MainViewModel
 import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.data.AppModel
-import com.liferlighdow.iteration.viewmodel.addShortcut
 import com.liferlighdow.iteration.viewmodel.handleAppDrop
 import com.liferlighdow.iteration.viewmodel.prepareForDrag
 import com.liferlighdow.iteration.viewmodel.removeAppFromHome
@@ -151,7 +151,6 @@ fun LauncherScreen(
     var showDeleteFolderConfirm by remember { mutableStateOf(false) }
     var showDeletePageConfirm by remember { mutableStateOf(false) }
     var showWidgetPicker by remember { mutableStateOf(false) }
-    var showShortcutPicker by remember { mutableStateOf(false) }
     var widgetTargetPage by remember { mutableStateOf<Int?>(null) }
 
     // 新增：快速編輯 App 的狀態
@@ -223,22 +222,6 @@ fun LauncherScreen(
     }
     
     val desktopStartIndex = if (showMinusOnePage) 1 else 0
-
-    val shortcutLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == android.app.Activity.RESULT_OK) {
-            val data = result.data
-            if (data != null) {
-                val label = data.getStringExtra(Intent.EXTRA_SHORTCUT_NAME) ?: "Shortcut"
-                val intent = data.getParcelableExtra<Intent>(Intent.EXTRA_SHORTCUT_INTENT)
-                val iconBitmap = data.getParcelableExtra<android.graphics.Bitmap>(Intent.EXTRA_SHORTCUT_ICON)
-                
-                if (intent != null) {
-                    viewModel.addShortcut(label, intent, iconBitmap, (pagerState.currentPage - desktopStartIndex).coerceAtLeast(0))
-                    android.widget.Toast.makeText(mContext, R.string.shortcut_created, android.widget.Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-    }
 
     // 處理返回按鍵以返回主頁面，並防止在主頁面按下返回鍵導致 Activity 重啟（刷新）
     // 此 Handler 應在所有變數定義後宣告
@@ -371,7 +354,14 @@ fun LauncherScreen(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize(),
                     userScrollEnabled = draggingApp == null && !isLibraryInSearchMode,
-                    beyondViewportPageCount = 1
+                    beyondViewportPageCount = 1,
+                    flingBehavior = PagerDefaults.flingBehavior(
+                        state = pagerState,
+                        snapAnimationSpec = spring(
+                            dampingRatio = Spring.DampingRatioLowBouncy,
+                            stiffness = Spring.StiffnessLow
+                        )
+                    )
                 ) { pageIndex ->
                 // 計算頁面偏移量 (-1.0 到 1.0)
                 val pageOffset = ((pagerState.currentPage - pageIndex) + pagerState.currentPageOffsetFraction)
@@ -432,7 +422,7 @@ fun LauncherScreen(
                                     if (app.isFolder) {
                                         folderIconPosition = pos
                                         folderToOpenId = app.uniqueId
-                                    } else onAppClick(app)
+                                    } else viewModel.launchApp(app)
                                 },
                                 onSlotPositioned = { idx, rect ->
                                     slotBounds["$pageIndex-$idx"] = rect
@@ -728,16 +718,6 @@ fun LauncherScreen(
         onDismissWidgetPicker = {
             showWidgetPicker = false
             widgetTargetPage = null
-        },
-        showShortcutPicker = showShortcutPicker,
-        onShowShortcutPicker = { showShortcutPicker = true },
-        onDismissShortcutPicker = { showShortcutPicker = false },
-        onShortcutAppSelected = { info ->
-            showShortcutPicker = false
-            val intent = Intent(Intent.ACTION_CREATE_SHORTCUT).apply {
-                setClassName(info.packageName, info.name)
-            }
-            shortcutLauncher.launch(intent)
         },
         showDockPicker = showDockPicker,
         onDismissDockPicker = { showDockPicker = null },

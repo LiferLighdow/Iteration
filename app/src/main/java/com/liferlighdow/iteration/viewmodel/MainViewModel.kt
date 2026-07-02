@@ -41,7 +41,6 @@ import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.utils.WallpaperProcessor
 import com.liferlighdow.iteration.data.AppModel
 import com.liferlighdow.iteration.data.AppRepository
-import com.liferlighdow.iteration.data.AppShortcut
 import com.liferlighdow.iteration.data.ConfigSerializer
 import com.liferlighdow.iteration.data.ContactModel
 import com.liferlighdow.iteration.data.DailyWeather
@@ -224,8 +223,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val styleSuffix = currentStyleSuffix
         if (styleSuffix == "default") return null
 
-        // 1. 取得基礎 ID (處理桌面實例的 @ 符號)
-        val baseId = if (uniqueId.contains("@")) uniqueId.substringBeforeLast("@") else uniqueId
+        // 1. 取得基礎 ID
+        // 桌面實例 ID 格式為 baseId@timestamp (時間戳通常 > 1000000000)
+        // 分身 ID 格式為 pkg/act@userId
+        val baseId = if (uniqueId.contains("@")) {
+            val parts = uniqueId.split("@")
+            val lastPart = parts.last()
+            // 如果最後一部分長度 >= 10，判定為時間戳，剝離它
+            if (lastPart.length >= 10 && lastPart.toLongOrNull() != null) {
+                uniqueId.substringBeforeLast("@")
+            } else {
+                uniqueId
+            }
+        } else {
+            uniqueId
+        }
+        
         val cacheKey = "${baseId}_$styleSuffix"
 
         // 2. 檢查 LruCache
@@ -261,11 +274,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun clearIconCache() {
         viewModelScope.launch(Dispatchers.IO) {
+            // 1. 清除記憶體 LruCache
             iconCache.evictAll()
+            // 2. 徹底刪除所有產生的磁碟快取檔案
             processedIconCacheDir.listFiles()?.forEach { it.delete() }
+            // 3. 清除圖格處理器的形狀遮罩快取
             iconProcessor.clearCache()
+            
             withContext(Dispatchers.Main) {
+                // 4. 強制清除 PackageManager 的原始 App 緩存
+                cachedRawApps = null
+                
+                // 5. 重新執行 loadApps (會重新讀取設定、處理圖示、產生新訊號)
                 loadApps()
+                
+                // 6. 發送全局廣播，通知 Launcher 內的所有組件（包含頁面、搜尋框等）徹底重新載入
+                val intent = Intent("com.liferlighdow.iteration.ACTION_REFRESH_APPS")
+                intent.setPackage(getApplication<Application>().packageName)
+                getApplication<Application>().sendBroadcast(intent)
             }
         }
     }
@@ -543,7 +569,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     var photoBitmap: Bitmap? = null
                     if (photoUri != null) {
                         try {
-                            photoBitmap = MediaStore.Images.Media.getBitmap(context.contentResolver, Uri.parse(photoUri))
+                            val uri = Uri.parse(photoUri)
+                            photoBitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                                val source = android.graphics.ImageDecoder.createSource(context.contentResolver, uri)
+                                android.graphics.ImageDecoder.decodeBitmap(source)
+                            } else {
+                                @Suppress("DEPRECATION")
+                                MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
+                            }
                         } catch (e: Exception) {}
                     }
                     contactList.add(ContactModel(id, name, number, photoBitmap))
@@ -560,44 +593,67 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // --- 新增：監聽 App 安裝/卸載/更新 ---
     private val launcherApps = application.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
+    private val packageReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent == null || intent.action != Intent.ACTION_PACKAGE_REMOVED) return
+            
+            val isReplacing = intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)
+            if (!isReplacing) {
+                val packageName = intent.data?.schemeSpecificPart ?: return
+                performFullPackageCleanup(packageName)
+            }
+        }
+    }
+
+    private fun performFullPackageCleanup(packageName: String) {
+        // 1. 從 seen_apps 中移除
+        val seenApps = (prefs.getStringSet("seen_apps", emptySet()) ?: emptySet()).toMutableSet()
+        val toRemoveSeen = seenApps.filter { it.startsWith("$packageName/") || it == packageName }
+        if (toRemoveSeen.isNotEmpty()) {
+            seenApps.removeAll(toRemoveSeen.toSet())
+            prefs.edit().putStringSet("seen_apps", seenApps).apply()
+        }
+
+        // 2. 從排除名單中移除
+        val excluded = (prefs.getStringSet("excluded_themed_packages", emptySet()) ?: emptySet()).toMutableSet()
+        if (excluded.remove(packageName)) {
+            prefs.edit().putStringSet("excluded_themed_packages", excluded).apply()
+            _excludedThemedPackages.value = excluded
+        }
+
+        // 3. 從隱藏名單中移除
+        if (hiddenPackages.remove(packageName)) {
+            prefs.edit().putStringSet("hidden_apps", hiddenPackages).apply()
+        }
+
+        // 4. 清除自定義標籤與類別
+        val labelsUpdated = customLabels.remove(packageName) != null
+        if (labelsUpdated) {
+            val json = JSONObject()
+            customLabels.forEach { (k, v) -> json.put(k, v) }
+            prefs.edit().putString("custom_labels_json", json.toString()).apply()
+        }
+        if (customCategories.remove(packageName) != null) {
+            saveCustomCategories()
+        }
+    }
+
     private val packageCallback = object : LauncherApps.Callback() {
         override fun onPackageAdded(packageName: String, user: UserHandle) {
+            // 新安裝時不需要清除，loadApps 會處理新 ID。
+            // 只有更新（Changed）或移除後再裝（由 packageReceiver 處理）才需要。
             refreshApps()
         }
         override fun onPackageRemoved(packageName: String, user: UserHandle) {
-            // 1. 從 seen_apps 中移除
-            val seenApps = (prefs.getStringSet("seen_apps", emptySet()) ?: emptySet()).toMutableSet()
-            val toRemoveSeen = seenApps.filter { it.startsWith("$packageName/") || it == packageName }
-            if (toRemoveSeen.isNotEmpty()) {
-                seenApps.removeAll(toRemoveSeen.toSet())
-                prefs.edit().putStringSet("seen_apps", seenApps).apply()
-            }
+            // 注意：不要在這裡從 seen_apps 或其他設定中移除
+            // 這樣在應用程式「更新」時（先移除再安裝），才能保留原有的位置、自定義標籤與隱藏狀態
+            // 也能避免在 autoAddAppsToHome 開啟時，更新應用程式導致重複加入桌面的問題
 
-            // 2. 從排除名單 (Exclusions) 中移除記憶
-            val excluded = (prefs.getStringSet("excluded_themed_packages", emptySet()) ?: emptySet()).toMutableSet()
-            if (excluded.remove(packageName)) {
-                prefs.edit().putStringSet("excluded_themed_packages", excluded).apply()
-                _excludedThemedPackages.value = excluded
-            }
-
-            // 3. 從隱藏名單中移除
-            if (hiddenPackages.remove(packageName)) {
-                prefs.edit().putStringSet("hidden_apps", hiddenPackages).apply()
-            }
-
-            // 4. 清除自定義標籤與類別
-            if (customLabels.remove(packageName) != null) {
-                val json = JSONObject()
-                customLabels.forEach { (k, v) -> json.put(k, v) }
-                prefs.edit().putString("custom_labels_json", json.toString()).apply()
-            }
-            if (customCategories.remove(packageName) != null) {
-                saveCustomCategories()
-            }
-
+            clearAppIconCache(packageName)
             refreshApps()
         }
         override fun onPackageChanged(packageName: String, user: UserHandle) {
+            clearAppIconCache(packageName)
             refreshApps()
         }
         override fun onPackagesAvailable(packageNames: Array<out String>, user: UserHandle, replacing: Boolean) {
@@ -613,8 +669,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun refreshApps() {
-        cachedRawApps = null // 清除緩存
-        loadApps()           // 重新讀取
+        cachedRawApps = null // 1. 強制清空系統應用快取
+        // 2. 加入延遲並發送廣播，確保系統層同步完成
+        viewModelScope.launch {
+            delay(1000)
+            loadApps()
+            
+            // 3. 發送全局刷新廣播
+            val intent = Intent("com.liferlighdow.iteration.ACTION_REFRESH_APPS")
+            intent.setPackage(getApplication<Application>().packageName)
+            getApplication<Application>().sendBroadcast(intent)
+        }
     }
 
     private val refreshReceiver = object : BroadcastReceiver() {
@@ -662,6 +727,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         } else {
             getApplication<Application>().registerReceiver(refreshReceiver, filter)
         }
+
+        // 註冊套件移除監聽（用於區分卸載與更新）
+        val pkgFilter = IntentFilter(Intent.ACTION_PACKAGE_REMOVED).apply {
+            addDataScheme("package")
+        }
+        getApplication<Application>().registerReceiver(packageReceiver, pkgFilter)
     }
 
     override fun onCleared() {
@@ -670,6 +741,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // 取消註冊，避免內存洩漏
         launcherApps.unregisterCallback(packageCallback)
         getApplication<Application>().unregisterReceiver(refreshReceiver)
+        getApplication<Application>().unregisterReceiver(packageReceiver)
     }
 
     private var lastBlurredSignal = -1L
@@ -779,7 +851,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _excludedThemedPackages.value = newExcluded
             _desktopRows.value = newRows
             _dockStyle.value = newDockStyle
-            iconCache.evictAll()
+            // 不要在這裡立即 evictAll，移到 loadAppsJob 裡面根據後綴變化決定
         }
 
         _searchEngineUrl.value = newSearchEngine
@@ -1089,43 +1161,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         loadApps()
     }
 
-    fun getShortcuts(packageName: String): List<AppShortcut> {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N_MR1) return emptyList()
-        val launcherApps = getApplication<Application>().getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
-        val query = LauncherApps.ShortcutQuery().apply {
-            setPackage(packageName)
-            setQueryFlags(LauncherApps.ShortcutQuery.FLAG_MATCH_DYNAMIC or LauncherApps.ShortcutQuery.FLAG_MATCH_MANIFEST or LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED)
-        }
-        return try {
-            val shortcuts = launcherApps.getShortcuts(query, Process.myUserHandle()) ?: emptyList()
-            shortcuts.map { shortcut ->
-                AppShortcut(
-                    id = shortcut.id,
-                    label = (shortcut.shortLabel ?: shortcut.longLabel ?: "").toString(),
-                    icon = try {
-                        launcherApps.getShortcutIconDrawable(
-                            shortcut,
-                            getApplication<Application>().resources.displayMetrics.densityDpi
-                        )
-                    } catch (e: Exception) {
-                        null
-                    },
-                    packageName = packageName
-                )
-            }
-        } catch (e: Exception) {
-            emptyList()
-        }
-    }
+    private fun clearAppIconCache(packageName: String) {
+        // 刪除該 App 所有的磁碟快取圖示，確保更新後能重新生成
+        processedIconCacheDir.listFiles { _, name ->
+            name.startsWith("${packageName}_")
+        }?.forEach { it.delete() }
 
-    fun launchShortcut(packageName: String, shortcutId: String) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N_MR1) return
-        val launcherApps = getApplication<Application>().getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
-        try {
-            launcherApps.startShortcut(packageName, shortcutId, null, null, Process.myUserHandle())
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        iconCache.evictAll()
     }
 
     fun toggleHiddenApp(packageName: String) {
@@ -1138,12 +1180,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
         prefs.edit().putStringSet("hidden_apps", hiddenPackages).apply()
 
-        // 刪除該 App 所有的磁碟快取圖示，確保排除/恢復排除能立即生效
-        processedIconCacheDir.listFiles { _, name ->
-            name.startsWith("${packageName}_")
-        }?.forEach { it.delete() }
-
-        iconCache.evictAll()
+        clearAppIconCache(packageName)
         loadApps() // Reload to update isHidden status
     }
 
@@ -1281,10 +1318,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 "C_${customBg.toString(16)}_${customFg.toString(16)}_${if (customOriginal) "O" else "M"}_${if (customOriginalBg) "OB" else "CB"}"
             } else "N"
 
-            currentStyleSuffix = if (currentIconPack.isNotEmpty()) {
+            val newStyleSuffix = if (currentIconPack.isNotEmpty()) {
                 "IP_V13_${currentIconPack.hashCode()}_${currentShape.name}_${currentStyle.name}_${if (isThemed) "T_$colorKey" else "N"}_$customKey"
             } else {
                 "V13_${currentStyle.name}_${currentShape.name}_${if (isThemed) "T_$colorKey" else "N"}_$customKey"
+            }
+
+            // 如果樣式真的變了，才更新後綴並清空記憶體快取
+            if (currentStyleSuffix != newStyleSuffix) {
+                currentStyleSuffix = newStyleSuffix
+                iconCache.evictAll()
             }
             themeColorsCache = themeColors
 
@@ -1410,33 +1453,43 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     }
 
                     // 關鍵：找出真正新安裝的 App (不在 seen_apps 中)
-                    val newApps = processedApps.filter {
-                        !seenApps.contains(it.uniqueId) && !it.isHidden
+                    val newApps = processedApps.filter { app ->
+                        val isNew = !seenApps.contains(app.uniqueId) && 
+                                   !seenApps.contains(app.packageName) && // 遷移相容：檢查舊包名格式
+                                   !app.isHidden
+                        isNew
                     }
 
                     if (newApps.isNotEmpty()) {
                         if (_autoAddAppsToHome.value) {
-                            // 將新 App 加入最後一頁，或者如果太滿就開新分頁
-                            val mutablePages = restoredPages.map { it.toMutableList() }.toMutableList()
-                            newApps.forEach { app ->
-                                var added = false
-                                for (page in mutablePages) {
-                                    if (page.size < pageSize) {
-                                        page.add(app)
-                                        added = true
-                                        break
+                            // 額外檢查：如果 newApps 數量多得離譜（例如 > 50），極大機率是 ID 遷移導致的
+                            // 這種情況下我們只更新 seenApps，不實際塞入桌面，防止使用者崩潰
+                            val isMassiveMigration = newApps.size > 20 
+                            
+                            if (!isMassiveMigration) {
+                                val mutablePages = restoredPages.map { it.toMutableList() }.toMutableList()
+                                newApps.forEach { app ->
+                                    var added = false
+                                    for (page in mutablePages) {
+                                        if (page.size < pageSize) {
+                                            page.add(app)
+                                            added = true
+                                            break
+                                        }
                                     }
+                                    if (!added) {
+                                        mutablePages.add(mutableListOf(app))
+                                    }
+                                    seenApps.add(app.uniqueId)
                                 }
-                                if (!added) {
-                                    mutablePages.add(mutableListOf(app))
-                                }
-                                seenApps.add(app.uniqueId)
+                                _pages.value = mutablePages
+                                saveLayout()
+                            } else {
+                                // 僅更新標記，不塞入桌面
+                                seenApps.addAll(newApps.map { it.uniqueId })
                             }
-                            // 儲存新的已見過清單
+                            
                             prefs.edit().putStringSet("seen_apps", seenApps).apply()
-
-                            _pages.value = mutablePages
-                            saveLayout() // 更新儲存的佈局
                         } else {
                             // 不自動加入桌面，但也標記為已見過，否則下次 loadApps 又會進來
                             seenApps.addAll(newApps.map { it.uniqueId })
@@ -1479,53 +1532,59 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         customOriginal: Boolean,
         customOriginalBg: Boolean
     ): ImageBitmap {
-        val pm = getApplication<Application>().packageManager
+        val launcherApps = getApplication<Application>().getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
+        val userManager = getApplication<Application>().getSystemService(Context.USER_SERVICE) as android.os.UserManager
         
-        // 優先獲取原始圖示
-        val rawIcon = if (app.isShortcut && app.shortcutId != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
-            try {
-                val query = LauncherApps.ShortcutQuery().apply {
-                    setPackage(app.packageName)
-                    setShortcutIds(listOf(app.shortcutId))
-                    setQueryFlags(LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED or LauncherApps.ShortcutQuery.FLAG_MATCH_DYNAMIC or LauncherApps.ShortcutQuery.FLAG_MATCH_MANIFEST)
-                }
-                val shortcuts = launcherApps.getShortcuts(query, Process.myUserHandle())
-                if (!shortcuts.isNullOrEmpty()) {
-                    launcherApps.getShortcutIconDrawable(shortcuts[0], getApplication<Application>().resources.displayMetrics.densityDpi)
-                } else {
-                    pm.getApplicationIcon(app.packageName)
-                }
-            } catch (e: Exception) {
-                try { pm.getApplicationIcon(app.packageName) } catch (e2: Exception) { null }
+        // 1. 取得該 App 所屬使用者的 Handle
+        val userHandle = userManager.userProfiles.find { 
+            userManager.getSerialNumberForUser(it) == app.userId 
+        } ?: android.os.Process.myUserHandle()
+
+        // 2. 優先嘗試獲取特定的 Activity 圖示 (支援一鍵多入口)
+        val rawIcon = try {
+            if (app.uniqueId.contains("/")) {
+                val componentStr = app.uniqueId.substringBefore("@")
+                val pkg = componentStr.substringBefore("/")
+                val cls = componentStr.substringAfter("/")
+                val component = android.content.ComponentName(pkg, cls)
+                
+                // 從 LauncherApps 中精準提取該入口的圖示
+                launcherApps.getActivityList(pkg, userHandle)
+                    .find { it.componentName == component }
+                    ?.getIcon(getApplication<Application>().resources.displayMetrics.densityDpi)
+            } else {
+                // 如果是普通應用，則獲取該使用者的標準圖示
+                launcherApps.getActivityList(app.packageName, userHandle)
+                    .firstOrNull()
+                    ?.getIcon(getApplication<Application>().resources.displayMetrics.densityDpi)
             }
-        } else if (app.packageName.isNotEmpty()) {
-            try {
-                pm.getApplicationIcon(app.packageName)
-            } catch (e: Exception) {
-                null
-            }
-        } else {
+        } catch (e: Exception) {
             null
         }
 
-        // 如果該 App 被設為排除 (Excluded)，不論是否使用圖標包，皆強制回歸原版並僅套用形狀
+        // 3. 如果上述都失敗，才回退到 PM (僅限主使用者)
+        val finalRawIcon = rawIcon ?: try {
+            getApplication<Application>().packageManager.getApplicationIcon(app.packageName)
+        } catch (e: Exception) {
+            null
+        }
+
         if (isExcluded) {
             return iconProcessor.processIcon(
-                rawIcon, false, null, IconStyle.STANDARD, currentShape, sizePx,
+                finalRawIcon, false, null, IconStyle.STANDARD, currentShape, sizePx,
                 customBgColor = 0, customFgColor = 0, customUseOriginal = true, customUseOriginalBg = true
             )
         }
 
         return if (currentIconPack.isNotEmpty()) {
-            val ipIcon = iconPackManager.getIcon(app.packageName)
+            val ipIcon = iconPackManager.getIcon(app.packageName, app.uniqueId)
             if (ipIcon != null) {
                 iconProcessor.processIcon(ipIcon, false, null, IconStyle.STANDARD, currentShape, sizePx, isIconPack = true)
             } else {
-                // 當使用圖標包但該 App 未適配時，強制使用原版樣式 (Custom + UseOriginal)，不套用 Iteration Style
-                iconProcessor.processIcon(rawIcon, false, null, IconStyle.CUSTOM, currentShape, sizePx, customBgColor = 0, customFgColor = 0, customUseOriginal = true, customUseOriginalBg = true)
+                iconProcessor.processIcon(finalRawIcon, false, null, IconStyle.CUSTOM, currentShape, sizePx, customBgColor = 0, customFgColor = 0, customUseOriginal = true, customUseOriginalBg = true)
             }
         } else {
-            iconProcessor.processIcon(rawIcon, isThemed, themeColors, currentStyle, currentShape, sizePx, customBgColor = customBg, customFgColor = customFg, customUseOriginal = customOriginal, customUseOriginalBg = customOriginalBg)
+            iconProcessor.processIcon(finalRawIcon, isThemed, themeColors, currentStyle, currentShape, sizePx, customBgColor = customBg, customFgColor = customFg, customUseOriginal = customOriginal, customUseOriginalBg = customOriginalBg)
         }
     }
 
@@ -1758,16 +1817,48 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _excludedThemedPackages.value = current
         prefs.edit().putStringSet("excluded_themed_packages", current).apply()
 
-        // 刪除該 App 所有的磁碟快取圖示，確保排除/恢復排除能立即生效
-        processedIconCacheDir.listFiles { _, name ->
-            name.startsWith("${packageName}_")
-        }?.forEach { it.delete() }
-
-        iconCache.evictAll()
+        clearAppIconCache(packageName)
         loadApps()
     }
 
     fun getInstalledIconPacks() = iconPackManager.getInstalledIconPacks()
+
+    fun launchApp(app: AppModel) {
+        val launcherApps = getApplication<Application>().getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
+        val userManager = getApplication<Application>().getSystemService(Context.USER_SERVICE) as android.os.UserManager
+        
+        try {
+            val allProfiles = userManager.userProfiles
+            val userHandle = allProfiles.find { 
+                userManager.getSerialNumberForUser(it) == app.userId 
+            } ?: android.os.Process.myUserHandle()
+
+            if (app.uniqueId.contains("/")) {
+                // 多入口應用或分身：使用 ComponentName 啟動特定 Activity
+                val idWithoutTimestamp = if (app.uniqueId.contains("@")) {
+                    val lastPart = app.uniqueId.substringAfterLast("@")
+                    if (lastPart.length >= 10) app.uniqueId.substringBeforeLast("@") else app.uniqueId
+                } else app.uniqueId
+                
+                val idWithoutUser = idWithoutTimestamp.substringBefore("@")
+                val pkg = idWithoutUser.substringBefore("/")
+                val cls = idWithoutUser.substringAfter("/")
+                val component = android.content.ComponentName(pkg, cls)
+                launcherApps.startMainActivity(component, userHandle, null, null)
+            } else {
+                // 一般應用：使用包名啟動
+                val intent = getApplication<Application>().packageManager.getLaunchIntentForPackage(app.packageName)
+                if (intent != null) {
+                    getApplication<Application>().startActivity(intent.apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    })
+                }
+            }
+            logAppLaunch(app.packageName)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
 
     fun setLiquidGlassEnabled(enabled: Boolean) {
         _isLiquidGlassEnabled.value = enabled

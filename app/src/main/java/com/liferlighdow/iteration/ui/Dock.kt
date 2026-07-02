@@ -147,7 +147,6 @@ fun Dock(
                     
                     val viewModel: MainViewModel = viewModel()
                     var showContextMenu by remember { mutableStateOf(false) }
-                    val shortcuts = remember(showContextMenu) { if (showContextMenu && app.packageName.isNotEmpty()) viewModel.getShortcuts(app.packageName) else emptyList() }
 
                     AppItem(
                         app = app,
@@ -184,27 +183,6 @@ fun Dock(
                         expanded = showContextMenu,
                         onDismissRequest = { showContextMenu = false }
                     ) {
-                        if (shortcuts.isNotEmpty()) {
-                            shortcuts.forEach { shortcut ->
-                                DropdownMenuItem(
-                                    text = { Text(shortcut.label) },
-                                    leadingIcon = {
-                                        shortcut.icon?.let { icon ->
-                                            Image(
-                                                bitmap = icon.toBitmap().asImageBitmap(),
-                                                contentDescription = null,
-                                                modifier = Modifier.size(24.dp)
-                                            )
-                                        }
-                                    },
-                                    onClick = {
-                                        viewModel.launchShortcut(app.packageName, shortcut.id)
-                                        showContextMenu = false
-                                    }
-                                )
-                            }
-                            HorizontalDivider()
-                        }
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.replace_app)) },
                             leadingIcon = { Icon(Icons.Default.Settings, null) },

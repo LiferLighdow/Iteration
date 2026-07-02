@@ -213,7 +213,6 @@ fun FolderOverlay(
                                         rowItems.forEach { app ->
                                             val lastPos = remember { object { var pos = Offset.Zero } }
                                             var showItemMenu by remember { mutableStateOf(false) }
-                                            val shortcuts = remember(showItemMenu) { if (showItemMenu) viewModel.getShortcuts(app.packageName) else emptyList() }
                                             Box(
                                                 modifier = Modifier
                                                     .weight(1f)
@@ -243,25 +242,7 @@ fun FolderOverlay(
                                                     isEditMode = isEditMode,
                                                     getIcon = { pkg -> viewModel.getIcon(pkg) },
                                                     onDeleteClick = {
-                                                        try {
-                                                            val intent =
-                                                                Intent(Intent.ACTION_DELETE).apply {
-                                                                    data = Uri.fromParts(
-                                                                        "package",
-                                                                        app.packageName,
-                                                                        null
-                                                                    )
-                                                                    flags =
-                                                                        Intent.FLAG_ACTIVITY_NEW_TASK
-                                                                }
-                                                            mContext.startActivity(intent)
-                                                        } catch (e: Exception) {
-                                                            Log.e(
-                                                                "Iteration",
-                                                                "Uninstall failed",
-                                                                e
-                                                            )
-                                                        }
+                                                        viewModel.removeAppFromFolder(currentFolder.uniqueId, app.uniqueId)
                                                     },
                                                     modifier = Modifier
                                                         .graphicsLayer {
@@ -286,28 +267,6 @@ fun FolderOverlay(
                                                     expanded = showItemMenu,
                                                     onDismissRequest = { showItemMenu = false }
                                                 ) {
-                                                    if (shortcuts.isNotEmpty()) {
-                                                        shortcuts.forEach { shortcut ->
-                                                            DropdownMenuItem(
-                                                                text = { Text(shortcut.label) },
-                                                                leadingIcon = {
-                                                                    shortcut.icon?.let { icon ->
-                                                                        Image(
-                                                                            bitmap = icon.toBitmap().asImageBitmap(),
-                                                                            contentDescription = null,
-                                                                            modifier = Modifier.size(24.dp)
-                                                                        )
-                                                                    }
-                                                                },
-                                                                onClick = {
-                                                                    viewModel.launchShortcut(app.packageName, shortcut.id)
-                                                                    showItemMenu = false
-                                                                    onDismiss()
-                                                                }
-                                                            )
-                                                        }
-                                                        HorizontalDivider()
-                                                    }
                                                     if (menuOptions.contains("delete_home")) {
                                                         DropdownMenuItem(
                                                             text = { Text(stringResource(R.string.menu_delete_home)) },

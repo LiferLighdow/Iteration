@@ -112,7 +112,6 @@ class IconPackManager(private val context: Context) {
                 var component: String? = null
                 var drawable: String? = null
 
-                // 修正 4：不給定固定命名空間(null)，直接遍歷屬性名稱，防止被 IPS 的特殊 Namespace 檔掉
                 for (i in 0 until xpp.attributeCount) {
                     val attrName = xpp.getAttributeName(i)
                     if (attrName.equals("component", ignoreCase = true)) {
@@ -123,7 +122,12 @@ class IconPackManager(private val context: Context) {
                 }
 
                 if (drawable != null && component != null) {
-                    val cleanComponent = component.substringAfter("{").substringBefore("}")
+                    // 更強大的正則解析，處理 ComponentInfo{package/activity}
+                    val cleanComponent = if (component.contains("{") && component.contains("}")) {
+                        component.substringAfter("{").substringBefore("}")
+                    } else {
+                        component
+                    }
                     iconMapping[cleanComponent] = drawable
                 }
             }
@@ -131,22 +135,27 @@ class IconPackManager(private val context: Context) {
         }
     }
 
-    fun getIcon(packageName: String): Drawable? {
+    fun getIcon(packageName: String, uniqueId: String? = null): Drawable? {
         val res = iconPackResources ?: return null
         val iconPkg = iconPackPackageName ?: return null
 
-        // 優先從快速索引中尋找
-        var drawableName = packageToComponentCache[packageName]?.let { iconMapping[it] }
+        // 1. 優先精準匹配 uniqueId (格式如 pkg/activity)
+        var drawableName = uniqueId?.let { id ->
+            val cleanId = if (id.count { it == '@' } >= 2) id.substringBeforeLast("@") 
+                         else if (id.contains("@") && id.substringAfterLast("@").length >= 10) id.substringBeforeLast("@")
+                         else id
+            iconMapping[cleanId]
+        }
         
-        // 如果沒有快取過，嘗試在 Mapping 中尋找
+        // 2. 特殊處理：如果是「多入口應用」(ID 包含斜線)，且圖標包沒有精準適配該入口
+        // 我們絕對不能回退到包名匹配，否則所有分身都會長得一樣。
+        if (drawableName == null && uniqueId != null && uniqueId.contains("/")) {
+            return null // 回傳 null，強迫 MainViewModel 使用系統原始的 Activity Icon
+        }
+
+        // 3. 次之匹配 packageName (僅限普通應用)
         if (drawableName == null) {
-            for ((key, value) in iconMapping) {
-                if (key.startsWith("$packageName/") || key == packageName) {
-                    drawableName = value
-                    packageToComponentCache[packageName] = key // 存入快速索引
-                    break
-                }
-            }
+            drawableName = iconMapping[packageName]
         }
 
         if (drawableName != null) {

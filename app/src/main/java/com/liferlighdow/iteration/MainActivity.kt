@@ -57,22 +57,7 @@ class MainActivity : AppCompatActivity() {
                     LauncherScreen(
                         viewModel = viewModel,
                         onAppClick = { app ->
-                            if (app.isShortcut) {
-                                if (app.shortcutId != null) {
-                                    viewModel.launchShortcut(app.packageName, app.shortcutId)
-                                } else if (app.intentUri != null) {
-                                    try {
-                                        val intent = Intent.parseUri(app.intentUri, 0)
-                                        startActivity(intent)
-                                    } catch (e: Exception) {
-                                        e.printStackTrace()
-                                    }
-                                }
-                            } else {
-                                viewModel.logAppLaunch(app.packageName)
-                                val intent = packageManager.getLaunchIntentForPackage(app.packageName)
-                                if (intent != null) startActivity(intent)
-                            }
+                            viewModel.launchApp(app)
                         },
                         onSettingsClick = {
                             startActivity(Intent(this@MainActivity, SettingsActivity::class.java))

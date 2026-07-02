@@ -212,13 +212,6 @@ fun IconEngineManualScreen(onBack: () -> Unit) {
 
             item {
                 ManualSection(
-                    title = "PWA & Web Shortcut Support",
-                    content = "Unlike standard launchers, the engine assigns unique identities to web shortcuts (PWA). This allows you to have multiple shortcuts from the same browser (e.g., Chrome) with completely independent icons and labels."
-                )
-            }
-
-            item {
-                ManualSection(
                     title = "High-Performance Processing",
                     content = "The engine utilizes a multi-threaded architecture (Semaphore 8), allowing it to process hundreds of icons simultaneously in the background. This ensures the UI remains responsive even when you change your entire icon style or theme color."
                 )

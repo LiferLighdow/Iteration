@@ -14,10 +14,6 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-    <uses-permission android:name="com.android.launcher.permission.INSTALL_SHORTCUT" />
-    <uses-permission android:name="android.permission.INSTALL_SHORTCUT" />
-    <uses-permission android:name="com.android.launcher.permission.READ_SETTINGS" />
-    <uses-permission android:name="com.android.launcher.permission.WRITE_SETTINGS" />
 
     <uses-feature android:name="android.hardware.telephony" android:required="false" />
 
@@ -59,23 +55,6 @@
             android:screenOrientation="portrait"
             android:parentActivityName=".MainActivity" />
 
-        <activity
-            android:name=".ui.PinShortcutActivity"
-            android:exported="false"
-            android:theme="@style/Theme.Iteration.Translucent" />
-
-        <!-- 增加捷徑建立的入口宣告，提升相容性 -->
-        <activity
-            android:name=".ui.CreateShortcutActivity"
-            android:exported="true"
-            android:label="@string/app_name"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar">
-            <intent-filter>
-                <action android:name="android.intent.action.CREATE_SHORTCUT" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
-
         <service
             android:name=".service.NotificationService"
             android:label="Iteration Notification Listener"
@@ -98,20 +77,6 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_service_config" />
         </service>
-
-        <!-- 接收捷徑的廣播接收器，分離 Action 以提高相容性 -->
-        <receiver
-            android:name=".receiver.ShortcutReceiver"
-            android:label="@string/app_name"
-            android:exported="true">
-            <intent-filter android:priority="1000">
-                <action android:name="com.android.launcher.action.INSTALL_SHORTCUT" />
-                <action android:name="com.android.launcher.action.UNINSTALL_SHORTCUT" />
-            </intent-filter>
-            <intent-filter android:priority="1000">
-                <action android:name="android.content.pm.action.CONFIRM_PIN_SHORTCUT" />
-            </intent-filter>
-        </receiver>
 
     </application>
 

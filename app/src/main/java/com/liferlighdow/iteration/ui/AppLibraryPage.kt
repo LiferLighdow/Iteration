@@ -438,12 +438,10 @@ fun LibraryItemWithMenu(
     val haptic = LocalHapticFeedback.current
     var showMenu by remember { mutableStateOf(false) }
 
-    // 用於重新命名的狀態（這裡稍微簡化，實際可能需要傳回 AppLibraryPage 處理更優雅，但我們先做基本功能）
+    // 用於重新命名的狀態
     var showRenameDialog by remember { mutableStateOf(false) }
     var renameText by remember { mutableStateOf(app.label) }
     
-    val shortcuts = remember(showMenu) { if (showMenu) viewModel.getShortcuts(app.packageName) else emptyList() }
-
     Box {
         AppItem(
             app = app,
@@ -463,27 +461,6 @@ fun LibraryItemWithMenu(
         )
 
         DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-            if (shortcuts.isNotEmpty()) {
-                shortcuts.forEach { shortcut ->
-                    DropdownMenuItem(
-                        text = { Text(shortcut.label) },
-                        leadingIcon = {
-                            shortcut.icon?.let { icon ->
-                                Image(
-                                    bitmap = icon.toBitmap().asImageBitmap(),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                        },
-                        onClick = {
-                            viewModel.launchShortcut(app.packageName, shortcut.id)
-                            showMenu = false
-                        }
-                    )
-                }
-                HorizontalDivider()
-            }
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.menu_add_to_home)) },
                 leadingIcon = { Icon(Icons.Default.Add, null) },
