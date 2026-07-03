@@ -151,6 +151,7 @@ import com.liferlighdow.iteration.ui.ThemeMode
 import com.liferlighdow.iteration.ui.liquidGlass
 import com.liferlighdow.iteration.utils.ActionMode
 import com.liferlighdow.iteration.utils.GestureAction
+import rikka.shizuku.Shizuku
 import com.liferlighdow.iteration.utils.IconPackInfo
 import com.liferlighdow.iteration.utils.IconProcessor
 import com.liferlighdow.iteration.utils.IconShape
@@ -3260,7 +3261,33 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
                                     DropdownMenuItem(
                                         text = { Text(label) },
                                         onClick = {
-                                            viewModel.setActionMode(mode)
+                                            when (mode) {
+                                                ActionMode.ROOT -> {
+                                                    viewModel.requestRootAccess { success ->
+                                                        if (success) {
+                                                            viewModel.setActionMode(mode)
+                                                            Toast.makeText(context, context.getString(R.string.root_permission_granted), Toast.LENGTH_SHORT).show()
+                                                        } else {
+                                                            Toast.makeText(context, context.getString(R.string.root_permission_failed), Toast.LENGTH_LONG).show()
+                                                        }
+                                                    }
+                                                }
+                                                ActionMode.SHIZUKU -> {
+                                                    if (Shizuku.pingBinder()) {
+                                                        if (viewModel.checkShizukuPermission()) {
+                                                            viewModel.setActionMode(mode)
+                                                        } else {
+                                                            Toast.makeText(context, context.getString(R.string.shizuku_permission_request), Toast.LENGTH_SHORT).show()
+                                                            Shizuku.requestPermission(0)
+                                                        }
+                                                    } else {
+                                                        Toast.makeText(context, context.getString(R.string.shizuku_not_running), Toast.LENGTH_LONG).show()
+                                                    }
+                                                }
+                                                else -> {
+                                                    viewModel.setActionMode(mode)
+                                                }
+                                            }
                                             expanded = false
                                         }
                                     )
@@ -3291,7 +3318,19 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
 
     // 生命週期監聽，用於從系統設定回來後更新狀態
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    
     DisposableEffect(lifecycleOwner) {
+        val shizukuListener = Shizuku.OnRequestPermissionResultListener { _, grantResult ->
+            if (grantResult == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                viewModel.setActionMode(ActionMode.SHIZUKU)
+                Toast.makeText(context, "Shizuku permission granted", Toast.LENGTH_SHORT).show()
+            }
+        }
+        
+        try {
+            Shizuku.addRequestPermissionResultListener(shizukuListener)
+        } catch (e: Exception) {}
+
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                 hasContactsPermission = androidx.core.content.ContextCompat.checkSelfPermission(
@@ -3303,7 +3342,12 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        onDispose { 
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            try {
+                Shizuku.removeRequestPermissionResultListener(shizukuListener)
+            } catch (e: Exception) {}
+        }
     }
 }
 

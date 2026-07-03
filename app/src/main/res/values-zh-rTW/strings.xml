@@ -431,4 +431,8 @@
     <string name="move_down">往下移</string>
     <string name="remove_from_list">從清單中移除</string>
     <string name="no_folders_managed_desc">尚未管理任何資料夾。預設資料夾顯示在清單末尾。</string>
+    <string name="root_permission_granted">已獲得 ROOT 權限</string>
+    <string name="root_permission_failed">獲取 ROOT 權限失敗</string>
+    <string name="shizuku_not_running">Shizuku 尚未啟動</string>
+    <string name="shizuku_permission_request">正在請求 Shizuku 權限</string>
 </resources>

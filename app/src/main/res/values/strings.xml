@@ -471,4 +471,8 @@
     <string name="move_down">Move Down</string>
     <string name="remove_from_list">Remove from list</string>
     <string name="no_folders_managed_desc">No folders managed yet. Default folders are shown at the end of the list.</string>
+    <string name="root_permission_granted">ROOT permission granted</string>
+    <string name="root_permission_failed">Failed to get ROOT permission</string>
+    <string name="shizuku_not_running">Shizuku is not running</string>
+    <string name="shizuku_permission_request">Requesting Shizuku permission</string>
 </resources>

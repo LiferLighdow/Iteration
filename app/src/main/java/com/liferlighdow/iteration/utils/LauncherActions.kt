@@ -9,6 +9,7 @@ import android.util.Log
 import android.widget.Toast
 import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.service.IterationAccessibilityService
+import rikka.shizuku.Shizuku
 
 fun performGestureAction(
     action: GestureAction,
@@ -33,18 +34,15 @@ fun performGestureAction(
                     }
                 }
                 ActionMode.ROOT -> {
-                    try {
-                        Runtime.getRuntime().exec(arrayOf("su", "-c", "input keyevent 26"))
-                    } catch (e: Exception) {
-                        Log.e("Iteration", "Root lock failed", e)
-                        Toast.makeText(context, "Root failed", Toast.LENGTH_SHORT).show()
-                    }
+                    executeCommand(arrayOf("su", "-c", "input keyevent 26"), context)
                 }
                 ActionMode.SHIZUKU -> {
-                    // 這裡通常需要 Shizuku 庫。先以 adb shell 為例，
-                    // 如果用戶通過 Shizuku 啟動了某些 shell 環境，
-                    // 或開發者後續集成 Shizuku 庫。目前先顯示提示。
-                    Toast.makeText(context, "Shizuku mode pending integration", Toast.LENGTH_SHORT).show()
+                    if (Shizuku.pingBinder()) {
+                        // Pending proper Shizuku command execution implementation
+                        Toast.makeText(context, "Shizuku mode active", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, context.getString(R.string.shizuku_not_running), Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
         }
@@ -77,17 +75,26 @@ fun performGestureAction(
                     }
                 }
                 ActionMode.ROOT -> {
-                    try {
-                        Runtime.getRuntime().exec(arrayOf("su", "-c", "cmd statusbar expand-notifications"))
-                    } catch (e: Exception) {
-                        Log.e("Iteration", "Root notifications failed", e)
-                    }
+                    executeCommand(arrayOf("su", "-c", "cmd statusbar expand-notifications"), context)
                 }
                 ActionMode.SHIZUKU -> {
-                    Toast.makeText(context, "Shizuku mode pending integration", Toast.LENGTH_SHORT).show()
+                    if (Shizuku.pingBinder()) {
+                        Toast.makeText(context, "Shizuku mode active", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, context.getString(R.string.shizuku_not_running), Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
         }
         GestureAction.NONE -> {}
+    }
+}
+
+private fun executeCommand(command: Array<String>, context: Context) {
+    try {
+        Runtime.getRuntime().exec(command)
+    } catch (e: Exception) {
+        Log.e("Iteration", "Command failed: ${command.joinToString(" ")}", e)
+        Toast.makeText(context, "Execution failed", Toast.LENGTH_SHORT).show()
     }
 }

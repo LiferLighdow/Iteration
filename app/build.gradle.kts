@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "com.liferlighdow.iteration"
-        minSdk = 23
+        minSdk = 24
         targetSdk = 37
         versionCode = 31
         versionName = "3.2.1"
@@ -71,6 +71,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.coil.compose)
     implementation(libs.materialColorUtils)
+    implementation(libs.shizuku.api)
+    implementation(libs.shizuku.provider)
     implementation("io.github.kyant0:backdrop:2.0.0")
 
     testImplementation(libs.junit)

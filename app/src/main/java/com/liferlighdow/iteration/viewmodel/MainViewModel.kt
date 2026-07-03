@@ -34,6 +34,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.liferlighdow.iteration.utils.ActionMode
 import com.liferlighdow.iteration.utils.GestureAction
+import rikka.shizuku.Shizuku
+import rikka.shizuku.ShizukuProvider
+import android.os.IBinder
 import com.liferlighdow.iteration.utils.IconPackManager
 import com.liferlighdow.iteration.utils.IconProcessor
 import com.liferlighdow.iteration.utils.IconShape
@@ -1681,6 +1684,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setActionMode(mode: ActionMode) {
         _actionMode.value = mode
         prefs.edit().putString("action_mode", mode.name).apply()
+    }
+
+    fun requestRootAccess(onResult: (Boolean) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val success = try {
+                val process = Runtime.getRuntime().exec("su")
+                process.outputStream.write("exit\n".toByteArray())
+                process.outputStream.flush()
+                process.waitFor() == 0
+            } catch (e: Exception) {
+                false
+            }
+            withContext(Dispatchers.Main) {
+                onResult(success)
+            }
+        }
+    }
+
+    fun checkShizukuPermission(): Boolean {
+        return try {
+            if (Shizuku.pingBinder()) {
+                Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
+            } else false
+        } catch (e: Exception) { false }
     }
 
     fun setSwipeUpAction(action: GestureAction) {
