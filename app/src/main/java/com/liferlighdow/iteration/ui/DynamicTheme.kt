@@ -9,7 +9,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.google.android.material.color.utilities.*
+import kotlinx.serialization.Serializable
 
+@Serializable
 enum class ThemeMode { LIGHT, DARK, FOLLOW_SYSTEM }
 
 /**

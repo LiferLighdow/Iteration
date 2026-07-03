@@ -82,7 +82,7 @@ fun MainViewModel.handleAppDrop(
                         } else {
                             page[tIdx] = AppModel(
                                 label = getApplication<Application>().getString(R.string.folder_default_name),
-                                isFolder = true,
+                                type = "folder",
                                 folderItems = listOf(targetItem, item).sortedBy { it.label.lowercase() },
                                 uniqueId = "folder_${System.currentTimeMillis()}"
                             )
@@ -241,7 +241,7 @@ fun MainViewModel.createFolder(pageIndex: Int, folderName: String) {
     
     val newFolder = AppModel(
         label = folderName.ifBlank { getApplication<Application>().getString(R.string.folder_default_name) },
-        isFolder = true,
+        type = "folder",
         uniqueId = "folder_${System.currentTimeMillis()}"
     )
     targetPage.add(newFolder)

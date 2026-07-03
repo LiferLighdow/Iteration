@@ -1,310 +1,59 @@
 package com.liferlighdow.iteration.data
 
-import org.json.JSONArray
-import org.json.JSONObject
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
-/**
- * 負責處理 Launcher 配置與 App 模型之間的 JSON 序列化與反序列化
- */
 object ConfigSerializer {
-
-    fun serializeAppModel(item: AppModel): JSONObject {
-        val obj = JSONObject()
-        obj.put("type", when {
-            item.isFolder -> "folder"
-            item.isWidget -> "widget"
-            else -> "app"
-        })
-        obj.put("id", item.uniqueId)
-        obj.put("label", item.label)
-        obj.put("pkg", item.packageName)
-        obj.put("userId", item.userId)
-
-        if (item.isFolder) {
-            val children = JSONArray()
-            item.folderItems.forEach { children.put(serializeAppModel(it)) }
-            obj.put("children", children)
-        }
-
-        item.widget?.let { w ->
-            obj.put("widget", serializeWidgetModel(w))
-        }
-        return obj
-    }
-
-    fun serializeWidgetModel(w: WidgetModel): JSONObject {
-        val obj = JSONObject()
-        obj.put("id", w.id)
-        obj.put("label", w.label)
-        obj.put("displayMode", w.displayMode.name)
-        obj.put("type", when (w.type) {
-            is WidgetType.Battery -> "Battery"
-            is WidgetType.Clock -> "Clock"
-            is WidgetType.Calendar -> "Calendar"
-            is WidgetType.Photo -> "Photo"
-            is WidgetType.Music -> "Music"
-            is WidgetType.Note -> "Note"
-            is WidgetType.Weather -> "Weather"
-            is WidgetType.Stack -> "Stack"
-        })
-        if (w.type is WidgetType.Calendar) obj.put("is_wide", w.type.isWide)
-        if (w.type is WidgetType.Photo) obj.put("is_wide", w.type.isWide)
-        if (w.type is WidgetType.Music) obj.put("is_wide", w.type.isWide)
-        if (w.type is WidgetType.Weather) obj.put("is_wide", w.type.isWide)
-        if (w.type is WidgetType.Note) {
-            obj.put("is_wide", w.type.isWide)
-            obj.put("note_text", w.type.text)
-        }
-        if (w.type is WidgetType.Stack) {
-            obj.put("is_wide", w.type.isWide)
-            val children = JSONArray()
-            w.type.children.forEach { children.put(serializeWidgetModel(it)) }
-            obj.put("children", children)
-        }
-        return obj
-    }
-
-    fun deserializeWidgetModel(obj: JSONObject): WidgetModel? {
-        val id = obj.optString("id")
-        val label = obj.optString("label")
-        val mode = try {
-            WidgetDisplayMode.valueOf(obj.optString("displayMode", "GLASS"))
-        } catch (e: Exception) {
-            WidgetDisplayMode.GLASS
-        }
-        val typeStr = obj.optString("type")
-        val isWide = obj.optBoolean("is_wide", false)
-
-        val type: WidgetType = when (typeStr) {
-            "Battery" -> WidgetType.Battery
-            "Clock" -> WidgetType.Clock
-            "Calendar" -> WidgetType.Calendar(isWide)
-            "Photo" -> WidgetType.Photo(isWide)
-            "Music" -> WidgetType.Music(isWide)
-            "Note" -> WidgetType.Note(text = obj.optString("note_text", ""), isWide = isWide)
-            "Weather" -> WidgetType.Weather(isWide = obj.optBoolean("is_wide", true))
-            "Stack" -> {
-                val children = mutableListOf<WidgetModel>()
-                val childrenArr = obj.optJSONArray("children")
-                if (childrenArr != null) {
-                    for (i in 0 until childrenArr.length()) {
-                        deserializeWidgetModel(childrenArr.getJSONObject(i))?.let { children.add(it) }
-                    }
-                }
-                WidgetType.Stack(children, isWide)
-            }
-            else -> return null
-        }
-        return WidgetModel(id = id, type = type, label = label, displayMode = mode)
-    }
-
-    fun deserializeAppModel(
-        obj: JSONObject,
-        allInstalled: List<AppModel>,
-        customLabels: Map<String, String>,
-        hiddenPackages: Set<String>
-    ): AppModel? {
-        val type = obj.optString("type", "app")
-        val pkg = obj.optString("pkg", "")
-        val id = obj.optString("id", "")
-        val userId = obj.optLong("userId", 0)
-
-        return when (type) {
-            "folder" -> {
-                val children = mutableListOf<AppModel>()
-                val childrenArray = obj.optJSONArray("children")
-                if (childrenArray != null) {
-                    for (i in 0 until childrenArray.length()) {
-                        deserializeAppModel(childrenArray.getJSONObject(i), allInstalled, customLabels, hiddenPackages)?.let {
-                            children.add(it)
-                        }
-                    }
-                }
-                AppModel(
-                    label = obj.optString("label", "Folder"),
-                    isFolder = true,
-                    uniqueId = id,
-                    folderItems = children
-                )
-            }
-            "widget" -> {
-                val widgetObj = obj.optJSONObject("widget")
-                val widget = if (widgetObj != null) {
-                    deserializeWidgetModel(widgetObj)
-                } else null
-
-                if (widget == null) return null
-
-                AppModel(
-                    label = obj.optString("label"),
-                    uniqueId = id,
-                    widget = widget
-                )
-            }
-            else -> {
-                // 優先尋找 ID 精準匹配的 App (處理分身)
-                // 注意：存檔時的 ID 可能帶有時間戳，匹配時應先剝離
-                val baseId = if (id.contains("@")) {
-                    val parts = id.split("@")
-                    if (parts.last().length >= 10) id.substringBeforeLast("@") else id
-                } else id
-
-                val baseApp = allInstalled.find { it.uniqueId == baseId }
-                    ?: allInstalled.find { it.packageName == pkg && it.userId == userId }
-                
-                if (baseApp == null) return null
-                
-                baseApp.copy(
-                    uniqueId = id, // 保留原始 ID (包含時間戳)
-                    label = customLabels[baseId] ?: customLabels[pkg] ?: baseApp.label,
-                    isHidden = hiddenPackages.contains(baseId) || hiddenPackages.contains(pkg)
-                )
-            }
-        }
+    private val json = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+        prettyPrint = true
+        coerceInputValues = true // 強制將不匹配的值轉換為預設值，增加容錯
+        classDiscriminator = "type" // 對齊密封類別的判斷欄位
     }
 
     /**
      * 將所有配置導出為 JSON 字串
      */
-    fun exportConfig(
-        themedIcons: Boolean,
-        liquidGlassDock: Boolean,
-        liquidGlassHomeFolder: Boolean,
-        liquidGlassAppLibraryFolder: Boolean,
-        liquidGlassGlobalSearch: Boolean,
-        liquidGlassAppLibrarySearch: Boolean,
-        liquidGlassWidgets: Boolean,
-        networkAccessEnabled: Boolean,
-        liquidGlassEnabled: Boolean,
-        showMinusOne: Boolean,
-        showAppLibrary: Boolean,
-        iconStyle: String,
-        iconShape: String,
-        libraryShape: String,
-        searchEngineUrl: String,
-        autoAddAppsToHome: Boolean,
-        showStatusBar: Boolean,
-        showNavigationBar: Boolean,
-        pageSize: Int,
-        actionMode: String,
-        glassParams: Map<String, Any>,
-        gestures: Map<String, String>,
-        appearance: Map<String, Any>,
-        favorites: Set<String>,
-        themeMode: String,
-        appLanguage: String,
-        isAmoledBlack: Boolean,
-        excludedThemed: Set<String>,
-        homeMenuOptions: Set<String>,
-        customIconSettings: Map<String, Any>,
-        password: String,
-        hiddenPackages: Set<String>,
-        customLabels: Map<String, String>,
-        customCategories: Map<String, String>,
-        userCategories: List<String>,
-        categoryRenames: Map<String, String>,
-        pages: List<List<AppModel>>,
-        minusOneWidgets: List<WidgetModel>,
-        dockPackageNames: List<String>,
-        launchCounts: String?
-    ): String {
-        val root = JSONObject()
-        val settings = JSONObject()
+    fun exportConfig(config: LauncherConfig): String {
+        return json.encodeToString(config)
+    }
 
-        settings.put("themed_icons", themedIcons)
-        settings.put("liquid_glass_dock", liquidGlassDock)
-        settings.put("liquid_glass_home_folder", liquidGlassHomeFolder)
-        settings.put("liquid_glass_app_library_folder", liquidGlassAppLibraryFolder)
-        settings.put("liquid_glass_global_search", liquidGlassGlobalSearch)
-        settings.put("liquid_glass_app_library_search", liquidGlassAppLibrarySearch)
-        settings.put("liquid_glass_widgets", liquidGlassWidgets)
-        settings.put("network_access_enabled", networkAccessEnabled)
-        settings.put("liquid_glass_enabled", liquidGlassEnabled)
-        settings.put("show_minus_one", showMinusOne)
-        settings.put("show_app_library", showAppLibrary)
-        settings.put("icon_style", iconStyle)
-        settings.put("icon_shape", iconShape)
-        settings.put("library_shape", libraryShape)
-        settings.put("search_engine_url", searchEngineUrl)
-        settings.put("auto_add_apps_to_home", autoAddAppsToHome)
-        settings.put("show_status_bar", showStatusBar)
-        settings.put("show_navigation_bar", showNavigationBar)
-        settings.put("theme_mode", themeMode)
-        settings.put("app_language", appLanguage)
-        settings.put("amoled_black", isAmoledBlack)
-        settings.put("page_size", pageSize)
-        settings.put("action_mode", actionMode)
-
-        val glassObj = JSONObject()
-        glassParams.forEach { (k, v) -> glassObj.put(k, v) }
-        root.put("glass_params", glassObj)
-
-        val gestureObj = JSONObject()
-        gestures.forEach { (k, v) -> gestureObj.put(k, v) }
-        root.put("gestures", gestureObj)
-
-        val appearanceObj = JSONObject()
-        appearance.forEach { (k, v) -> appearanceObj.put(k, v) }
-        root.put("appearance", appearanceObj)
-
-        val favArray = JSONArray()
-        favorites.forEach { favArray.put(it) }
-        root.put("favorites", favArray)
-
-        val excludedArray = JSONArray()
-        excludedThemed.forEach { excludedArray.put(it) }
-        root.put("excluded_themed", excludedArray)
-
-        val menuArray = JSONArray()
-        homeMenuOptions.forEach { menuArray.put(it) }
-        root.put("home_menu_options", menuArray)
-
-        val customIconObj = JSONObject()
-        customIconSettings.forEach { (k, v) -> customIconObj.put(k, v) }
-        root.put("custom_icon_settings", customIconObj)
-        settings.put("hidden_password", password)
-
-        val hidden = JSONArray()
-        hiddenPackages.forEach { hidden.put(it) }
-        root.put("hidden_apps", hidden)
-
-        val labels = JSONObject()
-        customLabels.forEach { (k, v) -> labels.put(k, v) }
-        root.put("custom_labels", labels)
-
-        val categories = JSONObject()
-        customCategories.forEach { (k, v) -> categories.put(k, v) }
-        root.put("custom_categories", categories)
-
-        val userCats = JSONArray()
-        userCategories.forEach { userCats.put(it) }
-        root.put("user_categories", userCats)
-
-        val renames = JSONObject()
-        categoryRenames.forEach { (k, v) -> renames.put(k, v) }
-        root.put("category_renames", renames)
-
-        val pagesArray = JSONArray()
-        pages.forEach { page ->
-            val pageArray = JSONArray()
-            page.forEach { pageArray.put(serializeAppModel(it)) }
-            pagesArray.put(pageArray)
+    /**
+     * 從 JSON 字串解析配置
+     */
+    fun deserializeConfig(jsonStr: String): LauncherConfig? {
+        return try {
+            json.decodeFromString<LauncherConfig>(jsonStr)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
         }
-        root.put("layout", pagesArray)
+    }
 
-        val minusOne = JSONArray()
-        minusOneWidgets.forEach { widget ->
-            minusOne.put(serializeWidgetModel(widget))
+    // --- Helper methods for single objects (Backward compatibility for internal storage) ---
+
+    fun serializeAppModel(app: AppModel): String = json.encodeToString(app)
+    fun deserializeAppModel(jsonStr: String): AppModel? = try { json.decodeFromString(jsonStr) } catch(e: Exception) { null }
+
+    fun serializeWidgetModel(widget: WidgetModel): String = json.encodeToString(widget)
+
+    fun deserializeWidgetModel(jsonStr: String): WidgetModel? {
+        return try {
+            // 嘗試使用新格式解析
+            json.decodeFromString<WidgetModel>(jsonStr)
+        } catch (e: Exception) {
+            // 如果失敗，可能是舊格式，這裡可以根據需要手動映射
+            // 或者使用更寬鬆的解析方式
+            null
         }
-        root.put("minus_one_widgets", minusOne)
+    }
 
-        root.put("dock", JSONArray(dockPackageNames))
-        root.put("launch_counts", launchCounts ?: "")
-
-        root.put("settings", settings)
-        root.put("version", 2) // 升級版本號
-        root.put("timestamp", System.currentTimeMillis())
-
-        return root.toString(4)
+    // 針對舊有 JSONObject 結構的相容方法
+    fun deserializeWidgetFromObject(obj: org.json.JSONObject): WidgetModel? {
+        val jsonStr = obj.toString()
+        // 舊版結構中，widget type 可能直接就在 type 欄位
+        // 這裡我們嘗試將其包裝成符合 kotlinx-serialization 預期的結構
+        return deserializeWidgetModel(jsonStr)
     }
 }

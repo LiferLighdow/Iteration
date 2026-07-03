@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlinCompose)
+    alias(libs.plugins.kotlinSerialization)
 }
 
 android {
@@ -73,7 +74,8 @@ dependencies {
     implementation(libs.materialColorUtils)
     implementation(libs.shizuku.api)
     implementation(libs.shizuku.provider)
-    implementation("io.github.kyant0:backdrop:2.0.0")
+    implementation(libs.backdrop)
+    implementation(libs.kotlinx.serialization.json)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.espresso.core)

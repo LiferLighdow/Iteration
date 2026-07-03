@@ -99,7 +99,7 @@ fun AppGrid(
     draggingApp: AppModel?,
     isEditMode: Boolean,
     viewModel: MainViewModel,
-    pageOffset: Float = 0f,
+    pageOffsetProvider: () -> Float = { 0f },
     isLiquidGlass: Boolean = false,
     backdrop: Backdrop? = null,
     iconShape: IconShape = IconShape.DEFAULT,
@@ -310,23 +310,24 @@ fun AppGrid(
                 val targetX = cellWidth * foundCol
                 val targetY = cellHeight * foundRow
                 
-                // 只有在非滑動頁面時才使用平滑動畫，減少滑動時的計算壓力
-                val isScrolling = pageOffset != 0f
                 val animX by animateDpAsState(targetX, label = "x")
                 val animY by animateDpAsState(targetY, label = "y")
 
                 val density = LocalDensity.current
-                // 彈性位移 (iOS 感)
-                val elasticOffset = with(density) { pageOffset * (foundCol - (columns - 1) / 2f) * 12.dp.toPx() }
                 var showContextMenu by remember { mutableStateOf(false) }
 
                 Box(
                     modifier = Modifier
                         .graphicsLayer {
+                            val offset = pageOffsetProvider()
+                            // 增加緩衝門檻，避免在吸附末端頻繁重組或閃爍
+                            val isScrolling = abs(offset) > 0.005f
+                            val elasticOffset = offset * (foundCol - (columns - 1) / 2f) * 12.dp.toPx()
+
                             // 改用 translation 處理位置，並整合彈性位移
                             // 在 Draw 階段計算，比 Modifier.offset 效能更好
-                            translationX = with(density) { (if (isScrolling) targetX else animX).toPx() } + elasticOffset
-                            translationY = with(density) { (if (isScrolling) targetY else animY).toPx() }
+                            translationX = (if (isScrolling) targetX.toPx() else animX.toPx()) + elasticOffset
+                            translationY = if (isScrolling) targetY.toPx() else animY.toPx()
                         }
                         .size(cellWidth * w, cellHeight * h)
                         .onGloballyPositioned {

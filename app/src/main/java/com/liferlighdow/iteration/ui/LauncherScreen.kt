@@ -360,13 +360,15 @@ fun LauncherScreen(
                     flingBehavior = PagerDefaults.flingBehavior(
                         state = pagerState,
                         snapAnimationSpec = spring(
-                            dampingRatio = Spring.DampingRatioLowBouncy,
-                            stiffness = Spring.StiffnessLow
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessMediumLow
                         )
                     )
                 ) { pageIndex ->
-                // 計算頁面偏移量 (-1.0 到 1.0)
-                val pageOffset = ((pagerState.currentPage - pageIndex) + pagerState.currentPageOffsetFraction)
+                // 計算頁面偏移量 (-1.0 到 1.0) 的 Provider，避免觸發全頁面重組
+                val pageOffsetProvider = remember(pagerState, pageIndex) {
+                    { (pagerState.currentPage - pageIndex) + pagerState.currentPageOffsetFraction }
+                }
 
                 val isMinusOne = showMinusOnePage && pageIndex == 0
                 val isLibrary = showAppLibrary && pageIndex == pageCount - 1
@@ -404,7 +406,7 @@ fun LauncherScreen(
                                 columns = columns, rows = rows, iconSize = iconSize,
                                 isEditMode = isEditMode,
                                 viewModel = viewModel,
-                                pageOffset = pageOffset,
+                                pageOffsetProvider = pageOffsetProvider,
                                 isLiquidGlass = isLiquidGlassEnabled && isLiquidGlassHomeFolderEnabled,
                                 backdrop = backdrop,
                                 iconShape = iconShape,

@@ -1,24 +1,35 @@
 package com.liferlighdow.iteration.data
 
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Transient
+
+@Serializable
 data class AppModel(
-    val label: String,
-    val packageName: String = "",
-    val isHidden: Boolean = false,
-    val category: Int = -1,
-    val displayCategory: String = "Other",
-    val isFolder: Boolean = false,
-    val folderItems: List<AppModel> = emptyList(),
-    val widget: WidgetModel? = null,
-    val userId: Long = 0,
-    val uniqueId: String = when {
-        widget != null -> "widget_${widget.id}"
-        else -> {
-            // 注意：我們在 AppRepository 中會傳入 activityName 作為 uniqueId 的一部分
-            // 格式預期為: packageName/activityName@userId
-            // 這裡只是預設的 fallback 邏輯
-            packageName + (if (userId > 0) "@$userId" else "")
+    @SerialName("label") val label: String,
+    @SerialName("pkg") val packageName: String = "",
+    @SerialName("isHidden") val isHidden: Boolean = false,
+    @SerialName("category") val category: Int = -1,
+    @SerialName("displayCategory") val displayCategory: String = "Other",
+    @SerialName("type") val type: String = "app", // "app", "folder", "widget"
+    @SerialName("children") val folderItems: List<AppModel> = emptyList(),
+    @SerialName("widget") val widget: WidgetModel? = null,
+    @SerialName("userId") val userId: Long = 0,
+    @SerialName("id") val uniqueId: String = ""
+) {
+    @Transient
+    val isFolder: Boolean = type == "folder"
+    
+    @Transient
+    val isWidget: Boolean = type == "widget" || widget != null
+
+    /**
+     * 相容性邏輯：如果 uniqueId 為空，根據內容產生預設 ID
+     */
+    val effectiveId: String get() = uniqueId.ifBlank {
+        when {
+            widget != null -> "widget_${widget.id}"
+            else -> packageName + (if (userId > 0) "@$userId" else "")
         }
     }
-) {
-    val isWidget: Boolean get() = widget != null
 }

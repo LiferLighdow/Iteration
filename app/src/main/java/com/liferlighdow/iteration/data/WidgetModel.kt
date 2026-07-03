@@ -75,37 +75,70 @@ import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.ui.glassFallbackColor
 import com.liferlighdow.iteration.ui.liquidGlass
 import kotlinx.coroutines.Job
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
 import java.net.URL
 import java.net.URLEncoder
 import java.util.Calendar
 import java.util.UUID
 import kotlin.math.*
 
+@Serializable
 sealed class WidgetType {
+    @Serializable
+    @SerialName("Battery")
     object Battery : WidgetType()
+
+    @Serializable
+    @SerialName("Clock")
     object Clock : WidgetType()
+
+    @Serializable
+    @SerialName("Calendar")
     data class Calendar(val isWide: Boolean = false) : WidgetType()
+
+    @Serializable
+    @SerialName("Photo")
     data class Photo(val isWide: Boolean = false) : WidgetType()
+
+    @Serializable
+    @SerialName("Music")
     data class Music(val isWide: Boolean = false) : WidgetType()
+
+    @Serializable
+    @SerialName("Note")
     data class Note(val text: String = "", val isWide: Boolean = false) : WidgetType()
+
+    @Serializable
+    @SerialName("Weather")
     data class Weather(val isWide: Boolean = true) : WidgetType()
+
+    @Serializable
+    @SerialName("Stack")
     data class Stack(val children: List<WidgetModel> = emptyList(), val isWide: Boolean = false) : WidgetType()
 }
 
+@Serializable
 enum class WidgetDisplayMode {
-    GLASS, COLOR
+    @SerialName("GLASS") GLASS, 
+    @SerialName("COLOR") COLOR
 }
 
+@Serializable
 enum class WeatherProvider {
     MET_NORWAY, OPEN_METEO
 }
 
+@Serializable
 data class WidgetModel(
-    val id: String = UUID.randomUUID().toString(),
-    val type: WidgetType,
-    val label: String,
-    val displayMode: WidgetDisplayMode = WidgetDisplayMode.GLASS
-)
+    @SerialName("id") val id: String = UUID.randomUUID().toString(),
+    @SerialName("type") val widgetType: WidgetType,
+    @SerialName("label") val label: String,
+    @SerialName("displayMode") val displayMode: WidgetDisplayMode = WidgetDisplayMode.GLASS
+) {
+    // 為了保持程式碼其餘部分的相容性，保留 type 屬性的 getter
+    val type: WidgetType get() = widgetType
+}
 
 data class CalendarEvent(val title: String, val startTime: Long, val endTime: Long)
 
@@ -594,7 +627,7 @@ fun WidgetStackPickerDialog(
                                 headlineContent = { Text(label) },
                                 leadingContent = { Icon(icon, null) },
                                 modifier = Modifier.clickable {
-                                    children = children + WidgetModel(type = type, label = label)
+                                    children = children + WidgetModel(widgetType = type, label = label)
                                 }
                             )
                         }
@@ -646,7 +679,7 @@ fun WidgetStackPickerDialog(
                     val newList = children.toMutableList()
                     val oldWidget = newList[index]
                     val newType = (oldWidget.type as WidgetType.Note).copy(text = text)
-                    newList[index] = oldWidget.copy(type = newType)
+                    newList[index] = oldWidget.copy(widgetType = newType)
                     children = newList
                     noteToEditInStack = null
                 }) {
