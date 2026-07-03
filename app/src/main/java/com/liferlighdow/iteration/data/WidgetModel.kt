@@ -85,58 +85,29 @@ import kotlin.math.*
 
 @Serializable
 sealed class WidgetType {
-    @Serializable
-    @SerialName("Battery")
-    object Battery : WidgetType()
-
-    @Serializable
-    @SerialName("Clock")
-    object Clock : WidgetType()
-
-    @Serializable
-    @SerialName("Calendar")
-    data class Calendar(val isWide: Boolean = false) : WidgetType()
-
-    @Serializable
-    @SerialName("Photo")
-    data class Photo(val isWide: Boolean = false) : WidgetType()
-
-    @Serializable
-    @SerialName("Music")
-    data class Music(val isWide: Boolean = false) : WidgetType()
-
-    @Serializable
-    @SerialName("Note")
-    data class Note(val text: String = "", val isWide: Boolean = false) : WidgetType()
-
-    @Serializable
-    @SerialName("Weather")
-    data class Weather(val isWide: Boolean = true) : WidgetType()
-
-    @Serializable
-    @SerialName("Stack")
-    data class Stack(val children: List<WidgetModel> = emptyList(), val isWide: Boolean = false) : WidgetType()
+    @Serializable @SerialName("Battery") object Battery : WidgetType()
+    @Serializable @SerialName("Clock") object Clock : WidgetType()
+    @Serializable @SerialName("Calendar") data class Calendar(val isWide: Boolean = false) : WidgetType()
+    @Serializable @SerialName("Photo") data class Photo(val isWide: Boolean = false) : WidgetType()
+    @Serializable @SerialName("Music") data class Music(val isWide: Boolean = false) : WidgetType()
+    @Serializable @SerialName("Note") data class Note(val text: String = "", val isWide: Boolean = false) : WidgetType()
+    @Serializable @SerialName("Weather") data class Weather(val isWide: Boolean = true) : WidgetType()
+    @Serializable @SerialName("Stack") data class Stack(val children: List<WidgetModel> = emptyList(), val isWide: Boolean = false) : WidgetType()
 }
 
 @Serializable
-enum class WidgetDisplayMode {
-    @SerialName("GLASS") GLASS, 
-    @SerialName("COLOR") COLOR
-}
+enum class WidgetDisplayMode { GLASS, COLOR }
 
 @Serializable
-enum class WeatherProvider {
-    MET_NORWAY, OPEN_METEO
-}
+enum class WeatherProvider { MET_NORWAY, OPEN_METEO }
 
 @Serializable
 data class WidgetModel(
     @SerialName("id") val id: String = UUID.randomUUID().toString(),
-    @SerialName("type") val widgetType: WidgetType,
-    @SerialName("label") val label: String,
-    @SerialName("displayMode") val displayMode: WidgetDisplayMode = WidgetDisplayMode.GLASS
+    @SerialName("t") val widgetType: WidgetType,
+    @SerialName("l") val label: String,
+    @SerialName("m") val displayMode: WidgetDisplayMode = WidgetDisplayMode.GLASS
 ) {
-    // 為了保持程式碼其餘部分的相容性，保留 type 屬性的 getter
     val type: WidgetType get() = widgetType
 }
 

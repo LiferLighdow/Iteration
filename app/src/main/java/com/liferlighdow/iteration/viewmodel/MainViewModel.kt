@@ -925,27 +925,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _pages.value.forEach { page ->
             val pageArray = JSONArray()
             page.forEach { item ->
-                pageArray.put(JSONObject(ConfigSerializer.serializeAppModel(item)))
+                pageArray.put(ConfigSerializer.serializeAppModel(item))
             }
             pagesArray.put(pageArray)
         }
-        prefs.edit().putString("launcher_layout_v2", pagesArray.toString()).apply()
+        prefs.edit().putString("launcher_layout_v3", pagesArray.toString()).apply()
     }
 
     private fun loadWidgets() {
-        val saved = prefs.getString("minus_one_widgets", null)
-        if (saved != null) {
-            val list = mutableListOf<WidgetModel>()
-            try {
-                val array = JSONArray(saved)
-                for (i in 0 until array.length()) {
-                    ConfigSerializer.deserializeWidgetFromObject(array.getJSONObject(i))?.let { list.add(it) }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
+        val saved = prefs.getString("minus_one_widgets_v3", null) ?: return
+        val list = mutableListOf<WidgetModel>()
+        try {
+            val array = JSONArray(saved)
+            for (i in 0 until array.length()) {
+                ConfigSerializer.deserializeWidgetModel(array.getString(i))?.let { list.add(it) }
             }
-            _minusOneWidgets.value = list
-        }
+        } catch (e: Exception) { e.printStackTrace() }
+        _minusOneWidgets.value = list
     }
 
     fun addWidget(type: WidgetType, pageIndex: Int = -1) {
@@ -970,7 +966,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val widget = WidgetModel(widgetType = type, label = label)
             val appModel = AppModel(
                 label = label,
-                type = "widget",
                 uniqueId = "widget_${widget.id}",
                 widget = widget
             )
@@ -1010,9 +1005,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun saveWidgets(list: List<WidgetModel>) {
         val array = JSONArray()
         list.forEach { widget ->
-            array.put(JSONObject(ConfigSerializer.serializeWidgetModel(widget)))
+            array.put(ConfigSerializer.serializeWidgetModel(widget))
         }
-        prefs.edit().putString("minus_one_widgets", array.toString()).apply()
+        prefs.edit().putString("minus_one_widgets_v3", array.toString()).apply()
     }
 
     // 佈局處理邏輯已移至 MainViewModelLayout.kt
@@ -1434,15 +1429,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val seenApps = (prefs.getStringSet("seen_apps", null) ?: emptySet()).toMutableSet()
             val isMigration = prefs.getStringSet("seen_apps", null) == null
 
-            // 優先從儲存的佈局恢復
-            val savedLayout = prefs.getString("launcher_layout_v2", null)
+            // 優先從儲存的佈局恢復 (v3 是純 kotlinx-serialization 格式)
+            val savedLayout = prefs.getString("launcher_layout_v3", null) 
+                ?: prefs.getString("launcher_layout_v2", null)
+
             if (savedLayout != null) {
                 try {
                     val pagesArray = JSONArray(savedLayout)
                     val restoredPages = mutableListOf<List<AppModel>>()
 
                     // 遷移邏輯：如果是第一次使用 seen_apps 且已有佈局，先將目前已安裝的所有 App 標記為已見過
-                    // 避免舊有的 App 被誤認成新安裝的。
                     if (isMigration) {
                         seenApps.addAll(processedApps.map { it.uniqueId })
                         prefs.edit().putStringSet("seen_apps", seenApps).apply()
@@ -1452,7 +1448,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         val pageArray = pagesArray.getJSONArray(i)
                         val pageItems = mutableListOf<AppModel>()
                         for (j in 0 until pageArray.length()) {
-                            val jsonStr = pageArray.getJSONObject(j).toString()
+                            // 自動辨識格式：v3 是 String, v2 是 JSONObject
+                            val itemValue = pageArray.get(j)
+                            val jsonStr = if (itemValue is JSONObject) itemValue.toString() else itemValue as String
+
                             ConfigSerializer.deserializeAppModel(jsonStr)?.let { savedApp ->
                                 if (savedApp.isFolder) {
                                     pageItems.add(savedApp)
@@ -2312,11 +2311,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         config.layout.forEach { page ->
             val pageArray = JSONArray()
             page.forEach { item ->
-                pageArray.put(JSONObject(ConfigSerializer.serializeAppModel(item)))
+                pageArray.put(ConfigSerializer.serializeAppModel(item))
             }
             layoutArray.put(pageArray)
         }
-        prefs.edit().putString("launcher_layout_v2", layoutArray.toString()).apply()
+        prefs.edit().putString("launcher_layout_v3", layoutArray.toString()).apply()
 
         // 5. 恢復 Dock & Stats
         _dockPackageNames.value = config.dock

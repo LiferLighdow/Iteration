@@ -8,8 +8,8 @@ object ConfigSerializer {
         ignoreUnknownKeys = true
         encodeDefaults = true
         prettyPrint = true
-        coerceInputValues = true // 強制將不匹配的值轉換為預設值，增加容錯
-        classDiscriminator = "type" // 對齊密封類別的判斷欄位
+        coerceInputValues = true
+        classDiscriminator = "type"
     }
 
     /**
@@ -24,36 +24,44 @@ object ConfigSerializer {
      */
     fun deserializeConfig(jsonStr: String): LauncherConfig? {
         return try {
+            // 1. 嘗試直接解析 (v3 格式)
             json.decodeFromString<LauncherConfig>(jsonStr)
         } catch (e: Exception) {
-            e.printStackTrace()
-            null
+            try {
+                // 2. 如果失敗，嘗試將舊格式字串 (v2) 預處理為 v3
+                val migratedJson = migrateJsonV2ToV3(jsonStr)
+                json.decodeFromString<LauncherConfig>(migratedJson)
+            } catch (e2: Exception) {
+                e2.printStackTrace()
+                null
+            }
         }
     }
 
-    // --- Helper methods for single objects (Backward compatibility for internal storage) ---
+    /**
+     * 針對舊有的 JSON 備份進行欄位對應轉換 (label -> l, pkg -> p 等)
+     */
+    private fun migrateJsonV2ToV3(jsonStr: String): String {
+        // 使用簡單的字串替換來處理鍵名，這比手動操作 JSONObject 快且乾淨
+        return jsonStr
+            .replace("\"label\":", "\"l\":")
+            .replace("\"pkg\":", "\"p\":")
+            .replace("\"isHidden\":", "\"h\":")
+            .replace("\"category\":", "\"c\":")
+            .replace("\"displayCategory\":", "\"dc\":")
+            .replace("\"isFolder\":", "\"f\":")
+            .replace("\"children\":", "\"ch\":")
+            .replace("\"widget\":", "\"w\":")
+            .replace("\"userId\":", "\"u\":")
+            .replace("\"type\":", "\"t\":") // WidgetType 的 type
+            .replace("\"displayMode\":", "\"m\":") // WidgetDisplayMode
+    }
+
+    // --- Helper methods for single objects ---
 
     fun serializeAppModel(app: AppModel): String = json.encodeToString(app)
-    fun deserializeAppModel(jsonStr: String): AppModel? = try { json.decodeFromString(jsonStr) } catch(e: Exception) { null }
+    fun deserializeAppModel(jsonStr: String): AppModel? = try { json.decodeFromString(jsonStr) } catch(_: Exception) { null }
 
     fun serializeWidgetModel(widget: WidgetModel): String = json.encodeToString(widget)
-
-    fun deserializeWidgetModel(jsonStr: String): WidgetModel? {
-        return try {
-            // 嘗試使用新格式解析
-            json.decodeFromString<WidgetModel>(jsonStr)
-        } catch (e: Exception) {
-            // 如果失敗，可能是舊格式，這裡可以根據需要手動映射
-            // 或者使用更寬鬆的解析方式
-            null
-        }
-    }
-
-    // 針對舊有 JSONObject 結構的相容方法
-    fun deserializeWidgetFromObject(obj: org.json.JSONObject): WidgetModel? {
-        val jsonStr = obj.toString()
-        // 舊版結構中，widget type 可能直接就在 type 欄位
-        // 這裡我們嘗試將其包裝成符合 kotlinx-serialization 預期的結構
-        return deserializeWidgetModel(jsonStr)
-    }
+    fun deserializeWidgetModel(jsonStr: String): WidgetModel? = try { json.decodeFromString(jsonStr) } catch(_: Exception) { null }
 }
