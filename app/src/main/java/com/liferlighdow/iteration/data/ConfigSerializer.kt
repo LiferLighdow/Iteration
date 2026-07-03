@@ -186,6 +186,7 @@ object ConfigSerializer {
         showStatusBar: Boolean,
         showNavigationBar: Boolean,
         pageSize: Int,
+        actionMode: String,
         glassParams: Map<String, Any>,
         gestures: Map<String, String>,
         appearance: Map<String, Any>,
@@ -232,6 +233,7 @@ object ConfigSerializer {
         settings.put("app_language", appLanguage)
         settings.put("amoled_black", isAmoledBlack)
         settings.put("page_size", pageSize)
+        settings.put("action_mode", actionMode)
 
         val glassObj = JSONObject()
         glassParams.forEach { (k, v) -> glassObj.put(k, v) }

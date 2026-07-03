@@ -149,6 +149,7 @@ import com.liferlighdow.iteration.ui.IterationTheme
 import com.liferlighdow.iteration.ui.ManualsScreen
 import com.liferlighdow.iteration.ui.ThemeMode
 import com.liferlighdow.iteration.ui.liquidGlass
+import com.liferlighdow.iteration.utils.ActionMode
 import com.liferlighdow.iteration.utils.GestureAction
 import com.liferlighdow.iteration.utils.IconPackInfo
 import com.liferlighdow.iteration.utils.IconProcessor
@@ -3095,6 +3096,7 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
     val viewModel: MainViewModel = viewModel()
     val isNetworkEnabled by viewModel.isNetworkAccessEnabled.collectAsState()
     val isSystemNetworkEnabled by viewModel.isSystemNetworkEnabled.collectAsState()
+    val actionMode by viewModel.actionMode.collectAsState()
     
     // 聯絡人權限狀態
     var hasContactsPermission by remember {
@@ -3233,6 +3235,40 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
                     modifier = Modifier.clickable {
                         context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                     }
+                )
+            }
+            item {
+                var expanded by remember { mutableStateOf(false) }
+                val options = listOf(
+                    ActionMode.ACCESSIBILITY to stringResource(R.string.action_mode_accessibility),
+                    ActionMode.SHIZUKU to stringResource(R.string.action_mode_shizuku),
+                    ActionMode.ROOT to stringResource(R.string.action_mode_root)
+                )
+                val currentLabel = options.find { it.first == actionMode }?.second ?: stringResource(R.string.action_mode_accessibility)
+
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.settings_action_mode)) },
+                    supportingContent = { Text(stringResource(R.string.action_mode_desc)) },
+                    trailingContent = {
+                        Box {
+                            TextButton(onClick = { expanded = true }) {
+                                Text(currentLabel)
+                                Icon(Icons.Default.ArrowDropDown, null)
+                            }
+                            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                                options.forEach { (mode, label) ->
+                                    DropdownMenuItem(
+                                        text = { Text(label) },
+                                        onClick = {
+                                            viewModel.setActionMode(mode)
+                                            expanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    modifier = Modifier.clickable { expanded = true }
                 )
             }
             item {

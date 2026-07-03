@@ -32,6 +32,7 @@ import androidx.core.os.LocaleListCompat
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.liferlighdow.iteration.utils.ActionMode
 import com.liferlighdow.iteration.utils.GestureAction
 import com.liferlighdow.iteration.utils.IconPackManager
 import com.liferlighdow.iteration.utils.IconProcessor
@@ -332,6 +333,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     )
     val doubleTapAction = _doubleTapAction.asStateFlow()
+
+    private val _actionMode = MutableStateFlow(
+        try {
+            ActionMode.valueOf(prefs.getString("action_mode", "ACCESSIBILITY") ?: "ACCESSIBILITY")
+        } catch (e: Exception) {
+            ActionMode.ACCESSIBILITY
+        }
+    )
+    val actionMode = _actionMode.asStateFlow()
 
     private val _swipeUpAction = MutableStateFlow(
         try {
@@ -1668,6 +1678,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         prefs.edit().putString("double_tap_action", action.name).apply()
     }
 
+    fun setActionMode(mode: ActionMode) {
+        _actionMode.value = mode
+        prefs.edit().putString("action_mode", mode.name).apply()
+    }
+
     fun setSwipeUpAction(action: GestureAction) {
         _swipeUpAction.value = action
         prefs.edit().putString("swipe_up_action", action.name).apply()
@@ -2118,6 +2133,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             showStatusBar = _showStatusBar.value,
             showNavigationBar = _showNavigationBar.value,
             pageSize = pageSize,
+            actionMode = _actionMode.value.name,
             password = getPassword(),
             hiddenPackages = hiddenPackages,
             customLabels = customLabels,
@@ -2161,6 +2177,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             setAutoAddAppsToHome(settings.optBoolean("auto_add_apps_to_home", true))
             setShowStatusBar(settings.optBoolean("show_status_bar", true))
             setShowNavigationBar(settings.optBoolean("show_navigation_bar", true))
+
+            val savedActionMode = settings.optString("action_mode", "ACCESSIBILITY")
+            _actionMode.value = try { ActionMode.valueOf(savedActionMode) } catch (e: Exception) { ActionMode.ACCESSIBILITY }
+            prefs.edit().putString("action_mode", _actionMode.value.name).apply()
 
             val savedStyle = settings.optString("icon_style", "STANDARD")
             _iconStyle.value = try { IconStyle.valueOf(savedStyle) } catch(e: Exception) { IconStyle.STANDARD }

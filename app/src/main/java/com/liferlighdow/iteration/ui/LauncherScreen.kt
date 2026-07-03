@@ -105,12 +105,14 @@ fun LauncherScreen(
     var showGlobalSearch by remember { mutableStateOf(false) }
 
     val mContext = LocalContext.current
+    val actionMode by viewModel.actionMode.collectAsState()
     
     fun performGestureAction(action: GestureAction, pkg: String) {
         com.liferlighdow.iteration.utils.performGestureAction(
             action = action,
             pkg = pkg,
             context = mContext,
+            actionMode = actionMode,
             onSettingsClick = onSettingsClick,
             onOpenGlobalSearch = { showGlobalSearch = true },
             onOpenDesktopMenu = { showDesktopMenu = true }
@@ -176,17 +178,17 @@ fun LauncherScreen(
         }
     }
 
-    // iOS 感的主畫面聯動動畫
+    // iOS 感的主畫面聯動動畫 - 改為非線性 Tween
     val launcherScale by animateFloatAsState(
         targetValue = if (showGlobalSearch) 0.92f else 1f,
-        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
         label = "launcherScale"
     )
 
-    // 新增：高強度模糊動畫
+    // 新增：高強度模糊動畫 - 改為非線性 Tween
     val launcherBlur by animateDpAsState(
         targetValue = if (showGlobalSearch || folderToOpenId != null) 20.dp else 0.dp,
-        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
         label = "launcherBlur"
     )
     
@@ -233,13 +235,14 @@ fun LauncherScreen(
     }
 
     // 計算 Dock 的顯示進度 (1.0 = 完全顯示, 0.0 = 完全隱藏)
+    // 增加非線性動畫處理 (FastOutSlowInEasing)
     val dockVisibilityProgress by remember(showMinusOnePage, showAppLibrary, desktopPageCount) {
         derivedStateOf {
             val continuousPage = pagerState.currentPage + pagerState.currentPageOffsetFraction
             val desktopStart = if (showMinusOnePage) 1f else 0f
             val desktopEnd = desktopStart + desktopPageCount - 1
             
-            if (continuousPage < desktopStart) {
+            val rawProgress = if (continuousPage < desktopStart) {
                 // 滑向負一頁
                 (continuousPage - (desktopStart - 1f)).coerceIn(0f, 1f)
             } else if (continuousPage > desktopEnd) {
@@ -248,6 +251,9 @@ fun LauncherScreen(
             } else {
                 1f
             }
+            
+            // 使用非線性曲線
+            FastOutSlowInEasing.transform(rawProgress)
         }
     }
 
@@ -357,9 +363,9 @@ fun LauncherScreen(
                     beyondViewportPageCount = 1,
                     flingBehavior = PagerDefaults.flingBehavior(
                         state = pagerState,
-                        snapAnimationSpec = spring(
-                            dampingRatio = Spring.DampingRatioLowBouncy,
-                            stiffness = Spring.StiffnessLow
+                        snapAnimationSpec = tween(
+                            durationMillis = 500,
+                            easing = FastOutSlowInEasing
                         )
                     )
                 ) { pageIndex ->

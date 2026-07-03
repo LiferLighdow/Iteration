@@ -158,6 +158,11 @@
     <string name="settings_gestures_desc">自訂在桌面上的觸控手勢</string>
     <string name="settings_permissions">至高無上的權限管理中心</string>
     <string name="settings_permissions_desc">虔誠管理您尊貴的應用權限和價值連城的隱私</string>
+    <string name="settings_action_mode">交互執行模式</string>
+    <string name="action_mode_accessibility">無障礙模式 (Accessibility)</string>
+    <string name="action_mode_shizuku">Shizuku / Sui 模式</string>
+    <string name="action_mode_root">ROOT 模式</string>
+    <string name="action_mode_desc">選擇執行鎖屏、展開通知等系統交互操作的底層手段。</string>
     <string name="permission_contacts">聯絡之權限</string>
     <string name="permission_contacts_desc">允許在全域搜尋中搜尋聯絡人，但我不會自動幫你打電話啦~</string>
     <string name="permission_notifications">通知之權限</string>

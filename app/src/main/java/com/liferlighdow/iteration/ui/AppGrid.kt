@@ -1,5 +1,6 @@
 package com.liferlighdow.iteration.ui
 
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -315,8 +316,10 @@ fun AppGrid(
                 val animY by animateDpAsState(targetY, label = "y")
 
                 val density = LocalDensity.current
-                // 彈性位移 (iOS 感)
-                val elasticOffset = with(density) { pageOffset * (foundCol - (columns - 1) / 2f) * 12.dp.toPx() }
+                // 彈性位移 (iOS 感) - 增加非線性處理
+                val easedOffset = if (pageOffset > 0) FastOutSlowInEasing.transform(pageOffset) 
+                                 else -FastOutSlowInEasing.transform(-pageOffset)
+                val elasticOffset = with(density) { easedOffset * (foundCol - (columns - 1) / 2f) * 14.dp.toPx() }
                 var showContextMenu by remember { mutableStateOf(false) }
 
                 Box(

@@ -183,6 +183,11 @@
     <string name="settings_gestures_desc">Customizing touch gestures on the home screen</string>
     <string name="settings_permissions">Permissions</string>
     <string name="settings_permissions_desc">Manage application permissions and privacy</string>
+    <string name="settings_action_mode">Action Mode</string>
+    <string name="action_mode_accessibility">Accessibility (Standard)</string>
+    <string name="action_mode_shizuku">Shizuku / Sui</string>
+    <string name="action_mode_root">ROOT</string>
+    <string name="action_mode_desc">Choose the technology used to perform system actions like locking the screen or expanding notifications.</string>
     <string name="permission_contacts">Contacts Access</string>
     <string name="permission_contacts_desc">Allow searching for contacts in global search</string>
     <string name="permission_notifications">Notification Access</string>
