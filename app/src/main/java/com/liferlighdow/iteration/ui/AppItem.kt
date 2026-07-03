@@ -64,11 +64,11 @@ fun AppItem(
     showReflection: Boolean = false,
     onAppClick: (() -> Unit)? = null,
     onDeleteClick: (() -> Unit)? = null,
+    notificationCountProvider: (() -> Int)? = null,
     getIcon: @Composable (String) -> ImageBitmap? = { null }
 ) {
     val viewModel: MainViewModel = viewModel()
     val iconSignal by viewModel.iconUpdateSignal.collectAsState()
-    val notificationCounts by NotificationService.notifications.collectAsState()
     
     val appIcon = remember(app.uniqueId, iconSignal) {
         if (!app.isFolder) {
@@ -77,11 +77,10 @@ fun AppItem(
     }
     
     val displayIcon = appIcon ?: if (!app.isFolder) getIcon(app.uniqueId) else null
-    val count = if (app.isFolder) {
-        app.folderItems.sumOf { notificationCounts[it.packageName] ?: 0 }
-    } else {
-        notificationCounts[app.packageName] ?: 0
-    }
+    
+    // 效能優化：不再集體收集 NotificationService.notifications
+    // 改由外部 Provider 傳入具體數字，避免集體重組
+    val count = notificationCountProvider?.invoke() ?: 0
 
     val currentShape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(iconSize * 0.238f)
 

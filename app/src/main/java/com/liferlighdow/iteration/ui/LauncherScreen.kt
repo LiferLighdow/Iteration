@@ -37,6 +37,7 @@ import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.liferlighdow.iteration.utils.GestureAction
 import com.liferlighdow.iteration.viewmodel.MainViewModel
+import com.liferlighdow.iteration.service.NotificationService
 import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.data.AppModel
 import com.liferlighdow.iteration.viewmodel.handleAppDrop
@@ -256,6 +257,9 @@ fun LauncherScreen(
     val isMinusOnePage = showMinusOnePage && pagerState.currentPage == 0
     val isAppLibraryPage = showAppLibrary && pagerState.currentPage == pageCount - 1
     
+    // 效能優化：統一收集通知狀態，避免 AppItem 集體重組
+    val notificationCounts by NotificationService.notifications.collectAsState()
+
     // 檢查 App Library 是否處於搜尋模式
     val librarySearchQuery by viewModel.searchQuery.collectAsState()
     val libraryCategory by viewModel.selectedCategory.collectAsState()
@@ -632,6 +636,7 @@ fun LauncherScreen(
                         dockApps = dockApps,
                         isEditMode = isEditMode,
                         myPackageName = myPackageName,
+                        notificationCounts = notificationCounts,
                         onSearchClick = { showGlobalSearch = true },
                         onAppClick = onAppClick,
                         onSettingsClick = onSettingsClick,

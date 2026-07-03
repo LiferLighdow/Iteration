@@ -115,9 +115,14 @@ fun Modifier.liquidGlassDock(
     val shape = remember(dockStyle, cornerRadius) {
         when (dockStyle) {
             DockStyle.CLASSIC -> RoundedCornerShape(0.dp)
-            DockStyle.MODERN -> RoundedCornerShape(cornerRadius)
+            DockStyle.MODERN, DockStyle.LITE -> RoundedCornerShape(cornerRadius)
             DockStyle.PLATFORM -> PlatformDockShape()
         }
+    }
+
+    if (dockStyle == DockStyle.LITE) {
+        // LITE style doesn't draw any background or glass effect
+        return@composed this
     }
 
     if (!isLiquidGlass || (dockStyle != DockStyle.PLATFORM && backdrop == null)) {

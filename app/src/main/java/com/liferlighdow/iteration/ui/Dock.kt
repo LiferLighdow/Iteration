@@ -50,6 +50,7 @@ fun Dock(
     refractionAmount: Float = 48f,
     chromaticAberration: Boolean = true,
     isEditMode: Boolean = false,
+    notificationCounts: Map<String, Int> = emptyMap(),
     onAppClick: (AppModel) -> Unit,
     onLongClick: (Int) -> Unit,
     onDeleteClick: ((AppModel) -> Unit)? = null
@@ -120,6 +121,9 @@ fun Dock(
                         )
                 )
             }
+            DockStyle.LITE -> {
+                // LITE style has no background decorations
+            }
         }
 
         // 2. 內容層 (App 圖示)
@@ -161,6 +165,7 @@ fun Dock(
                         showReflection = dockStyle == DockStyle.PLATFORM,
                         onDeleteClick = { onDeleteClick?.invoke(app) },
                         getIcon = { pkg -> viewModel.getIcon(pkg) },
+                        notificationCountProvider = { notificationCounts[app.packageName] ?: 0 },
                         modifier = Modifier.graphicsLayer {
                             if (isEditMode) rotationZ = rotation
                         }.combinedClickable(

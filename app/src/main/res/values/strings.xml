@@ -344,6 +344,7 @@
     <string name="dock_style_modern">Modern (Floating)</string>
     <string name="dock_style_classic">Classic (Full Width)</string>
     <string name="dock_style_platform">Platform (3D Glass)</string>
+    <string name="dock_style_lite">Lite (No Background)</string>
     <string name="style_exclusions">Style Exclusions</string>
     <string name="style_exclusions_desc">Selected apps will always use their original colorful icons.</string>
     <string name="your_device">Your Device</string>

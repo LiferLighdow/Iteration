@@ -36,6 +36,7 @@ fun LauncherBottomBar(
     dockApps: List<AppModel>,
     isEditMode: Boolean,
     myPackageName: String,
+    notificationCounts: Map<String, Int> = emptyMap(),
     // 回調
     onSearchClick: () -> Unit,
     onAppClick: (AppModel) -> Unit,
@@ -100,6 +101,7 @@ fun LauncherBottomBar(
                     refractionAmount = refractionAmount,
                     chromaticAberration = chromaticAberration,
                     isEditMode = isEditMode,
+                    notificationCounts = notificationCounts,
                     onAppClick = { app ->
                         if (app.packageName == myPackageName) onSettingsClick() else onAppClick(app)
                     },
@@ -107,7 +109,7 @@ fun LauncherBottomBar(
                     onDeleteClick = onDeleteClick
                 )
 
-                if (dockStyle == DockStyle.MODERN) {
+                if (dockStyle == DockStyle.MODERN || dockStyle == DockStyle.LITE) {
                     Spacer(modifier = Modifier.height(2.dp))
                 }
             }

@@ -4,5 +4,5 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 enum class DockStyle {
-    MODERN, CLASSIC, PLATFORM
+    MODERN, CLASSIC, PLATFORM, LITE
 }

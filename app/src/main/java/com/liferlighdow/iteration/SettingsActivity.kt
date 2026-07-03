@@ -2287,7 +2287,8 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
                 val styleOptions = listOf(
                     DockStyle.MODERN to stringResource(R.string.dock_style_modern),
                     DockStyle.CLASSIC to stringResource(R.string.dock_style_classic),
-                    DockStyle.PLATFORM to stringResource(R.string.dock_style_platform)
+                    DockStyle.PLATFORM to stringResource(R.string.dock_style_platform),
+                    DockStyle.LITE to stringResource(R.string.dock_style_lite)
                 )
                 val currentStyleLabel = styleOptions.find { it.first == dockStyle }?.second ?: stringResource(R.string.dock_style_modern)
 

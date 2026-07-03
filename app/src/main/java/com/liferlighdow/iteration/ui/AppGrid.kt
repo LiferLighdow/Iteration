@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.Dp
 import com.kyant.backdrop.Backdrop
 import com.liferlighdow.iteration.utils.IconShape
 import com.liferlighdow.iteration.viewmodel.MainViewModel
+import com.liferlighdow.iteration.service.NotificationService
 import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.data.AnalogClockWidget
 import com.liferlighdow.iteration.data.AppModel
@@ -122,6 +123,8 @@ fun AppGrid(
     onBackgroundTwoFingerSwipeDown: () -> Unit = {},
     onEditApp: (AppModel) -> Unit = {}
 ) {
+    val notificationCounts by NotificationService.notifications.collectAsState()
+
     val draggingUniqueId = draggingApp?.uniqueId
     var stackToEdit by remember { mutableStateOf<WidgetModel?>(null) }
     var noteToEdit by remember { mutableStateOf<WidgetModel?>(null) }
@@ -319,15 +322,10 @@ fun AppGrid(
                 Box(
                     modifier = Modifier
                         .graphicsLayer {
-                            val offset = pageOffsetProvider()
-                            // 增加緩衝門檻，避免在吸附末端頻繁重組或閃爍
-                            val isScrolling = abs(offset) > 0.005f
-                            val elasticOffset = offset * (foundCol - (columns - 1) / 2f) * 12.dp.toPx()
-
-                            // 改用 translation 處理位置，並整合彈性位移
-                            // 在 Draw 階段計算，比 Modifier.offset 效能更好
-                            translationX = (if (isScrolling) targetX.toPx() else animX.toPx()) + elasticOffset
-                            translationY = if (isScrolling) targetY.toPx() else animY.toPx()
+                            // 徹底移除彈性位移，保持圖示間距固定
+                            // 同時移除 isScrolling 判定，確保座標系統始終一致，消除末端跳躍感
+                            translationX = animX.toPx()
+                            translationY = animY.toPx()
                         }
                         .size(cellWidth * w, cellHeight * h)
                         .onGloballyPositioned {
@@ -384,6 +382,13 @@ fun AppGrid(
                             onContextMenuDismiss = { showContextMenu = false },
                             onAppClick = { onAppClick(app, lastPosition.pos) },
                             onEditApp = { onEditApp(app) },
+                            notificationCountProvider = {
+                                if (app.isFolder) {
+                                    app.folderItems.sumOf { notificationCounts[it.packageName] ?: 0 }
+                                } else {
+                                    notificationCounts[app.packageName] ?: 0
+                                }
+                            },
                             viewModel = viewModel
                         )
                     }
@@ -620,6 +625,7 @@ private fun AppGridItem(
     onContextMenuDismiss: () -> Unit,
     onAppClick: () -> Unit,
     onEditApp: () -> Unit,
+    notificationCountProvider: () -> Int,
     viewModel: MainViewModel
 ) {
     val mContext = LocalContext.current
@@ -639,6 +645,7 @@ private fun AppGridItem(
             onDeleteClick = {
                 viewModel.removeAppFromHome(app.uniqueId)
             },
+            notificationCountProvider = notificationCountProvider,
             modifier = Modifier.graphicsLayer {
                 alpha = if (app.uniqueId == draggingUniqueId) 0f else 1f
                 scaleX = scale; scaleY = scale

@@ -311,6 +311,7 @@
     <string name="dock_style_modern">現代風格（浮動式）</string>
     <string name="dock_style_classic">經典風格（全寬式）</string>
     <string name="dock_style_platform">平台風格（3D式）</string>
+    <string name="dock_style_lite">極簡風格（無背景）</string>
     <string name="style_exclusions">風格排除</string>
     <string name="style_exclusions_desc">您選擇的應用程式會一直乖乖地使用它原本的彩色圖示喔</string>
     <string name="your_device">主人在這</string>

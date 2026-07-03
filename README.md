@@ -16,7 +16,7 @@
 
 ---
 
-**Iteration** is a high-performance, minimalist Android launcher built from the ground up using **Jetpack Compose**. It bridges the gap between fluid, intuitive UI patterns and the robust flexibility of the Android ecosystem. Minimum <strong>Android 6 (API 23)</strong> supported. Optimized for the latest **Android 12 (API 31)** through **Android 17 (API 37)**.
+**Iteration** is a high-performance, minimalist Android launcher built from the ground up using **Jetpack Compose**. It bridges the gap between fluid, intuitive UI patterns and the robust flexibility of the Android ecosystem. Minimum <strong>Android 7 (API 24)</strong> supported. Optimized for the latest **Android 12 (API 31)** through **Android 17 (API 37)**.
 
 ---
 
