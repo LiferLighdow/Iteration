@@ -51,6 +51,7 @@ data class LauncherSettings(
     val themeMode: ThemeMode = ThemeMode.FOLLOW_SYSTEM,
     val appLanguage: String = "default",
     val amoledBlack: Boolean = false,
+    val iconPackPackage: String = "",
     val password: String = "",
     val homeMenuOptions: Set<String> = setOf("delete_home", "edit", "uninstall", "hide", "app_info", "favorite"),
     val glassParams: GlassParams = GlassParams(),

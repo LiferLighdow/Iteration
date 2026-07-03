@@ -679,6 +679,7 @@ fun StandardMusicWidget(
     modifier: Modifier = Modifier,
     backdrop: Backdrop? = null
 ) {
+    val mContext = LocalContext.current
     val viewModel: MainViewModel = viewModel()
     val isLiquidGlassEnabled by viewModel.isLiquidGlassEnabled.collectAsState()
     val isLiquidWidgetsEnabled by viewModel.isLiquidGlassWidgetsEnabled.collectAsState()
@@ -711,7 +712,18 @@ fun StandardMusicWidget(
                 refractionHeight = refractionHeight,
                 refractionAmount = refractionAmount,
                 chromaticAberration = chromaticAberration
-            ) else Modifier),
+            ) else Modifier)
+            .clickable(
+                enabled = mediaInfo?.packageName != null,
+                onClick = {
+                    mediaInfo?.packageName?.let { pkg ->
+                        val intent = mContext.packageManager.getLaunchIntentForPackage(pkg)
+                        if (intent != null) {
+                            mContext.startActivity(intent)
+                        }
+                    }
+                }
+            ),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = if (useLiquid) Color.Transparent else containerColor)
     ) {
@@ -810,6 +822,7 @@ fun WideMusicWidget(
     modifier: Modifier = Modifier,
     backdrop: Backdrop? = null
 ) {
+    val mContext = LocalContext.current
     val viewModel: MainViewModel = viewModel()
     val isLiquidGlassEnabled by viewModel.isLiquidGlassEnabled.collectAsState()
     val isLiquidWidgetsEnabled by viewModel.isLiquidGlassWidgetsEnabled.collectAsState()
@@ -842,7 +855,18 @@ fun WideMusicWidget(
                 refractionHeight = refractionHeight,
                 refractionAmount = refractionAmount,
                 chromaticAberration = chromaticAberration
-            ) else Modifier),
+            ) else Modifier)
+            .clickable(
+                enabled = mediaInfo?.packageName != null,
+                onClick = {
+                    mediaInfo?.packageName?.let { pkg ->
+                        val intent = mContext.packageManager.getLaunchIntentForPackage(pkg)
+                        if (intent != null) {
+                            mContext.startActivity(intent)
+                        }
+                    }
+                }
+            ),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = if (useLiquid) Color.Transparent else containerColor)
     ) {

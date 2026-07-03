@@ -1260,20 +1260,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun loadApps() {
         loadAppsJob?.cancel()
 
-        // 1. 強制重新載入設定
-        loadSettings()
-        updateSuggestions()
-        updateBlurredWallpaper()
-
-        val isThemed = _isThemedIconsEnabled.value
-        val currentStyle = _iconStyle.value
-        val currentShape = _iconShape.value
-        val currentIconPack = _iconPackPackage.value
-
         loadAppsJob = viewModelScope.launch {
+            // 如果是頻繁觸發（例如拖動 Slider），延遲加載以節省資源
+            delay(300)
+
+            // 在背景線程進行初步處理
+            withContext(Dispatchers.Default) {
+                loadSettings()
+                updateSuggestions()
+            }
+            updateBlurredWallpaper()
+
+            val isThemed = _isThemedIconsEnabled.value
+            val currentStyle = _iconStyle.value
+            val currentShape = _iconShape.value
+            val currentIconPack = _iconPackPackage.value
+
             // 如果是 Custom 風格且正在頻繁調整，稍微延遲一下以避免過度運算
             if (currentStyle == IconStyle.CUSTOM) {
-                delay(100)
+                delay(200)
             }
             if (currentIconPack.isNotEmpty()) {
                 withContext(Dispatchers.IO) {
@@ -1338,6 +1343,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
             themeColorsCache = themeColors
 
+            val launcherApps = getApplication<Application>().getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
+            val userManager = getApplication<Application>().getSystemService(Context.USER_SERVICE) as android.os.UserManager
+            val activityInfoCache = withContext(Dispatchers.IO) {
+                userManager.userProfiles.associateWith { handle ->
+                    launcherApps.getActivityList(null, handle)
+                }
+            }
+
             val processedApps: List<AppModel> = withContext(Dispatchers.Default) {
                 val density = getApplication<Application>().resources.displayMetrics.density
                 val sizePx = (62 * density).toInt()
@@ -1387,7 +1400,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                             customBg,
                                             customFg,
                                             customOriginal,
-                                            customOriginalBg
+                                            customOriginalBg,
+                                            activityInfoCache
                                         )
                                         saveIconToDisk(processed, diskCacheFile)
                                         iconCache.put(cacheKey, processed)
@@ -1553,9 +1567,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         customBg: Int,
         customFg: Int,
         customOriginal: Boolean,
-        customOriginalBg: Boolean
+        customOriginalBg: Boolean,
+        activityInfoCache: Map<android.os.UserHandle, List<android.content.pm.LauncherActivityInfo>>
     ): ImageBitmap {
-        val launcherApps = getApplication<Application>().getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
         val userManager = getApplication<Application>().getSystemService(Context.USER_SERVICE) as android.os.UserManager
         
         // 1. 取得該 App 所屬使用者的 Handle
@@ -1563,22 +1577,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             userManager.getSerialNumberForUser(it) == app.userId 
         } ?: android.os.Process.myUserHandle()
 
-        // 2. 優先嘗試獲取特定的 Activity 圖示 (支援一鍵多入口)
+        // 2. 從快取中獲取特定的 Activity 圖示 (支援一鍵多入口)
         val rawIcon = try {
+            val userActivities = activityInfoCache[userHandle] ?: emptyList()
             if (app.uniqueId.contains("/")) {
                 val componentStr = app.uniqueId.substringBefore("@")
                 val pkg = componentStr.substringBefore("/")
                 val cls = componentStr.substringAfter("/")
                 val component = android.content.ComponentName(pkg, cls)
                 
-                // 從 LauncherApps 中精準提取該入口的圖示
-                launcherApps.getActivityList(pkg, userHandle)
-                    .find { it.componentName == component }
+                userActivities.find { it.componentName == component }
                     ?.getIcon(getApplication<Application>().resources.displayMetrics.densityDpi)
             } else {
-                // 如果是普通應用，則獲取該使用者的標準圖示
-                launcherApps.getActivityList(app.packageName, userHandle)
-                    .firstOrNull()
+                userActivities.find { it.applicationInfo.packageName == app.packageName }
                     ?.getIcon(getApplication<Application>().resources.displayMetrics.densityDpi)
             }
         } catch (e: Exception) {
@@ -1798,49 +1809,42 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setThemedIconsEnabled(enabled: Boolean) {
         _isThemedIconsEnabled.value = enabled
         prefs.edit().putBoolean("themed_icons", enabled).apply()
-        iconCache.evictAll()
         loadApps()
     }
 
     fun setIconStyle(style: IconStyle) {
         _iconStyle.value = style
         prefs.edit().putString("icon_style", style.name).apply()
-        iconCache.evictAll()
         loadApps()
     }
 
     fun setCustomIconBgColor(color: Int) {
         _customIconBgColor.value = color
         prefs.edit().putInt("custom_icon_bg_color", color).apply()
-        iconCache.evictAll()
         loadApps()
     }
 
     fun setCustomIconFgColor(color: Int) {
         _customIconFgColor.value = color
         prefs.edit().putInt("custom_icon_fg_color", color).apply()
-        iconCache.evictAll()
         loadApps()
     }
 
     fun setCustomIconUseOriginal(useOriginal: Boolean) {
         _customIconUseOriginal.value = useOriginal
         prefs.edit().putBoolean("custom_icon_use_original", useOriginal).apply()
-        iconCache.evictAll()
         loadApps()
     }
 
     fun setCustomIconUseOriginalBg(useOriginalBg: Boolean) {
         _customIconUseOriginalBg.value = useOriginalBg
         prefs.edit().putBoolean("custom_icon_use_original_bg", useOriginalBg).apply()
-        iconCache.evictAll()
         loadApps()
     }
 
     fun setIconShape(shape: IconShape) {
         _iconShape.value = shape
         prefs.edit().putString("icon_shape", shape.name).apply()
-        iconCache.evictAll()
         loadApps()
     }
 
@@ -2145,6 +2149,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 themeMode = _themeMode.value,
                 appLanguage = _appLanguage.value,
                 amoledBlack = _isAmoledBlack.value,
+                iconPackPackage = _iconPackPackage.value,
                 password = getPassword(),
                 homeMenuOptions = _homeMenuOptions.value.filterNotNull().toSet(),
                 glassParams = GlassParams(
@@ -2204,86 +2209,122 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun applyConfig(config: LauncherConfig) {
         val settings = config.settings
         
-        // 1. 恢復基礎設定
-        setThemedIconsEnabled(settings.themedIcons)
-        setLiquidGlassDockEnabled(settings.liquidGlassDock)
-        setLiquidGlassHomeFolderEnabled(settings.liquidGlassHomeFolder)
-        setLiquidGlassAppLibraryFolderEnabled(settings.liquidGlassAppLibraryFolder)
-        setLiquidGlassGlobalSearchEnabled(settings.liquidGlassGlobalSearch)
-        setLiquidGlassAppLibrarySearchEnabled(settings.liquidGlassAppLibrarySearch)
-        setLiquidGlassWidgetsEnabled(settings.liquidGlassWidgets)
-        setNetworkAccessEnabled(settings.networkAccessEnabled)
-        setLiquidGlassEnabled(settings.liquidGlassEnabled)
-        setShowMinusOnePage(settings.showMinusOne)
-        setShowAppLibrary(settings.showAppLibrary)
-        setAutoAddAppsToHome(settings.autoAddAppsToHome)
-        setShowStatusBar(settings.showStatusBar)
-        setShowNavigationBar(settings.showNavigationBar)
+        // 1. 恢復基礎設定 - 直接操作 State 與 Prefs，避免觸發多個 loadApps
+        _isThemedIconsEnabled.value = settings.themedIcons
+        _isLiquidGlassEnabled.value = settings.liquidGlassEnabled
+        _isLiquidGlassDockEnabled.value = settings.liquidGlassDock
+        _isLiquidGlassHomeFolderEnabled.value = settings.liquidGlassHomeFolder
+        _isLiquidGlassAppLibraryFolderEnabled.value = settings.liquidGlassAppLibraryFolder
+        _isLiquidGlassGlobalSearchEnabled.value = settings.liquidGlassGlobalSearch
+        _isLiquidGlassAppLibrarySearchEnabled.value = settings.liquidGlassAppLibrarySearch
+        _isLiquidGlassWidgetsEnabled.value = settings.liquidGlassWidgets
+        _isNetworkAccessEnabled.value = settings.networkAccessEnabled
+        _showMinusOnePage.value = settings.showMinusOne
+        _showAppLibrary.value = settings.showAppLibrary
+        _autoAddAppsToHome.value = settings.autoAddAppsToHome
+        _showStatusBar.value = settings.showStatusBar
+        _showNavigationBar.value = settings.showNavigationBar
+        
+        prefs.edit().apply {
+            putBoolean("themed_icons", settings.themedIcons)
+            putBoolean("liquid_glass_enabled", settings.liquidGlassEnabled)
+            putBoolean("liquid_glass_dock", settings.liquidGlassDock)
+            putBoolean("liquid_glass_home_folder", settings.liquidGlassHomeFolder)
+            putBoolean("liquid_glass_app_library_folder", settings.liquidGlassAppLibraryFolder)
+            putBoolean("liquid_glass_global_search", settings.liquidGlassGlobalSearch)
+            putBoolean("liquid_glass_app_library_search", settings.liquidGlassAppLibrarySearch)
+            putBoolean("liquid_glass_widgets", settings.liquidGlassWidgets)
+            putBoolean("network_access_enabled", settings.networkAccessEnabled)
+            putBoolean("show_minus_one", settings.showMinusOne)
+            putBoolean("show_app_library", settings.showAppLibrary)
+            putBoolean("auto_add_apps_to_home", settings.autoAddAppsToHome)
+            putBoolean("show_status_bar", settings.showStatusBar)
+            putBoolean("show_navigation_bar", settings.showNavigationBar)
+            
+            putString("action_mode", settings.actionMode.name)
+            putString("icon_style", settings.iconStyle.name)
+            putString("icon_shape", settings.iconShape.name)
+            putString("library_shape", settings.libraryShape.name)
+            putString("search_engine_url", settings.searchEngineUrl)
+            putInt("page_size", settings.pageSize)
+            putString("password", settings.password)
+            
+            putFloat("liquid_glass_blur", settings.glassParams.blur)
+            putFloat("liquid_glass_refraction_height", settings.glassParams.refractionHeight)
+            putFloat("liquid_glass_refraction_amount", settings.glassParams.refractionAmount)
+            putBoolean("liquid_glass_chromatic_aberration", settings.glassParams.chromaticAberration)
+            
+            putString("double_tap_action", settings.gestures.doubleTapAction.name)
+            putString("swipe_up_action", settings.gestures.swipeUpAction.name)
+            putString("swipe_down_action", settings.gestures.swipeDownAction.name)
+            putString("long_press_action", settings.gestures.longPressAction.name)
+            putString("two_finger_swipe_up_action", settings.gestures.twoFingerSwipeUpAction.name)
+            putString("two_finger_swipe_down_action", settings.gestures.twoFingerSwipeDownAction.name)
+            
+            putString("double_tap_app", settings.gestures.doubleTapApp)
+            putString("swipe_up_app", settings.gestures.swipeUpApp)
+            putString("swipe_down_app", settings.gestures.swipeDownApp)
+            putString("long_press_app", settings.gestures.longPressApp)
+            putString("two_finger_swipe_up_app", settings.gestures.twoFingerSwipeUpApp)
+            putString("two_finger_swipe_down_app", settings.gestures.twoFingerSwipeDownApp)
+            
+            putString("icon_pack_package", settings.iconPackPackage)
+            putString("theme_mode", settings.themeMode.name)
+            putString("app_language", settings.appLanguage)
+            putBoolean("amoled_black", settings.amoledBlack)
+            
+            putInt("custom_icon_bg_color", settings.customIconSettings.bgColor)
+            putInt("custom_icon_fg_color", settings.customIconSettings.fgColor)
+            putBoolean("custom_icon_use_original", settings.customIconSettings.useOriginal)
+            putBoolean("custom_icon_use_original_bg", settings.customIconSettings.useOriginalBg)
+            
+            putStringSet("favorite_packages", config.favorites)
+            putStringSet("excluded_themed_packages", config.excludedThemed)
+            putStringSet("home_menu_options", settings.homeMenuOptions)
+            putStringSet("hidden_apps", config.hiddenApps)
+        }.apply()
 
         _actionMode.value = settings.actionMode
-        prefs.edit().putString("action_mode", settings.actionMode.name).apply()
-
         _iconStyle.value = settings.iconStyle
-        prefs.edit().putString("icon_style", settings.iconStyle.name).apply()
-
         _iconShape.value = settings.iconShape
-        prefs.edit().putString("icon_shape", settings.iconShape.name).apply()
-
         _libraryShape.value = settings.libraryShape
-        prefs.edit().putString("library_shape", settings.libraryShape.name).apply()
-
-        setSearchEngineUrl(settings.searchEngineUrl)
+        _searchEngineUrl.value = settings.searchEngineUrl
         pageSize = settings.pageSize
-        setPassword(settings.password)
-
-        // 3. 恢復進階細項設定
-        setLiquidGlassBlur(settings.glassParams.blur)
-        setLiquidGlassRefractionHeight(settings.glassParams.refractionHeight)
-        setLiquidGlassRefractionAmount(settings.glassParams.refractionAmount)
-        setLiquidGlassChromaticAberration(settings.glassParams.chromaticAberration)
-
-        val gst = settings.gestures
-        setDoubleTapAction(gst.doubleTapAction)
-        setSwipeUpAction(gst.swipeUpAction)
-        setSwipeDownAction(gst.swipeDownAction)
-        setLongPressAction(gst.longPressAction)
-        setTwoFingerSwipeUpAction(gst.twoFingerSwipeUpAction)
-        setTwoFingerSwipeDownAction(gst.twoFingerSwipeDownAction)
+        _themeMode.value = settings.themeMode
+        _appLanguage.value = settings.appLanguage
+        _isAmoledBlack.value = settings.amoledBlack
+        _iconPackPackage.value = settings.iconPackPackage
         
-        setDoubleTapApp(gst.doubleTapApp)
-        setSwipeUpApp(gst.swipeUpApp)
-        setSwipeDownApp(gst.swipeDownApp)
-        setLongPressApp(gst.longPressApp)
-        setTwoFingerSwipeUpApp(gst.twoFingerSwipeUpApp)
-        setTwoFingerSwipeDownApp(gst.twoFingerSwipeDownApp)
+        _liquidGlassBlur.value = settings.glassParams.blur
+        _liquidGlassRefractionHeight.value = settings.glassParams.refractionHeight
+        _liquidGlassRefractionAmount.value = settings.glassParams.refractionAmount
+        _liquidGlassChromaticAberration.value = settings.glassParams.chromaticAberration
 
-        setIconPack(settings.customIconSettings.useOriginal.toString()) // This looks suspicious in old code, but I'll follow settings for now
-        // Wait, old code had setIconPack(ap.optString("icon_pack", ""))
-        // I'll use the right one.
+        _doubleTapAction.value = settings.gestures.doubleTapAction
+        _swipeUpAction.value = settings.gestures.swipeUpAction
+        _swipeDownAction.value = settings.gestures.swipeDownAction
+        _longPressAction.value = settings.gestures.longPressAction
+        _twoFingerSwipeUpAction.value = settings.gestures.twoFingerSwipeUpAction
+        _twoFingerSwipeDownAction.value = settings.gestures.twoFingerSwipeDownAction
         
-        setThemeMode(settings.themeMode)
-        setAppLanguage(settings.appLanguage)
-        setAmoledBlack(settings.amoledBlack)
+        _doubleTapApp.value = settings.gestures.doubleTapApp
+        _swipeUpApp.value = settings.gestures.swipeUpApp
+        _swipeDownApp.value = settings.gestures.swipeDownApp
+        _longPressApp.value = settings.gestures.longPressApp
+        _twoFingerSwipeUpApp.value = settings.gestures.twoFingerSwipeUpApp
+        _twoFingerSwipeDownApp.value = settings.gestures.twoFingerSwipeDownApp
 
-        val ci = settings.customIconSettings
-        setCustomIconBgColor(ci.bgColor)
-        setCustomIconFgColor(ci.fgColor)
-        setCustomIconUseOriginal(ci.useOriginal)
-        setCustomIconUseOriginalBg(ci.useOriginalBg)
+        _customIconBgColor.value = settings.customIconSettings.bgColor
+        _customIconFgColor.value = settings.customIconSettings.fgColor
+        _customIconUseOriginal.value = settings.customIconSettings.useOriginal
+        _customIconUseOriginalBg.value = settings.customIconSettings.useOriginalBg
 
         _favoritePackages.value = config.favorites
-        prefs.edit().putStringSet("favorite_packages", config.favorites).apply()
-
         _excludedThemedPackages.value = config.excludedThemed
-        prefs.edit().putStringSet("excluded_themed_packages", config.excludedThemed).apply()
-
         _homeMenuOptions.value = settings.homeMenuOptions
-        prefs.edit().putStringSet("home_menu_options", settings.homeMenuOptions).apply()
-
-        // 2. 恢復 App 設定
+        
         hiddenPackages.clear()
         hiddenPackages.addAll(config.hiddenApps)
-        prefs.edit().putStringSet("hidden_apps", hiddenPackages).apply()
 
         customLabels.clear()
         customLabels.putAll(config.customLabels)
@@ -2322,7 +2363,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         prefs.edit().putString("dock_packages", config.dock.joinToString(",")).apply()
         prefs.edit().putString("launch_counts", config.launchCounts).apply()
 
-        // 重新加載所有內容
+        // 最後清空快取並統一加載一次
+        iconCache.evictAll()
         loadApps()
     }
 
