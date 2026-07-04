@@ -22,6 +22,7 @@ class WallpaperProcessor(private val context: Application) {
     /**
      * 從系統獲取當前桌布
      */
+    @android.annotation.SuppressLint("MissingPermission")
     fun extractSystemWallpaper(): WallpaperResult? {
         return try {
             val wm = WallpaperManager.getInstance(context)

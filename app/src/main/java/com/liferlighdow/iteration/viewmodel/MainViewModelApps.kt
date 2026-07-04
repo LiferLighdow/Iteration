@@ -1,0 +1,776 @@
+package com.liferlighdow.iteration.viewmodel
+
+import android.app.Application
+import android.app.WallpaperManager
+import android.content.Context
+import android.content.Intent
+import android.content.pm.LauncherActivityInfo
+import android.content.pm.LauncherApps
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.os.Build
+import android.os.UserHandle
+import android.os.UserManager
+import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.core.graphics.drawable.toBitmap
+import androidx.lifecycle.viewModelScope
+import com.liferlighdow.iteration.R
+import com.liferlighdow.iteration.data.AppModel
+import com.liferlighdow.iteration.data.ConfigSerializer
+import com.liferlighdow.iteration.ui.DockStyle
+import com.liferlighdow.iteration.ui.DynamicColorGenerator
+import com.liferlighdow.iteration.ui.ThemeMode
+import com.liferlighdow.iteration.utils.GestureAction
+import com.liferlighdow.iteration.utils.IconShape
+import com.liferlighdow.iteration.utils.IconStyle
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.File
+import java.io.FileOutputStream
+
+/**
+ * 從 LruCache 或磁碟獲取處理後的圖示
+ */
+fun MainViewModel.getIcon(uniqueId: String): ImageBitmap? {
+    val styleSuffix = currentStyleSuffix
+    if (styleSuffix == "default") return null
+
+    // 1. 取得基礎 ID
+    val baseId = if (uniqueId.contains("@")) {
+        val parts = uniqueId.split("@")
+        val lastPart = parts.last()
+        if (lastPart.length >= 10 && lastPart.toLongOrNull() != null) {
+            uniqueId.substringBeforeLast("@")
+        } else {
+            uniqueId
+        }
+    } else {
+        uniqueId
+    }
+    
+    val cacheKey = "${baseId}_$styleSuffix"
+
+    // 2. 檢查 LruCache
+    iconCache[cacheKey]?.let { return it }
+
+    // 3. 檢查自定義圖示
+    val fileSafeId = baseId.replace("/", "_").replace(":", "_").replace("@", "_")
+    val customIconFile = File(customIconDir, "$fileSafeId.png")
+    if (customIconFile.exists()) {
+        return try {
+            BitmapFactory.decodeFile(customIconFile.absolutePath)?.asImageBitmap()?.also {
+                iconCache.put(cacheKey, it)
+            }
+        } catch (e: Exception) { null }
+    }
+
+    // 4. 檢查磁碟快取
+    val diskCacheFile = File(processedIconCacheDir, "${fileSafeId}_$styleSuffix.png")
+    if (diskCacheFile.exists()) {
+        return try {
+            BitmapFactory.decodeFile(diskCacheFile.absolutePath)?.asImageBitmap()?.also {
+                iconCache.put(cacheKey, it)
+            }
+        } catch (e: Exception) { null }
+    }
+
+    return null
+}
+
+fun MainViewModel.triggerIconUpdate() {
+    _iconUpdateSignal.value = System.currentTimeMillis()
+}
+
+fun MainViewModel.clearIconCache() {
+    viewModelScope.launch(Dispatchers.IO) {
+        iconCache.evictAll()
+        processedIconCacheDir.listFiles()?.forEach { it.delete() }
+        iconProcessor.clearCache()
+        
+        withContext(Dispatchers.Main) {
+            cachedRawApps = null
+            loadApps()
+            
+            val intent = Intent("com.liferlighdow.iteration.ACTION_REFRESH_APPS")
+            intent.setPackage(getApplication<Application>().packageName)
+            getApplication<Application>().sendBroadcast(intent)
+        }
+    }
+}
+
+fun MainViewModel.loadHiddenPackages() {
+    val saved = prefs.getStringSet("hidden_apps", emptySet()) ?: emptySet()
+    hiddenPackages.clear()
+    hiddenPackages.addAll(saved)
+}
+
+fun MainViewModel.loadCustomLabels() {
+    val saved = prefs.getString("custom_labels_json", null)
+    customLabels.clear()
+    if (saved != null) {
+        val json = JSONObject(saved)
+        json.keys().forEach { key: String ->
+            customLabels[key] = json.getString(key)
+        }
+    }
+}
+
+fun MainViewModel.loadCustomCategories() {
+    val saved = prefs.getString("custom_categories_json", null)
+    customCategories.clear()
+    if (saved != null) {
+        val json = JSONObject(saved)
+        json.keys().forEach { key: String ->
+            customCategories[key] = json.getString(key)
+        }
+    }
+}
+
+fun MainViewModel.saveCustomCategories() {
+    val json = JSONObject()
+    customCategories.forEach { (k, v) -> json.put(k, v) }
+    prefs.edit().putString("custom_categories_json", json.toString()).apply()
+}
+
+fun MainViewModel.setAppCategory(uniqueId: String, category: String) {
+    if (category.isBlank()) {
+        customCategories.remove(uniqueId)
+    } else {
+        customCategories[uniqueId] = category
+    }
+    saveCustomCategories()
+    loadApps()
+}
+
+fun MainViewModel.setCustomLabel(uniqueId: String, newLabel: String) {
+    if (newLabel.isBlank()) {
+        customLabels.remove(uniqueId)
+    } else {
+        customLabels[uniqueId] = newLabel
+    }
+    val json = JSONObject()
+    customLabels.forEach { (k, v) -> json.put(k, v) }
+    prefs.edit().putString("custom_labels_json", json.toString()).apply()
+    loadApps()
+}
+
+fun MainViewModel.setCustomIcon(uniqueId: String, bitmap: Bitmap) {
+    val fileSafeId = uniqueId.replace("/", "_").replace(":", "_").replace("@", "_")
+    val file = File(customIconDir, "$fileSafeId.png")
+    FileOutputStream(file).use { out ->
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+    }
+    iconCache.remove(uniqueId)
+    loadApps()
+}
+
+fun MainViewModel.resetCustomIcon(uniqueId: String) {
+    val fileSafeId = uniqueId.replace("/", "_").replace(":", "_").replace("@", "_")
+    val file = File(customIconDir, "$fileSafeId.png")
+    if (file.exists()) file.delete()
+    iconCache.remove(uniqueId)
+    loadApps()
+}
+
+fun MainViewModel.toggleHiddenApp(packageName: String) {
+    if (hiddenPackages.contains(packageName)) {
+        hiddenPackages.remove(packageName)
+    } else {
+        hiddenPackages.add(packageName)
+        removeAppFromHomeByPackage(packageName)
+    }
+    prefs.edit().putStringSet("hidden_apps", hiddenPackages).apply()
+    clearAppIconCache(packageName)
+    loadApps()
+}
+
+fun MainViewModel.removeAppFromHomeByPackage(packageName: String) {
+    val currentPages = _pages.value.map { page ->
+        page.filter { item ->
+            if (item.isFolder) true else item.packageName != packageName
+        }.map { item ->
+            if (item.isFolder) {
+                item.copy(folderItems = item.folderItems.filter { it.packageName != packageName })
+            } else item
+        }
+    }.filter { it.isNotEmpty() }
+
+    _pages.value = currentPages
+    saveLayout()
+}
+
+fun MainViewModel.clearAppIconCache(packageName: String) {
+    processedIconCacheDir.listFiles { _, name ->
+        name.startsWith("${packageName}_")
+    }?.forEach { it.delete() }
+    iconCache.evictAll()
+}
+
+fun MainViewModel.loadUserCategories() {
+    val saved = prefs.getString("user_categories_ordered", null)
+    _userCategories.value = saved?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
+}
+
+fun MainViewModel.saveUserCategories(list: List<String>) {
+    prefs.edit().putString("user_categories_ordered", list.joinToString(",")).apply()
+}
+
+fun MainViewModel.addUserCategory(name: String) {
+    val current = _userCategories.value.toMutableList()
+    if (!current.contains(name)) {
+        current.add(name)
+        _userCategories.value = current
+        saveUserCategories(current)
+    }
+}
+
+fun MainViewModel.deleteUserCategory(name: String) {
+    val current = _userCategories.value.toMutableList()
+    current.remove(name)
+    _userCategories.value = current
+    saveUserCategories(current)
+
+    val toRemove = customCategories.filter { it.value == name }.keys
+    toRemove.forEach { customCategories.remove(it) }
+    saveCustomCategories()
+    loadApps()
+}
+
+fun MainViewModel.moveUserCategory(fromIndex: Int, toIndex: Int) {
+    val current = _userCategories.value.toMutableList()
+    if (fromIndex in current.indices && toIndex in current.indices) {
+        val item = current.removeAt(fromIndex)
+        current.add(toIndex, item)
+        _userCategories.value = current
+        saveUserCategories(current)
+    }
+}
+
+fun MainViewModel.loadCategoryRenames() {
+    val saved = prefs.getString("category_renames_json", null)
+    categoryRenames.clear()
+    if (saved != null) {
+        val json = JSONObject(saved)
+        json.keys().forEach { key: String ->
+            categoryRenames[key] = json.getString(key)
+        }
+    }
+}
+
+fun MainViewModel.saveCategoryRenames() {
+    val json = JSONObject()
+    categoryRenames.forEach { (k, v) -> json.put(k, v) }
+    prefs.edit().putString("category_renames_json", json.toString()).apply()
+}
+
+fun MainViewModel.renameCategory(oldName: String, newName: String) {
+    if (oldName == newName || newName.isBlank()) return
+    categoryRenames[oldName] = newName
+    saveCategoryRenames()
+
+    val current = _userCategories.value.toMutableList()
+    val index = current.indexOf(oldName)
+    if (index != -1) {
+        current[index] = newName
+        _userCategories.value = current
+        saveUserCategories(current)
+    }
+
+    val appsToUpdate = customCategories.filter { it.value == oldName }.keys
+    appsToUpdate.forEach { customCategories[it] = newName }
+    if (appsToUpdate.isNotEmpty()) saveCustomCategories()
+    loadApps()
+}
+
+fun MainViewModel.updateSuggestions() {
+    val launchCounts = prefs.getString("launch_counts", "") ?: ""
+    val topPackages = launchCounts.splitToSequence(",")
+        .filter { it.contains("|") }
+        .map { it.split("|") }
+        .filter { it.size == 2 }
+        .map { it[0] to (it[1].toIntOrNull() ?: 0) }
+        .sortedByDescending { it.second }
+        .take(8)
+        .map { it.first }
+        .toList()
+
+    _suggestedApps.value = _allApps.value.filter { topPackages.contains(it.packageName) && !it.isHidden }
+}
+
+fun MainViewModel.logAppLaunch(packageName: String) {
+    val launchCounts = prefs.getString("launch_counts", "") ?: ""
+    val countsMap = launchCounts.split(",").filter { it.contains("|") }.associate {
+        val parts = it.split("|")
+        parts[0] to (parts[1].toIntOrNull() ?: 0)
+    }.toMutableMap()
+
+    countsMap[packageName] = (countsMap[packageName] ?: 0) + 1
+    val serialized = countsMap.map { "${it.key}|${it.value}" }.joinToString(",")
+    prefs.edit().putString("launch_counts", serialized).apply()
+    updateSuggestions()
+}
+
+fun MainViewModel.processNewIcon(
+    app: AppModel,
+    currentIconPack: String,
+    isThemed: Boolean,
+    isExcluded: Boolean,
+    themeColors: ColorScheme?,
+    currentStyle: IconStyle,
+    currentShape: IconShape,
+    sizePx: Int,
+    customBg: Int,
+    customFg: Int,
+    customOriginal: Boolean,
+    customOriginalBg: Boolean,
+    activityInfoCache: Map<UserHandle, List<LauncherActivityInfo>>
+): ImageBitmap {
+    val userManager = getApplication<Application>().getSystemService(Context.USER_SERVICE) as UserManager
+    val userHandle = userManager.userProfiles.find { 
+        userManager.getSerialNumberForUser(it) == app.userId 
+    } ?: android.os.Process.myUserHandle()
+
+    val rawIcon = try {
+        val userActivities = activityInfoCache[userHandle] ?: emptyList()
+        if (app.uniqueId.contains("/")) {
+            val componentStr = app.uniqueId.substringBefore("@")
+            val pkg = componentStr.substringBefore("/")
+            val cls = componentStr.substringAfter("/")
+            val component = android.content.ComponentName(pkg, cls)
+            userActivities.find { it.componentName == component }?.getIcon(getApplication<Application>().resources.displayMetrics.densityDpi)
+        } else {
+            userActivities.find { it.applicationInfo.packageName == app.packageName }?.getIcon(getApplication<Application>().resources.displayMetrics.densityDpi)
+        }
+    } catch (e: Exception) { null }
+
+    val finalRawIcon = rawIcon ?: try {
+        getApplication<Application>().packageManager.getApplicationIcon(app.packageName)
+    } catch (e: Exception) { null }
+
+    if (isExcluded) {
+        return iconProcessor.processIcon(finalRawIcon, false, null, IconStyle.STANDARD, currentShape, sizePx, customBgColor = 0, customFgColor = 0, customUseOriginal = true, customUseOriginalBg = true)
+    }
+
+    return if (currentIconPack.isNotEmpty()) {
+        val ipIcon = iconPackManager.getIcon(app.packageName, app.uniqueId)
+        if (ipIcon != null) {
+            iconProcessor.processIcon(ipIcon, false, null, IconStyle.STANDARD, currentShape, sizePx, isIconPack = true)
+        } else {
+            iconProcessor.processIcon(finalRawIcon, false, null, IconStyle.CUSTOM, currentShape, sizePx, customBgColor = 0, customFgColor = 0, customUseOriginal = true, customUseOriginalBg = true)
+        }
+    } else {
+        iconProcessor.processIcon(finalRawIcon, isThemed, themeColors, currentStyle, currentShape, sizePx, customBgColor = customBg, customFgColor = customFg, customUseOriginal = customOriginal, customUseOriginalBg = customOriginalBg)
+    }
+}
+
+fun MainViewModel.saveIconToDisk(bitmap: ImageBitmap, file: File) {
+    try {
+        val b = bitmap.asAndroidBitmap()
+        FileOutputStream(file).use { out ->
+            b.compress(Bitmap.CompressFormat.PNG, 100, out)
+        }
+    } catch (e: Exception) { e.printStackTrace() }
+}
+
+fun MainViewModel.loadSettings() {
+    loadHiddenPackages()
+    loadCustomLabels()
+    loadUserCategories()
+    loadCustomCategories()
+    loadCategoryRenames()
+    loadWidgets()
+    loadDock()
+
+    val savedStyleStr = prefs.getString("icon_style", "STANDARD") ?: "STANDARD"
+    val newStyle = try { IconStyle.valueOf(savedStyleStr) } catch (e: Exception) { IconStyle.STANDARD }
+    val savedShapeStr = prefs.getString("icon_shape", "DEFAULT") ?: "DEFAULT"
+    val newShape = try { IconShape.valueOf(savedShapeStr) } catch (e: Exception) { IconShape.DEFAULT }
+    val savedLibShapeStr = prefs.getString("library_shape", "DEFAULT") ?: "DEFAULT"
+    val newLibShape = try { IconShape.valueOf(savedLibShapeStr) } catch (e: Exception) { IconShape.DEFAULT }
+    val newThemed = prefs.getBoolean("themed_icons", false)
+    val newLiquidEnabled = prefs.getBoolean("liquid_glass_enabled", false)
+    val newLiquidDockEnabled = prefs.getBoolean("liquid_glass_dock", false)
+    val newLiquidHomeFolderEnabled = prefs.getBoolean("liquid_glass_home_folder", false)
+    val newLiquidAppLibraryFolderEnabled = prefs.getBoolean("liquid_glass_app_library_folder", false)
+    val newLiquidGlobalSearchEnabled = prefs.getBoolean("liquid_glass_global_search", false)
+    val newLiquidAppLibrarySearchEnabled = prefs.getBoolean("liquid_glass_app_library_search", false)
+    val newLiquidWidgetsEnabled = prefs.getBoolean("liquid_glass_widgets", false)
+    val newNetworkAccessEnabled = prefs.getBoolean("network_access_enabled", true)
+    val newShowMinusOne = prefs.getBoolean("show_minus_one", true)
+    val newShowAppLibrary = prefs.getBoolean("show_app_library", true)
+    val newLiquidBlur = prefs.getFloat("liquid_glass_blur", 0f)
+    val newLiquidRefractionHeight = prefs.getFloat("liquid_glass_refraction_height", 24f)
+    val newLiquidRefractionAmount = prefs.getFloat("liquid_glass_refraction_amount", 48f)
+    val newLiquidChromaticAberration = prefs.getBoolean("liquid_glass_chromatic_aberration", true)
+    val newDoubleTapActionStr = prefs.getString("double_tap_action", "NONE") ?: "NONE"
+    val newDoubleTapAction = try { GestureAction.valueOf(newDoubleTapActionStr) } catch (e: Exception) { GestureAction.NONE }
+    val newIconPackPackage = prefs.getString("icon_pack_package", "") ?: ""
+    val newExcluded = prefs.getStringSet("excluded_themed_packages", emptySet()) ?: emptySet()
+    val newRows = prefs.getInt("desktop_rows", 0)
+    val newDockStyle = try { DockStyle.valueOf(prefs.getString("dock_style", "MODERN") ?: "MODERN") } catch (e: Exception) { DockStyle.MODERN }
+    val newSearchEngine = prefs.getString("search_engine_url", "https://www.google.com/search?q=") ?: "https://www.google.com/search?q="
+    val newAutoAdd = prefs.getBoolean("auto_add_apps_to_home", true)
+    val newShowStatusBar = prefs.getBoolean("show_status_bar", true)
+    val newShowNavigationBar = prefs.getBoolean("show_navigation_bar", true)
+    val newThemeMode = try {
+        ThemeMode.valueOf(prefs.getString("theme_mode", "FOLLOW_SYSTEM") ?: "FOLLOW_SYSTEM")
+    } catch (e: Exception) {
+        ThemeMode.FOLLOW_SYSTEM
+    }
+    val newAmoled = prefs.getBoolean("amoled_black", false)
+
+    if (_iconStyle.value != newStyle || _isThemedIconsEnabled.value != newThemed || _iconPackPackage.value != newIconPackPackage || _iconShape.value != newShape || _libraryShape.value != newLibShape || _excludedThemedPackages.value != newExcluded || _desktopRows.value != newRows || _dockStyle.value != newDockStyle) {
+        _iconStyle.value = newStyle
+        _iconShape.value = newShape
+        _libraryShape.value = newLibShape
+        _isThemedIconsEnabled.value = newThemed
+        _iconPackPackage.value = newIconPackPackage
+        _excludedThemedPackages.value = newExcluded
+        _desktopRows.value = newRows
+        _dockStyle.value = newDockStyle
+    }
+
+    _searchEngineUrl.value = newSearchEngine
+    _autoAddAppsToHome.value = newAutoAdd
+    _showStatusBar.value = newShowStatusBar
+    _showNavigationBar.value = newShowNavigationBar
+    _themeMode.value = newThemeMode
+    _isAmoledBlack.value = newAmoled
+    _isLiquidGlassEnabled.value = newLiquidEnabled
+    _isLiquidGlassDockEnabled.value = newLiquidDockEnabled
+    _isLiquidGlassHomeFolderEnabled.value = newLiquidHomeFolderEnabled
+    _isLiquidGlassAppLibraryFolderEnabled.value = newLiquidAppLibraryFolderEnabled
+    _isLiquidGlassGlobalSearchEnabled.value = newLiquidGlobalSearchEnabled
+    _isLiquidGlassAppLibrarySearchEnabled.value = newLiquidAppLibrarySearchEnabled
+    _isLiquidGlassWidgetsEnabled.value = newLiquidWidgetsEnabled
+    _isNetworkAccessEnabled.value = newNetworkAccessEnabled
+    _showMinusOnePage.value = newShowMinusOne
+    _showAppLibrary.value = newShowAppLibrary
+    _liquidGlassBlur.value = newLiquidBlur
+    _liquidGlassRefractionHeight.value = newLiquidRefractionHeight
+    _liquidGlassRefractionAmount.value = newLiquidRefractionAmount
+    _liquidGlassChromaticAberration.value = newLiquidChromaticAberration
+    _doubleTapAction.value = newDoubleTapAction
+
+    _swipeUpAction.value = try {
+        GestureAction.valueOf(prefs.getString("swipe_up_action", "NONE") ?: "NONE")
+    } catch (e: Exception) {
+        GestureAction.NONE
+    }
+    _doubleTapApp.value = prefs.getString("double_tap_app", "") ?: ""
+    _swipeUpApp.value = prefs.getString("swipe_up_app", "") ?: ""
+    _swipeDownAction.value = try {
+        GestureAction.valueOf(prefs.getString("swipe_down_action", "OPEN_GLOBAL_SEARCH") ?: "OPEN_GLOBAL_SEARCH")
+    } catch (e: Exception) {
+        GestureAction.OPEN_GLOBAL_SEARCH
+    }
+    _longPressAction.value = try {
+        GestureAction.valueOf(prefs.getString("long_press_action", "OPEN_DESKTOP_MENU") ?: "OPEN_DESKTOP_MENU")
+    } catch (e: Exception) {
+        GestureAction.OPEN_DESKTOP_MENU
+    }
+    _swipeDownApp.value = prefs.getString("swipe_down_app", "") ?: ""
+    _longPressApp.value = prefs.getString("long_press_app", "") ?: ""
+    _twoFingerSwipeUpAction.value = try {
+        GestureAction.valueOf(prefs.getString("two_finger_swipe_up_action", "NONE") ?: "NONE")
+    } catch (e: Exception) {
+        GestureAction.NONE
+    }
+    _twoFingerSwipeDownAction.value = try {
+        GestureAction.valueOf(prefs.getString("two_finger_swipe_down_action", "OPEN_NOTIFICATIONS") ?: "OPEN_NOTIFICATIONS")
+    } catch (e: Exception) {
+        GestureAction.OPEN_NOTIFICATIONS
+    }
+    _twoFingerSwipeUpApp.value = prefs.getString("two_finger_swipe_up_app", "") ?: ""
+    _twoFingerSwipeDownApp.value = prefs.getString("two_finger_swipe_down_app", "") ?: ""
+
+    _homeMenuOptions.value = prefs.getStringSet("home_menu_options", setOf("delete_home", "uninstall")) ?: setOf("delete_home", "uninstall")
+    _favoritePackages.value = prefs.getStringSet("favorite_packages", emptySet()) ?: emptySet()
+}
+
+fun MainViewModel.loadDock() {
+    val saved = prefs.getString("dock_packages", null)
+    val list = if (saved != null) {
+        val decoded = saved.split(",").toMutableList()
+        while (decoded.size < 4) decoded.add("")
+        decoded.take(4)
+    } else {
+        List(4) { "" }
+    }
+    _dockPackageNames.value = list
+}
+
+@android.annotation.SuppressLint("MissingPermission")
+fun MainViewModel.loadApps() {
+    loadAppsJob?.cancel()
+
+    loadAppsJob = viewModelScope.launch {
+        delay(300)
+        withContext(Dispatchers.Default) {
+            loadSettings()
+            updateSuggestions()
+        }
+        updateBlurredWallpaper()
+
+        val isThemed = _isThemedIconsEnabled.value
+        val currentStyle = _iconStyle.value
+        val currentShape = _iconShape.value
+        val currentIconPack = _iconPackPackage.value
+
+        if (currentStyle == IconStyle.CUSTOM) {
+            delay(200)
+        }
+        if (currentIconPack.isNotEmpty()) {
+            withContext(Dispatchers.IO) {
+                iconPackManager.loadIconPack(currentIconPack)
+            }
+        }
+
+        val rawApps = cachedRawApps ?: withContext(Dispatchers.IO) {
+            repository.getInstalledApps().also { cachedRawApps = it }
+        }
+
+        val themeColors = if (isThemed) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                dynamicLightColorScheme(getApplication())
+            } else {
+                val seed = withContext(Dispatchers.IO) {
+                    try {
+                        val wm = WallpaperManager.getInstance(getApplication())
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                            wm.getWallpaperColors(WallpaperManager.FLAG_SYSTEM)?.primaryColor?.toArgb()
+                        } else {
+                            wm.drawable?.toBitmap()
+                                ?.let { DynamicColorGenerator.extractSeedColorFromBitmap(it) }
+                        }
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+                seed?.let { DynamicColorGenerator.generateColorSchemeFromSeed(it, false) }
+            }
+        } else null
+
+        val colorKey = themeColors?.primary?.let {
+            val argb = ((it.alpha * 255).toInt() shl 24) or
+                       ((it.red * 255).toInt() shl 16) or
+                       ((it.green * 255).toInt() shl 8) or
+                       (it.blue * 255).toInt()
+            argb.toString(16)
+        } ?: "default"
+
+        val customBg = _customIconBgColor.value
+        val customFg = _customIconFgColor.value
+        val customOriginal = _customIconUseOriginal.value
+        val customOriginalBg = _customIconUseOriginalBg.value
+        val customKey = if (currentStyle == IconStyle.CUSTOM) {
+            "C_${customBg.toString(16)}_${customFg.toString(16)}_${if (customOriginal) "O" else "M"}_${if (customOriginalBg) "OB" else "CB"}"
+        } else "N"
+
+        val newStyleSuffix = if (currentIconPack.isNotEmpty()) {
+            "IP_V13_${currentIconPack.hashCode()}_${currentShape.name}_${currentStyle.name}_${if (isThemed) "T_$colorKey" else "N"}_$customKey"
+        } else {
+            "V13_${currentStyle.name}_${currentShape.name}_${if (isThemed) "T_$colorKey" else "N"}_$customKey"
+        }
+
+        if (currentStyleSuffix != newStyleSuffix) {
+            currentStyleSuffix = newStyleSuffix
+            iconCache.evictAll()
+        }
+        themeColorsCache = themeColors
+
+        val launcherApps = getApplication<Application>().getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
+        val userManager = getApplication<Application>().getSystemService(Context.USER_SERVICE) as UserManager
+        val activityInfoCache = withContext(Dispatchers.IO) {
+            userManager.userProfiles.associateWith { handle ->
+                launcherApps.getActivityList(null, handle)
+            }
+        }
+
+        val processedApps: List<AppModel> = withContext(Dispatchers.Default) {
+            val density = getApplication<Application>().resources.displayMetrics.density
+            val sizePx = (62 * density).toInt()
+            val styleSuffix = currentStyleSuffix
+            val semaphore = Semaphore(8)
+
+            coroutineScope {
+                rawApps.map { app ->
+                    async {
+                        semaphore.withPermit {
+                            val fileSafeId = app.uniqueId.replace("/", "_").replace(":", "_").replace("@", "_")
+                            val customIconFile = File(customIconDir, "$fileSafeId.png")
+                            val legacyCustomIconFile = File(customIconDir, "${app.packageName}.png")
+                            val diskCacheFile = File(processedIconCacheDir, "${fileSafeId}_$styleSuffix.png")
+                            val cacheKey = "${app.uniqueId}_$styleSuffix"
+                            val isExcluded = excludedThemedPackages.value.contains(app.packageName)
+
+                            if (iconCache[cacheKey] == null) {
+                                val customToLoad = if (customIconFile.exists()) customIconFile else if (legacyCustomIconFile.exists()) legacyCustomIconFile else null
+                                if (customToLoad != null) {
+                                    BitmapFactory.decodeFile(customToLoad.absolutePath)?.asImageBitmap()?.let {
+                                        iconCache.put(cacheKey, it)
+                                    }
+                                } else if (diskCacheFile.exists()) {
+                                    BitmapFactory.decodeFile(diskCacheFile.absolutePath)?.let {
+                                        iconCache.put(cacheKey, it.asImageBitmap())
+                                    }
+                                } else {
+                                    val processed = processNewIcon(app, currentIconPack, isThemed, isExcluded, themeColors, currentStyle, currentShape, sizePx, customBg, customFg, customOriginal, customOriginalBg, activityInfoCache)
+                                    saveIconToDisk(processed, diskCacheFile)
+                                    iconCache.put(cacheKey, processed)
+                                }
+                            }
+
+                            val appRes = getApplication<Application>()
+                            val rawCategory = customCategories[app.uniqueId] ?: customCategories[app.packageName] ?: when (app.category) {
+                                0 -> appRes.getString(R.string.cat_games)
+                                1 -> appRes.getString(R.string.cat_audio)
+                                2 -> appRes.getString(R.string.cat_video)
+                                3 -> appRes.getString(R.string.cat_imaging)
+                                4 -> appRes.getString(R.string.cat_social)
+                                5 -> appRes.getString(R.string.cat_news)
+                                6 -> appRes.getString(R.string.cat_maps)
+                                7 -> appRes.getString(R.string.cat_productivity)
+                                else -> appRes.getString(R.string.cat_other)
+                            }
+
+                            val displayCategory = categoryRenames[rawCategory] ?: rawCategory
+                            app.copy(
+                                label = customLabels[app.uniqueId] ?: customLabels[app.packageName] ?: app.label,
+                                isHidden = hiddenPackages.contains(app.packageName) || hiddenPackages.contains(app.uniqueId),
+                                displayCategory = displayCategory
+                            )
+                        }
+                    }
+                }.awaitAll()
+            }
+        }
+
+        _allApps.value = processedApps
+        triggerIconUpdate()
+
+        val seenApps = (prefs.getStringSet("seen_apps", null) ?: emptySet()).toMutableSet()
+        val isMigration = prefs.getStringSet("seen_apps", null) == null
+        val savedLayout = prefs.getString("launcher_layout_v3", null) ?: prefs.getString("launcher_layout_v2", null)
+
+        if (savedLayout != null) {
+            try {
+                val pagesArray = JSONArray(savedLayout)
+                val restoredPages = mutableListOf<List<AppModel>>()
+                if (isMigration) {
+                    seenApps.addAll(processedApps.map { it.uniqueId })
+                    prefs.edit().putStringSet("seen_apps", seenApps).apply()
+                }
+                for (i in 0 until pagesArray.length()) {
+                    val pageArray = pagesArray.getJSONArray(i)
+                    val pageItems = mutableListOf<AppModel>()
+                    for (j in 0 until pageArray.length()) {
+                        val itemValue = pageArray.get(j)
+                        val jsonStr = if (itemValue is JSONObject) itemValue.toString() else itemValue as String
+                        ConfigSerializer.deserializeAppModel(jsonStr)?.let { savedApp ->
+                            if (savedApp.isFolder || savedApp.isWidget) {
+                                pageItems.add(savedApp)
+                            } else {
+                                val baseApp = processedApps.find { it.uniqueId == savedApp.uniqueId }
+                                    ?: processedApps.find { it.packageName == savedApp.packageName && it.userId == savedApp.userId }
+                                baseApp?.let {
+                                    pageItems.add(it.copy(uniqueId = savedApp.uniqueId, label = customLabels[savedApp.uniqueId] ?: customLabels[savedApp.packageName] ?: it.label, isHidden = hiddenPackages.contains(savedApp.uniqueId) || hiddenPackages.contains(savedApp.packageName)))
+                                }
+                            }
+                        }
+                    }
+                    restoredPages.add(pageItems)
+                }
+                val newApps = processedApps.filter { app -> !seenApps.contains(app.uniqueId) && !seenApps.contains(app.packageName) && !app.isHidden }
+                if (newApps.isNotEmpty()) {
+                    if (_autoAddAppsToHome.value) {
+                        val isMassiveMigration = newApps.size > 20
+                        if (!isMassiveMigration) {
+                            val mutablePages = restoredPages.map { it.toMutableList() }.toMutableList()
+                            newApps.forEach { app ->
+                                var added = false
+                                for (page in mutablePages) { if (page.size < pageSize) { page.add(app); added = true; break } }
+                                if (!added) mutablePages.add(mutableListOf(app))
+                                seenApps.add(app.uniqueId)
+                            }
+                            _pages.value = mutablePages
+                            saveLayout()
+                        } else { seenApps.addAll(newApps.map { it.uniqueId }) }
+                        prefs.edit().putStringSet("seen_apps", seenApps).apply()
+                    } else {
+                        seenApps.addAll(newApps.map { it.uniqueId })
+                        prefs.edit().putStringSet("seen_apps", seenApps).apply()
+                        _pages.value = restoredPages
+                    }
+                } else { _pages.value = restoredPages }
+            } catch (e: Exception) { repaginate(processedApps) }
+        } else {
+            repaginate(processedApps)
+            seenApps.addAll(processedApps.map { it.uniqueId })
+            prefs.edit().putStringSet("seen_apps", seenApps).apply()
+            saveLayout()
+        }
+        if (_dockPackageNames.value.all { it.isEmpty() } && processedApps.isNotEmpty()) {
+            val defaultDock = processedApps.take(4).map { it.packageName }
+            _dockPackageNames.value = defaultDock
+            prefs.edit().putString("dock_packages", defaultDock.joinToString(",")).apply()
+        }
+    }
+}
+
+fun MainViewModel.repaginate(allApps: List<AppModel>) {
+    if (allApps.isEmpty()) {
+        _pages.value = listOf(emptyList())
+    } else {
+        val visibleApps = allApps.filter { !it.isHidden }
+        _pages.value = visibleApps.chunked(pageSize)
+    }
+}
+
+fun MainViewModel.launchApp(app: AppModel) {
+    val launcherApps = getApplication<Application>().getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
+    val userManager = getApplication<Application>().getSystemService(Context.USER_SERVICE) as UserManager
+    
+    try {
+        val allProfiles = userManager.userProfiles
+        val userHandle = allProfiles.find { 
+            userManager.getSerialNumberForUser(it) == app.userId 
+        } ?: android.os.Process.myUserHandle()
+
+        if (app.uniqueId.contains("/")) {
+            val idWithoutTimestamp = if (app.uniqueId.contains("@")) {
+                val lastPart = app.uniqueId.substringAfterLast("@")
+                if (lastPart.length >= 10) app.uniqueId.substringBeforeLast("@") else app.uniqueId
+            } else app.uniqueId
+            
+            val idWithoutUser = idWithoutTimestamp.substringBefore("@")
+            val pkg = idWithoutUser.substringBefore("/")
+            val cls = idWithoutUser.substringAfter("/")
+            val component = android.content.ComponentName(pkg, cls)
+            launcherApps.startMainActivity(component, userHandle, null, null)
+        } else {
+            val intent = getApplication<Application>().packageManager.getLaunchIntentForPackage(app.packageName)
+            if (intent != null) {
+                getApplication<Application>().startActivity(intent.apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                })
+            }
+        }
+        logAppLaunch(app.packageName)
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+}

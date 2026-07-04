@@ -100,6 +100,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -156,7 +157,7 @@ import com.liferlighdow.iteration.utils.IconPackInfo
 import com.liferlighdow.iteration.utils.IconProcessor
 import com.liferlighdow.iteration.utils.IconShape
 import com.liferlighdow.iteration.utils.IconStyle
-import com.liferlighdow.iteration.viewmodel.MainViewModel
+import com.liferlighdow.iteration.viewmodel.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
@@ -195,7 +196,7 @@ class SettingsActivity : AppCompatActivity() {
 }
 
 enum class SettingsPage {
-    MAIN, HIDE_APPS, RENAME_APPS, CHANGE_ICON, APP_LIBRARY, ICON_THEME, DOCK, LIQUID_GLASS, GESTURES, SEARCH, PERMISSIONS, MANUALS, GLOBAL_SEARCH_MANUAL, ICON_ENGINE_MANUAL, LANGUAGE
+    MAIN, HIDE_APPS, RENAME_APPS, CHANGE_ICON, APP_LIBRARY, ICON_THEME, DOCK, LIQUID_GLASS, GESTURES, SEARCH, PERMISSIONS, MANUALS, GLOBAL_SEARCH_MANUAL, ICON_ENGINE_MANUAL, LANGUAGE, ADVANCED
 }
 
 @Composable
@@ -225,7 +226,8 @@ fun SettingsNavigation() {
             onNavigateToSearch = { currentPage = SettingsPage.SEARCH },
             onNavigateToPermissions = { currentPage = SettingsPage.PERMISSIONS },
             onNavigateToManuals = { currentPage = SettingsPage.MANUALS },
-            onNavigateToLanguage = { currentPage = SettingsPage.LANGUAGE }
+            onNavigateToLanguage = { currentPage = SettingsPage.LANGUAGE },
+            onNavigateToAdvanced = { currentPage = SettingsPage.ADVANCED }
         )
         SettingsPage.HIDE_APPS -> HideAppsScreen(onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.RENAME_APPS -> RenameAppsScreen(onBack = { currentPage = SettingsPage.MAIN })
@@ -252,6 +254,7 @@ fun SettingsNavigation() {
             currentPage = SettingsPage.MANUALS
         })
         SettingsPage.LANGUAGE -> LanguageSettingsScreen(onBack = { currentPage = SettingsPage.MAIN })
+        SettingsPage.ADVANCED -> AdvancedSettingsScreen(onBack = { currentPage = SettingsPage.MAIN })
     }
 }
 
@@ -343,7 +346,8 @@ fun SettingsMainScreen(
     onNavigateToSearch: () -> Unit,
     onNavigateToPermissions: () -> Unit,
     onNavigateToManuals: () -> Unit,
-    onNavigateToLanguage: () -> Unit
+    onNavigateToLanguage: () -> Unit,
+    onNavigateToAdvanced: () -> Unit
 ) {
     val viewModel: MainViewModel = viewModel()
     val context = LocalContext.current
@@ -370,9 +374,10 @@ fun SettingsMainScreen(
             SettingsMetadata(context.getString(R.string.settings_search), context.getString(R.string.settings_search_desc), Icons.Default.Search, Color(0xFF00ACC1), onNavigateToSearch),
             SettingsMetadata(context.getString(R.string.settings_permissions), context.getString(R.string.settings_permissions_desc), Icons.Default.Security, Color(0xFF607D8B), onNavigateToPermissions),
             SettingsMetadata(context.getString(R.string.settings_language), context.getString(R.string.language_system_default), Icons.Default.Language, Color(0xFF3F51B5), onNavigateToLanguage),
+            SettingsMetadata(context.getString(R.string.settings_advanced), context.getString(R.string.settings_advanced_desc), Icons.Default.Settings, Color(0xFF607D8B), onNavigateToAdvanced),
             SettingsMetadata(context.getString(R.string.user_manual_title), context.getString(R.string.user_manual_desc), Icons.AutoMirrored.Filled.MenuBook, Color(0xFFFF9800), onNavigateToManuals),
             SettingsMetadata(context.getString(R.string.settings_hide_apps), context.getString(R.string.settings_hide_apps_desc), Icons.Default.VisibilityOff, Color(0xFF795548), {
-                if (viewModel.getPassword().isEmpty()) onNavigateToHideApps() else {} // 觸發 PasswordGate
+                if (viewModel.getPassword().isNullOrEmpty()) onNavigateToHideApps() else {} // 觸發 PasswordGate
             }, isHideApps = true),
             SettingsMetadata(context.getString(R.string.settings_rename_apps), context.getString(R.string.settings_rename_apps_desc), Icons.Default.Edit, Color(0xFF673AB7), onNavigateToRenameApps),
             SettingsMetadata(context.getString(R.string.settings_export), context.getString(R.string.settings_backup_restore_desc), Icons.Default.Backup, Color(0xFF4CAF50), { /* Launcher Logic */ }, isExport = true),
@@ -478,7 +483,7 @@ fun SettingsMainScreen(
                                                 }
                                             }
                                             item.isHideApps -> {
-                                                if (viewModel.getPassword().isEmpty()) onNavigateToHideApps()
+                                                if (viewModel.getPassword().isNullOrEmpty()) onNavigateToHideApps()
                                                 else showPasswordGate = true
                                             }
                                             item.isExport -> exportLauncher.launch("iteration_backup.json")
@@ -609,6 +614,14 @@ fun SettingsMainScreen(
                             iconColor = Color(0xFF3F51B5),
                             onClick = onNavigateToLanguage
                         )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        SettingsItem(
+                            headline = stringResource(R.string.settings_advanced),
+                            supporting = stringResource(R.string.settings_advanced_desc),
+                            icon = Icons.Default.Settings,
+                            iconColor = Color(0xFF607D8B),
+                            onClick = onNavigateToAdvanced
+                        )
                     }
                 }
 
@@ -628,7 +641,7 @@ fun SettingsMainScreen(
                             icon = Icons.Default.VisibilityOff,
                             iconColor = Color(0xFF795548),
                             onClick = {
-                                if (viewModel.getPassword().isEmpty()) onNavigateToHideApps()
+                                if (viewModel.getPassword().isNullOrEmpty()) onNavigateToHideApps()
                                 else showPasswordGate = true
                             }
                         )
@@ -1977,7 +1990,7 @@ fun HideAppsScreen(onBack: () -> Unit) {
             }
             item {
                 OutlinedTextField(
-                    value = currentPassword,
+                    value = currentPassword ?: "",
                     onValueChange = {
                         currentPassword = it
                         viewModel.setPassword(it)
@@ -3493,6 +3506,74 @@ fun LanguageSettingsScreen(onBack: () -> Unit) {
                     },
                     modifier = Modifier.clickable { viewModel.setAppLanguage(code) }
                 )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AdvancedSettingsScreen(onBack: () -> Unit) {
+    val viewModel: MainViewModel = viewModel()
+    val cacheSize by viewModel.iconCacheSize.collectAsState()
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.settings_advanced)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+            item {
+                PaddingRemaining(16.dp) {
+                    Text(
+                        stringResource(R.string.icon_cache_size_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        stringResource(R.string.icon_cache_size_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Text(
+                        stringResource(R.string.icon_cache_current, cacheSize),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                    ) {
+                        IconButton(onClick = { 
+                            viewModel.setIconCacheSize((cacheSize - 10).coerceAtLeast(250)) 
+                        }) {
+                            Icon(Icons.Default.Remove, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        }
+                        
+                        Slider(
+                            value = cacheSize.toFloat(),
+                            onValueChange = { viewModel.setIconCacheSize(it.roundToInt()) },
+                            valueRange = 250f..1000f,
+                            modifier = Modifier.weight(1f)
+                        )
+                        
+                        IconButton(onClick = { 
+                            viewModel.setIconCacheSize((cacheSize + 10).coerceAtMost(1000)) 
+                        }) {
+                            Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                }
             }
         }
     }

@@ -476,4 +476,9 @@
     <string name="root_permission_failed">Failed to get ROOT permission</string>
     <string name="shizuku_not_running">Shizuku is not running</string>
     <string name="shizuku_permission_request">Requesting Shizuku permission</string>
+    <string name="settings_advanced">Advanced</string>
+    <string name="settings_advanced_desc">Performance and cache settings</string>
+    <string name="icon_cache_size_title">Icon Cache Size</string>
+    <string name="icon_cache_size_desc">The number of icons to keep in memory. Larger values improve smoothness but use more RAM.</string>
+    <string name="icon_cache_current">Current Cache Size: %1$d</string>
 </resources>

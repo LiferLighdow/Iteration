@@ -24,9 +24,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.core.graphics.drawable.toBitmap
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.liferlighdow.iteration.utils.IconShape
-import com.liferlighdow.iteration.viewmodel.MainViewModel
+import com.liferlighdow.iteration.viewmodel.*
 import com.liferlighdow.iteration.R
-import com.liferlighdow.iteration.viewmodel.createFolder
 import com.liferlighdow.iteration.data.AppModel
 import com.liferlighdow.iteration.data.WidgetPickerDialog
 import com.liferlighdow.iteration.viewmodel.deleteFolder

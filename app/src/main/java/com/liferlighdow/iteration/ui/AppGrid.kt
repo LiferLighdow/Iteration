@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.Dp
 import com.kyant.backdrop.Backdrop
 import com.liferlighdow.iteration.utils.IconShape
 import com.liferlighdow.iteration.viewmodel.MainViewModel
+import com.liferlighdow.iteration.viewmodel.*
 import com.liferlighdow.iteration.service.NotificationService
 import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.data.AnalogClockWidget
@@ -216,16 +217,18 @@ fun AppGrid(
                 if (!isEditMode) {
                     awaitPointerEventScope {
                         while (true) {
-                            awaitFirstDown(requireUnconsumed = false)
+                            // 1. 使用 Initial pass 搶先預覽 Down 事件，不論點在哪裡都能收到
+                            val down = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
                             var hasTriggered = false
                             var totalDragY = 0f
                             var totalDragX = 0f
 
-                            while (true) {
-                                val event = awaitPointerEvent()
-                                // 優先讓子元件（如 Stack Widget 或 Wide Calendar）處理手勢
-                                if (event.changes.any { it.isConsumed }) break
+                            // 獲取系統定義的滑動門檻 (Touch Slop)
+                            val touchSlop = viewConfiguration.touchSlop
 
+                            while (true) {
+                                // 2. 同樣使用 Initial pass 預覽後續的移動
+                                val event = awaitPointerEvent(pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
                                 val dragEvent = event.changes.firstOrNull() ?: break
                                 if (!dragEvent.pressed) break 
 
@@ -233,25 +236,25 @@ fun AppGrid(
                                 totalDragX += (dragEvent.position.x - dragEvent.previousPosition.x)
 
                                 if (!hasTriggered) {
-                                    // 加入方向判定：垂直位移必須是水平位移的 2 倍以上，防止換頁誤觸
-                                    val isVertical = abs(totalDragY) > abs(totalDragX) * 2f
+                                    val isVertical = abs(totalDragY) > abs(totalDragX) * 1.5f
                                     val pointerCount = event.changes.size
                                     
-                                    if (isVertical) {
+                                    // 判斷是否為「刻意」的滑動手勢
+                                    if (isVertical && abs(totalDragY) > touchSlop) {
                                         if (pointerCount == 2) {
-                                            if (totalDragY < -80f) {
+                                            if (totalDragY < -100f) {
                                                 onBackgroundTwoFingerSwipeUp()
                                                 hasTriggered = true
-                                            } else if (totalDragY > 80f) {
+                                            } else if (totalDragY > 100f) {
                                                 onBackgroundTwoFingerSwipeDown()
                                                 hasTriggered = true
                                             }
                                         } else if (pointerCount == 1) {
-                                            // 單指門檻提高
-                                            if (totalDragY < -360f) {
+                                            // 單指滑動觸發閾值（這裡可以根據手感調整，300f 比較保險）
+                                            if (totalDragY < -300f) {
                                                 onBackgroundSwipeUp()
                                                 hasTriggered = true
-                                            } else if (totalDragY > 360f) {
+                                            } else if (totalDragY > 300f) {
                                                 onBackgroundSwipeDown()
                                                 hasTriggered = true
                                             }
@@ -259,6 +262,7 @@ fun AppGrid(
                                     }
                                 }
                                 
+                                // 3. 如果已經判定為手勢，就「吃掉」事件，讓底下的 Icon 徹底收不到任何觸摸
                                 if (hasTriggered) {
                                     event.changes.forEach { it.consume() }
                                 }

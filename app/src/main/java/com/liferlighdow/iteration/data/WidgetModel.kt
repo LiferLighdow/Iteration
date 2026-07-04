@@ -70,6 +70,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.core.content.ContextCompat
 import com.kyant.backdrop.Backdrop
 import com.liferlighdow.iteration.viewmodel.MainViewModel
+import com.liferlighdow.iteration.viewmodel.*
 import com.liferlighdow.iteration.service.NotificationService
 import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.ui.glassFallbackColor
@@ -615,9 +616,12 @@ fun WidgetStackPickerDialog(
     }
 
     if (cropUri != null && photoTargetId != null) {
+        val targetIsWide = children.find { it.id == photoTargetId }?.let {
+            (it.type as? WidgetType.Photo)?.isWide
+        } ?: false
         ImageCropDialog(
             uri = cropUri!!,
-            isWide = false,
+            isWide = targetIsWide,
             onDismiss = { cropUri = null; photoTargetId = null },
             onConfirm = { croppedBitmap ->
                 viewModel.saveWidgetPhoto(photoTargetId!!, croppedBitmap)
@@ -972,7 +976,7 @@ fun WideMusicWidget(
 
 @Composable
 fun PhotoWidget(widget: WidgetModel, viewModel: MainViewModel, modifier: Modifier = Modifier, enableClick: Boolean = true) {
-    var photo by remember(widget.id) { mutableStateOf(viewModel.getWidgetPhoto(widget.id)) }
+    var photo by remember(widget.id) { mutableStateOf<Bitmap?>(viewModel.getWidgetPhoto(widget.id)) }
     var showCropDialog by remember { mutableStateOf<Uri?>(null) }
 
     val isWide = (widget.type as? WidgetType.Photo)?.isWide ?: false

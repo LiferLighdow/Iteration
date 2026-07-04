@@ -28,6 +28,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.drawable.toBitmap
+import com.liferlighdow.iteration.viewmodel.*
 import androidx.compose.foundation.Image
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.gestures.detectTapGestures

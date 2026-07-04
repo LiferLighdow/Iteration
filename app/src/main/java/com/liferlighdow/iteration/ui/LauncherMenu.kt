@@ -12,7 +12,7 @@ import androidx.compose.ui.unit.dp
 import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.viewmodel.MainViewModel
 import com.liferlighdow.iteration.viewmodel.addEmptyPage
-import com.liferlighdow.iteration.viewmodel.deletePage
+import com.liferlighdow.iteration.viewmodel.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

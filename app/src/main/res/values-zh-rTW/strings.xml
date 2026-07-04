@@ -436,4 +436,9 @@
     <string name="root_permission_failed">獲取 ROOT 權限失敗</string>
     <string name="shizuku_not_running">Shizuku 尚未啟動</string>
     <string name="shizuku_permission_request">正在請求 Shizuku 權限</string>
+    <string name="settings_advanced">進階設定</string>
+    <string name="settings_advanced_desc">效能與快取相關設定</string>
+    <string name="icon_cache_size_title">圖示快取大小</string>
+    <string name="icon_cache_size_desc">保存在記憶體中的圖示數量。較大的值可提高流暢度，但會佔用更多記憶體。</string>
+    <string name="icon_cache_current">目前快取大小：%1$d</string>
 </resources>

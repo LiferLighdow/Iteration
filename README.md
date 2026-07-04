@@ -134,6 +134,9 @@ app/src/main/java/com/liferlighdow/iteration/
 │   ├── AppRepository.kt  # Multi-Entry Activity Resolver
 │   ├── ConfigSerializer.kt # Version-Agnostic Coder
 │   ├── ContactModel.kt
+│   ├── CurrencyRepository.kt
+│   ├── LauncherConfig.kt # Data Classes for Backup
+│   ├── WeatherRepository.kt
 │   └── WidgetModel.kt
 │
 ├── ui/                   # UI Components & Screens
@@ -151,15 +154,21 @@ app/src/main/java/com/liferlighdow/iteration/
 │   └── MinusOnePage.kt
 │
 ├── viewmodel/            # Architecture & State Management
-│   ├── MainViewModel.kt
-│   └── MainViewModelLayout.kt # Desktop Logic Extension
+│   ├── MainViewModel.kt          # Core State & Initialization
+│   ├── MainViewModelApps.kt      # Icon & App Logic Extension
+│   ├── MainViewModelConfig.kt    # Backup/Import Extension
+│   ├── MainViewModelExternal.kt  # Weather/Currency/Contacts Extension
+│   ├── MainViewModelLayout.kt    # Desktop & Folder Logic Extension
+│   ├── MainViewModelSettings.kt  # User Preferences Setter Extension
+│   ├── MainViewModelWallpaper.kt # Blur & Wallpaper Logic Extension
+│   └── MainViewModelWidgets.kt   # Stacker & Widget Logic Extension
 │
 ├── service/              # System Services & Receivers
-│   ├── AdminReceiver.kt
 │   ├── IterationAccessibilityService.kt
 │   └── NotificationService.kt
 │
 ├── utils/                # Utility Classes (Icons, Wallpaper, Actions)
+│   ├── ActionMode.kt
 │   ├── GestureAction.kt
 │   ├── IconPackManager.kt # Advanced XML & IPS Parser
 │   ├── IconProcessor.kt   # PorterDuff-Masked Renderer

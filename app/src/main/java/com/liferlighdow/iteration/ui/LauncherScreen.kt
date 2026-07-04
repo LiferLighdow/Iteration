@@ -36,13 +36,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.liferlighdow.iteration.utils.GestureAction
-import com.liferlighdow.iteration.viewmodel.MainViewModel
+import com.liferlighdow.iteration.viewmodel.*
 import com.liferlighdow.iteration.service.NotificationService
 import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.data.AppModel
-import com.liferlighdow.iteration.viewmodel.handleAppDrop
-import com.liferlighdow.iteration.viewmodel.prepareForDrag
-import com.liferlighdow.iteration.viewmodel.removeAppFromHome
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch

@@ -21,7 +21,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.liferlighdow.iteration.ui.IterationTheme
 import com.liferlighdow.iteration.ui.LauncherScreen
 import com.liferlighdow.iteration.ui.ThemeMode
-import com.liferlighdow.iteration.viewmodel.MainViewModel
+import com.liferlighdow.iteration.viewmodel.*
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
