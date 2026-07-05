@@ -101,6 +101,7 @@ fun LauncherScreen(
 
     var showDesktopMenu by remember { mutableStateOf(false) }
     var showGlobalSearch by remember { mutableStateOf(false) }
+    var searchDragOffset by remember { mutableStateOf(0f) }
 
     val mContext = LocalContext.current
     val actionMode by viewModel.actionMode.collectAsState()
@@ -543,6 +544,20 @@ fun LauncherScreen(
                                         twoFingerSwipeDownApp
                                     )
                                 },
+                                onBackgroundDragY = { offset ->
+                                    if (!isEditMode && swipeDownAction == GestureAction.OPEN_GLOBAL_SEARCH) {
+                                        // 只有在設定為全域搜尋且非編輯模式時才跟手
+                                        if (offset > 0) searchDragOffset = offset
+                                    }
+                                },
+                                onBackgroundDragEnd = { finalOffset ->
+                                    if (!isEditMode && swipeDownAction == GestureAction.OPEN_GLOBAL_SEARCH) {
+                                        if (finalOffset > 80f) { // 同步調降至 80px
+                                            showGlobalSearch = true
+                                        }
+                                        searchDragOffset = 0f
+                                    }
+                                },
                                 onEditApp = { appToEdit = it }
                             )
                         }
@@ -675,6 +690,7 @@ fun LauncherScreen(
 
         GlobalSearchOverlay(
             isVisible = showGlobalSearch,
+            dragOffset = searchDragOffset,
             onDismiss = { showGlobalSearch = false },
             allApps = allAppsFlat,
             suggestedApps = viewModel.suggestedApps.collectAsState().value,

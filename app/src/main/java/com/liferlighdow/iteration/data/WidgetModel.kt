@@ -716,18 +716,7 @@ fun StandardMusicWidget(
                 refractionHeight = refractionHeight,
                 refractionAmount = refractionAmount,
                 chromaticAberration = chromaticAberration
-            ) else Modifier)
-            .clickable(
-                enabled = mediaInfo?.packageName != null,
-                onClick = {
-                    mediaInfo?.packageName?.let { pkg ->
-                        val intent = mContext.packageManager.getLaunchIntentForPackage(pkg)
-                        if (intent != null) {
-                            mContext.startActivity(intent)
-                        }
-                    }
-                }
-            ),
+            ) else Modifier),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = if (useLiquid) Color.Transparent else containerColor)
     ) {
@@ -859,18 +848,7 @@ fun WideMusicWidget(
                 refractionHeight = refractionHeight,
                 refractionAmount = refractionAmount,
                 chromaticAberration = chromaticAberration
-            ) else Modifier)
-            .clickable(
-                enabled = mediaInfo?.packageName != null,
-                onClick = {
-                    mediaInfo?.packageName?.let { pkg ->
-                        val intent = mContext.packageManager.getLaunchIntentForPackage(pkg)
-                        if (intent != null) {
-                            mContext.startActivity(intent)
-                        }
-                    }
-                }
-            ),
+            ) else Modifier),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = if (useLiquid) Color.Transparent else containerColor)
     ) {

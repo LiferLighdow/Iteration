@@ -7,6 +7,7 @@ import android.provider.ContactsContract
 import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -31,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -61,6 +63,7 @@ import kotlin.math.*
 @Composable
 fun GlobalSearchOverlay(
     isVisible: Boolean,
+    dragOffset: Float = 0f,
     onDismiss: () -> Unit,
     allApps: List<AppModel>,
     suggestedApps: List<AppModel>,
@@ -96,7 +99,6 @@ fun GlobalSearchOverlay(
             return@LaunchedEffect
         }
 
-        // 支援格式: "Text to zh-TW" 或原本的 "tr Text"
         val toRegex = Regex("(.+)\\s+to\\s+([a-zA-Z-]+)$", RegexOption.IGNORE_CASE)
         val toMatch = toRegex.find(q)
         
@@ -108,7 +110,6 @@ fun GlobalSearchOverlay(
             targetLang = toMatch.groupValues[2].trim()
         } else if (q.startsWith("tr ", ignoreCase = true)) {
             textToTranslate = q.substring(3).trim()
-            // 獲取手機系統預設語言
             targetLang = Locale.getDefault().toLanguageTag()
         } else {
             translationResult = null
@@ -120,7 +121,7 @@ fun GlobalSearchOverlay(
             return@LaunchedEffect
         }
 
-        delay(500) // 防抖
+        delay(500)
         isTranslating = true
         
         withContext(Dispatchers.IO) {
@@ -141,50 +142,53 @@ fun GlobalSearchOverlay(
                         val part = resultParts.getJSONArray(i).optString(0, "")
                         if (part != "null") translatedText.append(part)
                     }
-                    withContext(Dispatchers.Main) {
-                        translationResult = translatedText.toString()
-                    }
+                    withContext(Dispatchers.Main) { translationResult = translatedText.toString() }
                 } else {
-                    withContext(Dispatchers.Main) {
-                        translationResult = mContext.getString(R.string.service_unavailable, conn.responseCode)
-                    }
+                    withContext(Dispatchers.Main) { translationResult = mContext.getString(R.string.service_unavailable, conn.responseCode) }
                 }
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    translationResult = mContext.getString(R.string.error_format, e.message ?: mContext.getString(R.string.unknown_error))
-                }
+                withContext(Dispatchers.Main) { translationResult = mContext.getString(R.string.error_format, e.message ?: mContext.getString(R.string.unknown_error)) }
             } finally {
-                withContext(Dispatchers.Main) {
-                    isTranslating = false
-                }
+                withContext(Dispatchers.Main) { isTranslating = false }
             }
         }
     }
 
-    AnimatedVisibility(
-        visible = isVisible,
-        enter = slideInVertically(
-            initialOffsetY = { -it },
-            animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
-        ) + fadeIn(),
-        exit = slideOutVertically(
-            targetOffsetY = { -it },
-            animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
-        ) + fadeOut()
-    ) {
+    val viewModel: MainViewModel = viewModel()
+    val favoritePackages by viewModel.favoritePackages.collectAsState()
+    val searchEngineUrl by viewModel.searchEngineUrl.collectAsState()
+    val contacts by viewModel.contacts.collectAsState()
+    val isNetworkEnabled by viewModel.isNetworkAccessEnabled.collectAsState()
+    val exchangeRates by viewModel.exchangeRates.collectAsState()
+
+    // 互動式過渡邏輯
+    val animProgress by animateFloatAsState(
+        targetValue = if (isVisible) 1f else 0f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessLow),
+        label = "searchAnim"
+    )
+    val dragProgress = (dragOffset / 600f).coerceIn(0f, 1f)
+    val effectiveProgress = max(animProgress, dragProgress)
+
+    if (effectiveProgress > 0.01f) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.3f))
+                .graphicsLayer {
+                    alpha = effectiveProgress
+                    translationY = (effectiveProgress - 1f) * 300f
+                }
+                .background(Color.Black.copy(alpha = 0.3f * effectiveProgress))
                 .clickable { onDismiss() }
                 .statusBarsPadding()
         ) {
             Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
                 OutlinedTextField(
-                    value = query, onValueChange = { query = it }, 
+                    value = query, onValueChange = { query = it },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 20.dp)
+                        .graphicsLayer { translationY = (effectiveProgress - 1f) * 100f }
                         .liquidGlass(
                             enabled = isLiquidGlassEnabled && isLiquidGlassGlobalSearchEnabled,
                             backdrop = backdrop,
@@ -203,13 +207,13 @@ fun GlobalSearchOverlay(
                             }
                         }
                     },
-                    shape = RoundedCornerShape(28.dp), 
+                    shape = RoundedCornerShape(28.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White, 
-                        unfocusedTextColor = Color.White, 
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
                         focusedContainerColor = glassFallbackColor(0.2f),
                         unfocusedContainerColor = glassFallbackColor(0.2f),
-                        focusedBorderColor = Color.White.copy(alpha = 0.5f), 
+                        focusedBorderColor = Color.White.copy(alpha = 0.5f),
                         unfocusedBorderColor = Color.Transparent
                     ),
                     singleLine = true
@@ -223,10 +227,8 @@ fun GlobalSearchOverlay(
                 val mathResult = remember(query) {
                     val q = query.lowercase().trim()
                     if (q.isEmpty()) return@remember null
-                    // 只要包含數字或常數(pi/e)，且包含數學特徵符號或函數名，就嘗試計算
                     val hasMathChar = q.any { it in "+-*/^%()π" }
                     val hasFunction = listOf("sqrt", "sin", "cos", "tan", "cot", "sec", "csc", "log", "abs", "pi", "e").any { q.contains(it) }
-                    
                     if ((q.any { it.isDigit() } || q.contains("pi") || q.contains("e") || q.contains("π")) && (hasMathChar || hasFunction)) {
                         try { evaluateExpression(q) } catch (_: Exception) { null }
                     } else null
@@ -246,7 +248,6 @@ fun GlobalSearchOverlay(
 
                 val isConversion = remember(query) {
                     val q = query.lowercase()
-                    // 偵測如 "100 usd to twd" 或 "50kg in lb"
                     val keywords = listOf(" to ", " in ", "usd", "twd", "jpy", "hkd", "eur", "gbp", "cny")
                     q.any { it.isDigit() } && keywords.any { q.contains(it) }
                 }
@@ -256,65 +257,44 @@ fun GlobalSearchOverlay(
                     q == "setting" || q == "settings" || q == "launcher settings" || q == "launcher setting" || q == "設定"
                 }
 
-                val viewModel: MainViewModel = viewModel()
-    val favoritePackages by viewModel.favoritePackages.collectAsState()
-    val searchEngineUrl by viewModel.searchEngineUrl.collectAsState()
-    val contacts by viewModel.contacts.collectAsState()
-    val isNetworkEnabled by viewModel.isNetworkAccessEnabled.collectAsState()
-    val exchangeRates by viewModel.exchangeRates.collectAsState()
+                val filteredContacts = remember(query, contacts) {
+                    if (query.isBlank()) emptyList()
+                    else contacts.filter { it.name.contains(query, ignoreCase = true) || it.phoneNumber.contains(query) }
+                }
 
-    // 載入聯絡人 (如果尚未載入)
-    LaunchedEffect(isVisible) {
-        if (isVisible) {
-            viewModel.loadContacts()
-            // 如果匯率為空且開啟網路，嘗試刷新
-            if (exchangeRates.isEmpty() && isNetworkEnabled) {
-                viewModel.fetchExchangeRates()
-            }
-        }
-    }
+                val currencyResult = remember(query, exchangeRates) {
+                    if (query.isBlank() || exchangeRates.isEmpty()) return@remember null
+                    performCurrencyConversion(query, exchangeRates)
+                }
 
-    val filteredContacts = remember(query, contacts) {
-        if (query.isBlank()) emptyList()
-        else contacts.filter { it.name.contains(query, ignoreCase = true) || it.phoneNumber.contains(query) }
-    }
-
-    val currencyResult = remember(query, exchangeRates) {
-        if (query.isBlank() || exchangeRates.isEmpty()) return@remember null
-        performCurrencyConversion(query, exchangeRates)
-    }
-
-    val clipboardText = remember(isVisible, query) {
-        if (isVisible && query.isBlank()) {
-            clipboardManager.getText()?.text
-        } else null
-    }
-    val favoriteApps = remember(favoritePackages, allApps) {
-        allApps.filter { favoritePackages.contains(it.packageName) && !it.isHidden }.take(8)
-    }
-
-    val finalSuggestions = remember(suggestedApps, allApps) {
+                val clipboardText = remember(isVisible, query) {
+                    if (isVisible && query.isBlank()) clipboardManager.getText()?.text else null
+                }
+                val favoriteApps = remember(favoritePackages, allApps) {
+                    allApps.filter { favoritePackages.contains(it.packageName) && !it.isHidden }.take(8)
+                }
+                val finalSuggestions = remember(suggestedApps, allApps) {
                     if (suggestedApps.isNotEmpty()) suggestedApps.take(8)
                     else allApps.filter { !it.isHidden }.take(8)
                 }
 
-                LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // 1. 計算機卡片
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize().graphicsLayer {
+                        alpha = effectiveProgress
+                        scaleX = 0.9f + 0.1f * effectiveProgress
+                        scaleY = 0.9f + 0.1f * effectiveProgress
+                    },
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     if (query.isNotBlank() && mathResult != null) {
                         item {
                             Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 8.dp)
-                                    .clickable {
-                                        clipboardManager.setText(AnnotatedString(mathResult!!))
-                                        Toast.makeText(mContext, mContext.getString(R.string.result_copied, mathResult), Toast.LENGTH_SHORT).show()
-                                    },
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).clickable {
+                                    clipboardManager.setText(AnnotatedString(mathResult))
+                                    Toast.makeText(mContext, mContext.getString(R.string.result_copied, mathResult), Toast.LENGTH_SHORT).show()
+                                },
                                 shape = RoundedCornerShape(24.dp),
-                                colors = CardDefaults.cardColors(containerColor = glassFallbackColor(
-                                    0.15f
-                                )
-                                ),
+                                colors = CardDefaults.cardColors(containerColor = glassFallbackColor(0.15f)),
                                 border = BorderStroke(1.dp, glassFallbackColor(0.1f))
                             ) {
                                 Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -324,7 +304,7 @@ fun GlobalSearchOverlay(
                                     Spacer(modifier = Modifier.width(16.dp))
                                     Column {
                                         Text(stringResource(R.string.calculator), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f))
-                                        Text(text = mathResult ?: "", style = MaterialTheme.typography.headlineMedium, color = Color.White, fontWeight = FontWeight.Bold)
+                                        Text(text = mathResult, style = MaterialTheme.typography.headlineMedium, color = Color.White, fontWeight = FontWeight.Bold)
                                     }
                                     Spacer(modifier = Modifier.weight(1f))
                                     Icon(Icons.Default.ContentCopy, null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
@@ -333,38 +313,25 @@ fun GlobalSearchOverlay(
                         }
                     }
 
-                    // 1.5 單位換算卡片
                     if (query.isNotBlank() && unitResult != null) {
-                        item {
-                            UnitConverterCard(unitResult, mContext, clipboardManager, stringResource(R.string.unit_converter), Icons.AutoMirrored.Filled.CompareArrows, MaterialTheme.colorScheme.secondary)
-                        }
+                        item { UnitConverterCard(unitResult, mContext, clipboardManager, stringResource(R.string.unit_converter), Icons.AutoMirrored.Filled.CompareArrows, MaterialTheme.colorScheme.secondary) }
                     }
 
-                    // 1.6 匯率換算卡片 (直接顯示結果)
                     if (query.isNotBlank() && currencyResult != null) {
-                        item {
-                            UnitConverterCard(currencyResult!!, mContext, clipboardManager, stringResource(R.string.currency_converter), Icons.Default.CurrencyExchange, Color(0xFF4CAF50))
-                        }
+                        item { UnitConverterCard(currencyResult, mContext, clipboardManager, stringResource(R.string.currency_converter), Icons.Default.CurrencyExchange, Color(0xFF4CAF50)) }
                     }
 
-                    // 1.7 翻譯卡片
                     if (query.isNotBlank() && (translationResult != null || isTranslating)) {
                         item {
                             Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 8.dp)
-                                    .clickable {
-                                        translationResult?.let {
-                                            clipboardManager.setText(AnnotatedString(it))
-                                            Toast.makeText(mContext, mContext.getString(R.string.translation_copied), Toast.LENGTH_SHORT).show()
-                                        }
-                                    },
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).clickable {
+                                    translationResult?.let {
+                                        clipboardManager.setText(AnnotatedString(it))
+                                        Toast.makeText(mContext, mContext.getString(R.string.translation_copied), Toast.LENGTH_SHORT).show()
+                                    }
+                                },
                                 shape = RoundedCornerShape(24.dp),
-                                colors = CardDefaults.cardColors(containerColor = glassFallbackColor(
-                                    0.15f
-                                )
-                                ),
+                                colors = CardDefaults.cardColors(containerColor = glassFallbackColor(0.15f)),
                                 border = BorderStroke(1.dp, glassFallbackColor(0.1f))
                             ) {
                                 Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -374,11 +341,8 @@ fun GlobalSearchOverlay(
                                     Spacer(modifier = Modifier.width(16.dp))
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(stringResource(R.string.translator), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f))
-                                        if (isTranslating) {
-                                            LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(2.dp).padding(top = 8.dp), color = Color.White)
-                                        } else {
-                                            Text(text = translationResult ?: "", style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.Medium)
-                                        }
+                                        if (isTranslating) LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(2.dp).padding(top = 8.dp), color = Color.White)
+                                        else Text(text = translationResult ?: "", style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.Medium)
                                     }
                                     if (!isTranslating) {
                                         Spacer(modifier = Modifier.width(8.dp))
@@ -389,18 +353,13 @@ fun GlobalSearchOverlay(
                         }
                     }
 
-                    // 1.8 Launcher Settings Card
                     if (query.isNotBlank() && isLauncherSettingQuery) {
                         item {
                             Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 8.dp)
-                                    .clickable {
-                                        val intent = Intent(mContext, SettingsActivity::class.java)
-                                        mContext.startActivity(intent)
-                                        onDismiss()
-                                    },
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).clickable {
+                                    mContext.startActivity(Intent(mContext, SettingsActivity::class.java))
+                                    onDismiss()
+                                },
                                 shape = RoundedCornerShape(24.dp),
                                 colors = CardDefaults.cardColors(containerColor = glassFallbackColor(0.15f)),
                                 border = BorderStroke(1.dp, glassFallbackColor(0.1f))
@@ -421,21 +380,13 @@ fun GlobalSearchOverlay(
                         }
                     }
 
-                    // 2. 建議網格 與 收藏網格
                     if (query.isBlank()) {
-                        // 智慧剪貼簿卡片
                         if (clipboardText != null && clipboardText.isNotBlank()) {
                             item {
                                 Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 8.dp)
-                                        .clickable { query = clipboardText },
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).clickable { query = clipboardText },
                                     shape = RoundedCornerShape(24.dp),
-                                    colors = CardDefaults.cardColors(containerColor = glassFallbackColor(
-                                        0.15f
-                                    )
-                                    ),
+                                    colors = CardDefaults.cardColors(containerColor = glassFallbackColor(0.15f)),
                                     border = BorderStroke(1.dp, glassFallbackColor(0.1f))
                                 ) {
                                     Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -458,69 +409,41 @@ fun GlobalSearchOverlay(
                             item {
                                 Text(stringResource(R.string.favorites), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp, bottom = 12.dp))
                                 Box(modifier = Modifier.fillMaxWidth().height(180.dp)) {
-                                    LazyVerticalGrid(
-                                        columns = GridCells.Fixed(4),
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                                        userScrollEnabled = false
-                                    ) {
+                                    LazyVerticalGrid(columns = GridCells.Fixed(4), modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(16.dp), userScrollEnabled = false) {
                                         items(favoriteApps) { app ->
-                                            AppItem(
-                                                app = app, iconSize = 56.dp, iconShape = iconShape,
-                                                getIcon = { pkg -> viewModel.getIcon(pkg) },
-                                                onAppClick = { onAppClick(app); onDismiss() }
-                                            )
+                                            AppItem(app = app, iconSize = 56.dp, iconShape = iconShape, getIcon = { pkg -> viewModel.getIcon(pkg) }, onAppClick = { onAppClick(app); onDismiss() })
                                         }
                                     }
                                 }
-                                HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = glassFallbackColor(
-                                    0.15f
-                                )
-                                )
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = glassFallbackColor(0.15f))
                             }
                         }
 
                         item {
                             Text(stringResource(R.string.app_suggestions), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp, bottom = 12.dp))
                             Box(modifier = Modifier.fillMaxWidth().height(180.dp)) {
-                                LazyVerticalGrid(
-                                    columns = GridCells.Fixed(4),
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                                    userScrollEnabled = false
-                                ) {
+                                LazyVerticalGrid(columns = GridCells.Fixed(4), modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(16.dp), userScrollEnabled = false) {
                                     items(finalSuggestions) { app ->
-                                        AppItem(
-                                            app = app, iconSize = 56.dp, iconShape = iconShape,
-                                            getIcon = { pkg -> viewModel.getIcon(pkg) },
-                                            onAppClick = { onAppClick(app); onDismiss() }
-                                        )
+                                        AppItem(app = app, iconSize = 56.dp, iconShape = iconShape, getIcon = { pkg -> viewModel.getIcon(pkg) }, onAppClick = { onAppClick(app); onDismiss() })
                                     }
                                 }
                             }
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = glassFallbackColor(
-                                0.15f
-                            )
-                            )
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = glassFallbackColor(0.15f))
                         }
                     } else {
-                        // 3. 搜尋結果列表
                         if (filteredResults.isNotEmpty()) {
                             item { Text(stringResource(R.string.apps), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(vertical = 8.dp)) }
                         }
                         items(filteredResults, key = { it.uniqueId }) { app ->
                             ListItem(
-                                headlineContent = { Text(app.label, color = Color.White) }, 
-                                leadingContent = { 
-                                    val appIcon = viewModel.getIcon(app.uniqueId)
-                                    if (appIcon != null) {
+                                headlineContent = { Text(app.label, color = Color.White) },
+                                leadingContent = {
+                                    viewModel.getIcon(app.uniqueId)?.let { appIcon ->
                                         val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(48.dp * 0.238f)
                                         Image(bitmap = appIcon, contentDescription = null, modifier = Modifier.size(48.dp).clip(shape).background(Color.White))
                                     }
                                 },
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent), 
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                                 modifier = Modifier.clickable { onAppClick(app); onDismiss() }
                             )
                         }
@@ -533,27 +456,18 @@ fun GlobalSearchOverlay(
                                 headlineContent = { Text(contact.name, color = Color.White) },
                                 supportingContent = { Text(contact.phoneNumber, color = Color.White.copy(alpha = 0.6f)) },
                                 leadingContent = {
-                                    if (contact.photo != null) {
-                                        Image(bitmap = contact.photo.asImageBitmap(), contentDescription = null, modifier = Modifier.size(40.dp).clip(CircleShape))
-                                    } else {
-                                        Box(modifier = Modifier.size(40.dp).background(Color.White.copy(alpha = 0.2f), CircleShape), contentAlignment = Alignment.Center) {
-                                            Icon(Icons.Default.Person, null, tint = Color.White)
-                                        }
-                                    }
+                                    if (contact.photo != null) Image(bitmap = contact.photo.asImageBitmap(), contentDescription = null, modifier = Modifier.size(40.dp).clip(CircleShape))
+                                    else Box(modifier = Modifier.size(40.dp).background(Color.White.copy(alpha = 0.2f), CircleShape), contentAlignment = Alignment.Center) { Icon(Icons.Default.Person, null, tint = Color.White) }
                                 },
                                 trailingContent = {
                                     IconButton(onClick = {
-                                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${contact.phoneNumber}"))
-                                        mContext.startActivity(intent)
+                                        mContext.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:${contact.phoneNumber}")))
                                         onDismiss()
-                                    }) {
-                                        Icon(Icons.Default.Call, null, tint = Color.White)
-                                    }
+                                    }) { Icon(Icons.Default.Call, null, tint = Color.White) }
                                 },
                                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                                 modifier = Modifier.clickable {
-                                    val intent = Intent(Intent.ACTION_VIEW)
-                                    intent.data = Uri.withAppendedPath(ContactsContract.Contacts.CONTENT_URI, contact.id)
+                                    val intent = Intent(Intent.ACTION_VIEW).apply { data = Uri.withAppendedPath(ContactsContract.Contacts.CONTENT_URI, contact.id) }
                                     mContext.startActivity(intent)
                                     onDismiss()
                                 }
@@ -561,52 +475,20 @@ fun GlobalSearchOverlay(
                         }
                     }
 
-                    // 4. 外部搜尋連結
                     if (query.isNotBlank()) {
                         item {
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = glassFallbackColor(
-                                0.2f
-                            )
-                            )
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = glassFallbackColor(0.2f))
                             Text(stringResource(R.string.more_searches), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(bottom = 8.dp))
                         }
                         if (isEquation) {
-                            item {
-                                SearchLinkItem(stringResource(R.string.solve_equation), Icons.Default.Functions) {
-                                    val encodedQuery = URLEncoder.encode(query, "UTF-8")
-                                    mContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.wolframalpha.com/input/?i=$encodedQuery")))
-                                    onDismiss()
-                                }
-                            }
+                            item { SearchLinkItem(stringResource(R.string.solve_equation), Icons.Default.Functions) { mContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.wolframalpha.com/input/?i=${URLEncoder.encode(query, "UTF-8")}"))); onDismiss() } }
                         }
                         if (isConversion) {
-                            item {
-                                SearchLinkItem(stringResource(R.string.convert_currency_units), Icons.Default.CurrencyExchange) {
-                                    val encodedQuery = URLEncoder.encode(query, "UTF-8")
-                                    mContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=$encodedQuery")))
-                                    onDismiss()
-                                }
-                            }
+                            item { SearchLinkItem(stringResource(R.string.convert_currency_units), Icons.Default.CurrencyExchange) { mContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=${URLEncoder.encode(query, "UTF-8")}"))); onDismiss() } }
                         }
-                        item {
-                            SearchLinkItem(stringResource(R.string.search_web), Icons.Default.Language) {
-                                val encodedQuery = URLEncoder.encode(query, "UTF-8")
-                                mContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("${searchEngineUrl}$encodedQuery")))
-                                onDismiss()
-                            }
-                        }
-                        item {
-                            SearchLinkItem(stringResource(R.string.search_store), Icons.Default.Shop) {
-                                mContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("market://search?q=${query}")))
-                                onDismiss()
-                            }
-                        }
-                        item {
-                            SearchLinkItem(stringResource(R.string.search_maps), Icons.Default.Place) {
-                                mContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${query}")))
-                                onDismiss()
-                            }
-                        }
+                        item { SearchLinkItem(stringResource(R.string.search_web), Icons.Default.Language) { mContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("${searchEngineUrl}${URLEncoder.encode(query, "UTF-8")}"))); onDismiss() } }
+                        item { SearchLinkItem(stringResource(R.string.search_store), Icons.Default.Shop) { mContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("market://search?q=${query}"))); onDismiss() } }
+                        item { SearchLinkItem(stringResource(R.string.search_maps), Icons.Default.Place) { mContext.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${query}"))); onDismiss() } }
                     }
                 }
             }
@@ -625,30 +507,18 @@ private fun SearchLinkItem(label: String, icon: ImageVector, onClick: () -> Unit
 }
 
 @Composable
-private fun UnitConverterCard(
-    result: String,
-    context: Context,
-    clipboard: ClipboardManager,
-    label: String,
-    icon: ImageVector,
-    iconBgColor: Color
-) {
+private fun UnitConverterCard(result: String, context: Context, clipboard: ClipboardManager, label: String, icon: ImageVector, iconBgColor: Color) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp)
-            .clickable {
-                clipboard.setText(AnnotatedString(result))
-                Toast.makeText(context, context.getString(R.string.result_copied, result), Toast.LENGTH_SHORT).show()
-            },
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).clickable {
+            clipboard.setText(AnnotatedString(result))
+            Toast.makeText(context, context.getString(R.string.result_copied, result), Toast.LENGTH_SHORT).show()
+        },
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = glassFallbackColor(0.15f)),
         border = BorderStroke(1.dp, glassFallbackColor(0.1f))
     ) {
         Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier.size(48.dp).background(iconBgColor.copy(alpha = 0.2f), CircleShape), contentAlignment = Alignment.Center) {
-                Icon(icon, null, tint = Color.White)
-            }
+            Box(modifier = Modifier.size(48.dp).background(iconBgColor.copy(alpha = 0.2f), CircleShape), contentAlignment = Alignment.Center) { Icon(icon, null, tint = Color.White) }
             Spacer(modifier = Modifier.width(16.dp))
             Column {
                 Text(label, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f))
@@ -660,63 +530,32 @@ private fun UnitConverterCard(
     }
 }
 
-/**
- * 貨幣換算邏輯
- */
 fun performCurrencyConversion(str: String, rates: Map<String, Double>): String? {
-    // 正則：支持算式開頭，例如 (100+50) usd to twd
     val regex = Regex("""^(.+?)\s*([a-zA-Z]{3})\s+(?:to|in)\s+([a-zA-Z]{3})$""")
     val match = regex.find(str.lowercase().trim()) ?: return null
-    
     val valuePart = match.groupValues[1].trim()
     val from = match.groupValues[2]
     val to = match.groupValues[3]
-
     val amount = evaluateExpression(valuePart)?.toDoubleOrNull() ?: valuePart.toDoubleOrNull() ?: return null
-
-    val fromRate = rates[from]
-    val toRate = rates[to]
-
-    if (fromRate == null || toRate == null) return null
-
-    // 換算公式：(金額 / 原始幣對USD匯率) * 目標幣對USD匯率
+    val fromRate = rates[from] ?: return null
+    val toRate = rates[to] ?: return null
     val result = (amount / fromRate) * toRate
-    
     return String.format("%,.2f", result) + " " + to.uppercase()
 }
 
-/**
- * 加強版輕量級數學表達式解析器
- * 支持: +, -, *, /, ^, %, (), sqrt, abs, sin, cos, tan, pi, e
- */
 fun evaluateExpression(str: String): String? {
     return try {
         val cleanStr = str.replace(" ", "").lowercase()
         val result = object : Any() {
             var pos = -1
             var ch = 0
-
-            fun nextChar() {
-                ch = if (++pos < cleanStr.length) cleanStr[pos].code else -1
-            }
-
+            fun nextChar() { ch = if (++pos < cleanStr.length) cleanStr[pos].code else -1 }
             fun eat(charToEat: Int): Boolean {
                 while (ch == ' '.code) nextChar()
-                if (ch == charToEat) {
-                    nextChar()
-                    return true
-                }
+                if (ch == charToEat) { nextChar(); return true }
                 return false
             }
-
-            fun parse(): Double {
-                nextChar()
-                val x = parseExpression()
-                if (pos < cleanStr.length) return Double.NaN
-                return x
-            }
-
-            // 加減
+            fun parse(): Double { nextChar(); val x = parseExpression(); if (pos < cleanStr.length) return Double.NaN; return x }
             fun parseExpression(): Double {
                 var x = parseTerm()
                 while (true) {
@@ -725,37 +564,27 @@ fun evaluateExpression(str: String): String? {
                     else return x
                 }
             }
-
-            // 乘除、百分比
             fun parseTerm(): Double {
                 var x = parseFactor()
                 while (true) {
                     if (eat('*'.code)) x *= parseFactor()
                     else if (eat('/'.code)) x /= parseFactor()
                     else if (eat('%'.code)) x %= parseFactor()
-                    else if (ch == '('.code || ch == 'π'.code || (ch >= 'a'.code && ch <= 'z'.code) || (ch >= '0'.code && ch <= '9'.code) || ch == '.'.code) {
-                        x *= parseFactor()
-                    } else return x
+                    else if (ch == '('.code || ch == 'π'.code || (ch >= 'a'.code && ch <= 'z'.code) || (ch >= '0'.code && ch <= '9'.code) || ch == '.'.code) x *= parseFactor()
+                    else return x
                 }
             }
-
-            // 次方、一元運算、括號、函數
             fun parseFactor(): Double {
-                if (eat('+'.code)) return parseFactor() // unary plus
-                if (eat('-'.code)) return -parseFactor() // unary minus
-
+                if (eat('+'.code)) return parseFactor()
+                if (eat('-'.code)) return -parseFactor()
                 var x: Double
                 val startPos = pos
-                if (eat('('.code)) { // parentheses
-                    x = parseExpression()
-                    eat(')'.code)
-                } else if ((ch >= '0'.code && ch <= '9'.code) || ch == '.'.code) { // numbers
+                if (eat('('.code)) { x = parseExpression(); eat(')'.code) }
+                else if ((ch >= '0'.code && ch <= '9'.code) || ch == '.'.code) {
                     while ((ch >= '0'.code && ch <= '9'.code) || ch == '.'.code) nextChar()
                     x = cleanStr.substring(startPos, pos).toDouble()
-                } else if (ch == 'π'.code) {
-                    nextChar()
-                    x = PI
-                } else if (ch >= 'a'.code && ch <= 'z'.code) { // functions or constants
+                } else if (ch == 'π'.code) { nextChar(); x = PI }
+                else if (ch >= 'a'.code && ch <= 'z'.code) {
                     while (ch >= 'a'.code && ch <= 'z'.code) nextChar()
                     val func = cleanStr.substring(startPos, pos)
                     x = when (func) {
@@ -782,73 +611,28 @@ fun evaluateExpression(str: String): String? {
                         }
                     }
                 } else return Double.NaN
-
-                if (eat('^'.code)) x = x.pow(parseFactor()) // exponentiation
-
+                if (eat('^'.code)) x = x.pow(parseFactor())
                 return x
             }
         }.parse()
-
         if (result.isNaN() || result.isInfinite()) null
         else if (result == result.toLong().toDouble()) result.toLong().toString()
-        else {
-            val formatted = String.format("%.8f", result).trimEnd('0').trimEnd('.')
-            if (formatted == "-0") "0" else formatted
-        }
-    } catch (e: Exception) {
-        null
-    }
+        else String.format("%.8f", result).trimEnd('0').trimEnd('.')
+    } catch (e: Exception) { null }
 }
 
-/**
- * 本地離線單位換算器
- * 支持: 長度 (m, km, cm, mm, in, ft, yd, mi), 重量 (g, kg, mg, lb, oz), 溫度 (c, f, k)
- * 改良版：支持在單位前使用算式，例如 (1+2)*5 kg to g
- */
 fun performUnitConversion(str: String): String? {
-    // 改良正則：支持括號與算式開頭 (^(.+?) 配合後續的單位識別)
     val regex = Regex("""^(.+?)\s*([a-zA-Z]+)\s+(?:to|in)\s+([a-zA-Z]+)$""")
     val match = regex.find(str.lowercase().trim()) ?: return null
-    
     val valuePart = match.groupValues[1].trim()
     val from = match.groupValues[2]
     val to = match.groupValues[3]
-
-    // 嘗試將 valuePart 當作算式解析，若失敗則嘗試直接轉 Double
     val evaluatedValue = evaluateExpression(valuePart)?.toDoubleOrNull() ?: valuePart.toDoubleOrNull() ?: return null
-
-    // 單位係數基準 (Length -> meter, Weight -> gram)
-    val lengthMap = mapOf(
-        "m" to 1.0, "meter" to 1.0, "meters" to 1.0,
-        "km" to 1000.0, "kilometer" to 1000.0, "kilometers" to 1000.0,
-        "cm" to 0.01, "centimeter" to 0.01, "centimeters" to 0.01,
-        "mm" to 0.001, "millimeter" to 0.001, "millimeters" to 0.001,
-        "in" to 0.0254, "inch" to 0.0254, "inches" to 0.0254,
-        "ft" to 0.3048, "foot" to 0.3048, "feet" to 0.3048,
-        "yd" to 0.9144, "yard" to 0.9144, "yards" to 0.9144,
-        "mi" to 1609.34, "mile" to 1609.34, "miles" to 1609.34
-    )
-
-    val weightMap = mapOf(
-        "g" to 1.0, "gram" to 1.0, "grams" to 1.0,
-        "kg" to 1000.0, "kilogram" to 1000.0, "kilograms" to 1000.0,
-        "mg" to 0.001, "milligram" to 0.001, "milligrams" to 0.001,
-        "lb" to 453.592, "pound" to 453.592, "pounds" to 453.592,
-        "oz" to 28.3495, "ounce" to 28.3495, "ounces" to 28.3495
-    )
-
+    val lengthMap = mapOf("m" to 1.0, "km" to 1000.0, "cm" to 0.01, "mm" to 0.001, "in" to 0.0254, "ft" to 0.3048, "yd" to 0.9144, "mi" to 1609.34)
+    val weightMap = mapOf("g" to 1.0, "kg" to 1000.0, "mg" to 0.001, "lb" to 453.592, "oz" to 28.3495)
     return when {
-        // 長度換算
-        lengthMap.containsKey(from) && lengthMap.containsKey(to) -> {
-            val res = evaluatedValue * lengthMap[from]!! / lengthMap[to]!!
-            formatResult(res) + to
-        }
-        // 重量換算
-        weightMap.containsKey(from) && weightMap.containsKey(to) -> {
-            val res = evaluatedValue * weightMap[from]!! / weightMap[to]!!
-            formatResult(res) + to
-        }
-        // 溫度換算 (特殊邏輯)
+        lengthMap.containsKey(from) && lengthMap.containsKey(to) -> formatResult(evaluatedValue * lengthMap[from]!! / lengthMap[to]!!) + to
+        weightMap.containsKey(from) && weightMap.containsKey(to) -> formatResult(evaluatedValue * weightMap[from]!! / weightMap[to]!!) + to
         from == "c" && to == "f" -> formatResult(evaluatedValue * 9/5 + 32) + "°F"
         from == "f" && to == "c" -> formatResult((evaluatedValue - 32) * 5/9) + "°C"
         from == "c" && to == "k" -> formatResult(evaluatedValue + 273.15) + "K"

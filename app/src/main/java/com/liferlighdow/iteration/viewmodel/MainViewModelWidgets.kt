@@ -69,17 +69,22 @@ fun MainViewModel.updateWidgetDisplayMode(id: String, mode: WidgetDisplayMode) {
     _minusOneWidgets.value = newList
     saveWidgets(newList)
 
-    // 2. 更新桌面分頁上的小工具
-    val currentPages = _pages.value.map { page ->
-        page.map { item ->
-            if (item.widget?.id == id) {
-                item.copy(widget = item.widget.copy(displayMode = mode))
-            } else {
-                item
-            }
+    // 2. 更新桌面分頁上的小工具 (包含資料夾內)
+    fun updateItem(item: AppModel): AppModel {
+        if (item.widget?.id == id) {
+            return item.copy(widget = item.widget.copy(displayMode = mode))
         }
+        if (item.isFolder) {
+            return item.copy(folderItems = item.folderItems.map { updateItem(it) })
+        }
+        return item
+    }
+
+    val currentPages = _pages.value.map { page ->
+        page.map { updateItem(it) }
     }
     _pages.value = currentPages
+    saveLayout()
 }
 
 fun MainViewModel.saveWidgets(list: List<WidgetModel>) {
@@ -91,14 +96,20 @@ fun MainViewModel.saveWidgets(list: List<WidgetModel>) {
 }
 
 fun MainViewModel.updateStackChildren(stackId: String, children: List<WidgetModel>) {
-    val currentPages = _pages.value.map { page ->
-        page.map { item ->
-            val w = item.widget
-            if (w?.id == stackId && w.widgetType is WidgetType.Stack) {
-                val isWide = w.widgetType.isWide
-                item.copy(widget = w.copy(widgetType = WidgetType.Stack(children, isWide)))
-            } else item
+    fun updateItem(item: AppModel): AppModel {
+        val w = item.widget
+        if (w?.id == stackId && w.widgetType is WidgetType.Stack) {
+            val isWide = w.widgetType.isWide
+            return item.copy(widget = w.copy(widgetType = WidgetType.Stack(children, isWide)))
         }
+        if (item.isFolder) {
+            return item.copy(folderItems = item.folderItems.map { updateItem(it) })
+        }
+        return item
+    }
+
+    val currentPages = _pages.value.map { page ->
+        page.map { updateItem(it) }
     }
     _pages.value = currentPages
 
@@ -115,13 +126,19 @@ fun MainViewModel.updateStackChildren(stackId: String, children: List<WidgetMode
 }
 
 fun MainViewModel.updateNoteText(widgetId: String, text: String) {
-    val currentPages = _pages.value.map { page ->
-        page.map { item ->
-            val w = item.widget
-            if (w?.id == widgetId && w.widgetType is WidgetType.Note) {
-                item.copy(widget = w.copy(widgetType = w.widgetType.copy(text = text)))
-            } else item
+    fun updateItem(item: AppModel): AppModel {
+        val w = item.widget
+        if (w?.id == widgetId && w.widgetType is WidgetType.Note) {
+            return item.copy(widget = w.copy(widgetType = w.widgetType.copy(text = text)))
         }
+        if (item.isFolder) {
+            return item.copy(folderItems = item.folderItems.map { updateItem(it) })
+        }
+        return item
+    }
+
+    val currentPages = _pages.value.map { page ->
+        page.map { updateItem(it) }
     }
     _pages.value = currentPages
 

@@ -26,6 +26,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import com.kyant.backdrop.Backdrop
 import com.liferlighdow.iteration.viewmodel.MainViewModel
 import com.liferlighdow.iteration.viewmodel.*
+import com.liferlighdow.iteration.service.NotificationService
 import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.data.AnalogClockWidget
 import com.liferlighdow.iteration.data.BatteryWidget
@@ -59,6 +60,7 @@ fun MinusOnePage(
     var noteToEdit by remember { mutableStateOf<WidgetModel?>(null) }
     var weatherToEdit by remember { mutableStateOf<WidgetModel?>(null) }
     val mContext = LocalContext.current
+    val mediaInfo by NotificationService.currentMedia.collectAsState()
 
     Column(
         modifier = Modifier
@@ -145,6 +147,12 @@ fun MinusOnePage(
                                             }
                                             mContext.startActivity(intent)
                                         } catch (e: Exception) {}
+                                    }
+                                    is WidgetType.Music -> {
+                                        mediaInfo?.packageName?.let { pkg ->
+                                            val intent = mContext.packageManager.getLaunchIntentForPackage(pkg)
+                                            if (intent != null) mContext.startActivity(intent)
+                                        }
                                     }
                                     else -> {}
                                 }

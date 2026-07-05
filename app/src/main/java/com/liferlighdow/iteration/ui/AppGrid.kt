@@ -122,9 +122,13 @@ fun AppGrid(
     onBackgroundSwipeDown: () -> Unit = {},
     onBackgroundTwoFingerSwipeUp: () -> Unit = {},
     onBackgroundTwoFingerSwipeDown: () -> Unit = {},
+    onBackgroundDragY: (Float) -> Unit = {},
+    onBackgroundDragEnd: (Float) -> Unit = {},
     onEditApp: (AppModel) -> Unit = {}
 ) {
     val notificationCounts by NotificationService.notifications.collectAsState()
+    val mediaInfo by NotificationService.currentMedia.collectAsState()
+    val mContext = LocalContext.current
 
     val draggingUniqueId = draggingApp?.uniqueId
     var stackToEdit by remember { mutableStateOf<WidgetModel?>(null) }
@@ -217,56 +221,67 @@ fun AppGrid(
                 if (!isEditMode) {
                     awaitPointerEventScope {
                         while (true) {
-                            // 1. 使用 Initial pass 搶先預覽 Down 事件，不論點在哪裡都能收到
                             val down = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
                             var hasTriggered = false
+                            var directionLocked = 0 // 0: 未定, 1: 垂直鎖定 (Search), 2: 水平鎖定 (Pager), 3: 多指鎖定
                             var totalDragY = 0f
                             var totalDragX = 0f
-
-                            // 獲取系統定義的滑動門檻 (Touch Slop)
                             val touchSlop = viewConfiguration.touchSlop
 
                             while (true) {
-                                // 2. 同樣使用 Initial pass 預覽後續的移動
                                 val event = awaitPointerEvent(pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
-                                val dragEvent = event.changes.firstOrNull() ?: break
-                                if (!dragEvent.pressed) break 
+                                val pointerCount = event.changes.size
+                                val anyPressed = event.changes.any { it.pressed }
+                                if (!anyPressed) break
 
+                                // 1. 偵測多指：一旦出現兩隻手指以上，立刻切換到多指模式
+                                if (pointerCount >= 2 && directionLocked != 3) {
+                                    directionLocked = 3
+                                    // 多指模式下，立刻歸零搜尋位移，防止搜尋介面卡在半空中
+                                    onBackgroundDragY(0f) 
+                                }
+
+                                val dragEvent = event.changes.firstOrNull() ?: break
                                 totalDragY += (dragEvent.position.y - dragEvent.previousPosition.y)
                                 totalDragX += (dragEvent.position.x - dragEvent.previousPosition.x)
 
-                                if (!hasTriggered) {
-                                    val isVertical = abs(totalDragY) > abs(totalDragX) * 1.5f
-                                    val pointerCount = event.changes.size
-                                    
-                                    // 判斷是否為「刻意」的滑動手勢
-                                    if (isVertical && abs(totalDragY) > touchSlop) {
-                                        if (pointerCount == 2) {
-                                            if (totalDragY < -100f) {
-                                                onBackgroundTwoFingerSwipeUp()
-                                                hasTriggered = true
-                                            } else if (totalDragY > 100f) {
-                                                onBackgroundTwoFingerSwipeDown()
-                                                hasTriggered = true
-                                            }
-                                        } else if (pointerCount == 1) {
-                                            // 單指滑動觸發閾值（這裡可以根據手感調整，300f 比較保險）
-                                            if (totalDragY < -300f) {
-                                                onBackgroundSwipeUp()
-                                                hasTriggered = true
-                                            } else if (totalDragY > 300f) {
-                                                onBackgroundSwipeDown()
-                                                hasTriggered = true
-                                            }
+                                // 2. 方向鎖定邏輯 (僅在單指時運作)
+                                if (directionLocked == 0) {
+                                    if (kotlin.math.abs(totalDragY) > touchSlop || kotlin.math.abs(totalDragX) > touchSlop) {
+                                        if (kotlin.math.abs(totalDragY) > kotlin.math.abs(totalDragX) * 0.7f) {
+                                            directionLocked = 1 // 垂直
+                                        } else {
+                                            directionLocked = 2 // 水平
                                         }
                                     }
                                 }
-                                
-                                // 3. 如果已經判定為手勢，就「吃掉」事件，讓底下的 Icon 徹底收不到任何觸摸
-                                if (hasTriggered) {
-                                    event.changes.forEach { it.consume() }
+
+                                when (directionLocked) {
+                                    1 -> { // 單指垂直：全域搜尋拉動
+                                        event.changes.forEach { it.consume() }
+                                        onBackgroundDragY(totalDragY)
+                                        if (!hasTriggered) {
+                                            if (totalDragY > 80f) { // 調降至 80px
+                                                onBackgroundSwipeDown(); hasTriggered = true
+                                            } else if (totalDragY < -120f) { // 上滑保持稍微高一點避免誤觸
+                                                onBackgroundSwipeUp(); hasTriggered = true
+                                            }
+                                        }
+                                    }
+                                    3 -> { // 多指模式：觸發雙指手勢
+                                        if (!hasTriggered && kotlin.math.abs(totalDragY) > touchSlop * 2) {
+                                            if (totalDragY > 0) onBackgroundTwoFingerSwipeDown()
+                                            else onBackgroundTwoFingerSwipeUp()
+                                            hasTriggered = true
+                                        }
+                                        // 多指手勢也需消耗事件，防止 Pager 亂動
+                                        event.changes.forEach { it.consume() }
+                                    }
                                 }
                             }
+                            // 放開手指後的收尾
+                            if (directionLocked == 1) onBackgroundDragEnd(totalDragY)
+                            else onBackgroundDragY(0f)
                         }
                     }
                 }
@@ -348,7 +363,48 @@ fun AppGrid(
                             } else {
                                 detectTapGestures(
                                     onLongPress = { showContextMenu = true },
-                                    onTap = { if (!app.isWidget) onAppClick(app, lastPosition.pos) }
+                                    onTap = { 
+                                    if (!app.isWidget) {
+                                        onAppClick(app, lastPosition.pos)
+                                    } else {
+                                        val widget = app.widget
+                                        if (widget != null) {
+                                            when (widget.type) {
+                                                is WidgetType.Clock -> {
+                                                    try {
+                                                        val intent = Intent(android.provider.AlarmClock.ACTION_SHOW_ALARMS).apply {
+                                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                                        }
+                                                        mContext.startActivity(intent)
+                                                    } catch (e: Exception) {
+                                                        try {
+                                                            val pm = mContext.packageManager
+                                                            val fallbackIntent = pm.getLaunchIntentForPackage("com.google.android.deskclock")
+                                                                ?: pm.getLaunchIntentForPackage("com.android.deskclock")
+                                                            if (fallbackIntent != null) mContext.startActivity(fallbackIntent)
+                                                        } catch (e2: Exception) {}
+                                                    }
+                                                }
+                                                is WidgetType.Calendar -> {
+                                                    try {
+                                                        val intent = Intent(Intent.ACTION_MAIN).apply {
+                                                            addCategory(Intent.CATEGORY_APP_CALENDAR)
+                                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                                        }
+                                                        mContext.startActivity(intent)
+                                                    } catch (e: Exception) {}
+                                                }
+                                                is WidgetType.Music -> {
+                                                    mediaInfo?.packageName?.let { pkg ->
+                                                        val intent = mContext.packageManager.getLaunchIntentForPackage(pkg)
+                                                        if (intent != null) mContext.startActivity(intent)
+                                                    }
+                                                }
+                                                else -> {}
+                                            }
+                                        }
+                                    }
+                                }
                                 )
                             }
                         },
