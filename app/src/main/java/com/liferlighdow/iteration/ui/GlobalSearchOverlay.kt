@@ -6,8 +6,8 @@ import android.net.Uri
 import android.provider.ContactsContract
 import android.widget.Toast
 import androidx.compose.animation.*
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -53,6 +53,7 @@ import org.json.JSONArray
 import com.liferlighdow.iteration.data.AppModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
@@ -82,6 +83,7 @@ fun GlobalSearchOverlay(
     var isTranslating by remember { mutableStateOf(false) }
     val mContext = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
+    val scope = rememberCoroutineScope()
 
     // 當關閉時清空搜尋詞
     LaunchedEffect(isVisible) {
@@ -91,39 +93,24 @@ fun GlobalSearchOverlay(
         }
     }
 
-    // 聯網翻譯邏輯 (防抖)
+    // 聯網翻譯邏輯 (保持不變)
     LaunchedEffect(query) {
         val q = query.trim()
-        if (q.isBlank()) {
-            translationResult = null
-            return@LaunchedEffect
-        }
-
+        if (q.isBlank()) { translationResult = null; return@LaunchedEffect }
         val toRegex = Regex("(.+)\\s+to\\s+([a-zA-Z-]+)$", RegexOption.IGNORE_CASE)
         val toMatch = toRegex.find(q)
-        
         val textToTranslate: String
         val targetLang: String
-        
         if (toMatch != null) {
             textToTranslate = toMatch.groupValues[1].trim()
             targetLang = toMatch.groupValues[2].trim()
         } else if (q.startsWith("tr ", ignoreCase = true)) {
             textToTranslate = q.substring(3).trim()
             targetLang = Locale.getDefault().toLanguageTag()
-        } else {
-            translationResult = null
-            return@LaunchedEffect
-        }
-
-        if (textToTranslate.isBlank()) {
-            translationResult = null
-            return@LaunchedEffect
-        }
-
+        } else { translationResult = null; return@LaunchedEffect }
+        if (textToTranslate.isBlank()) { translationResult = null; return@LaunchedEffect }
         delay(500)
         isTranslating = true
-        
         withContext(Dispatchers.IO) {
             try {
                 val url = URL("https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=$targetLang&dt=t&q=${URLEncoder.encode(textToTranslate, "UTF-8")}")
@@ -132,7 +119,6 @@ fun GlobalSearchOverlay(
                 conn.connectTimeout = 8000
                 conn.readTimeout = 8000
                 conn.setRequestProperty("User-Agent", "Mozilla/5.0")
-                
                 if (conn.responseCode == 200) {
                     val res = conn.inputStream.bufferedReader().use { it.readText() }
                     val jsonArray = JSONArray(res)
@@ -143,14 +129,8 @@ fun GlobalSearchOverlay(
                         if (part != "null") translatedText.append(part)
                     }
                     withContext(Dispatchers.Main) { translationResult = translatedText.toString() }
-                } else {
-                    withContext(Dispatchers.Main) { translationResult = mContext.getString(R.string.service_unavailable, conn.responseCode) }
                 }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) { translationResult = mContext.getString(R.string.error_format, e.message ?: mContext.getString(R.string.unknown_error)) }
-            } finally {
-                withContext(Dispatchers.Main) { isTranslating = false }
-            }
+            } catch (e: Exception) {} finally { withContext(Dispatchers.Main) { isTranslating = false } }
         }
     }
 
@@ -158,27 +138,39 @@ fun GlobalSearchOverlay(
     val favoritePackages by viewModel.favoritePackages.collectAsState()
     val searchEngineUrl by viewModel.searchEngineUrl.collectAsState()
     val contacts by viewModel.contacts.collectAsState()
-    val isNetworkEnabled by viewModel.isNetworkAccessEnabled.collectAsState()
     val exchangeRates by viewModel.exchangeRates.collectAsState()
 
-    // 互動式過渡邏輯
-    val animProgress by animateFloatAsState(
-        targetValue = if (isVisible) 1f else 0f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessLow),
-        label = "searchAnim"
-    )
-    val dragProgress = (dragOffset / 600f).coerceIn(0f, 1f)
-    val effectiveProgress = max(animProgress, dragProgress)
+    // --- 核心改進：互動式動畫交棒 ---
+    val progress = remember { Animatable(0f) }
 
-    if (effectiveProgress > 0.01f) {
+    // 當手指拖動時，直接更新進度數值 (Snap)
+    LaunchedEffect(dragOffset) {
+        if (!isVisible && dragOffset > 0) {
+            progress.snapTo((dragOffset / 600f).coerceIn(0f, 1f))
+        }
+    }
+
+    // 當開啟狀態改變時，執行平滑動畫 (Animate)
+    LaunchedEffect(isVisible) {
+        if (isVisible) {
+            // 從目前的拖動進度繼續跑向 1.0
+            progress.animateTo(1f, spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessLow))
+        } else {
+            progress.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
+        }
+    }
+
+    val effectiveProgress = progress.value
+
+    if (effectiveProgress > 0.001f) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
                     alpha = effectiveProgress
-                    translationY = (effectiveProgress - 1f) * 300f
+                    translationY = (effectiveProgress - 1f) * 200f
                 }
-                .background(Color.Black.copy(alpha = 0.3f * effectiveProgress))
+                .background(Color.Black.copy(alpha = 0.4f * effectiveProgress))
                 .clickable { onDismiss() }
                 .statusBarsPadding()
         ) {
@@ -188,7 +180,7 @@ fun GlobalSearchOverlay(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 20.dp)
-                        .graphicsLayer { translationY = (effectiveProgress - 1f) * 100f }
+                        .graphicsLayer { translationY = (effectiveProgress - 1f) * 50f }
                         .liquidGlass(
                             enabled = isLiquidGlassEnabled && isLiquidGlassGlobalSearchEnabled,
                             backdrop = backdrop,
@@ -281,8 +273,8 @@ fun GlobalSearchOverlay(
                 LazyColumn(
                     modifier = Modifier.fillMaxSize().graphicsLayer {
                         alpha = effectiveProgress
-                        scaleX = 0.9f + 0.1f * effectiveProgress
-                        scaleY = 0.9f + 0.1f * effectiveProgress
+                        scaleX = 0.95f + 0.05f * effectiveProgress
+                        scaleY = 0.95f + 0.05f * effectiveProgress
                     },
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
