@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.StarOutline
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -64,21 +65,12 @@ import com.liferlighdow.iteration.viewmodel.MainViewModel
 import com.liferlighdow.iteration.viewmodel.*
 import com.liferlighdow.iteration.service.NotificationService
 import com.liferlighdow.iteration.R
-import com.liferlighdow.iteration.data.AnalogClockWidget
+import com.liferlighdow.iteration.ui.widgets.*
+import com.liferlighdow.iteration.ui.dialogs.*
 import com.liferlighdow.iteration.data.AppModel
-import com.liferlighdow.iteration.data.BatteryWidget
-import com.liferlighdow.iteration.data.CalendarWidget
-import com.liferlighdow.iteration.data.LocationSearchDialog
-import com.liferlighdow.iteration.data.MusicWidget
-import com.liferlighdow.iteration.data.NoteEditDialog
-import com.liferlighdow.iteration.data.NoteWidget
-import com.liferlighdow.iteration.data.PhotoWidget
-import com.liferlighdow.iteration.data.StackWidget
 import com.liferlighdow.iteration.data.WeatherProvider
-import com.liferlighdow.iteration.data.WeatherWidget
 import com.liferlighdow.iteration.data.WidgetDisplayMode
 import com.liferlighdow.iteration.data.WidgetModel
-import com.liferlighdow.iteration.data.WidgetStackPickerDialog
 import com.liferlighdow.iteration.data.WidgetType
 import com.liferlighdow.iteration.viewmodel.removeAppFromHome
 import kotlin.math.abs
@@ -134,6 +126,20 @@ fun AppGrid(
     var stackToEdit by remember { mutableStateOf<WidgetModel?>(null) }
     var noteToEdit by remember { mutableStateOf<WidgetModel?>(null) }
     var weatherToEdit by remember { mutableStateOf<WidgetModel?>(null) }
+    var photoToAdjust by remember { mutableStateOf<WidgetModel?>(null) }
+    var photoToPick by remember { mutableStateOf<WidgetModel?>(null) }
+    var showCropDialogByUri by remember { mutableStateOf<Uri?>(null) }
+
+    val photoPickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            try {
+                mContext.contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            } catch (e: Exception) {}
+            showCropDialogByUri = it
+        }
+    }
 
     val displayApps = remember(apps, confirmedHoveredSlotIdx, draggingUniqueId, confirmedIntent) {
         val list = apps.toMutableList()
@@ -421,7 +427,10 @@ fun AppGrid(
                             onContextMenuDismiss = { showContextMenu = false },
                             onUpdateStackToEdit = { stackToEdit = it },
                             onUpdateNoteToEdit = { noteToEdit = it },
-                            onUpdateWeatherToEdit = { weatherToEdit = it }
+                            onUpdateWeatherToEdit = { weatherToEdit = it },
+                            onUpdatePhotoToAdjust = { photoToAdjust = it },
+                            onUpdatePhotoToPick = { photoToPick = it },
+                            photoPickerLauncher = photoPickerLauncher
                         )
                     } else {
                         AppGridItem(
@@ -483,6 +492,37 @@ fun AppGrid(
             onDismiss = { weatherToEdit = null }
         )
     }
+
+    if (photoToAdjust != null) {
+        val type = photoToAdjust!!.type as? WidgetType.Photo
+        val uriStr = type?.uri
+        if (uriStr != null) {
+            ImageCropDialog(
+                uri = Uri.parse(uriStr),
+                isWide = type.isWide,
+                onDismiss = { photoToAdjust = null },
+                onConfirm = { cropped ->
+                    viewModel.saveWidgetPhoto(photoToAdjust!!.id, cropped)
+                    photoToAdjust = null
+                }
+            )
+        }
+    }
+
+    if (showCropDialogByUri != null && photoToPick != null) {
+        val isWide = (photoToPick!!.type as? WidgetType.Photo)?.isWide ?: false
+        ImageCropDialog(
+            uri = showCropDialogByUri!!,
+            isWide = isWide,
+            onDismiss = { showCropDialogByUri = null; photoToPick = null },
+            onConfirm = { cropped ->
+                viewModel.saveWidgetPhoto(photoToPick!!.id, cropped)
+                viewModel.updatePhotoWidgetUri(photoToPick!!.id, showCropDialogByUri.toString())
+                showCropDialogByUri = null
+                photoToPick = null
+            }
+        )
+    }
 }
 
 @Composable
@@ -496,7 +536,10 @@ private fun WidgetGridItem(
     onContextMenuDismiss: () -> Unit,
     onUpdateStackToEdit: (WidgetModel) -> Unit,
     onUpdateNoteToEdit: (WidgetModel) -> Unit,
-    onUpdateWeatherToEdit: (WidgetModel) -> Unit
+    onUpdateWeatherToEdit: (WidgetModel) -> Unit,
+    onUpdatePhotoToAdjust: (WidgetModel) -> Unit,
+    onUpdatePhotoToPick: (WidgetModel) -> Unit,
+    photoPickerLauncher: androidx.activity.result.ActivityResultLauncher<String>
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -604,6 +647,30 @@ private fun WidgetGridItem(
                         leadingIcon = { Icon(Icons.Default.Palette, null, tint = MaterialTheme.colorScheme.primary) },
                         onClick = {
                             viewModel.updateWidgetDisplayMode(widget.id, WidgetDisplayMode.COLOR)
+                            onContextMenuDismiss()
+                        }
+                    )
+                }
+            }
+            if (app.widget?.type is WidgetType.Photo) {
+                val type = app.widget.type as WidgetType.Photo
+                
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.choose_picture)) },
+                    leadingIcon = { Icon(Icons.Default.AddAPhoto, null, tint = MaterialTheme.colorScheme.primary) },
+                    onClick = {
+                        onUpdatePhotoToPick(app.widget)
+                        photoPickerLauncher.launch("image/*")
+                        onContextMenuDismiss()
+                    }
+                )
+
+                if (type.uri != null) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.adjust_position)) },
+                        leadingIcon = { Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary) },
+                        onClick = {
+                            onUpdatePhotoToAdjust(app.widget)
                             onContextMenuDismiss()
                         }
                     )

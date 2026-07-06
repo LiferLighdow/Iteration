@@ -361,9 +361,10 @@ fun LauncherScreen(
                     beyondViewportPageCount = 1,
                     flingBehavior = PagerDefaults.flingBehavior(
                         state = pagerState,
+                        snapPositionalThreshold = 0.25f, // 只要滑動 25% 就判定翻頁，手感更輕快
                         snapAnimationSpec = spring(
                             dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessMediumLow
+                            stiffness = 180f // 降至 180f (比 StiffnessLow 還低一點)，產生慢慢飄到底的感覺
                         )
                     )
                 ) { pageIndex ->

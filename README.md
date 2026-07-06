@@ -140,6 +140,17 @@ app/src/main/java/com/liferlighdow/iteration/
 │   └── WidgetModel.kt
 │
 ├── ui/                   # UI Components & Screens
+│   ├── widgets/          # Individual Widget Components
+│   │   ├── BatteryWidget.kt
+│   │   ├── CalendarWidget.kt
+│   │   ├── ClockWidget.kt
+│   │   ├── MusicWidget.kt
+│   │   ├── NoteWidget.kt
+│   │   ├── PhotoWidget.kt
+│   │   ├── StackWidget.kt
+│   │   └── WeatherWidget.kt
+│   ├── dialogs/          # Specialized Dialogs
+│   │   └── WidgetDialogs.kt  # Stack Picker, Photo Crop, Location Search, etc.
 │   ├── AppGrid.kt        # Optimized Slot-Based Layout
 │   ├── AppItem.kt
 │   ├── AppLibraryPage.kt

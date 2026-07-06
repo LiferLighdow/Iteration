@@ -87,6 +87,16 @@ fun MainViewModel.updateWidgetDisplayMode(id: String, mode: WidgetDisplayMode) {
     saveLayout()
 }
 
+fun MainViewModel.reorderMinusOneWidgets(fromIndex: Int, toIndex: Int) {
+    val list = _minusOneWidgets.value.toMutableList()
+    if (fromIndex in list.indices && toIndex in list.indices) {
+        val item = list.removeAt(fromIndex)
+        list.add(toIndex, item)
+        _minusOneWidgets.value = list
+        saveWidgets(list)
+    }
+}
+
 fun MainViewModel.saveWidgets(list: List<WidgetModel>) {
     val array = JSONArray()
     list.forEach { widget ->
@@ -153,11 +163,34 @@ fun MainViewModel.updateNoteText(widgetId: String, text: String) {
     saveWidgets(newMinusOne)
 }
 
+fun MainViewModel.updatePhotoWidgetUri(widgetId: String, uri: String) {
+    fun updateItem(item: AppModel): AppModel {
+        val w = item.widget
+        if (w?.id == widgetId && w.widgetType is WidgetType.Photo) {
+            return item.copy(widget = w.copy(widgetType = w.widgetType.copy(uri = uri)))
+        }
+        if (item.isFolder) {
+            return item.copy(folderItems = item.folderItems.map { updateItem(it) })
+        }
+        return item
+    }
+
+    _pages.value = _pages.value.map { page -> page.map { updateItem(it) } }
+    _minusOneWidgets.value = _minusOneWidgets.value.map { widget ->
+        if (widget.id == widgetId && widget.widgetType is WidgetType.Photo) {
+            widget.copy(widgetType = widget.widgetType.copy(uri = uri))
+        } else widget
+    }
+    saveLayout()
+    saveWidgets(_minusOneWidgets.value)
+}
+
 fun MainViewModel.saveWidgetPhoto(widgetId: String, bitmap: Bitmap) {
     val file = File(widgetPhotoDir, "$widgetId.png")
     FileOutputStream(file).use { out ->
         bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
     }
+    _widgetUpdateSignal.value = System.currentTimeMillis()
     _minusOneWidgets.value = _minusOneWidgets.value.toList()
 }
 

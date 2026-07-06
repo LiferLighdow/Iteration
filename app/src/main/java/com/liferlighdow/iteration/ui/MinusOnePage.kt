@@ -2,8 +2,12 @@ package com.liferlighdow.iteration.ui
 
 import android.content.Intent
 import android.provider.AlarmClock
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -17,31 +21,32 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.unit.toSize
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.zIndex
 import com.kyant.backdrop.Backdrop
 import com.liferlighdow.iteration.viewmodel.MainViewModel
 import com.liferlighdow.iteration.viewmodel.*
 import com.liferlighdow.iteration.service.NotificationService
 import com.liferlighdow.iteration.R
-import com.liferlighdow.iteration.data.AnalogClockWidget
-import com.liferlighdow.iteration.data.BatteryWidget
-import com.liferlighdow.iteration.data.CalendarWidget
-import com.liferlighdow.iteration.data.LocationSearchDialog
-import com.liferlighdow.iteration.data.MusicWidget
-import com.liferlighdow.iteration.data.NoteEditDialog
-import com.liferlighdow.iteration.data.NoteWidget
-import com.liferlighdow.iteration.data.PhotoWidget
-import com.liferlighdow.iteration.data.StackWidget
+import com.liferlighdow.iteration.ui.widgets.*
+import com.liferlighdow.iteration.ui.dialogs.*
 import com.liferlighdow.iteration.data.WeatherProvider
-import com.liferlighdow.iteration.data.WeatherWidget
 import com.liferlighdow.iteration.data.WidgetDisplayMode
 import com.liferlighdow.iteration.data.WidgetModel
-import com.liferlighdow.iteration.data.WidgetStackPickerDialog
 import com.liferlighdow.iteration.data.WidgetType
 
 @Composable
@@ -56,10 +61,30 @@ fun MinusOnePage(
 ) {
     var isReorderMode by remember { mutableStateOf(false) }
     val effectiveEditMode = isEditMode || isReorderMode
+    
+    // 拖動相關狀態
+    var draggingWidgetId by remember { mutableStateOf<String?>(null) }
+    var dragOffset by remember { mutableStateOf(Offset.Zero) }
+    val widgetPositions = remember { mutableStateMapOf<String, Rect>() }
+
     var stackToEdit by remember { mutableStateOf<WidgetModel?>(null) }
     var noteToEdit by remember { mutableStateOf<WidgetModel?>(null) }
     var weatherToEdit by remember { mutableStateOf<WidgetModel?>(null) }
+    var photoToAdjust by remember { mutableStateOf<WidgetModel?>(null) }
+    var photoToPick by remember { mutableStateOf<WidgetModel?>(null) }
+    var showCropDialogByUri by remember { mutableStateOf<android.net.Uri?>(null) }
     val mContext = LocalContext.current
+
+    val photoPickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.GetContent()
+    ) { uri: android.net.Uri? ->
+        uri?.let {
+            try {
+                mContext.contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            } catch (e: Exception) {}
+            showCropDialogByUri = it
+        }
+    }
     val mediaInfo by NotificationService.currentMedia.collectAsState()
 
     Column(
@@ -111,54 +136,122 @@ fun MinusOnePage(
                 GridItemSpan(span)
             }) { widget ->
                 var showContextMenu by remember { mutableStateOf(false) }
+                val index = widgets.indexOfFirst { it.id == widget.id }
+                val isDragging = draggingWidgetId == widget.id
+
+                val infiniteTransition = rememberInfiniteTransition(label = "jiggle")
+                val rotation by infiniteTransition.animateFloat(
+                    initialValue = -1.5f,
+                    targetValue = 1.5f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(150, easing = LinearEasing),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "jiggle"
+                )
 
                 Box(
-                    modifier = Modifier.pointerInput(widget.type) {
-                        detectTapGestures(
-                            onLongPress = {
-                                if (widget.type is WidgetType.Stack) {
-                                    stackToEdit = widget
-                                } else {
-                                    showContextMenu = true
-                                }
-                            },
-                            onTap = {
-                                when (widget.type) {
-                                    is WidgetType.Clock -> {
-                                        try {
-                                            val intent = Intent(AlarmClock.ACTION_SHOW_ALARMS).apply {
-                                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                            }
-                                            mContext.startActivity(intent)
-                                        } catch (e: Exception) {
-                                            try {
-                                                val pm = mContext.packageManager
-                                                val fallbackIntent = pm.getLaunchIntentForPackage("com.google.android.deskclock")
-                                                    ?: pm.getLaunchIntentForPackage("com.android.deskclock")
-                                                if (fallbackIntent != null) mContext.startActivity(fallbackIntent)
-                                            } catch (e2: Exception) {}
-                                        }
-                                    }
-                                    is WidgetType.Calendar -> {
-                                        try {
-                                            val intent = Intent(Intent.ACTION_MAIN).apply {
-                                                addCategory(Intent.CATEGORY_APP_CALENDAR)
-                                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                            }
-                                            mContext.startActivity(intent)
-                                        } catch (e: Exception) {}
-                                    }
-                                    is WidgetType.Music -> {
-                                        mediaInfo?.packageName?.let { pkg ->
-                                            val intent = mContext.packageManager.getLaunchIntentForPackage(pkg)
-                                            if (intent != null) mContext.startActivity(intent)
-                                        }
-                                    }
-                                    else -> {}
-                                }
+                    modifier = Modifier
+                        .onGloballyPositioned { layoutCoordinates ->
+                            val pos = layoutCoordinates.positionInRoot()
+                            widgetPositions[widget.id] = Rect(pos, layoutCoordinates.size.toSize())
+                        }
+                        .graphicsLayer {
+                            if (effectiveEditMode && !isDragging) {
+                                rotationZ = rotation
                             }
-                        )
-                    }
+                            if (isDragging) {
+                                translationX = dragOffset.x
+                                translationY = dragOffset.y
+                                scaleX = 1.05f
+                                scaleY = 1.05f
+                                alpha = 0.9f
+                            }
+                        }
+                        .zIndex(if (isDragging) 10f else 0f)
+                        .pointerInput(widget.id, effectiveEditMode) {
+                            if (effectiveEditMode) {
+                                detectDragGesturesAfterLongPress(
+                                    onDragStart = { _ ->
+                                        draggingWidgetId = widget.id
+                                        dragOffset = Offset.Zero
+                                    },
+                                    onDrag = { change, dragAmount ->
+                                        change.consume()
+                                        dragOffset += dragAmount
+
+                                        val currentPos = widgetPositions[widget.id]?.center?.plus(dragOffset)
+                                        if (currentPos != null) {
+                                            val targetWidget = widgetPositions.entries.find { (id, rect) ->
+                                                id != widget.id && rect.contains(currentPos)
+                                            }
+                                            targetWidget?.let { (targetId, _) ->
+                                                val targetIndex = widgets.indexOfFirst { it.id == targetId }
+                                                if (targetIndex != -1 && index != -1 && targetIndex != index) {
+                                                    viewModel.reorderMinusOneWidgets(index, targetIndex)
+                                                }
+                                            }
+                                        }
+                                    },
+                                    onDragEnd = {
+                                        draggingWidgetId = null
+                                        dragOffset = Offset.Zero
+                                    },
+                                    onDragCancel = {
+                                        draggingWidgetId = null
+                                        dragOffset = Offset.Zero
+                                    }
+                                )
+                            }
+                        }
+                        .pointerInput(widget.type, effectiveEditMode) {
+                            if (!effectiveEditMode) {
+                                detectTapGestures(
+                                    onLongPress = {
+                                        if (widget.type is WidgetType.Stack) {
+                                            stackToEdit = widget
+                                        } else {
+                                            showContextMenu = true
+                                        }
+                                    },
+                                    onTap = {
+                                        when (widget.type) {
+                                            is WidgetType.Clock -> {
+                                                try {
+                                                    val intent = Intent(AlarmClock.ACTION_SHOW_ALARMS).apply {
+                                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                                    }
+                                                    mContext.startActivity(intent)
+                                                } catch (e: Exception) {
+                                                    try {
+                                                        val pm = mContext.packageManager
+                                                        val fallbackIntent = pm.getLaunchIntentForPackage("com.google.android.deskclock")
+                                                            ?: pm.getLaunchIntentForPackage("com.android.deskclock")
+                                                        if (fallbackIntent != null) mContext.startActivity(fallbackIntent)
+                                                    } catch (e2: Exception) {}
+                                                }
+                                            }
+                                            is WidgetType.Calendar -> {
+                                                try {
+                                                    val intent = Intent(Intent.ACTION_MAIN).apply {
+                                                        addCategory(Intent.CATEGORY_APP_CALENDAR)
+                                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                                    }
+                                                    mContext.startActivity(intent)
+                                                } catch (e: Exception) {}
+                                            }
+                                            is WidgetType.Music -> {
+                                                mediaInfo?.packageName?.let { pkg ->
+                                                    val intent = mContext.packageManager.getLaunchIntentForPackage(pkg)
+                                                    if (intent != null) mContext.startActivity(intent)
+                                                }
+                                            }
+                                            else -> {}
+                                        }
+                                    }
+                                )
+                            }
+                        }
                 ) {
                     when (widget.type) {
                         is WidgetType.Battery -> BatteryWidget(
@@ -240,6 +333,30 @@ fun MinusOnePage(
                                 )
                             }
                         }
+                        if (widget.type is WidgetType.Photo) {
+                            val type = widget.type as WidgetType.Photo
+                            
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.choose_picture)) },
+                                leadingIcon = { Icon(Icons.Default.AddAPhoto, null, tint = MaterialTheme.colorScheme.primary) },
+                                onClick = {
+                                    photoToPick = widget
+                                    photoPickerLauncher.launch("image/*")
+                                    showContextMenu = false
+                                }
+                            )
+
+                            if (type.uri != null) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.adjust_position)) },
+                                    leadingIcon = { Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary) },
+                                    onClick = {
+                                        photoToAdjust = widget
+                                        showContextMenu = false
+                                    }
+                                )
+                            }
+                        }
                         if (widget.type is WidgetType.Stack) {
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.menu_choose_widgets)) },
@@ -315,6 +432,37 @@ fun MinusOnePage(
         LocationSearchDialog(
             viewModel = viewModel,
             onDismiss = { weatherToEdit = null }
+        )
+    }
+
+    if (photoToAdjust != null) {
+        val type = photoToAdjust!!.type as? WidgetType.Photo
+        val uriStr = type?.uri
+        if (uriStr != null) {
+            ImageCropDialog(
+                uri = android.net.Uri.parse(uriStr),
+                isWide = type.isWide,
+                onDismiss = { photoToAdjust = null },
+                onConfirm = { cropped ->
+                    viewModel.saveWidgetPhoto(photoToAdjust!!.id, cropped)
+                    photoToAdjust = null
+                }
+            )
+        }
+    }
+
+    if (showCropDialogByUri != null && photoToPick != null) {
+        val isWide = (photoToPick!!.type as? WidgetType.Photo)?.isWide ?: false
+        ImageCropDialog(
+            uri = showCropDialogByUri!!,
+            isWide = isWide,
+            onDismiss = { showCropDialogByUri = null; photoToPick = null },
+            onConfirm = { cropped ->
+                viewModel.saveWidgetPhoto(photoToPick!!.id, cropped)
+                viewModel.updatePhotoWidgetUri(photoToPick!!.id, showCropDialogByUri.toString())
+                showCropDialogByUri = null
+                photoToPick = null
+            }
         )
     }
 }

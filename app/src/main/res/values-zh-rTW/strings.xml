@@ -331,6 +331,7 @@
     <string name="brightness">亮度：%1$d%%</string>
     <string name="alpha">透明度：%1$d%%</string>
     <string name="choose_picture">選擇圖片</string>
+    <string name="adjust_position">調整圖片位置</string>
     <string name="edit_note">更改記事本</string>
     <string name="choose_location">選擇地區</string>
     <string name="note_placeholder">在這裡輸入您的大膽想法&#8230;</string>

@@ -366,6 +366,7 @@
 
     <!-- Widgets & Menus -->
     <string name="choose_picture">Choose Picture</string>
+    <string name="adjust_position">Adjust Position</string>
     <string name="edit_note">Edit Note</string>
     <string name="choose_location">Choose Location</string>
     <string name="note_placeholder">Enter your note here&#8230;</string>

@@ -27,7 +27,7 @@ import com.liferlighdow.iteration.utils.IconShape
 import com.liferlighdow.iteration.viewmodel.*
 import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.data.AppModel
-import com.liferlighdow.iteration.data.WidgetPickerDialog
+import com.liferlighdow.iteration.ui.dialogs.WidgetPickerDialog
 import com.liferlighdow.iteration.viewmodel.deleteFolder
 import com.liferlighdow.iteration.viewmodel.deletePage
 

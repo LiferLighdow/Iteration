@@ -66,6 +66,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     internal val _iconUpdateSignal = MutableStateFlow(0L)
     val iconUpdateSignal = _iconUpdateSignal.asStateFlow()
 
+    internal val _widgetUpdateSignal = MutableStateFlow(0L)
+    val widgetUpdateSignal = _widgetUpdateSignal.asStateFlow()
+
     internal val _pages = MutableStateFlow<List<List<AppModel>>>(emptyList())
     val pages: StateFlow<List<List<AppModel>>> = _pages
 
