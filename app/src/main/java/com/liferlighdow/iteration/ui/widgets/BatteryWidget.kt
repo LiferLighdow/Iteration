@@ -22,6 +22,7 @@ import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.data.WidgetDisplayMode
 import com.liferlighdow.iteration.ui.glassFallbackColor
 import com.liferlighdow.iteration.ui.liquidGlass
+import com.liferlighdow.iteration.ui.withGlassShadow
 import com.liferlighdow.iteration.viewmodel.MainViewModel
 
 @Composable
@@ -44,6 +45,7 @@ fun BatteryWidget(
     var batteryLevel by remember { mutableIntStateOf(0) }
     var isCharging by remember { mutableStateOf(false) }
 
+    val isGlass = displayMode == WidgetDisplayMode.GLASS
     val containerColor = when (displayMode) {
         WidgetDisplayMode.GLASS -> glassFallbackColor(0.2f)
         WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.primaryContainer
@@ -92,7 +94,7 @@ fun BatteryWidget(
         ) {
             Text(
                 text = stringResource(R.string.widget_battery),
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.titleSmall.withGlassShadow(isGlass),
                 color = contentColor
             )
 
@@ -108,15 +110,14 @@ fun BatteryWidget(
                 )
                 Text(
                     text = "$batteryLevel%",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = contentColor,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold).withGlassShadow(isGlass),
+                    color = contentColor
                 )
             }
 
             Text(
                 text = if (isCharging) stringResource(R.string.charging) else stringResource(R.string.discharging),
-                style = MaterialTheme.typography.labelSmall,
+                style = MaterialTheme.typography.labelSmall.withGlassShadow(isGlass),
                 color = contentColor.copy(alpha = 0.7f)
             )
         }

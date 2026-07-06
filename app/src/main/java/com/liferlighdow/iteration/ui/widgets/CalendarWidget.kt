@@ -34,6 +34,7 @@ import com.liferlighdow.iteration.data.WidgetModel
 import com.liferlighdow.iteration.data.WidgetType
 import com.liferlighdow.iteration.ui.glassFallbackColor
 import com.liferlighdow.iteration.ui.liquidGlass
+import com.liferlighdow.iteration.ui.withGlassShadow
 import com.liferlighdow.iteration.viewmodel.MainViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -99,6 +100,7 @@ fun StandardCalendarWidget(
         else -> ""
     }
 
+    val isGlass = displayMode == WidgetDisplayMode.GLASS
     val containerColor = when (displayMode) {
         WidgetDisplayMode.GLASS -> glassFallbackColor(0.2f)
         WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.tertiaryContainer
@@ -132,21 +134,19 @@ fun StandardCalendarWidget(
         ) {
             Text(
                 text = month,
-                style = MaterialTheme.typography.titleMedium,
-                color = accentColor,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold).withGlassShadow(isGlass),
+                color = accentColor
             )
 
             Text(
                 text = dayOfMonth.toString(),
-                style = MaterialTheme.typography.displayMedium,
-                color = contentColor,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.Bold).withGlassShadow(isGlass),
+                color = contentColor
             )
 
             Text(
                 text = dayOfWeek,
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.labelLarge.withGlassShadow(isGlass),
                 color = contentColor.copy(alpha = 0.7f)
             )
         }
@@ -188,6 +188,7 @@ fun WideCalendarWidget(
         hasPermission = isGranted
     }
 
+    val isGlass = displayMode == WidgetDisplayMode.GLASS
     val containerColor = when (displayMode) {
         WidgetDisplayMode.GLASS -> glassFallbackColor(0.2f)
         WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.tertiaryContainer
@@ -298,9 +299,8 @@ fun WideCalendarWidget(
                     val cal = Calendar.getInstance()
                     Text(
                         text = cal.get(Calendar.DAY_OF_MONTH).toString(),
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = contentColor,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold).withGlassShadow(isGlass),
+                        color = contentColor
                     )
                     Text(
                         text = when(cal.get(Calendar.DAY_OF_WEEK)) {
@@ -308,7 +308,7 @@ fun WideCalendarWidget(
                             Calendar.WEDNESDAY -> "WED"; Calendar.THURSDAY -> "THU"; Calendar.FRIDAY -> "FRI"
                             Calendar.SATURDAY -> "SAT"; else -> ""
                         },
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.labelSmall.withGlassShadow(isGlass),
                         color = accentColor
                     )
                 }
@@ -318,7 +318,7 @@ fun WideCalendarWidget(
                 // Right part: Events
                 if (events.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(text = stringResource(R.string.no_events_today), style = MaterialTheme.typography.bodyMedium, color = contentColor.copy(alpha = 0.5f))
+                        Text(text = stringResource(R.string.no_events_today), style = MaterialTheme.typography.bodyMedium.withGlassShadow(isGlass), color = contentColor.copy(alpha = 0.5f))
                     }
                 } else {
                     LazyColumn(
@@ -330,10 +330,10 @@ fun WideCalendarWidget(
                                 Box(modifier = Modifier.size(4.dp, 16.dp).clip(CircleShape).background(accentColor))
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Column {
-                                    Text(text = event.title, style = MaterialTheme.typography.labelLarge, color = contentColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(text = event.title, style = MaterialTheme.typography.labelLarge.withGlassShadow(isGlass), color = contentColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     val startTime = Calendar.getInstance().apply { timeInMillis = event.startTime }
                                     val timeStr = String.format("%02d:%02d", startTime.get(Calendar.HOUR_OF_DAY), startTime.get(Calendar.MINUTE))
-                                    Text(text = timeStr, style = MaterialTheme.typography.labelSmall, color = contentColor.copy(alpha = 0.6f))
+                                    Text(text = timeStr, style = MaterialTheme.typography.labelSmall.withGlassShadow(isGlass), color = contentColor.copy(alpha = 0.6f))
                                 }
                             }
                         }

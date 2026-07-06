@@ -19,6 +19,7 @@ import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.data.WidgetDisplayMode
 import com.liferlighdow.iteration.ui.glassFallbackColor
 import com.liferlighdow.iteration.ui.liquidGlass
+import com.liferlighdow.iteration.ui.withGlassShadow
 import com.liferlighdow.iteration.viewmodel.MainViewModel
 import kotlinx.coroutines.delay
 import java.util.Calendar
@@ -41,6 +42,7 @@ fun AnalogClockWidget(
 
     var time by remember { mutableStateOf(Calendar.getInstance()) }
 
+    val isGlass = displayMode == WidgetDisplayMode.GLASS
     val containerColor = when (displayMode) {
         WidgetDisplayMode.GLASS -> glassFallbackColor(0.2f)
         WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.secondaryContainer
@@ -142,10 +144,10 @@ fun AnalogClockWidget(
             }
 
             // 4 Numbers (12, 3, 6, 9)
-            Text(stringResource(R.string.clock_12), modifier = Modifier.align(Alignment.TopCenter).padding(top = 18.dp), color = contentColor, style = MaterialTheme.typography.labelSmall)
-            Text(stringResource(R.string.clock_6), modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 18.dp), color = contentColor, style = MaterialTheme.typography.labelSmall)
-            Text(stringResource(R.string.clock_3), modifier = Modifier.align(Alignment.CenterEnd).padding(end = 18.dp), color = contentColor, style = MaterialTheme.typography.labelSmall)
-            Text(stringResource(R.string.clock_9), modifier = Modifier.align(Alignment.CenterStart).padding(start = 18.dp), color = contentColor, style = MaterialTheme.typography.labelSmall)
+            Text(stringResource(R.string.clock_12), modifier = Modifier.align(Alignment.TopCenter).padding(top = 18.dp), color = contentColor, style = MaterialTheme.typography.labelSmall.withGlassShadow(isGlass))
+            Text(stringResource(R.string.clock_6), modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 18.dp), color = contentColor, style = MaterialTheme.typography.labelSmall.withGlassShadow(isGlass))
+            Text(stringResource(R.string.clock_3), modifier = Modifier.align(Alignment.CenterEnd).padding(end = 18.dp), color = contentColor, style = MaterialTheme.typography.labelSmall.withGlassShadow(isGlass))
+            Text(stringResource(R.string.clock_9), modifier = Modifier.align(Alignment.CenterStart).padding(start = 18.dp), color = contentColor, style = MaterialTheme.typography.labelSmall.withGlassShadow(isGlass))
         }
     }
 }

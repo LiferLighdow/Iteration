@@ -75,6 +75,7 @@ fun WidgetStackPickerDialog(
     }
 
     var noteToEditInStack by remember { mutableStateOf<Pair<Int, WidgetModel>?>(null) }
+    var photoToAdjust by remember { mutableStateOf<WidgetModel?>(null) }
     var showLocationSearch by remember { mutableStateOf(false) }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -142,6 +143,7 @@ fun WidgetStackPickerDialog(
                                             }
 
                                             if (item.type is WidgetType.Photo) {
+                                                val photoType = item.type as WidgetType.Photo
                                                 DropdownMenuItem(
                                                     text = { Text(stringResource(R.string.choose_picture)) },
                                                     leadingIcon = { Icon(Icons.Default.AddAPhoto, null, tint = MaterialTheme.colorScheme.primary) },
@@ -151,6 +153,17 @@ fun WidgetStackPickerDialog(
                                                         showItemMenu = false
                                                     }
                                                 )
+
+                                                if (photoType.uri != null) {
+                                                    DropdownMenuItem(
+                                                        text = { Text(stringResource(R.string.adjust_position)) },
+                                                        leadingIcon = { Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary) },
+                                                        onClick = {
+                                                            photoToAdjust = item
+                                                            showItemMenu = false
+                                                        }
+                                                    )
+                                                }
                                             }
 
                                             if (item.type is WidgetType.Note) {
@@ -273,6 +286,22 @@ fun WidgetStackPickerDialog(
                 photoTargetId = null
             }
         )
+    }
+
+    if (photoToAdjust != null) {
+        val type = photoToAdjust!!.type as? WidgetType.Photo
+        val uriStr = type?.uri
+        if (uriStr != null) {
+            ImageCropDialog(
+                uri = Uri.parse(uriStr),
+                isWide = type.isWide,
+                onDismiss = { photoToAdjust = null },
+                onConfirm = { cropped ->
+                    viewModel.saveWidgetPhoto(photoToAdjust!!.id, cropped)
+                    photoToAdjust = null
+                }
+            )
+        }
     }
 
     if (noteToEditInStack != null) {

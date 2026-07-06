@@ -19,6 +19,7 @@ import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.data.WidgetModel
 import com.liferlighdow.iteration.data.WidgetType
 import com.liferlighdow.iteration.ui.glassFallbackColor
+import com.liferlighdow.iteration.ui.withGlassShadow
 import com.liferlighdow.iteration.viewmodel.MainViewModel
 import com.liferlighdow.iteration.viewmodel.getWidgetPhoto
 
@@ -48,7 +49,11 @@ fun PhotoWidget(widget: WidgetModel, viewModel: MainViewModel, modifier: Modifie
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Default.AddAPhoto, contentDescription = null, tint = Color.White.copy(alpha = 0.6f))
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(stringResource(R.string.widget_photo), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelSmall)
+                    Text(
+                        stringResource(R.string.widget_photo), 
+                        color = Color.White.copy(alpha = 0.6f), 
+                        style = MaterialTheme.typography.labelSmall.withGlassShadow()
+                    )
                 }
             }
         }

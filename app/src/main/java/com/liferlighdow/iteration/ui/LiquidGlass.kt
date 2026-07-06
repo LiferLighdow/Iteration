@@ -15,6 +15,8 @@ import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
@@ -29,6 +31,20 @@ import com.kyant.backdrop.effects.vibrancy
 fun glassFallbackColor(alpha: Float = 0.3f): Color {
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     return if (isDark) Color.Black.copy(alpha = alpha) else Color.White.copy(alpha = alpha)
+}
+
+/**
+ * 為玻璃模式下的文字提供陰影，增強在複雜背景下的可讀性
+ */
+fun TextStyle.withGlassShadow(enabled: Boolean = true): TextStyle {
+    if (!enabled) return this
+    return this.copy(
+        shadow = Shadow(
+            color = Color.Black.copy(alpha = 0.5f),
+            offset = Offset(0f, 2f),
+            blurRadius = 4f
+        )
+    )
 }
 
 /**

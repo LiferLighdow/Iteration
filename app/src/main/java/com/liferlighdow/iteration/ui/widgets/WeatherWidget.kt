@@ -21,6 +21,7 @@ import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.data.WidgetDisplayMode
 import com.liferlighdow.iteration.ui.glassFallbackColor
 import com.liferlighdow.iteration.ui.liquidGlass
+import com.liferlighdow.iteration.ui.withGlassShadow
 import com.liferlighdow.iteration.viewmodel.MainViewModel
 import com.liferlighdow.iteration.viewmodel.fetchWeather
 
@@ -43,6 +44,7 @@ fun WeatherWidget(
 
     val useLiquid = displayMode == WidgetDisplayMode.GLASS && isLiquidGlassEnabled && isLiquidWidgetsEnabled && backdrop != null
 
+    val isGlass = displayMode == WidgetDisplayMode.GLASS
     val containerColor = when (displayMode) {
         WidgetDisplayMode.GLASS -> glassFallbackColor(0.2f)
         WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.tertiaryContainer
@@ -123,13 +125,12 @@ fun WeatherWidget(
                     )
                     Text(
                         text = "${weatherInfo!!.currentTemp.toInt()}°",
-                        style = MaterialTheme.typography.headlineLarge,
-                        color = contentColor,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold).withGlassShadow(isGlass),
+                        color = contentColor
                     )
                     Text(
                         text = weatherInfo?.cityName ?: "Today",
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.labelMedium.withGlassShadow(isGlass),
                         color = contentColor.copy(alpha = 0.7f)
                     )
                 }
@@ -145,7 +146,7 @@ fun WeatherWidget(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
                                 text = day.date.split("-").lastOrNull() ?: "",
-                                style = MaterialTheme.typography.labelSmall,
+                                style = MaterialTheme.typography.labelSmall.withGlassShadow(isGlass),
                                 color = contentColor.copy(alpha = 0.6f)
                             )
                             Spacer(Modifier.height(4.dp))
@@ -158,13 +159,12 @@ fun WeatherWidget(
                             Spacer(Modifier.height(4.dp))
                             Text(
                                 text = "${day.maxTemp.toInt()}°",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = contentColor,
-                                fontWeight = FontWeight.Bold
+                                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold).withGlassShadow(isGlass),
+                                color = contentColor
                             )
                             Text(
                                 text = "${day.minTemp.toInt()}°",
-                                style = MaterialTheme.typography.bodySmall,
+                                style = MaterialTheme.typography.bodySmall.withGlassShadow(isGlass),
                                 color = contentColor.copy(alpha = 0.5f)
                             )
                         }

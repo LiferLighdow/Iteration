@@ -399,7 +399,8 @@ fun LauncherScreen(
                                         id,
                                         mode
                                     )
-                                }
+                                },
+                                onAppClick = onAppClick
                             )
                         }
                         isDesktop -> {

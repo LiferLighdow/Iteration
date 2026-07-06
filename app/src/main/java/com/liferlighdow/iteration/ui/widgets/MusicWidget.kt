@@ -28,6 +28,7 @@ import com.liferlighdow.iteration.data.WidgetType
 import com.liferlighdow.iteration.service.NotificationService
 import com.liferlighdow.iteration.ui.glassFallbackColor
 import com.liferlighdow.iteration.ui.liquidGlass
+import com.liferlighdow.iteration.ui.withGlassShadow
 import com.liferlighdow.iteration.viewmodel.MainViewModel
 
 @Composable
@@ -63,6 +64,7 @@ fun StandardMusicWidget(
 
     val mediaInfo by NotificationService.currentMedia.collectAsState()
 
+    val isGlass = displayMode == WidgetDisplayMode.GLASS
     val containerColor = when (displayMode) {
         WidgetDisplayMode.GLASS -> glassFallbackColor(0.2f)
         WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.secondaryContainer
@@ -111,14 +113,14 @@ fun StandardMusicWidget(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = mediaInfo?.title ?: stringResource(R.string.no_music_playing),
-                        style = MaterialTheme.typography.titleSmall,
+                        style = MaterialTheme.typography.titleSmall.withGlassShadow(isGlass),
                         color = contentColor,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = mediaInfo?.artist ?: stringResource(R.string.unknown_artist),
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.labelSmall.withGlassShadow(isGlass),
                         color = contentColor.copy(alpha = 0.7f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -194,6 +196,7 @@ fun WideMusicWidget(
 
     val mediaInfo by NotificationService.currentMedia.collectAsState()
 
+    val isGlass = displayMode == WidgetDisplayMode.GLASS
     val containerColor = when (displayMode) {
         WidgetDisplayMode.GLASS -> glassFallbackColor(0.2f)
         WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.secondaryContainer
@@ -268,14 +271,14 @@ fun WideMusicWidget(
                     Column {
                         Text(
                             text = mediaInfo?.title ?: stringResource(R.string.no_music_playing),
-                            style = MaterialTheme.typography.titleMedium,
+                            style = MaterialTheme.typography.titleMedium.withGlassShadow(isGlass),
                             color = contentColor,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             text = mediaInfo?.artist ?: stringResource(R.string.unknown_artist),
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.bodyMedium.withGlassShadow(isGlass),
                             color = contentColor.copy(alpha = 0.7f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis

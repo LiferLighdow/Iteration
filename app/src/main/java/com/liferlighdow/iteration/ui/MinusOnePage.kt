@@ -1,7 +1,10 @@
 package com.liferlighdow.iteration.ui
 
 import android.content.Intent
-import android.provider.AlarmClock
+import android.net.Uri
+import android.provider.ContactsContract
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -9,10 +12,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -21,21 +26,25 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
 import com.kyant.backdrop.Backdrop
 import com.liferlighdow.iteration.viewmodel.MainViewModel
@@ -48,6 +57,8 @@ import com.liferlighdow.iteration.data.WeatherProvider
 import com.liferlighdow.iteration.data.WidgetDisplayMode
 import com.liferlighdow.iteration.data.WidgetModel
 import com.liferlighdow.iteration.data.WidgetType
+import com.liferlighdow.iteration.data.AppModel
+import com.liferlighdow.iteration.utils.IconShape
 
 @Composable
 fun MinusOnePage(
@@ -57,14 +68,21 @@ fun MinusOnePage(
     isEditMode: Boolean = false,
     onAddClick: () -> Unit,
     onRemoveWidget: (String) -> Unit,
-    onUpdateWidgetMode: (String, WidgetDisplayMode) -> Unit
+    onUpdateWidgetMode: (String, WidgetDisplayMode) -> Unit,
+    onAppClick: (AppModel) -> Unit
 ) {
     var isReorderMode by remember { mutableStateOf(false) }
     val effectiveEditMode = isEditMode || isReorderMode
+
+    // 搜尋相關狀態
+    var isSearching by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+    val focusManager = LocalFocusManager.current
     
     // 拖動相關狀態
     var draggingWidgetId by remember { mutableStateOf<String?>(null) }
-    var dragOffset by remember { mutableStateOf(Offset.Zero) }
+    var touchPosition by remember { mutableStateOf(Offset.Zero) }
+    var dragStartOffset by remember { mutableStateOf(Offset.Zero) }
     val widgetPositions = remember { mutableStateMapOf<String, Rect>() }
 
     var stackToEdit by remember { mutableStateOf<WidgetModel?>(null) }
@@ -74,6 +92,19 @@ fun MinusOnePage(
     var photoToPick by remember { mutableStateOf<WidgetModel?>(null) }
     var showCropDialogByUri by remember { mutableStateOf<android.net.Uri?>(null) }
     val mContext = LocalContext.current
+
+    // 主題偵測與顏色設定
+    val isDarkTheme = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val baseColor = if (isDarkTheme) Color.Black else Color.White
+    val contentColor = if (isDarkTheme) Color.White else Color.Black
+
+    if (isSearching) {
+        BackHandler {
+            isSearching = false
+            searchQuery = ""
+            focusManager.clearFocus()
+        }
+    }
 
     val photoPickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.GetContent()
@@ -94,312 +125,400 @@ fun MinusOnePage(
             .statusBarsPadding()
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            FilledTonalIconButton(
-                onClick = onAddClick,
-                shape = RoundedCornerShape(12.dp)
+            androidx.compose.animation.AnimatedVisibility(
+                visible = effectiveEditMode,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
             ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = stringResource(R.string.add),
-                    modifier = Modifier.size(24.dp)
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    FilledTonalIconButton(
+                        onClick = onAddClick,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = IconButtonDefaults.filledTonalIconButtonColors(
+                            containerColor = baseColor.copy(alpha = 0.4f),
+                            contentColor = contentColor
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = stringResource(R.string.add),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    Button(
+                        onClick = { isReorderMode = false },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = baseColor.copy(alpha = 0.4f),
+                            contentColor = contentColor
+                        )
+                    ) {
+                        Text(
+                            stringResource(R.string.done),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             }
 
-            IconButton(onClick = { isReorderMode = !isReorderMode }) {
-                Icon(
-                    Icons.Default.MoreVert,
-                    contentDescription = "Menu",
-                    tint = if (isReorderMode) MaterialTheme.colorScheme.primary else Color.White
+            androidx.compose.animation.AnimatedVisibility(
+                visible = !effectiveEditMode,
+                enter = fadeIn() + slideInVertically { -it },
+                exit = fadeOut() + slideOutVertically { -it }
+            ) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { 
+                        searchQuery = it 
+                        isSearching = it.isNotEmpty() || isSearching
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { 
+                        Text(
+                            stringResource(R.string.search_hint), 
+                            color = contentColor.copy(alpha = 0.6f)
+                        ) 
+                    },
+                    leadingIcon = { 
+                        Icon(
+                            Icons.Default.Search, 
+                            contentDescription = null, 
+                            tint = contentColor.copy(alpha = 0.7f) 
+                        ) 
+                    },
+                    trailingIcon = {
+                        if (isSearching) {
+                            IconButton(onClick = { 
+                                isSearching = false
+                                searchQuery = ""
+                                focusManager.clearFocus()
+                            }) {
+                                Icon(Icons.Default.Close, contentDescription = null, tint = contentColor)
+                            }
+                        }
+                    },
+                    shape = RoundedCornerShape(30.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = contentColor,
+                        unfocusedTextColor = contentColor,
+                        focusedContainerColor = baseColor.copy(alpha = 0.35f),
+                        unfocusedContainerColor = baseColor.copy(alpha = 0.3f),
+                        focusedBorderColor = contentColor.copy(alpha = 0.2f),
+                        unfocusedBorderColor = Color.Transparent
+                    ),
+                    singleLine = true
                 )
             }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(4),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            items(widgets, key = { it.id }, span = { widget ->
-                val span = if ((widget.type as? WidgetType.Photo)?.isWide == true ||
-                    (widget.type as? WidgetType.Calendar)?.isWide == true ||
-                    (widget.type as? WidgetType.Music)?.isWide == true ||
-                    (widget.type as? WidgetType.Note)?.isWide == true ||
-                    (widget.type as? WidgetType.Weather)?.isWide == true ||
-                    (widget.type as? WidgetType.Stack)?.isWide == true) 4 else 2
-                GridItemSpan(span)
-            }) { widget ->
-                var showContextMenu by remember { mutableStateOf(false) }
-                val index = widgets.indexOfFirst { it.id == widget.id }
-                val isDragging = draggingWidgetId == widget.id
-
-                val infiniteTransition = rememberInfiniteTransition(label = "jiggle")
-                val rotation by infiniteTransition.animateFloat(
-                    initialValue = -1.5f,
-                    targetValue = 1.5f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(150, easing = LinearEasing),
-                        repeatMode = RepeatMode.Reverse
-                    ),
-                    label = "jiggle"
-                )
-
-                Box(
-                    modifier = Modifier
-                        .onGloballyPositioned { layoutCoordinates ->
-                            val pos = layoutCoordinates.positionInRoot()
-                            widgetPositions[widget.id] = Rect(pos, layoutCoordinates.size.toSize())
-                        }
-                        .graphicsLayer {
-                            if (effectiveEditMode && !isDragging) {
-                                rotationZ = rotation
-                            }
-                            if (isDragging) {
-                                translationX = dragOffset.x
-                                translationY = dragOffset.y
-                                scaleX = 1.05f
-                                scaleY = 1.05f
-                                alpha = 0.9f
-                            }
-                        }
-                        .zIndex(if (isDragging) 10f else 0f)
-                        .pointerInput(widget.id, effectiveEditMode) {
-                            if (effectiveEditMode) {
-                                detectDragGesturesAfterLongPress(
-                                    onDragStart = { _ ->
-                                        draggingWidgetId = widget.id
-                                        dragOffset = Offset.Zero
-                                    },
-                                    onDrag = { change, dragAmount ->
-                                        change.consume()
-                                        dragOffset += dragAmount
-
-                                        val currentPos = widgetPositions[widget.id]?.center?.plus(dragOffset)
-                                        if (currentPos != null) {
-                                            val targetWidget = widgetPositions.entries.find { (id, rect) ->
-                                                id != widget.id && rect.contains(currentPos)
-                                            }
-                                            targetWidget?.let { (targetId, _) ->
-                                                val targetIndex = widgets.indexOfFirst { it.id == targetId }
-                                                if (targetIndex != -1 && index != -1 && targetIndex != index) {
-                                                    viewModel.reorderMinusOneWidgets(index, targetIndex)
-                                                }
-                                            }
-                                        }
-                                    },
-                                    onDragEnd = {
-                                        draggingWidgetId = null
-                                        dragOffset = Offset.Zero
-                                    },
-                                    onDragCancel = {
-                                        draggingWidgetId = null
-                                        dragOffset = Offset.Zero
-                                    }
-                                )
-                            }
-                        }
-                        .pointerInput(widget.type, effectiveEditMode) {
-                            if (!effectiveEditMode) {
-                                detectTapGestures(
-                                    onLongPress = {
-                                        if (widget.type is WidgetType.Stack) {
-                                            stackToEdit = widget
-                                        } else {
-                                            showContextMenu = true
-                                        }
-                                    },
-                                    onTap = {
-                                        when (widget.type) {
-                                            is WidgetType.Clock -> {
-                                                try {
-                                                    val intent = Intent(AlarmClock.ACTION_SHOW_ALARMS).apply {
-                                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                                    }
-                                                    mContext.startActivity(intent)
-                                                } catch (e: Exception) {
-                                                    try {
-                                                        val pm = mContext.packageManager
-                                                        val fallbackIntent = pm.getLaunchIntentForPackage("com.google.android.deskclock")
-                                                            ?: pm.getLaunchIntentForPackage("com.android.deskclock")
-                                                        if (fallbackIntent != null) mContext.startActivity(fallbackIntent)
-                                                    } catch (e2: Exception) {}
-                                                }
-                                            }
-                                            is WidgetType.Calendar -> {
-                                                try {
-                                                    val intent = Intent(Intent.ACTION_MAIN).apply {
-                                                        addCategory(Intent.CATEGORY_APP_CALENDAR)
-                                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                                    }
-                                                    mContext.startActivity(intent)
-                                                } catch (e: Exception) {}
-                                            }
-                                            is WidgetType.Music -> {
-                                                mediaInfo?.packageName?.let { pkg ->
-                                                    val intent = mContext.packageManager.getLaunchIntentForPackage(pkg)
-                                                    if (intent != null) mContext.startActivity(intent)
-                                                }
-                                            }
-                                            else -> {}
-                                        }
-                                    }
-                                )
-                            }
-                        }
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Widget Grid
+            androidx.compose.animation.AnimatedVisibility(
+                visible = !isSearching,
+                enter = fadeIn() + scaleIn(initialScale = 0.95f),
+                exit = fadeOut() + scaleOut(targetScale = 0.95f)
+            ) {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(4),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxSize()
                 ) {
-                    when (widget.type) {
-                        is WidgetType.Battery -> BatteryWidget(
-                            displayMode = widget.displayMode,
-                            backdrop = backdrop
-                        )
-                        is WidgetType.Clock -> AnalogClockWidget(
-                            displayMode = widget.displayMode,
-                            backdrop = backdrop
-                        )
-                        is WidgetType.Calendar -> CalendarWidget(
-                            widget = widget,
-                            displayMode = widget.displayMode,
-                            backdrop = backdrop
-                        )
-                        is WidgetType.Photo -> PhotoWidget(widget = widget, viewModel = viewModel)
-                        is WidgetType.Music -> MusicWidget(
-                            widget = widget,
-                            displayMode = widget.displayMode,
-                            backdrop = backdrop
-                        )
-                        is WidgetType.Note -> NoteWidget(
-                            widget = widget,
-                            displayMode = widget.displayMode,
-                            backdrop = backdrop
-                        )
-                        is WidgetType.Weather -> WeatherWidget(
-                            displayMode = widget.displayMode,
-                            backdrop = backdrop
-                        )
-                        is WidgetType.Stack -> StackWidget(
-                            widget = widget,
-                            viewModel = viewModel,
-                            backdrop = backdrop
-                        )
-                    }
+                    items(widgets, key = { it.id }, span = { widget ->
+                        val span = if ((widget.type as? WidgetType.Photo)?.isWide == true ||
+                            (widget.type as? WidgetType.Calendar)?.isWide == true ||
+                            (widget.type as? WidgetType.Music)?.isWide == true ||
+                            (widget.type as? WidgetType.Note)?.isWide == true ||
+                            (widget.type as? WidgetType.Weather)?.isWide == true ||
+                            (widget.type as? WidgetType.Stack)?.isWide == true) 4 else 2
+                        GridItemSpan(span)
+                    }) { widget ->
+                        var showContextMenu by remember { mutableStateOf(false) }
+                        val index = widgets.indexOfFirst { it.id == widget.id }
+                        val isDragging = draggingWidgetId == widget.id
 
-                    if (effectiveEditMode) {
+                        val infiniteTransition = rememberInfiniteTransition(label = "jiggle")
+                        val rotation by infiniteTransition.animateFloat(
+                            initialValue = -1.5f,
+                            targetValue = 1.5f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(150, easing = LinearEasing),
+                                repeatMode = RepeatMode.Reverse
+                            ),
+                            label = "jiggle"
+                        )
+
                         Box(
                             modifier = Modifier
-                                .align(Alignment.TopStart)
-                                .offset(x = (-6).dp, y = (-6).dp)
-                                .size(24.dp)
-                                .background(Color.Gray.copy(alpha = 0.9f), CircleShape)
-                                .clickable { onRemoveWidget(widget.id) },
-                            contentAlignment = Alignment.Center
+                                .onGloballyPositioned { layoutCoordinates ->
+                                    val pos = layoutCoordinates.positionInRoot()
+                                    widgetPositions[widget.id] = Rect(pos, layoutCoordinates.size.toSize())
+                                }
+                                .graphicsLayer {
+                                    if (effectiveEditMode && !isDragging) {
+                                        rotationZ = rotation
+                                    }
+                                    if (isDragging) {
+                                        val currentSlotPos = widgetPositions[widget.id]?.topLeft ?: Offset.Zero
+                                        translationX = touchPosition.x - currentSlotPos.x - dragStartOffset.x
+                                        translationY = touchPosition.y - currentSlotPos.y - dragStartOffset.y
+                                        scaleX = 1.06f
+                                        scaleY = 1.06f
+                                        alpha = 0.8f
+                                    }
+                                }
+                                .zIndex(if (isDragging) 10f else 0f)
+                                .pointerInput(widget.id, effectiveEditMode) {
+                                    if (effectiveEditMode) {
+                                        detectDragGesturesAfterLongPress(
+                                            onDragStart = { offset ->
+                                                draggingWidgetId = widget.id
+                                                dragStartOffset = offset
+                                                touchPosition = (widgetPositions[widget.id]?.topLeft ?: Offset.Zero) + offset
+                                            },
+                                            onDrag = { change, dragAmount ->
+                                                change.consume()
+                                                touchPosition += dragAmount
+
+                                                val currentCenter = touchPosition - dragStartOffset + 
+                                                    Offset(size.width / 2f, size.height / 2f)
+                                                
+                                                val targetEntry = widgetPositions.entries.find { (id, rect) ->
+                                                    id != widget.id && rect.contains(currentCenter)
+                                                }
+                                                
+                                                targetEntry?.let { (targetId, _) ->
+                                                    val targetIndex = widgets.indexOfFirst { it.id == targetId }
+                                                    if (targetIndex != -1 && index != -1 && targetIndex != index) {
+                                                        viewModel.reorderMinusOneWidgets(index, targetIndex)
+                                                    }
+                                                }
+                                            },
+                                            onDragEnd = { draggingWidgetId = null },
+                                            onDragCancel = { draggingWidgetId = null }
+                                        )
+                                    }
+                                }
+                                .pointerInput(widget.type, effectiveEditMode) {
+                                    if (!effectiveEditMode) {
+                                        detectTapGestures(
+                                            onLongPress = {
+                                                if (widget.type is WidgetType.Stack) {
+                                                    stackToEdit = widget
+                                                } else {
+                                                    showContextMenu = true
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
                         ) {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = "Remove",
-                                tint = Color.White,
-                                modifier = Modifier.size(16.dp)
-                            )
+                            when (widget.type) {
+                                is WidgetType.Battery -> BatteryWidget(displayMode = widget.displayMode, backdrop = backdrop)
+                                is WidgetType.Clock -> AnalogClockWidget(displayMode = widget.displayMode, backdrop = backdrop)
+                                is WidgetType.Calendar -> CalendarWidget(widget = widget, displayMode = widget.displayMode, backdrop = backdrop)
+                                is WidgetType.Photo -> PhotoWidget(widget = widget, viewModel = viewModel)
+                                is WidgetType.Music -> MusicWidget(widget = widget, displayMode = widget.displayMode, backdrop = backdrop)
+                                is WidgetType.Note -> NoteWidget(widget = widget, displayMode = widget.displayMode, backdrop = backdrop)
+                                is WidgetType.Weather -> WeatherWidget(displayMode = widget.displayMode, backdrop = backdrop)
+                                is WidgetType.Stack -> StackWidget(widget = widget, viewModel = viewModel, backdrop = backdrop)
+                            }
+
+                            if (effectiveEditMode) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopStart)
+                                        .offset(x = (-6).dp, y = (-6).dp)
+                                        .size(24.dp)
+                                        .background(Color.Gray.copy(alpha = 0.9f), CircleShape)
+                                        .clickable { onRemoveWidget(widget.id) },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.Close, "Remove", tint = Color.White, modifier = Modifier.size(16.dp))
+                                }
+                            }
+
+                            DropdownMenu(expanded = showContextMenu, onDismissRequest = { showContextMenu = false }) {
+                                if (widget.type !is WidgetType.Stack && widget.type !is WidgetType.Photo) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(if (widget.displayMode == WidgetDisplayMode.COLOR) R.string.widget_glass_mode else R.string.widget_color_mode)) },
+                                        leadingIcon = { Icon(if (widget.displayMode == WidgetDisplayMode.COLOR) Icons.Default.BlurOn else Icons.Default.Palette, null, tint = MaterialTheme.colorScheme.primary) },
+                                        onClick = {
+                                            onUpdateWidgetMode(widget.id, if (widget.displayMode == WidgetDisplayMode.COLOR) WidgetDisplayMode.GLASS else WidgetDisplayMode.COLOR)
+                                            showContextMenu = false
+                                        }
+                                    )
+                                }
+                                if (widget.type is WidgetType.Photo) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.choose_picture)) },
+                                        leadingIcon = { Icon(Icons.Default.AddAPhoto, null, tint = MaterialTheme.colorScheme.primary) },
+                                        onClick = {
+                                            photoToPick = widget
+                                            photoPickerLauncher.launch("image/*")
+                                            showContextMenu = false
+                                        }
+                                    )
+                                    if ((widget.type as WidgetType.Photo).uri != null) {
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(R.string.adjust_position)) },
+                                            leadingIcon = { Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary) },
+                                            onClick = { photoToAdjust = widget; showContextMenu = false }
+                                        )
+                                    }
+                                }
+                                if (widget.type is WidgetType.Stack) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.menu_choose_widgets)) },
+                                        leadingIcon = { Icon(Icons.Default.Settings, null) },
+                                        onClick = { stackToEdit = widget; showContextMenu = false }
+                                    )
+                                }
+                                if (widget.type is WidgetType.Note) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.edit_note)) },
+                                        leadingIcon = { Icon(Icons.Default.Edit, null) },
+                                        onClick = { noteToEdit = widget; showContextMenu = false }
+                                    )
+                                }
+                                if (widget.type is WidgetType.Weather) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.choose_location)) },
+                                        leadingIcon = { Icon(Icons.Default.LocationOn, null) },
+                                        onClick = { weatherToEdit = widget; showContextMenu = false }
+                                    )
+                                }
+                            }
                         }
                     }
 
-                    DropdownMenu(
-                        expanded = showContextMenu,
-                        onDismissRequest = { showContextMenu = false }
+                    // 底部 Edit 膠囊按鈕
+                    if (!effectiveEditMode) {
+                        item(span = { GridItemSpan(4) }) {
+                            Box(modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
+                                Surface(
+                                    onClick = { isReorderMode = true },
+                                    shape = RoundedCornerShape(20.dp),
+                                    color = baseColor.copy(alpha = 0.4f),
+                                    contentColor = contentColor
+                                ) {
+                                    Text("Edit", modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                    item(span = { GridItemSpan(4) }) { Spacer(modifier = Modifier.height(64.dp)) }
+                }
+            }
+
+            // Search Results
+            androidx.compose.animation.AnimatedVisibility(
+                visible = isSearching,
+                enter = fadeIn() + slideInVertically { it / 2 },
+                exit = fadeOut() + slideOutVertically { -it / 2 }
+            ) {
+                val allApps by viewModel.allApps.collectAsState()
+                val contacts by viewModel.contacts.collectAsState()
+                val iconShape by viewModel.iconShape.collectAsState()
+
+                val filteredApps = remember(searchQuery, allApps) {
+                    if (searchQuery.isBlank()) emptyList()
+                    else allApps.filter { !it.isHidden && it.label.contains(searchQuery, ignoreCase = true) }
+                }
+
+                val filteredContacts = remember(searchQuery, contacts) {
+                    if (searchQuery.isBlank()) emptyList()
+                    else contacts.filter { it.name.contains(searchQuery, ignoreCase = true) || it.phoneNumber.contains(searchQuery) }
+                }
+
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = baseColor.copy(alpha = 0.3f),
+                    shape = RoundedCornerShape(24.dp)
+                ) {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .pointerInput(Unit) {
+                                detectTapGestures(onTap = { focusManager.clearFocus() })
+                            }
+                            .padding(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        if (widget.type !is WidgetType.Stack && widget.type !is WidgetType.Photo) {
-                            if (widget.displayMode == WidgetDisplayMode.COLOR) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.widget_glass_mode)) },
-                                    leadingIcon = { Icon(Icons.Default.BlurOn, null, tint = MaterialTheme.colorScheme.primary) },
-                                    onClick = {
-                                        onUpdateWidgetMode(widget.id, WidgetDisplayMode.GLASS)
-                                        showContextMenu = false
-                                    }
-                                )
-                            } else {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.widget_color_mode)) },
-                                    leadingIcon = { Icon(Icons.Default.Palette, null, tint = MaterialTheme.colorScheme.primary) },
-                                    onClick = {
-                                        onUpdateWidgetMode(widget.id, WidgetDisplayMode.COLOR)
-                                        showContextMenu = false
-                                    }
-                                )
-                            }
-                        }
-                        if (widget.type is WidgetType.Photo) {
-                            val type = widget.type as WidgetType.Photo
-                            
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.choose_picture)) },
-                                leadingIcon = { Icon(Icons.Default.AddAPhoto, null, tint = MaterialTheme.colorScheme.primary) },
-                                onClick = {
-                                    photoToPick = widget
-                                    photoPickerLauncher.launch("image/*")
-                                    showContextMenu = false
-                                }
-                            )
-
-                            if (type.uri != null) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.adjust_position)) },
-                                    leadingIcon = { Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary) },
-                                    onClick = {
-                                        photoToAdjust = widget
-                                        showContextMenu = false
-                                    }
-                                )
-                            }
-                        }
-                        if (widget.type is WidgetType.Stack) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.menu_choose_widgets)) },
-                                leadingIcon = { Icon(Icons.Default.Settings, null) },
-                                onClick = {
-                                    stackToEdit = widget
-                                    showContextMenu = false
-                                }
-                            )
-                        }
-                        if (widget.type is WidgetType.Note) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.edit_note)) },
-                                leadingIcon = { Icon(Icons.Default.Edit, null) },
-                                onClick = {
-                                    noteToEdit = widget
-                                    showContextMenu = false
-                                }
-                            )
-                        }
-                        if (widget.type is WidgetType.Weather) {
-                            val currentProvider by viewModel.weatherProvider.collectAsState()
-                            
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.choose_location)) },
-                                leadingIcon = { Icon(Icons.Default.LocationOn, null) },
-                                onClick = {
-                                    weatherToEdit = widget
-                                    showContextMenu = false
-                                }
-                            )
-
-                            DropdownMenuItem(
-                                text = { Text(stringResource(if (currentProvider == WeatherProvider.MET_NORWAY) R.string.use_open_meteo else R.string.use_met_norway)) },
-                                leadingIcon = { Icon(Icons.Default.Cloud, null) },
-                                onClick = {
-                                    viewModel.setWeatherProvider(
-                                        if (currentProvider == WeatherProvider.MET_NORWAY) WeatherProvider.OPEN_METEO
-                                        else WeatherProvider.MET_NORWAY
+                        if (searchQuery.isNotEmpty()) {
+                            if (filteredApps.isNotEmpty()) {
+                                item { Text(stringResource(R.string.apps), color = contentColor.copy(alpha = 0.6f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(vertical = 8.dp)) }
+                                items(filteredApps) { app ->
+                                    ListItem(
+                                        headlineContent = { Text(app.label, color = contentColor) },
+                                        leadingContent = {
+                                            viewModel.getIcon(app.packageName)?.let { icon ->
+                                                val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(48.dp * 0.238f)
+                                                Image(bitmap = icon, contentDescription = null, modifier = Modifier.size(48.dp).clip(shape).background(Color.White))
+                                            }
+                                        },
+                                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                        modifier = Modifier.clickable { 
+                                            onAppClick(app)
+                                            isSearching = false; searchQuery = ""; focusManager.clearFocus()
+                                        }
                                     )
-                                    showContextMenu = false
                                 }
-                            )
+                            }
+
+                            if (filteredContacts.isNotEmpty()) {
+                                item { Text(stringResource(R.string.contacts), color = contentColor.copy(alpha = 0.6f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(vertical = 8.dp)) }
+                                items(filteredContacts) { contact ->
+                                    ListItem(
+                                        headlineContent = { Text(contact.name, color = contentColor) },
+                                        supportingContent = { Text(contact.phoneNumber, color = contentColor.copy(alpha = 0.6f)) },
+                                        leadingContent = {
+                                            if (contact.photo != null) Image(bitmap = contact.photo.asImageBitmap(), contentDescription = null, modifier = Modifier.size(40.dp).clip(CircleShape))
+                                            else Box(modifier = Modifier.size(40.dp).background(contentColor.copy(alpha = 0.2f), CircleShape), contentAlignment = Alignment.Center) { Icon(Icons.Default.Person, null, tint = contentColor) }
+                                        },
+                                        trailingContent = {
+                                            IconButton(onClick = {
+                                                mContext.startActivity(Intent(Intent.ACTION_DIAL, android.net.Uri.parse("tel:${contact.phoneNumber}")))
+                                                isSearching = false; searchQuery = ""; focusManager.clearFocus()
+                                            }) { Icon(Icons.Default.Call, null, tint = contentColor) }
+                                        },
+                                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                        modifier = Modifier.clickable {
+                                            val intent = Intent(Intent.ACTION_VIEW).apply { data = android.net.Uri.withAppendedPath(ContactsContract.Contacts.CONTENT_URI, contact.id) }
+                                            mContext.startActivity(intent)
+                                            isSearching = false; searchQuery = ""; focusManager.clearFocus()
+                                        }
+                                    )
+                                }
+                            }
+                            
+                            item {
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = contentColor.copy(alpha = 0.1f))
+                                val searchEngineUrl by viewModel.searchEngineUrl.collectAsState()
+                                ListItem(
+                                    headlineContent = { Text(stringResource(R.string.search_web), color = contentColor) },
+                                    leadingContent = { Icon(Icons.Default.Language, null, tint = contentColor) },
+                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                    modifier = Modifier.clickable {
+                                        mContext.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("${searchEngineUrl}${searchQuery}")))
+                                        isSearching = false; searchQuery = ""; focusManager.clearFocus()
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -407,15 +526,14 @@ fun MinusOnePage(
         }
     }
 
+    // Dialogs
     if (stackToEdit != null) {
         WidgetStackPickerDialog(
             currentChildren = (stackToEdit!!.type as WidgetType.Stack).children,
             isWide = (stackToEdit!!.type as WidgetType.Stack).isWide,
             viewModel = viewModel,
             onDismiss = { stackToEdit = null },
-            onConfirm = { newChildren ->
-                viewModel.updateStackChildren(stackToEdit!!.id, newChildren)
-            }
+            onConfirm = { newChildren -> viewModel.updateStackChildren(stackToEdit!!.id, newChildren) }
         )
     }
 
@@ -429,10 +547,7 @@ fun MinusOnePage(
     }
 
     if (weatherToEdit != null) {
-        LocationSearchDialog(
-            viewModel = viewModel,
-            onDismiss = { weatherToEdit = null }
-        )
+        LocationSearchDialog(viewModel = viewModel, onDismiss = { weatherToEdit = null })
     }
 
     if (photoToAdjust != null) {
@@ -460,8 +575,7 @@ fun MinusOnePage(
             onConfirm = { cropped ->
                 viewModel.saveWidgetPhoto(photoToPick!!.id, cropped)
                 viewModel.updatePhotoWidgetUri(photoToPick!!.id, showCropDialogByUri.toString())
-                showCropDialogByUri = null
-                photoToPick = null
+                showCropDialogByUri = null; photoToPick = null
             }
         )
     }

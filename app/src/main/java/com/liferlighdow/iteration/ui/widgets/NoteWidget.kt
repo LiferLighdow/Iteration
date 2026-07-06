@@ -16,6 +16,7 @@ import com.liferlighdow.iteration.data.WidgetModel
 import com.liferlighdow.iteration.data.WidgetType
 import com.liferlighdow.iteration.ui.glassFallbackColor
 import com.liferlighdow.iteration.ui.liquidGlass
+import com.liferlighdow.iteration.ui.withGlassShadow
 import com.liferlighdow.iteration.viewmodel.MainViewModel
 
 @Composable
@@ -38,6 +39,7 @@ fun NoteWidget(
 
     val useLiquid = displayMode == WidgetDisplayMode.GLASS && isLiquidGlassEnabled && isLiquidWidgetsEnabled && backdrop != null
 
+    val isGlass = displayMode == WidgetDisplayMode.GLASS
     val containerColor = when (displayMode) {
         WidgetDisplayMode.GLASS -> glassFallbackColor(0.2f)
         WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.secondaryContainer
@@ -70,7 +72,8 @@ fun NoteWidget(
         ) {
             Text(
                 text = text.ifEmpty { "Tap to edit note..." },
-                style = if (isWide) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.bodyMedium,
+                style = (if (isWide) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.bodyMedium)
+                    .withGlassShadow(isGlass),
                 color = if (text.isEmpty()) contentColor.copy(alpha = 0.5f) else contentColor,
                 overflow = TextOverflow.Ellipsis
             )
