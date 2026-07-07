@@ -118,6 +118,15 @@ fun MinusOnePage(
     }
     val mediaInfo by NotificationService.currentMedia.collectAsState()
 
+    val isLiquidGlassEnabled by viewModel.isLiquidGlassEnabled.collectAsState()
+    val isMinusOneSearchGlassEnabled by viewModel.isLiquidGlassMinusOneSearchEnabled.collectAsState()
+    val isMinusOneButtonGlassEnabled by viewModel.isLiquidGlassMinusOneButtonEnabled.collectAsState()
+
+    val blurRadius by viewModel.liquidGlassBlur.collectAsState()
+    val refractionHeight by viewModel.liquidGlassRefractionHeight.collectAsState()
+    val refractionAmount by viewModel.liquidGlassRefractionAmount.collectAsState()
+    val chromaticAberration by viewModel.liquidGlassChromaticAberration.collectAsState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -143,9 +152,18 @@ fun MinusOnePage(
                 ) {
                     FilledTonalIconButton(
                         onClick = onAddClick,
+                        modifier = Modifier.liquidGlass(
+                            enabled = isLiquidGlassEnabled && isMinusOneButtonGlassEnabled,
+                            backdrop = backdrop,
+                            cornerRadius = 12.dp,
+                            blurRadius = blurRadius,
+                            refractionHeight = refractionHeight,
+                            refractionAmount = refractionAmount,
+                            chromaticAberration = chromaticAberration
+                        ),
                         shape = RoundedCornerShape(12.dp),
                         colors = IconButtonDefaults.filledTonalIconButtonColors(
-                            containerColor = baseColor.copy(alpha = 0.4f),
+                            containerColor = if (isLiquidGlassEnabled && isMinusOneButtonGlassEnabled) Color.Transparent else baseColor.copy(alpha = 0.4f),
                             contentColor = contentColor
                         )
                     ) {
@@ -158,9 +176,18 @@ fun MinusOnePage(
 
                     Button(
                         onClick = { isReorderMode = false },
+                        modifier = Modifier.liquidGlass(
+                            enabled = isLiquidGlassEnabled && isMinusOneButtonGlassEnabled,
+                            backdrop = backdrop,
+                            cornerRadius = 12.dp,
+                            blurRadius = blurRadius,
+                            refractionHeight = refractionHeight,
+                            refractionAmount = refractionAmount,
+                            chromaticAberration = chromaticAberration
+                        ),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = baseColor.copy(alpha = 0.4f),
+                            containerColor = if (isLiquidGlassEnabled && isMinusOneButtonGlassEnabled) Color.Transparent else baseColor.copy(alpha = 0.4f),
                             contentColor = contentColor
                         )
                     ) {
@@ -184,7 +211,15 @@ fun MinusOnePage(
                         searchQuery = it 
                         isSearching = it.isNotEmpty() || isSearching
                     },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().liquidGlass(
+                        enabled = isLiquidGlassEnabled && isMinusOneSearchGlassEnabled,
+                        backdrop = backdrop,
+                        cornerRadius = 30.dp,
+                        blurRadius = blurRadius,
+                        refractionHeight = refractionHeight,
+                        refractionAmount = refractionAmount,
+                        chromaticAberration = chromaticAberration
+                    ),
                     placeholder = { 
                         Text(
                             stringResource(R.string.search_hint), 
@@ -213,9 +248,9 @@ fun MinusOnePage(
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = contentColor,
                         unfocusedTextColor = contentColor,
-                        focusedContainerColor = baseColor.copy(alpha = 0.35f),
-                        unfocusedContainerColor = baseColor.copy(alpha = 0.3f),
-                        focusedBorderColor = contentColor.copy(alpha = 0.2f),
+                        focusedContainerColor = if (isLiquidGlassEnabled && isMinusOneSearchGlassEnabled) Color.Transparent else baseColor.copy(alpha = 0.35f),
+                        unfocusedContainerColor = if (isLiquidGlassEnabled && isMinusOneSearchGlassEnabled) Color.Transparent else baseColor.copy(alpha = 0.3f),
+                        focusedBorderColor = if (isLiquidGlassEnabled && isMinusOneSearchGlassEnabled) contentColor.copy(alpha = 0.1f) else contentColor.copy(alpha = 0.2f),
                         unfocusedBorderColor = Color.Transparent
                     ),
                     singleLine = true
@@ -328,14 +363,14 @@ fun MinusOnePage(
                                 }
                         ) {
                             when (widget.type) {
-                                is WidgetType.Battery -> BatteryWidget(displayMode = widget.displayMode, backdrop = backdrop)
-                                is WidgetType.Clock -> AnalogClockWidget(displayMode = widget.displayMode, backdrop = backdrop)
-                                is WidgetType.Calendar -> CalendarWidget(widget = widget, displayMode = widget.displayMode, backdrop = backdrop)
+                                is WidgetType.Battery -> BatteryWidget(displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
+                                is WidgetType.Clock -> AnalogClockWidget(displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
+                                is WidgetType.Calendar -> CalendarWidget(widget = widget, displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
                                 is WidgetType.Photo -> PhotoWidget(widget = widget, viewModel = viewModel)
-                                is WidgetType.Music -> MusicWidget(widget = widget, displayMode = widget.displayMode, backdrop = backdrop)
-                                is WidgetType.Note -> NoteWidget(widget = widget, displayMode = widget.displayMode, backdrop = backdrop)
-                                is WidgetType.Weather -> WeatherWidget(displayMode = widget.displayMode, backdrop = backdrop)
-                                is WidgetType.Stack -> StackWidget(widget = widget, viewModel = viewModel, backdrop = backdrop)
+                                is WidgetType.Music -> MusicWidget(widget = widget, displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
+                                is WidgetType.Note -> NoteWidget(widget = widget, displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
+                                is WidgetType.Weather -> WeatherWidget(displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
+                                is WidgetType.Stack -> StackWidget(widget = widget, viewModel = viewModel, backdrop = backdrop, isMinusOnePage = true)
                             }
 
                             if (effectiveEditMode) {
@@ -412,8 +447,17 @@ fun MinusOnePage(
                             Box(modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
                                 Surface(
                                     onClick = { isReorderMode = true },
+                                    modifier = Modifier.liquidGlass(
+                                        enabled = isLiquidGlassEnabled && isMinusOneButtonGlassEnabled,
+                                        backdrop = backdrop,
+                                        cornerRadius = 20.dp,
+                                        blurRadius = blurRadius,
+                                        refractionHeight = refractionHeight,
+                                        refractionAmount = refractionAmount,
+                                        chromaticAberration = chromaticAberration
+                                    ),
                                     shape = RoundedCornerShape(20.dp),
-                                    color = baseColor.copy(alpha = 0.4f),
+                                    color = if (isLiquidGlassEnabled && isMinusOneButtonGlassEnabled) Color.Transparent else baseColor.copy(alpha = 0.4f),
                                     contentColor = contentColor
                                 ) {
                                     Text("Edit", modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
@@ -463,12 +507,18 @@ fun MinusOnePage(
                             if (filteredApps.isNotEmpty()) {
                                 item { Text(stringResource(R.string.apps), color = contentColor.copy(alpha = 0.6f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(vertical = 8.dp)) }
                                 items(filteredApps) { app ->
+                                    val iconSignal by viewModel.iconUpdateSignal.collectAsState()
+                                    val appIcon = remember(app.uniqueId, iconSignal) {
+                                        viewModel.getIcon(app.uniqueId)
+                                    }
                                     ListItem(
                                         headlineContent = { Text(app.label, color = contentColor) },
                                         leadingContent = {
-                                            viewModel.getIcon(app.packageName)?.let { icon ->
+                                            if (appIcon != null) {
                                                 val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(48.dp * 0.238f)
-                                                Image(bitmap = icon, contentDescription = null, modifier = Modifier.size(48.dp).clip(shape).background(Color.White))
+                                                Image(bitmap = appIcon, contentDescription = null, modifier = Modifier.size(48.dp).clip(shape).background(Color.White))
+                                            } else {
+                                                Box(modifier = Modifier.size(48.dp).background(contentColor.copy(alpha = 0.1f), CircleShape))
                                             }
                                         },
                                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),

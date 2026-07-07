@@ -1188,6 +1188,9 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
     val isLiquidGlassGlobalSearchEnabled by viewModel.isLiquidGlassGlobalSearchEnabled.collectAsState()
     val isLiquidGlassAppLibrarySearchEnabled by viewModel.isLiquidGlassAppLibrarySearchEnabled.collectAsState()
     val isLiquidGlassWidgetsEnabled by viewModel.isLiquidGlassWidgetsEnabled.collectAsState()
+    val isLiquidGlassMinusOneWidgetEnabled by viewModel.isLiquidGlassMinusOneWidgetEnabled.collectAsState()
+    val isLiquidGlassMinusOneSearchEnabled by viewModel.isLiquidGlassMinusOneSearchEnabled.collectAsState()
+    val isLiquidGlassMinusOneButtonEnabled by viewModel.isLiquidGlassMinusOneButtonEnabled.collectAsState()
 
     val blurRadius by viewModel.liquidGlassBlur.collectAsState()
     val refractionHeight by viewModel.liquidGlassRefractionHeight.collectAsState()
@@ -1471,6 +1474,54 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
                             )
                         },
                         modifier = Modifier.clickable { viewModel.setLiquidGlassWidgetsEnabled(!isLiquidGlassWidgetsEnabled) }
+                    )
+                }
+
+                item {
+                    Text(
+                        text = stringResource(R.string.minus_one_title),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                }
+                item {
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.glass_minus_one_widget)) },
+                        supportingContent = { Text(stringResource(R.string.glass_minus_one_widget_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = isLiquidGlassMinusOneWidgetEnabled,
+                                onCheckedChange = { viewModel.setLiquidGlassMinusOneWidgetEnabled(it) }
+                            )
+                        },
+                        modifier = Modifier.clickable { viewModel.setLiquidGlassMinusOneWidgetEnabled(!isLiquidGlassMinusOneWidgetEnabled) }
+                    )
+                }
+                item {
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.glass_minus_one_search)) },
+                        supportingContent = { Text(stringResource(R.string.glass_minus_one_search_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = isLiquidGlassMinusOneSearchEnabled,
+                                onCheckedChange = { viewModel.setLiquidGlassMinusOneSearchEnabled(it) }
+                            )
+                        },
+                        modifier = Modifier.clickable { viewModel.setLiquidGlassMinusOneSearchEnabled(!isLiquidGlassMinusOneSearchEnabled) }
+                    )
+                }
+                item {
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.glass_minus_one_button)) },
+                        supportingContent = { Text(stringResource(R.string.glass_minus_one_button_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = isLiquidGlassMinusOneButtonEnabled,
+                                onCheckedChange = { viewModel.setLiquidGlassMinusOneButtonEnabled(it) }
+                            )
+                        },
+                        modifier = Modifier.clickable { viewModel.setLiquidGlassMinusOneButtonEnabled(!isLiquidGlassMinusOneButtonEnabled) }
                     )
                 }
 

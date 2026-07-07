@@ -234,6 +234,12 @@
     <string name="glass_folders_library_desc">為應用程式庫的資料夾啟用液態玻璃效果</string>
     <string name="glass_search_library">搜尋框</string>
     <string name="glass_search_library_desc">為應用程式庫的搜尋框啟用液態玻璃效果</string>
+    <string name="glass_minus_one_widget">負一頁小工具</string>
+    <string name="glass_minus_one_widget_desc">為負一頁的小工具啟用液態玻璃效果</string>
+    <string name="glass_minus_one_search">負一頁搜尋框</string>
+    <string name="glass_minus_one_search_desc">為負一頁的搜尋框啟用液態玻璃效果</string>
+    <string name="glass_minus_one_button">負一頁按鈕</string>
+    <string name="glass_minus_one_button_desc">為負一頁的按鈕啟用液態玻璃效果</string>
     <string name="desktop_settings_title">桌面設定</string>
     <string name="show_minus_one">顯示負一頁</string>
     <string name="show_minus_one_desc">切換左側的小工具頁面</string>

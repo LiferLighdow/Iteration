@@ -36,13 +36,14 @@ fun MusicWidget(
     widget: WidgetModel,
     displayMode: WidgetDisplayMode,
     modifier: Modifier = Modifier,
-    backdrop: Backdrop? = null
+    backdrop: Backdrop? = null,
+    isMinusOnePage: Boolean = false
 ) {
     val isWide = (widget.type as? WidgetType.Music)?.isWide ?: false
     if (isWide) {
-        WideMusicWidget(displayMode, modifier, backdrop)
+        WideMusicWidget(displayMode, modifier, backdrop, isMinusOnePage)
     } else {
-        StandardMusicWidget(displayMode, modifier, backdrop)
+        StandardMusicWidget(displayMode, modifier, backdrop, isMinusOnePage)
     }
 }
 
@@ -50,11 +51,12 @@ fun MusicWidget(
 fun StandardMusicWidget(
     displayMode: WidgetDisplayMode,
     modifier: Modifier = Modifier,
-    backdrop: Backdrop? = null
+    backdrop: Backdrop? = null,
+    isMinusOnePage: Boolean = false
 ) {
     val viewModel: MainViewModel = viewModel()
     val isLiquidGlassEnabled by viewModel.isLiquidGlassEnabled.collectAsState()
-    val isLiquidWidgetsEnabled by viewModel.isLiquidGlassWidgetsEnabled.collectAsState()
+    val isLiquidWidgetsEnabled by (if (isMinusOnePage) viewModel.isLiquidGlassMinusOneWidgetEnabled else viewModel.isLiquidGlassWidgetsEnabled).collectAsState()
     val blurRadius by viewModel.liquidGlassBlur.collectAsState()
     val refractionHeight by viewModel.liquidGlassRefractionHeight.collectAsState()
     val refractionAmount by viewModel.liquidGlassRefractionAmount.collectAsState()
@@ -182,11 +184,12 @@ fun StandardMusicWidget(
 fun WideMusicWidget(
     displayMode: WidgetDisplayMode,
     modifier: Modifier = Modifier,
-    backdrop: Backdrop? = null
+    backdrop: Backdrop? = null,
+    isMinusOnePage: Boolean = false
 ) {
     val viewModel: MainViewModel = viewModel()
     val isLiquidGlassEnabled by viewModel.isLiquidGlassEnabled.collectAsState()
-    val isLiquidWidgetsEnabled by viewModel.isLiquidGlassWidgetsEnabled.collectAsState()
+    val isLiquidWidgetsEnabled by (if (isMinusOnePage) viewModel.isLiquidGlassMinusOneWidgetEnabled else viewModel.isLiquidGlassWidgetsEnabled).collectAsState()
     val blurRadius by viewModel.liquidGlassBlur.collectAsState()
     val refractionHeight by viewModel.liquidGlassRefractionHeight.collectAsState()
     val refractionAmount by viewModel.liquidGlassRefractionAmount.collectAsState()

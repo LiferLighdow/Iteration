@@ -115,6 +115,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         MutableStateFlow(prefs.getBoolean("liquid_glass_widgets", false))
     val isLiquidGlassWidgetsEnabled = _isLiquidGlassWidgetsEnabled.asStateFlow()
 
+    internal val _isLiquidGlassMinusOneWidgetEnabled =
+        MutableStateFlow(prefs.getBoolean("liquid_glass_minus_one_widget", false))
+    val isLiquidGlassMinusOneWidgetEnabled = _isLiquidGlassMinusOneWidgetEnabled.asStateFlow()
+
+    internal val _isLiquidGlassMinusOneSearchEnabled =
+        MutableStateFlow(prefs.getBoolean("liquid_glass_minus_one_search", false))
+    val isLiquidGlassMinusOneSearchEnabled = _isLiquidGlassMinusOneSearchEnabled.asStateFlow()
+
+    internal val _isLiquidGlassMinusOneButtonEnabled =
+        MutableStateFlow(prefs.getBoolean("liquid_glass_minus_one_button", false))
+    val isLiquidGlassMinusOneButtonEnabled = _isLiquidGlassMinusOneButtonEnabled.asStateFlow()
+
     internal val _isNetworkAccessEnabled =
         MutableStateFlow(prefs.getBoolean("network_access_enabled", true))
     val isNetworkAccessEnabled = _isNetworkAccessEnabled.asStateFlow()
@@ -532,6 +544,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             "liquid_glass_refraction_height" -> _liquidGlassRefractionHeight.value = sharedPreferences.getFloat(key, 24f)
             "liquid_glass_refraction_amount" -> _liquidGlassRefractionAmount.value = sharedPreferences.getFloat(key, 48f)
             "liquid_glass_chromatic_aberration" -> _liquidGlassChromaticAberration.value = sharedPreferences.getBoolean(key, true)
+            "liquid_glass_minus_one_widget" -> _isLiquidGlassMinusOneWidgetEnabled.value = sharedPreferences.getBoolean(key, false)
+            "liquid_glass_minus_one_search" -> _isLiquidGlassMinusOneSearchEnabled.value = sharedPreferences.getBoolean(key, false)
+            "liquid_glass_minus_one_button" -> _isLiquidGlassMinusOneButtonEnabled.value = sharedPreferences.getBoolean(key, false)
             "themed_icons" -> _isThemedIconsEnabled.value = sharedPreferences.getBoolean(key, false)
             "show_minus_one" -> _showMinusOnePage.value = sharedPreferences.getBoolean(key, true)
             "show_app_library" -> _showAppLibrary.value = sharedPreferences.getBoolean(key, true)

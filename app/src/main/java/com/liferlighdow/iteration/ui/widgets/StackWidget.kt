@@ -28,7 +28,8 @@ fun StackWidget(
     widget: WidgetModel,
     viewModel: MainViewModel,
     modifier: Modifier = Modifier,
-    backdrop: Backdrop? = null
+    backdrop: Backdrop? = null,
+    isMinusOnePage: Boolean = false
 ) {
     val isWide = (widget.type as? WidgetType.Stack)?.isWide ?: false
     val stackItems = (widget.type as? WidgetType.Stack)?.children ?: emptyList()
@@ -52,13 +53,13 @@ fun StackWidget(
                     val item = stackItems[page]
                     Box(modifier = Modifier.fillMaxSize()) {
                         when (item.type) {
-                            is WidgetType.Battery -> BatteryWidget(displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop)
-                            is WidgetType.Clock -> AnalogClockWidget(displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop)
-                            is WidgetType.Calendar -> CalendarWidget(widget = item, displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop)
+                            is WidgetType.Battery -> BatteryWidget(displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage)
+                            is WidgetType.Clock -> AnalogClockWidget(displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage)
+                            is WidgetType.Calendar -> CalendarWidget(widget = item, displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage)
                             is WidgetType.Photo -> PhotoWidget(widget = item, viewModel = viewModel, modifier = Modifier.fillMaxSize())
-                            is WidgetType.Music -> MusicWidget(widget = item, displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop)
-                            is WidgetType.Note -> NoteWidget(widget = item, displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop)
-                            is WidgetType.Weather -> WeatherWidget(displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop)
+                            is WidgetType.Music -> MusicWidget(widget = item, displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage)
+                            is WidgetType.Note -> NoteWidget(widget = item, displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage)
+                            is WidgetType.Weather -> WeatherWidget(displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage)
                             else -> {}
                         }
                     }

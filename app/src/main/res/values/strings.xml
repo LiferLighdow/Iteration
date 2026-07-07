@@ -263,6 +263,12 @@
     <string name="glass_folders_library_desc">Enable glass effect for app library folders</string>
     <string name="glass_search_library">Search Bar</string>
     <string name="glass_search_library_desc">Enable glass effect for the app library search bar</string>
+    <string name="glass_minus_one_widget">Minus One Page Widgets</string>
+    <string name="glass_minus_one_widget_desc">Enable glass effect for widgets on the minus one page</string>
+    <string name="glass_minus_one_search">Minus One Page Search Bar</string>
+    <string name="glass_minus_one_search_desc">Enable glass effect for the search bar on minus one page</string>
+    <string name="glass_minus_one_button">Minus One Page Buttons</string>
+    <string name="glass_minus_one_button_desc">Enable glass effect for buttons on the minus one page</string>
 
     <!-- Settings - Desktop & Layout -->
     <string name="desktop_settings_title">Desktop Settings</string>

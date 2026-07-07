@@ -24,14 +24,15 @@ fun NoteWidget(
     widget: WidgetModel,
     displayMode: WidgetDisplayMode,
     modifier: Modifier = Modifier,
-    backdrop: Backdrop? = null
+    backdrop: Backdrop? = null,
+    isMinusOnePage: Boolean = false
 ) {
     val isWide = (widget.type as? WidgetType.Note)?.isWide ?: false
     val text = (widget.type as? WidgetType.Note)?.text ?: ""
 
     val viewModel: MainViewModel = viewModel()
     val isLiquidGlassEnabled by viewModel.isLiquidGlassEnabled.collectAsState()
-    val isLiquidWidgetsEnabled by viewModel.isLiquidGlassWidgetsEnabled.collectAsState()
+    val isLiquidWidgetsEnabled by (if (isMinusOnePage) viewModel.isLiquidGlassMinusOneWidgetEnabled else viewModel.isLiquidGlassWidgetsEnabled).collectAsState()
     val blurRadius by viewModel.liquidGlassBlur.collectAsState()
     val refractionHeight by viewModel.liquidGlassRefractionHeight.collectAsState()
     val refractionAmount by viewModel.liquidGlassRefractionAmount.collectAsState()

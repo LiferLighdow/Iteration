@@ -20,6 +20,9 @@ fun MainViewModel.exportConfig(): String {
             liquidGlassGlobalSearch = _isLiquidGlassGlobalSearchEnabled.value,
             liquidGlassAppLibrarySearch = _isLiquidGlassAppLibrarySearchEnabled.value,
             liquidGlassWidgets = _isLiquidGlassWidgetsEnabled.value,
+            liquidGlassMinusOneWidget = _isLiquidGlassMinusOneWidgetEnabled.value,
+            liquidGlassMinusOneSearch = _isLiquidGlassMinusOneSearchEnabled.value,
+            liquidGlassMinusOneButton = _isLiquidGlassMinusOneButtonEnabled.value,
             networkAccessEnabled = _isNetworkAccessEnabled.value,
             showMinusOne = _showMinusOnePage.value,
             showAppLibrary = _showAppLibrary.value,
@@ -104,6 +107,9 @@ fun MainViewModel.applyConfig(config: LauncherConfig) {
     _isLiquidGlassGlobalSearchEnabled.value = settings.liquidGlassGlobalSearch
     _isLiquidGlassAppLibrarySearchEnabled.value = settings.liquidGlassAppLibrarySearch
     _isLiquidGlassWidgetsEnabled.value = settings.liquidGlassWidgets
+    _isLiquidGlassMinusOneWidgetEnabled.value = settings.liquidGlassMinusOneWidget
+    _isLiquidGlassMinusOneSearchEnabled.value = settings.liquidGlassMinusOneSearch
+    _isLiquidGlassMinusOneButtonEnabled.value = settings.liquidGlassMinusOneButton
     _isNetworkAccessEnabled.value = settings.networkAccessEnabled
     _showMinusOnePage.value = settings.showMinusOne
     _showAppLibrary.value = settings.showAppLibrary
@@ -120,6 +126,9 @@ fun MainViewModel.applyConfig(config: LauncherConfig) {
         putBoolean("liquid_glass_global_search", settings.liquidGlassGlobalSearch)
         putBoolean("liquid_glass_app_library_search", settings.liquidGlassAppLibrarySearch)
         putBoolean("liquid_glass_widgets", settings.liquidGlassWidgets)
+        putBoolean("liquid_glass_minus_one_widget", settings.liquidGlassMinusOneWidget)
+        putBoolean("liquid_glass_minus_one_search", settings.liquidGlassMinusOneSearch)
+        putBoolean("liquid_glass_minus_one_button", settings.liquidGlassMinusOneButton)
         putBoolean("network_access_enabled", settings.networkAccessEnabled)
         putBoolean("show_minus_one", settings.showMinusOne)
         putBoolean("show_app_library", settings.showAppLibrary)

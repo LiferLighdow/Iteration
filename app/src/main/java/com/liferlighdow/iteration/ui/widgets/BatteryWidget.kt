@@ -29,11 +29,12 @@ import com.liferlighdow.iteration.viewmodel.MainViewModel
 fun BatteryWidget(
     displayMode: WidgetDisplayMode,
     modifier: Modifier = Modifier,
-    backdrop: Backdrop? = null
+    backdrop: Backdrop? = null,
+    isMinusOnePage: Boolean = false
 ) {
     val viewModel: MainViewModel = viewModel()
     val isLiquidGlassEnabled by viewModel.isLiquidGlassEnabled.collectAsState()
-    val isLiquidWidgetsEnabled by viewModel.isLiquidGlassWidgetsEnabled.collectAsState()
+    val isLiquidWidgetsEnabled by (if (isMinusOnePage) viewModel.isLiquidGlassMinusOneWidgetEnabled else viewModel.isLiquidGlassWidgetsEnabled).collectAsState()
     val blurRadius by viewModel.liquidGlassBlur.collectAsState()
     val refractionHeight by viewModel.liquidGlassRefractionHeight.collectAsState()
     val refractionAmount by viewModel.liquidGlassRefractionAmount.collectAsState()

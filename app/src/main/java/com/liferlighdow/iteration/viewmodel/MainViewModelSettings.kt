@@ -256,6 +256,24 @@ fun MainViewModel.setLiquidGlassWidgetsEnabled(enabled: Boolean) {
     if (enabled) updateBlurredWallpaper()
 }
 
+fun MainViewModel.setLiquidGlassMinusOneWidgetEnabled(enabled: Boolean) {
+    _isLiquidGlassMinusOneWidgetEnabled.value = enabled
+    prefs.edit().putBoolean("liquid_glass_minus_one_widget", enabled).apply()
+    if (enabled) updateBlurredWallpaper()
+}
+
+fun MainViewModel.setLiquidGlassMinusOneSearchEnabled(enabled: Boolean) {
+    _isLiquidGlassMinusOneSearchEnabled.value = enabled
+    prefs.edit().putBoolean("liquid_glass_minus_one_search", enabled).apply()
+    if (enabled) updateBlurredWallpaper()
+}
+
+fun MainViewModel.setLiquidGlassMinusOneButtonEnabled(enabled: Boolean) {
+    _isLiquidGlassMinusOneButtonEnabled.value = enabled
+    prefs.edit().putBoolean("liquid_glass_minus_one_button", enabled).apply()
+    if (enabled) updateBlurredWallpaper()
+}
+
 fun MainViewModel.setHomeMenuOption(option: String, enabled: Boolean) {
     val current = _homeMenuOptions.value.toMutableSet()
     if (enabled) current.add(option) else current.remove(option)

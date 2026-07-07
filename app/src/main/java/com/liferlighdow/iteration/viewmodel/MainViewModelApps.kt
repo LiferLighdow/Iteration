@@ -408,6 +408,9 @@ fun MainViewModel.loadSettings() {
     val newLiquidGlobalSearchEnabled = prefs.getBoolean("liquid_glass_global_search", false)
     val newLiquidAppLibrarySearchEnabled = prefs.getBoolean("liquid_glass_app_library_search", false)
     val newLiquidWidgetsEnabled = prefs.getBoolean("liquid_glass_widgets", false)
+    val newLiquidMinusOneWidgetEnabled = prefs.getBoolean("liquid_glass_minus_one_widget", false)
+    val newLiquidMinusOneSearchEnabled = prefs.getBoolean("liquid_glass_minus_one_search", false)
+    val newLiquidMinusOneButtonEnabled = prefs.getBoolean("liquid_glass_minus_one_button", false)
     val newNetworkAccessEnabled = prefs.getBoolean("network_access_enabled", true)
     val newShowMinusOne = prefs.getBoolean("show_minus_one", true)
     val newShowAppLibrary = prefs.getBoolean("show_app_library", true)
@@ -456,6 +459,9 @@ fun MainViewModel.loadSettings() {
     _isLiquidGlassGlobalSearchEnabled.value = newLiquidGlobalSearchEnabled
     _isLiquidGlassAppLibrarySearchEnabled.value = newLiquidAppLibrarySearchEnabled
     _isLiquidGlassWidgetsEnabled.value = newLiquidWidgetsEnabled
+    _isLiquidGlassMinusOneWidgetEnabled.value = newLiquidMinusOneWidgetEnabled
+    _isLiquidGlassMinusOneSearchEnabled.value = newLiquidMinusOneSearchEnabled
+    _isLiquidGlassMinusOneButtonEnabled.value = newLiquidMinusOneButtonEnabled
     _isNetworkAccessEnabled.value = newNetworkAccessEnabled
     _showMinusOnePage.value = newShowMinusOne
     _showAppLibrary.value = newShowAppLibrary
