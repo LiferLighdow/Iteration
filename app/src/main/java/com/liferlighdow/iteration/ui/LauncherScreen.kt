@@ -29,6 +29,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -270,14 +271,19 @@ fun LauncherScreen(
         
         // 徹底移除桌布 Image 層，回歸純粹的 UI 採樣
 
-        val iconSize = 62.dp
+        val userRows by viewModel.desktopRows.collectAsState()
+        val isBalanced = userRows == -1
+        val rows = if (isBalanced) 6 else if (userRows > 0) userRows else (if (maxHeight / maxWidth < 2.0f) 5 else 6)
+
+        val iconSize = if (isBalanced) 60.dp else 62.dp
+        val labelFontSize = if (isBalanced) 11.sp else 12.sp
         val iconSizePx = with(density) { iconSize.toPx() }
         val columns = 4
         
-        val userRows by viewModel.desktopRows.collectAsState()
-        val rows = if (userRows > 0) userRows else (if (maxHeight / maxWidth < 2.0f) 5 else 6)
+        // Balanced 模式增加水平呼吸感
+        val horizontalPadding = if (isBalanced) 28.dp else 16.dp
 
-        LaunchedEffect(columns * rows) { viewModel.setPageSize(columns * rows) }
+        LaunchedEffect(columns, rows) { viewModel.setPageSize(columns * rows) }
 
         LaunchedEffect(draggingApp) {
             if (draggingApp == null) return@LaunchedEffect
@@ -383,7 +389,10 @@ fun LauncherScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .statusBarsPadding()
-                        .padding(bottom = if (isLibrary || isMinusOne) 0.dp else 158.dp)
+                        .padding(
+                            top = if (isDesktop && isBalanced) 42.dp else 0.dp,
+                            bottom = if (isLibrary || isMinusOne) 0.dp else (if (isBalanced) 178.dp else 158.dp)
+                        )
                 ) {
                     when {
                         isMinusOne -> {
@@ -408,6 +417,8 @@ fun LauncherScreen(
                             AppGrid(
                                 apps = pages.getOrNull(desktopIdx) ?: emptyList(),
                                 columns = columns, rows = rows, iconSize = iconSize,
+                                horizontalPadding = horizontalPadding,
+                                labelFontSize = labelFontSize,
                                 isEditMode = isEditMode,
                                 viewModel = viewModel,
                                 pageOffsetProvider = pageOffsetProvider,
@@ -575,6 +586,9 @@ fun LauncherScreen(
                                 refractionHeight = refractionHeight,
                                 refractionAmount = refractionAmount,
                                 chromaticAberration = chromaticAberration,
+                                horizontalPadding = horizontalPadding,
+                                iconSize = if (isBalanced) 70.dp else 72.dp, // App Library 的圖示原本就比較大，微縮至 70
+                                labelFontSize = labelFontSize,
                                 onAppClick = { app ->
                                     if (app.isFolder) {
                                         folderToOpenId = app.uniqueId
@@ -638,6 +652,7 @@ fun LauncherScreen(
                         isLiquidGlassDockEnabled = isLiquidGlassDockEnabled,
                         backdrop = backdrop,
                         iconSize = iconSize,
+                        horizontalPadding = horizontalPadding,
                         iconShape = iconShape,
                         dockStyle = dockStyle,
                         dockCornerRadius = dockCornerRadius,

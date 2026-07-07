@@ -63,6 +63,7 @@ fun AppItem(
     chromaticAberration: Boolean = true,
     isEditMode: Boolean = false,
     showReflection: Boolean = false,
+    labelFontSize: androidx.compose.ui.unit.TextUnit = 12.sp,
     onAppClick: (() -> Unit)? = null,
     onDeleteClick: (() -> Unit)? = null,
     notificationCountProvider: (() -> Int)? = null,
@@ -230,6 +231,7 @@ fun AppItem(
             Text(
                 text = app.label,
                 style = MaterialTheme.typography.labelSmall.copy(
+                    fontSize = labelFontSize,
                     shadow = Shadow(
                         color = Color.Black.copy(alpha = 0.5f),
                         offset = Offset(0f, 2f),

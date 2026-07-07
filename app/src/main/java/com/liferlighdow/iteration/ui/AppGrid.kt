@@ -52,6 +52,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlin.math.max
 import kotlin.math.min
 import android.content.Intent
@@ -90,6 +91,8 @@ fun calculateOverlap(r1: Rect, r2: Rect): Float {
 @Composable
 fun AppGrid(
     apps: List<AppModel>, columns: Int, rows: Int, iconSize: Dp,
+    horizontalPadding: Dp = 16.dp,
+    labelFontSize: androidx.compose.ui.unit.TextUnit = 12.sp,
     draggingApp: AppModel?,
     isEditMode: Boolean,
     viewModel: MainViewModel,
@@ -222,7 +225,7 @@ fun AppGrid(
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = horizontalPadding)
             .pointerInput(isEditMode) {
                 if (!isEditMode) {
                     awaitPointerEventScope {
@@ -423,6 +426,7 @@ fun AppGrid(
                             isEditMode = isEditMode,
                             backdrop = backdrop,
                             viewModel = viewModel,
+                            labelFontSize = labelFontSize,
                             showContextMenu = showContextMenu,
                             onContextMenuDismiss = { showContextMenu = false },
                             onUpdateStackToEdit = { stackToEdit = it },
@@ -447,6 +451,7 @@ fun AppGrid(
                             draggingUniqueId = draggingUniqueId,
                             scale = scale,
                             rotation = rotation,
+                            labelFontSize = labelFontSize,
                             showContextMenu = showContextMenu,
                             onContextMenuDismiss = { showContextMenu = false },
                             onAppClick = { onAppClick(app, lastPosition.pos) },
@@ -532,6 +537,7 @@ private fun WidgetGridItem(
     isEditMode: Boolean,
     backdrop: Backdrop?,
     viewModel: MainViewModel,
+    labelFontSize: androidx.compose.ui.unit.TextUnit = 12.sp,
     showContextMenu: Boolean,
     onContextMenuDismiss: () -> Unit,
     onUpdateStackToEdit: (WidgetModel) -> Unit,
@@ -541,14 +547,29 @@ private fun WidgetGridItem(
     onUpdatePhotoToPick: (WidgetModel) -> Unit,
     photoPickerLauncher: androidx.activity.result.ActivityResultLauncher<String>
 ) {
+    val isWide = when (val type = app.widget?.type) {
+        is WidgetType.Calendar -> type.isWide
+        is WidgetType.Photo -> type.isWide
+        is WidgetType.Music -> type.isWide
+        is WidgetType.Note -> type.isWide
+        is WidgetType.Stack -> type.isWide
+        is WidgetType.Weather -> type.isWide
+        else -> false
+    }
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .fillMaxSize()
-            .padding(8.dp)
+            .padding(
+                top = if (isWide) 0.dp else 8.dp, // Wide Widget 整體下移 8dp
+                bottom = if (isWide) 0.dp else 8.dp,
+                start = 8.dp,
+                end = 8.dp
+            )
             .graphicsLayer { alpha = if (app.uniqueId == draggingUniqueId) 0f else 1f }
     ) {
-        Box(modifier = Modifier.weight(1f)) {
+        Box(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.85f)) {
             val widget = app.widget
             if (widget != null) {
                 when (widget.type) {
@@ -614,9 +635,11 @@ private fun WidgetGridItem(
             }
         }
 
+        // 標籤現在不參與 weight 計算，調整它的 padding 只會移動文字，不會縮放組件矩形
         Text(
             text = app.label,
             style = MaterialTheme.typography.labelSmall.copy(
+                fontSize = labelFontSize,
                 shadow = Shadow(
                     color = Color.Black.copy(alpha = 0.5f),
                     offset = Offset(0f, 2f),
@@ -626,7 +649,7 @@ private fun WidgetGridItem(
             color = Color.White,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 4.dp)
+            modifier = Modifier.padding(top = if (isWide) 8.dp else 10.dp)
         )
 
         DropdownMenu(expanded = showContextMenu, onDismissRequest = onContextMenuDismiss) {
@@ -748,6 +771,7 @@ private fun AppGridItem(
     draggingUniqueId: String?,
     scale: Float,
     rotation: Float,
+    labelFontSize: androidx.compose.ui.unit.TextUnit = 12.sp,
     showContextMenu: Boolean,
     onContextMenuDismiss: () -> Unit,
     onAppClick: () -> Unit,
@@ -768,6 +792,7 @@ private fun AppGridItem(
             refractionAmount = refractionAmount,
             chromaticAberration = chromaticAberration,
             isEditMode = isEditMode,
+            labelFontSize = labelFontSize,
             getIcon = { pkg -> viewModel.getIcon(pkg) },
             onDeleteClick = {
                 viewModel.removeAppFromHome(app.uniqueId)

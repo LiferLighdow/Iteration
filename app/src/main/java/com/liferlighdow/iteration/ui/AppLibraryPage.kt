@@ -52,6 +52,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kyant.backdrop.Backdrop
 import com.liferlighdow.iteration.utils.IconShape
@@ -74,6 +75,9 @@ fun AppLibraryPage(
     refractionHeight: Float = 24f,
     refractionAmount: Float = 48f,
     chromaticAberration: Boolean = true,
+    horizontalPadding: Dp = 16.dp,
+    iconSize: Dp = 62.dp,
+    labelFontSize: androidx.compose.ui.unit.TextUnit = 12.sp,
     onAppClick: (AppModel) -> Unit,
     onDragStart: (AppModel, Offset) -> Unit,
     onDrag: (Offset) -> Unit,
@@ -117,9 +121,9 @@ fun AppLibraryPage(
     val hiddenAppsCount = remember(allApps) { allApps.count { it.isHidden } }
     val showHiddenFolder = hiddenAppsCount > 0 && searchQuery.isBlank() && (selectedCategory == null || selectedCategory == "All")
 
-    Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-        // 搜尋欄：即使在分類中也顯示，但標題不同
-        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+    Column(modifier = Modifier.fillMaxSize().padding(horizontal = horizontalPadding)) {
+        // 搜尋欄：縮減垂直 padding 以平衡視覺
+        Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             if (selectedCategory != null && selectedCategory != "All") {
                 IconButton(onClick = { viewModel.setSelectedCategory("All") }) {
                     Icon(Icons.Default.ArrowBack, null, tint = Color.White)
@@ -270,8 +274,8 @@ fun AppLibraryPage(
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
                     modifier = Modifier.fillMaxSize(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(horizontalPadding),
+                    verticalArrangement = Arrangement.spacedBy(18.dp),
                     contentPadding = PaddingValues(bottom = 32.dp)
                 ) {
                     val folderList = mutableListOf<Pair<String, List<AppModel>>>()
@@ -332,6 +336,7 @@ fun AppLibraryFolder(
     refractionHeight: Float = 24f,
     refractionAmount: Float = 48f,
     chromaticAberration: Boolean = true,
+    iconSize: Dp = 72.dp,
     onAppClick: (AppModel) -> Unit,
     onMoreClick: () -> Unit,
     onDragStart: (AppModel, Offset) -> Unit,
@@ -342,10 +347,10 @@ fun AppLibraryFolder(
 ) {
     val viewModel: MainViewModel = viewModel()
     
-    // 根據形狀決定裁切方式：只有圓形才強制裁切（防止脫框），Default 則不裁切（確保 72dp 圖示角角完整）
+    // 根據形狀決定裁切方式：只有圓形才強制裁切（防止脫框），Default 則不裁切（確保圖示角角完整）
     val folderShape = if (libraryShape == IconShape.CIRCLE) CircleShape else null
-    val folderPadding = if (libraryShape == IconShape.CIRCLE) 20.dp else 12.dp
-    val internalIconSize = 72.dp
+    val folderPadding = if (libraryShape == IconShape.CIRCLE) (iconSize * 0.27f) else (iconSize * 0.16f)
+    val internalIconSize = iconSize // 直接使用傳入的大小，或者是比例換算
 
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Box(

@@ -30,6 +30,7 @@ fun LauncherBottomBar(
     refractionAmount: Float,
     chromaticAberration: Boolean,
     // 分頁資訊
+    horizontalPadding: Dp = 16.dp,
     desktopPageCount: Int,
     currentPage: Int,
     // App 數據
@@ -91,6 +92,7 @@ fun LauncherBottomBar(
                 Dock(
                     apps = dockApps,
                     iconSize = iconSize,
+                    horizontalPadding = horizontalPadding,
                     isLiquidGlass = isLiquidGlassEnabled && isLiquidGlassDockEnabled,
                     backdrop = backdrop,
                     dockStyle = dockStyle,

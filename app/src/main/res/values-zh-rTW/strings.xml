@@ -434,6 +434,7 @@
     <string name="layout_4x5">4 x 5</string>
     <string name="layout_4x6">4 x 6</string>
     <string name="layout_4x7">4 x 7</string>
+    <string name="layout_4x6_balanced">4 x 6 平衡</string>
     <string name="dock_apps">Dock 應用</string>
     <string name="move_up">往上移</string>
     <string name="move_down">往下移</string>

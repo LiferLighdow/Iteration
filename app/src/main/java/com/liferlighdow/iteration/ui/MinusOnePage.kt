@@ -163,7 +163,7 @@ fun MinusOnePage(
                         ),
                         shape = RoundedCornerShape(12.dp),
                         colors = IconButtonDefaults.filledTonalIconButtonColors(
-                            containerColor = if (isLiquidGlassEnabled && isMinusOneButtonGlassEnabled) Color.Transparent else baseColor.copy(alpha = 0.4f),
+                            containerColor = Color.Transparent,
                             contentColor = contentColor
                         )
                     ) {
@@ -187,7 +187,7 @@ fun MinusOnePage(
                         ),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isLiquidGlassEnabled && isMinusOneButtonGlassEnabled) Color.Transparent else baseColor.copy(alpha = 0.4f),
+                            containerColor = Color.Transparent,
                             contentColor = contentColor
                         )
                     ) {
@@ -248,9 +248,9 @@ fun MinusOnePage(
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = contentColor,
                         unfocusedTextColor = contentColor,
-                        focusedContainerColor = if (isLiquidGlassEnabled && isMinusOneSearchGlassEnabled) Color.Transparent else baseColor.copy(alpha = 0.35f),
-                        unfocusedContainerColor = if (isLiquidGlassEnabled && isMinusOneSearchGlassEnabled) Color.Transparent else baseColor.copy(alpha = 0.3f),
-                        focusedBorderColor = if (isLiquidGlassEnabled && isMinusOneSearchGlassEnabled) contentColor.copy(alpha = 0.1f) else contentColor.copy(alpha = 0.2f),
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedBorderColor = contentColor.copy(alpha = 0.1f),
                         unfocusedBorderColor = Color.Transparent
                     ),
                     singleLine = true
@@ -457,7 +457,7 @@ fun MinusOnePage(
                                         chromaticAberration = chromaticAberration
                                     ),
                                     shape = RoundedCornerShape(20.dp),
-                                    color = if (isLiquidGlassEnabled && isMinusOneButtonGlassEnabled) Color.Transparent else baseColor.copy(alpha = 0.4f),
+                                    color = Color.Transparent,
                                     contentColor = contentColor
                                 ) {
                                     Text("Edit", modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)

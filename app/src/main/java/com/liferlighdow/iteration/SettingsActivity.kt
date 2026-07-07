@@ -2317,7 +2317,8 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
                     0 to stringResource(R.string.auto_adaptive), 
                     5 to stringResource(R.string.layout_4x5), 
                     6 to stringResource(R.string.layout_4x6), 
-                    7 to stringResource(R.string.layout_4x7)
+                    7 to stringResource(R.string.layout_4x7),
+                    -1 to stringResource(R.string.layout_4x6_balanced)
                 )
                 val currentLabel = options.find { it.first == desktopRows }?.second ?: stringResource(R.string.auto_adaptive)
 

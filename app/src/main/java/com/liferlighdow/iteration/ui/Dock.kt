@@ -40,6 +40,7 @@ import com.liferlighdow.iteration.data.AppModel
 fun Dock(
     apps: List<AppModel>,
     iconSize: Dp,
+    horizontalPadding: Dp = 12.dp,
     isLiquidGlass: Boolean = false,
     backdrop: Backdrop,
     dockStyle: DockStyle = DockStyle.MODERN,
@@ -134,7 +135,7 @@ fun Dock(
                     DockStyle.CLASSIC -> 10.dp + navPadding
                     else -> 20.dp + navPadding
                 })
-                .padding(horizontal = 12.dp),
+                .padding(horizontal = horizontalPadding),
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.Bottom
         ) {

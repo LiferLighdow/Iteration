@@ -474,6 +474,7 @@
     <string name="layout_4x5">4 x 5</string>
     <string name="layout_4x6">4 x 6</string>
     <string name="layout_4x7">4 x 7</string>
+    <string name="layout_4x6_balanced">4 x 6 Balanced</string>
     <string name="dock_apps">Dock Apps</string>
     <string name="move_up">Move Up</string>
     <string name="move_down">Move Down</string>
