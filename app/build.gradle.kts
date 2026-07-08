@@ -12,8 +12,8 @@ android {
         applicationId = "com.liferlighdow.iteration"
         minSdk = 24
         targetSdk = 37
-        versionCode = 39
-        versionName = "3.7"
+        versionCode = 40
+        versionName = "3.7.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

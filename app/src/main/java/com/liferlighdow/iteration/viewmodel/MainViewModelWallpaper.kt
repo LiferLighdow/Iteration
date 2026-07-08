@@ -25,6 +25,7 @@ fun MainViewModel.updateBlurredWallpaper() {
         if (result != null) {
             _rawWallpaper.value = result.raw
             _blurredWallpaper.value = result.blurred
+            _isLightWallpaper.value = result.isLightWallpaper
         }
     }
 }

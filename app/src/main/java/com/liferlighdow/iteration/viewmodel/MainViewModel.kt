@@ -59,6 +59,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     internal val _rawWallpaper = MutableStateFlow<ImageBitmap?>(null)
     val rawWallpaper = _rawWallpaper.asStateFlow()
 
+    internal val _isLightWallpaper = MutableStateFlow(false)
+    val isLightWallpaper = _isLightWallpaper.asStateFlow()
+
     // 用於強制更新 UI 的訊號
     internal val _wallpaperUpdateSignal = MutableStateFlow(0L)
     val wallpaperUpdateSignal = _wallpaperUpdateSignal.asStateFlow()

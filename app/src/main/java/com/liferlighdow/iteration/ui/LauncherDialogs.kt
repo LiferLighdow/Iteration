@@ -46,6 +46,7 @@ fun LauncherOverlays(
     showDeletePageConfirm: Boolean,
     onDismissDeletePage: () -> Unit,
     onShowDeletePageConfirm: () -> Unit,
+    onDeletePage: (Int) -> Unit,
     showWidgetPicker: Boolean,
     onDismissWidgetPicker: () -> Unit,
     showDockPicker: Int?,
@@ -99,7 +100,7 @@ fun LauncherOverlays(
         onDeletePageClick = {
             val isEmpty = pages.getOrNull(currentPage)?.isEmpty() ?: false
             if (isEmpty) {
-                viewModel.deletePage(currentPage)
+                onDeletePage(currentPage)
             } else {
                 onShowDeletePageConfirm()
             }
@@ -164,7 +165,7 @@ fun LauncherOverlays(
             confirmButton = {
                 Button(
                     onClick = {
-                        viewModel.deletePage(currentPage)
+                        onDeletePage(currentPage)
                         onDismissDeletePage()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)

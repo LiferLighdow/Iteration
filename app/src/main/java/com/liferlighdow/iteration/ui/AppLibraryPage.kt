@@ -274,8 +274,8 @@ fun AppLibraryPage(
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
                     modifier = Modifier.fillMaxSize(),
-                    horizontalArrangement = Arrangement.spacedBy(horizontalPadding),
-                    verticalArrangement = Arrangement.spacedBy(18.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(bottom = 32.dp)
                 ) {
                     val folderList = mutableListOf<Pair<String, List<AppModel>>>()

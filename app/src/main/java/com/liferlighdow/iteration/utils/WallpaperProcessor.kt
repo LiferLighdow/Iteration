@@ -1,9 +1,11 @@
 package com.liferlighdow.iteration.utils
 
 import android.app.Application
+import android.app.WallpaperColors
 import android.app.WallpaperManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.os.Build
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.drawable.toBitmap
@@ -16,7 +18,8 @@ class WallpaperProcessor(private val context: Application) {
 
     data class WallpaperResult(
         val raw: ImageBitmap,
-        val blurred: ImageBitmap
+        val blurred: ImageBitmap,
+        val isLightWallpaper: Boolean = false
     )
 
     /**
@@ -26,8 +29,15 @@ class WallpaperProcessor(private val context: Application) {
     fun extractSystemWallpaper(): WallpaperResult? {
         return try {
             val wm = WallpaperManager.getInstance(context)
+            var isLight = false
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val colors = wm.getWallpaperColors(WallpaperManager.FLAG_SYSTEM)
+                if (colors != null) {
+                    isLight = (colors.colorHints and WallpaperColors.HINT_SUPPORTS_DARK_TEXT) != 0
+                }
+            }
             val drawable = wm.drawable ?: return null
-            processBitmap(drawable.toBitmap())
+            processBitmap(drawable.toBitmap(), if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) isLight else null)
         } catch (e: Exception) {
             e.printStackTrace()
             null
@@ -51,7 +61,7 @@ class WallpaperProcessor(private val context: Application) {
     /**
      * 核心處理邏輯：裁剪、縮放、二次採樣模糊
      */
-    fun processBitmap(rawBitmap: Bitmap): WallpaperResult {
+    fun processBitmap(rawBitmap: Bitmap, systemSuggestedLight: Boolean? = null): WallpaperResult {
         val dm = context.resources.displayMetrics
         val screenW = dm.widthPixels
         val screenH = dm.heightPixels
@@ -66,10 +76,10 @@ class WallpaperProcessor(private val context: Application) {
         val cropped = Bitmap.createBitmap(rawBitmap, (rawBitmap.width - cropW) / 2, (rawBitmap.height - cropH) / 2, cropW, cropH)
         val scaled = Bitmap.createScaledBitmap(cropped, screenW, screenH, true)
 
+        // 計算頂部區域亮度 (Status Bar 所在位置)
+        val isLight = systemSuggestedLight ?: calculateIsLight(scaled)
+
         // 2. 【Liquid Glass 採樣優化】
-        // 優化點：不再將模糊後的圖片拉伸回全解析度。
-        // 返回小尺寸位圖，由 UI 層 (Compose Image) 進行硬體加速拉伸，
-        // 視覺效果幾乎一致（因為本就是模糊的），但節省了 90% 的內存佔用。
         val blurScale = 0.15f
         val bw = (screenW * blurScale).toInt().coerceAtLeast(1)
         val bh = (screenH * blurScale).toInt().coerceAtLeast(1)
@@ -78,7 +88,29 @@ class WallpaperProcessor(private val context: Application) {
 
         return WallpaperResult(
             raw = scaled.asImageBitmap(),
-            blurred = blurred.asImageBitmap()
+            blurred = blurred.asImageBitmap(),
+            isLightWallpaper = isLight
         )
+    }
+
+    private fun calculateIsLight(bitmap: Bitmap): Boolean {
+        val width = bitmap.width
+        val height = (bitmap.height * 0.05f).toInt().coerceAtLeast(20) // 只取頂部 5%
+        if (width <= 0 || height <= 0) return false
+        
+        val pixels = IntArray(width * height)
+        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+        
+        var totalLuminance = 0.0
+        for (pixel in pixels) {
+            val r = android.graphics.Color.red(pixel)
+            val g = android.graphics.Color.green(pixel)
+            val b = android.graphics.Color.blue(pixel)
+            // 使用 W3C 亮度公式
+            totalLuminance += (0.299 * r + 0.587 * g + 0.114 * b)
+        }
+        
+        val avgLuminance = totalLuminance / (width * height)
+        return avgLuminance > 170 // 經驗值，大於 170 認為是淺色背景
     }
 }

@@ -753,6 +753,20 @@ fun LauncherScreen(
         showDeletePageConfirm = showDeletePageConfirm,
         onDismissDeletePage = { showDeletePageConfirm = false },
         onShowDeletePageConfirm = { showDeletePageConfirm = true },
+        onDeletePage = { pageIdx ->
+            val targetDesktopPage = if (pageIdx > 0) pageIdx - 1 else 0
+            val absoluteTargetPage = targetDesktopPage + desktopStartIndex
+            
+            viewModel.deletePage(pageIdx)
+            
+            scope.launch {
+                // 稍微延遲確保 PagerState 已更新頁數，避免捲動到錯誤的位置
+                delay(50)
+                if (absoluteTargetPage < pagerState.pageCount) {
+                    pagerState.animateScrollToPage(absoluteTargetPage)
+                }
+            }
+        },
         showWidgetPicker = showWidgetPicker,
         onDismissWidgetPicker = {
             showWidgetPicker = false

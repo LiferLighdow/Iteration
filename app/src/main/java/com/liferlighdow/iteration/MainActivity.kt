@@ -34,11 +34,15 @@ class MainActivity : AppCompatActivity() {
             val isAmoledBlack by viewModel.isAmoledBlack.collectAsState()
             val showStatusBar by viewModel.showStatusBar.collectAsState()
             val showNavigationBar by viewModel.showNavigationBar.collectAsState()
+            val isLightWallpaper by viewModel.isLightWallpaper.collectAsState()
 
-            LaunchedEffect(showStatusBar, showNavigationBar) {
+            LaunchedEffect(showStatusBar, showNavigationBar, isLightWallpaper) {
                 val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
                 windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
                 
+                // 根據桌布明暗設置狀態欄圖示顏色 (淺色桌布使用深色圖示，反之亦然)
+                windowInsetsController.isAppearanceLightStatusBars = isLightWallpaper
+
                 if (showStatusBar) {
                     windowInsetsController.show(WindowInsetsCompat.Type.statusBars())
                 } else {
