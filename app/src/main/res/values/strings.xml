@@ -190,6 +190,8 @@
     <string name="action_mode_desc">Choose the technology used to perform system actions like locking the screen or expanding notifications.</string>
     <string name="permission_contacts">Contacts Access</string>
     <string name="permission_contacts_desc">Allow searching for contacts in global search</string>
+    <string name="permission_calendar">Calendar Access</string>
+    <string name="permission_calendar_desc">Allow access to your calendar to show events in widgets</string>
     <string name="permission_notifications">Notification Access</string>
     <string name="permission_notifications_desc">Required to show notification dots and badges</string>
     <string name="permission_accessibility">Accessibility Service</string>
@@ -432,8 +434,6 @@
     <string name="result_copied">Result copied: %1$s</string>
     <string name="translation_copied">Translation copied</string>
     <string name="failed_to_open_settings">Failed to open settings</string>
-    <string name="admin_enabled">Iteration: Admin Enabled</string>
-    <string name="admin_disabled">Iteration: Admin Disabled</string>
     <string name="shortcut_action">Shortcut Action: %1$s</string>
     <string name="clock_12">12</string>
     <string name="clock_3">3</string>
@@ -484,6 +484,7 @@
     <string name="root_permission_failed">Failed to get ROOT permission</string>
     <string name="shizuku_not_running">Shizuku is not running</string>
     <string name="shizuku_permission_request">Requesting Shizuku permission</string>
+    <string name="shizuku_permission_denied">Shizuku permission denied</string>
     <string name="settings_advanced">Advanced</string>
     <string name="settings_advanced_desc">Performance and cache settings</string>
     <string name="icon_cache_size_title">Icon Cache Size</string>

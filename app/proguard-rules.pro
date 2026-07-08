@@ -42,5 +42,3 @@
 -keep class com.kyant.backdrop.** { *; }
 -dontwarn com.kyant.backdrop.**
 
-# 10. Device Admin
--keep class com.liferlighdow.iteration.service.AdminReceiver { *; }

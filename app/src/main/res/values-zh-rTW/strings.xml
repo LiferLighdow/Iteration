@@ -165,6 +165,8 @@
     <string name="action_mode_desc">選擇執行鎖屏、展開通知等系統交互操作的底層手段。</string>
     <string name="permission_contacts">聯絡之權限</string>
     <string name="permission_contacts_desc">允許在全域搜尋中搜尋聯絡人，但我不會自動幫你打電話啦~</string>
+    <string name="permission_calendar">日曆之權限</string>
+    <string name="permission_calendar_desc">允許存取日曆以在小工具中顯示您的行程活動，我會準時提醒你的！</string>
     <string name="permission_notifications">通知之權限</string>
     <string name="permission_notifications_desc">拿到了我就能顯示通知小圓點和計數器。</string>
     <string name="permission_accessibility">無障礙服務</string>
@@ -411,8 +413,6 @@
     <string name="result_copied">已複製結果：%1$s</string>
     <string name="translation_copied">翻譯文本已複製</string>
     <string name="failed_to_open_settings">哭啊~無法開啟設定</string>
-    <string name="admin_enabled">Iteration：謝謝主人讓我管理這棟大房子</string>
-    <string name="admin_disabled">Iteration：主人怎麼這樣啦~~~拒絕我當管理員</string>
     <string name="shortcut_action">快速操作：%1$s</string>
     <string name="clock_12">12</string>
     <string name="clock_3">3</string>
@@ -444,6 +444,7 @@
     <string name="root_permission_failed">獲取 ROOT 權限失敗</string>
     <string name="shizuku_not_running">Shizuku 尚未啟動</string>
     <string name="shizuku_permission_request">正在請求 Shizuku 權限</string>
+    <string name="shizuku_permission_denied">Shizuku 權限被拒絕</string>
     <string name="settings_advanced">進階設定</string>
     <string name="settings_advanced_desc">效能與快取相關設定</string>
     <string name="icon_cache_size_title">圖示快取大小</string>

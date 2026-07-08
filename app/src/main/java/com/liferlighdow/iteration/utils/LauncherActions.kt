@@ -4,12 +4,15 @@ import android.accessibilityservice.AccessibilityService
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
 import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.service.IterationAccessibilityService
 import rikka.shizuku.Shizuku
+import kotlin.concurrent.thread
 
 fun performGestureAction(
     action: GestureAction,
@@ -37,12 +40,7 @@ fun performGestureAction(
                     executeCommand(arrayOf("su", "-c", "input keyevent 26"), context)
                 }
                 ActionMode.SHIZUKU -> {
-                    if (Shizuku.pingBinder()) {
-                        // Pending proper Shizuku command execution implementation
-                        Toast.makeText(context, "Shizuku mode active", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(context, context.getString(R.string.shizuku_not_running), Toast.LENGTH_SHORT).show()
-                    }
+                    executeShizukuCommand(arrayOf("input", "keyevent", "26"), context)
                 }
             }
         }
@@ -78,11 +76,7 @@ fun performGestureAction(
                     executeCommand(arrayOf("su", "-c", "cmd statusbar expand-notifications"), context)
                 }
                 ActionMode.SHIZUKU -> {
-                    if (Shizuku.pingBinder()) {
-                        Toast.makeText(context, "Shizuku mode active", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(context, context.getString(R.string.shizuku_not_running), Toast.LENGTH_SHORT).show()
-                    }
+                    executeShizukuCommand(arrayOf("cmd", "statusbar", "expand-notifications"), context)
                 }
             }
         }
@@ -90,11 +84,51 @@ fun performGestureAction(
     }
 }
 
+private fun executeShizukuCommand(command: Array<String>, context: Context) {
+    if (!Shizuku.pingBinder()) {
+        Toast.makeText(context, context.getString(R.string.shizuku_not_running), Toast.LENGTH_SHORT).show()
+        return
+    }
+
+    val handler = Handler(Looper.getMainLooper())
+    thread {
+        try {
+            if (Shizuku.checkSelfPermission() == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                var success = false
+                try {
+                    // Method 1: Robust Reflection (Iterate through methods to find matching signature)
+                    val method = Shizuku::class.java.declaredMethods.find { 
+                        it.name == "newProcess" && it.parameterTypes.size == 3 && it.parameterTypes[0].isArray
+                    }
+                    
+                    if (method != null) {
+                        method.isAccessible = true
+                        val process = method.invoke(null, command, null, null) as rikka.shizuku.ShizukuRemoteProcess
+                        val exitCode = process.waitFor()
+                        success = (exitCode == 0)
+                    } else {
+                        throw NoSuchMethodException("Shizuku.newProcess method not found via reflection")
+                    }
+                } catch (e: Exception) {
+                    Log.e("Iteration", "Shizuku Reflection failed", e)
+                    handler.post { Toast.makeText(context, "Shizuku Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show() }
+                }
+            } else {
+                handler.post { Toast.makeText(context, context.getString(R.string.shizuku_permission_denied), Toast.LENGTH_SHORT).show() }
+            }
+        } catch (e: Exception) {
+            Log.e("Iteration", "Shizuku error", e)
+            handler.post { Toast.makeText(context, "Shizuku Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show() }
+        }
+    }
+}
+
 private fun executeCommand(command: Array<String>, context: Context) {
-    try {
-        Runtime.getRuntime().exec(command)
-    } catch (e: Exception) {
-        Log.e("Iteration", "Command failed: ${command.joinToString(" ")}", e)
-        Toast.makeText(context, "Execution failed", Toast.LENGTH_SHORT).show()
+    thread {
+        try {
+            Runtime.getRuntime().exec(command).waitFor()
+        } catch (e: Exception) {
+            Log.e("Iteration", "Command failed: ${command.joinToString(" ")}", e)
+        }
     }
 }

@@ -3175,6 +3175,16 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
         )
     }
 
+    // 日曆權限狀態
+    var hasCalendarPermission by remember {
+        mutableStateOf(
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.READ_CALENDAR
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        )
+    }
+
     // 通知權限狀態
     var isNotificationEnabled by remember {
         mutableStateOf(
@@ -3194,6 +3204,12 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         hasContactsPermission = isGranted
+    }
+
+    val calendarLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        hasCalendarPermission = isGranted
     }
 
     Scaffold(
@@ -3266,6 +3282,27 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
                     modifier = Modifier.clickable {
                         if (!hasContactsPermission) {
                             launcher.launch(android.Manifest.permission.READ_CONTACTS)
+                        }
+                    }
+                )
+            }
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.permission_calendar)) },
+                    supportingContent = { Text(stringResource(R.string.permission_calendar_desc)) },
+                    trailingContent = {
+                        Switch(
+                            checked = hasCalendarPermission,
+                            onCheckedChange = {
+                                if (!hasCalendarPermission) {
+                                    calendarLauncher.launch(android.Manifest.permission.READ_CALENDAR)
+                                }
+                            }
+                        )
+                    },
+                    modifier = Modifier.clickable {
+                        if (!hasCalendarPermission) {
+                            calendarLauncher.launch(android.Manifest.permission.READ_CALENDAR)
                         }
                     }
                 )
