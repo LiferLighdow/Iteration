@@ -71,9 +71,10 @@ jobs:
           - Commit: ${{ github.sha }}
           - Timestamp: ${{ github.event.head_commit.timestamp }}
         files: |
-          app/build/outputs/apk/release/*.apk
+          app/build/outputs/apk/release/*-signed.apk
         prerelease: false
         generate_release_notes: true
         make_latest: true
+        fail_on_unmatched_files: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
