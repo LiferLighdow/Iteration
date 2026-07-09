@@ -65,14 +65,15 @@ jobs:
         tag_name: v${{ steps.get_version.outputs.version }}
         name: Release v${{ steps.get_version.outputs.version }}
         body: |
-          This is an automated build.
-          Version: ${{ steps.get_version.outputs.version }}
-          Last updated: ${{ github.event.head_commit.timestamp }}
-          Commit: ${{ github.sha }}
+          Automated release for version ${{ steps.get_version.outputs.version }}.
+          
+          **Commit Info:**
+          - Commit: ${{ github.sha }}
+          - Timestamp: ${{ github.event.head_commit.timestamp }}
         files: |
-          ${{ steps.sign_app.outputs.signedReleaseFile }}
-          app/build/outputs/apk/release/*-unsigned.apk
           app/build/outputs/apk/release/*.apk
         prerelease: false
+        generate_release_notes: true
+        make_latest: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
