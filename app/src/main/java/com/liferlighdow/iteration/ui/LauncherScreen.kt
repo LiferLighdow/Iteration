@@ -2,7 +2,7 @@ package com.liferlighdow.iteration.ui
 
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.BitmapFactory
+import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.util.Log
@@ -12,24 +12,39 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.BlurEffect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -41,6 +56,7 @@ import com.liferlighdow.iteration.viewmodel.*
 import com.liferlighdow.iteration.service.NotificationService
 import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.data.AppModel
+import com.liferlighdow.iteration.ui.dialogs.WallpaperCropDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -99,10 +115,16 @@ fun LauncherScreen(
     val dockCornerRadius by viewModel.dockCornerRadius.collectAsState()
     val showMinusOnePage by viewModel.showMinusOnePage.collectAsState()
     val showAppLibrary by viewModel.showAppLibrary.collectAsState()
+    val isApplyingWallpaper by viewModel.isApplyingWallpaper.collectAsState()
 
     var showDesktopMenu by remember { mutableStateOf(false) }
     var showGlobalSearch by remember { mutableStateOf(false) }
     var searchDragOffset by remember { mutableStateOf(0f) }
+    var pickedWallpaperUri by remember { mutableStateOf<Uri?>(null) }
+    var showWallpaperTypeDialog by remember { mutableStateOf(false) }
+    var showColorPickerByWallpaper by remember { mutableStateOf(false) }
+    data class EmojiSelectionData(val color: Int, val emojiText: String)
+    var showEmojiModeSelection by remember { mutableStateOf<EmojiSelectionData?>(null) }
 
     val mContext = LocalContext.current
     val actionMode by viewModel.actionMode.collectAsState()
@@ -226,12 +248,10 @@ fun LauncherScreen(
     val desktopStartIndex = if (showMinusOnePage) 1 else 0
 
     // 處理返回按鍵以返回主頁面，並防止在主頁面按下返回鍵導致 Activity 重啟（刷新）
-    // 此 Handler 應在所有變數定義後宣告
     BackHandler(enabled = !showGlobalSearch && !isEditMode && folderToOpenId == null) {
         if (pagerState.currentPage != desktopStartIndex) {
             scope.launch { pagerState.animateScrollToPage(desktopStartIndex) }
         }
-        // 如果已經在主頁面，BackHandler 會攔截事件但不做任何事，從而防止 Activity 結束
     }
 
     // 計算 Dock 的顯示進度 (1.0 = 完全顯示, 0.0 = 完全隱藏)
@@ -258,6 +278,7 @@ fun LauncherScreen(
     
     // 效能優化：統一收集通知狀態，避免 AppItem 集體重組
     val notificationCounts by NotificationService.notifications.collectAsState()
+    val emojiWallpaperText by viewModel.emojiWallpaperText.collectAsState()
 
     // 檢查 App Library 是否處於搜尋模式
     val librarySearchQuery by viewModel.searchQuery.collectAsState()
@@ -269,8 +290,6 @@ fun LauncherScreen(
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val density = LocalDensity.current
         
-        // 徹底移除桌布 Image 層，回歸純粹的 UI 採樣
-
         val userRows by viewModel.desktopRows.collectAsState()
         val isBalanced = userRows == -1
         val rows = if (isBalanced) 6 else if (userRows > 0) userRows else (if (maxHeight / maxWidth < 2.0f) 5 else 6)
@@ -280,7 +299,6 @@ fun LauncherScreen(
         val iconSizePx = with(density) { iconSize.toPx() }
         val columns = 4
         
-        // Balanced 模式增加水平呼吸感
         val horizontalPadding = if (isBalanced) 28.dp else 16.dp
 
         LaunchedEffect(columns, rows) { viewModel.setPageSize(columns * rows) }
@@ -291,7 +309,6 @@ fun LauncherScreen(
                 val finalX = touchPosition.x + dragOffset.x
                 val edgeWidth = with(density) { 45.dp.toPx() }
                 
-                // 限制拖曳時的自動換頁範圍僅限於桌面分頁，防止進入負一屏或 App Library
                 if (finalX < edgeWidth && pagerState.currentPage > desktopStartIndex) {
                     pagerState.animateScrollToPage(pagerState.currentPage - 1)
                     delay(800)
@@ -303,22 +320,18 @@ fun LauncherScreen(
             }
         }
 
-        // 1. 桌面底層 (包含桌布與內容)
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
                     scaleX = launcherScale
                     scaleY = launcherScale
-                    // 只有 Android 12+ 才對整個內容層進行系統級模糊
-                    // 透過 graphicsLayer 設定 renderEffect 可以避免頻繁重組
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                         val blurPx = with(density) { launcherBlur.toPx() }
                         renderEffect = if (blurPx > 0f) BlurEffect(blurPx, blurPx) else null
                     }
                 }
         ) {
-            // 1.1 桌布層
             Box(modifier = Modifier.fillMaxSize()) {
                 rawWallpaper?.let {
                     Image(
@@ -330,9 +343,48 @@ fun LauncherScreen(
                         contentScale = ContentScale.Crop
                     )
                 }
+
+                // Lite 模式：啟動器層 Emoji 陣列
+                if (emojiWallpaperText.isNotEmpty()) {
+                    val emojis = remember(emojiWallpaperText) {
+                        val list = mutableListOf<String>()
+                        val it = java.text.BreakIterator.getCharacterInstance()
+                        it.setText(emojiWallpaperText)
+                        var start = it.first()
+                        var end = it.next()
+                        while (end != java.text.BreakIterator.DONE) {
+                            list.add(emojiWallpaperText.substring(start, end))
+                            start = end
+                            end = it.next()
+                        }
+                        list
+                    }
+                    
+                    if (emojis.isNotEmpty()) {
+                        androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+                            val columns = 5
+                            val itemWidth = size.width / columns
+                            val itemHeight = itemWidth * 1.2f
+                            val rows = (size.height / itemHeight).toInt() + 2
+                            
+                            val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                                textSize = itemWidth * 0.6f
+                                textAlign = android.graphics.Paint.Align.CENTER
+                            }
+                            
+                            for (row in 0 until rows) {
+                                for (col in 0 until columns) {
+                                    val emojiIndex = (row + col) % emojis.size
+                                    val x = col * itemWidth + itemWidth / 2f
+                                    val y = row * itemHeight + itemHeight / 2f - ((paint.descent() + paint.ascent()) / 2f)
+                                    // 注意：這裡使用 nativeCanvas 繪製文字
+                                    drawContext.canvas.nativeCanvas.drawText(emojis[emojiIndex], x, y, paint)
+                                }
+                            }
+                        }
+                    }
+                }
                 
-                // Android 12 以下的「高清模糊」替代方案
-                // 透過淡入預先處理好的模糊桌布，避免即時採樣產生的重影
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
                     blurredWallpaper?.let {
                         Image(
@@ -341,7 +393,6 @@ fun LauncherScreen(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .graphicsLayer {
-                                    // 在繪製層級控制透明度，避免觸發重組
                                     alpha = (launcherBlur.value / 20f).coerceIn(0f, 1f)
                                 },
                             contentScale = ContentScale.Crop
@@ -350,13 +401,10 @@ fun LauncherScreen(
                 }
             }
 
-            // 1.2 桌面內容 (Pager, Icons, Widgets)
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer {
-                        // 當資料夾打開或搜尋時，讓內容完全消失 (隱藏)
-                        // 這樣可以讓背景更乾淨，並解決在 API 31 以下模擬模糊時產生的重影問題
                         alpha = 1f - (launcherBlur.value / 20f).coerceIn(0f, 1f)
                     }
             ) {
@@ -367,14 +415,13 @@ fun LauncherScreen(
                     beyondViewportPageCount = 1,
                     flingBehavior = PagerDefaults.flingBehavior(
                         state = pagerState,
-                        snapPositionalThreshold = 0.25f, // 只要滑動 25% 就判定翻頁，手感更輕快
+                        snapPositionalThreshold = 0.25f,
                         snapAnimationSpec = spring(
                             dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = 180f // 降至 180f (比 StiffnessLow 還低一點)，產生慢慢飄到底的感覺
+                            stiffness = 180f
                         )
                     )
                 ) { pageIndex ->
-                // 計算頁面偏移量 (-1.0 到 1.0) 的 Provider，避免觸發全頁面重組
                 val pageOffsetProvider = remember(pagerState, pageIndex) {
                     { (pagerState.currentPage - pageIndex) + pagerState.currentPageOffsetFraction }
                 }
@@ -382,7 +429,6 @@ fun LauncherScreen(
                 val isMinusOne = showMinusOnePage && pageIndex == 0
                 val isLibrary = showAppLibrary && pageIndex == pageCount - 1
                 
-                val desktopStartIndex = if (showMinusOnePage) 1 else 0
                 val isDesktop = pageIndex >= desktopStartIndex && pageIndex < desktopStartIndex + desktopPageCount
 
                 Box(
@@ -559,13 +605,12 @@ fun LauncherScreen(
                                 },
                                 onBackgroundDragY = { offset ->
                                     if (!isEditMode && swipeDownAction == GestureAction.OPEN_GLOBAL_SEARCH) {
-                                        // 只有在設定為全域搜尋且非編輯模式時才跟手
                                         if (offset > 0) searchDragOffset = offset
                                     }
                                 },
                                 onBackgroundDragEnd = { finalOffset ->
                                     if (!isEditMode && swipeDownAction == GestureAction.OPEN_GLOBAL_SEARCH) {
-                                        if (finalOffset > 80f) { // 同步調降至 80px
+                                        if (finalOffset > 80f) {
                                             showGlobalSearch = true
                                         }
                                         searchDragOffset = 0f
@@ -587,7 +632,7 @@ fun LauncherScreen(
                                 refractionAmount = refractionAmount,
                                 chromaticAberration = chromaticAberration,
                                 horizontalPadding = horizontalPadding,
-                                iconSize = if (isBalanced) 70.dp else 72.dp, // App Library 的圖示原本就比較大，微縮至 70
+                                iconSize = if (isBalanced) 70.dp else 72.dp,
                                 labelFontSize = labelFontSize,
                                 onAppClick = { app ->
                                     if (app.isFolder) {
@@ -639,7 +684,6 @@ fun LauncherScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .graphicsLayer {
-                            // 同步桌面內容：當資料夾打開或搜尋時，Dock 也應相應淡出
                             alpha = (1f - (launcherBlur.value / 20f).coerceIn(0f, 1f)) * dockVisibilityProgress
                         },
                     contentAlignment = Alignment.BottomCenter
@@ -690,7 +734,6 @@ fun LauncherScreen(
                 modifier = Modifier
                     .size(iconSize)
                     .graphicsLayer {
-                        // 在 Draw 階段計算位移，避免觸發重組
                         translationX = touchPosition.x + dragOffset.x - iconSizePx / 2
                         translationY = touchPosition.y + dragOffset.y - iconSizePx / 2
                         alpha = 0.8f
@@ -724,20 +767,20 @@ fun LauncherScreen(
     }
 
     val wallpaperLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let {
-            scope.launch(Dispatchers.IO) {
-                try {
-                    mContext.contentResolver.openInputStream(it)?.use { input ->
-                        val bitmap = BitmapFactory.decodeStream(input)
-                        if (bitmap != null) {
-                            viewModel.setCustomWallpaper(bitmap)
-                        }
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
+        pickedWallpaperUri = uri
+    }
+
+    if (pickedWallpaperUri != null) {
+        WallpaperCropDialog(
+            uri = pickedWallpaperUri!!,
+            onDismiss = { pickedWallpaperUri = null },
+            onConfirm = { croppedBitmap ->
+                viewModel.setCustomWallpaperColor(0) // 清除純色記錄，標記為圖片桌布
+                viewModel.setEmojiWallpaperText("") // 清除 Emoji
+                viewModel.setCustomWallpaper(croppedBitmap)
+                pickedWallpaperUri = null
             }
-        }
+        )
     }
 
     LauncherOverlays(
@@ -760,7 +803,6 @@ fun LauncherScreen(
             viewModel.deletePage(pageIdx)
             
             scope.launch {
-                // 稍微延遲確保 PagerState 已更新頁數，避免捲動到錯誤的位置
                 delay(50)
                 if (absoluteTargetPage < pagerState.pageCount) {
                     pagerState.animateScrollToPage(absoluteTargetPage)
@@ -795,8 +837,326 @@ fun LauncherScreen(
             widgetTargetPage = page
             showWidgetPicker = true
         },
-        onWallpaperClick = { wallpaperLauncher.launch("image/*") },
+        onWallpaperClick = { showWallpaperTypeDialog = true },
         onSettingsClick = onSettingsClick,
         onAppClick = onAppClick
     )
+
+    if (showWallpaperTypeDialog) {
+        AlertDialog(
+            onDismissRequest = { showWallpaperTypeDialog = false },
+            title = { Text(stringResource(R.string.menu_wallpaper)) },
+            text = { Text(stringResource(R.string.select_wallpaper_type_desc)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showWallpaperTypeDialog = false
+                    wallpaperLauncher.launch("image/*")
+                }) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Image, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.widget_photo))
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showWallpaperTypeDialog = false
+                    showColorPickerByWallpaper = true
+                }) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Palette, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.style_custom))
+                    }
+                }
+            }
+        )
+    }
+
+    if (showColorPickerByWallpaper) {
+        var selectedColor by remember { mutableIntStateOf(0xFF2196F3.toInt()) }
+        var emojiText by remember { mutableStateOf("") }
+        val favorites by viewModel.favoriteWallpaperColors.collectAsState()
+        
+        AlertDialog(
+            onDismissRequest = { showColorPickerByWallpaper = false },
+            title = { Text(stringResource(R.string.custom_style_title)) },
+            text = {
+                ColorPickerInternal(
+                    initialColor = selectedColor,
+                    onColorChanged = { selectedColor = it },
+                    emojiText = emojiText,
+                    onEmojiChanged = { emojiText = it },
+                    favorites = favorites,
+                    onAddFavorite = { viewModel.addFavoriteWallpaperColor(it) },
+                    onRemoveFavorite = { viewModel.removeFavoriteWallpaperColor(it) }
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    if (emojiText.isBlank()) {
+                        // 優化：如果沒有 Emoji，生成 1x1 的純色 Bitmap
+                        val bitmap = android.graphics.Bitmap.createBitmap(1, 1, android.graphics.Bitmap.Config.ARGB_8888).apply {
+                            eraseColor(selectedColor)
+                        }
+                        viewModel.setCustomWallpaperColor(selectedColor)
+                        viewModel.setEmojiWallpaperText("") // 清除 Lite 模式 Emoji
+                        viewModel.setCustomWallpaper(bitmap)
+                        showColorPickerByWallpaper = false
+                    } else {
+                        // 如果有 Emoji，先彈出模式選擇對話框
+                        showEmojiModeSelection = EmojiSelectionData(selectedColor, emojiText)
+                        showColorPickerByWallpaper = false
+                    }
+                }) {
+                    Text(stringResource(R.string.apply))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showColorPickerByWallpaper = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
+    if (showEmojiModeSelection != null) {
+        val data = showEmojiModeSelection!!
+        AlertDialog(
+            onDismissRequest = { showEmojiModeSelection = null },
+            title = { Text(stringResource(R.string.wallpaper_mode_title)) },
+            text = {
+                Column {
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.wallpaper_mode_lite)) },
+                        supportingContent = { Text(stringResource(R.string.wallpaper_mode_lite_desc)) },
+                        leadingContent = { Icon(Icons.Default.Bolt, null, tint = MaterialTheme.colorScheme.primary) },
+                        modifier = Modifier.clickable {
+                            val bitmap = android.graphics.Bitmap.createBitmap(1, 1, android.graphics.Bitmap.Config.ARGB_8888).apply {
+                                eraseColor(data.color)
+                            }
+                            viewModel.setCustomWallpaperColor(data.color)
+                            viewModel.setEmojiWallpaperText(data.emojiText)
+                            viewModel.setCustomWallpaper(bitmap)
+                            showEmojiModeSelection = null
+                        }
+                    )
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.wallpaper_mode_full)) },
+                        supportingContent = { Text(stringResource(R.string.wallpaper_mode_full_desc)) },
+                        leadingContent = { Icon(Icons.Default.HighQuality, null, tint = MaterialTheme.colorScheme.primary) },
+                        modifier = Modifier.clickable {
+                            val dm = mContext.resources.displayMetrics
+                            val b = android.graphics.Bitmap.createBitmap(dm.widthPixels, dm.heightPixels, android.graphics.Bitmap.Config.ARGB_8888)
+                            val canvas = android.graphics.Canvas(b)
+                            canvas.drawColor(data.color)
+                            
+                            val emojis = mutableListOf<String>()
+                            val it = java.text.BreakIterator.getCharacterInstance()
+                            it.setText(data.emojiText)
+                            var start = it.first()
+                            var end = it.next()
+                            while (end != java.text.BreakIterator.DONE) {
+                                emojis.add(data.emojiText.substring(start, end))
+                                start = end
+                                end = it.next()
+                            }
+                            
+                            if (emojis.isNotEmpty()) {
+                                val columns = 5
+                                val itemWidth = dm.widthPixels / columns.toFloat()
+                                val itemHeight = itemWidth * 1.2f
+                                val rows = (dm.heightPixels / itemHeight).toInt() + 2
+                                val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                                    textSize = itemWidth * 0.6f
+                                    textAlign = android.graphics.Paint.Align.CENTER
+                                }
+                                for (row in 0 until rows) {
+                                    for (col in 0 until columns) {
+                                        val emojiIndex = (row + col) % emojis.size
+                                        val x = col * itemWidth + itemWidth / 2f
+                                        val y = row * itemHeight + itemHeight / 2f - ((paint.descent() + paint.ascent()) / 2f)
+                                        canvas.drawText(emojis[emojiIndex], x, y, paint)
+                                    }
+                                }
+                            }
+                            viewModel.setCustomWallpaperColor(data.color)
+                            viewModel.setEmojiWallpaperText("") // Full 模式不需要啟動器層 Emoji
+                            viewModel.setCustomWallpaper(b)
+                            showEmojiModeSelection = null
+                        }
+                    )
+                }
+            },
+            confirmButton = {}
+        )
+    }
+
+    if (isApplyingWallpaper) {
+        Dialog(
+            onDismissRequest = { },
+            properties = DialogProperties(
+                dismissOnBackPress = false,
+                dismissOnClickOutside = false
+            )
+        ) {
+            Surface(
+                shape = RoundedCornerShape(28.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 6.dp
+            ) {
+                Column(
+                    modifier = Modifier
+                        .padding(24.dp)
+                        .fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = stringResource(R.string.applying_wallpaper),
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(48.dp),
+                        strokeWidth = 4.dp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    Text(
+                        text = stringResource(R.string.applying_wallpaper_desc),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ColorPickerInternal(
+    initialColor: Int,
+    onColorChanged: (Int) -> Unit,
+    emojiText: String,
+    onEmojiChanged: (String) -> Unit,
+    favorites: List<Int> = emptyList(),
+    onAddFavorite: (Int) -> Unit = {},
+    onRemoveFavorite: (Int) -> Unit = {}
+) {
+    var hexText by remember(initialColor) { mutableStateOf(String.format("%06X", initialColor and 0xFFFFFF)) }
+    val hsv = remember(initialColor) {
+        val res = FloatArray(3)
+        android.graphics.Color.colorToHSV(initialColor, res)
+        res
+    }
+    var h by remember(initialColor) { mutableFloatStateOf(hsv[0]) }
+    var s by remember(initialColor) { mutableFloatStateOf(hsv[1]) }
+    var v by remember(initialColor) { mutableFloatStateOf(hsv[2]) }
+
+    Column {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(60.dp)
+                .background(androidx.compose.ui.graphics.Color(initialColor), RoundedCornerShape(12.dp))
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            if (emojiText.isNotEmpty()) {
+                Text(text = emojiText, fontSize = 32.sp)
+            }
+            
+            // Add Favorite Button
+            IconButton(
+                onClick = { onAddFavorite(initialColor) },
+                modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)
+            ) {
+                Icon(
+                    imageVector = if (favorites.contains(initialColor)) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    contentDescription = null,
+                    tint = if (favorites.contains(initialColor)) Color.Red else Color.White.copy(alpha = 0.8f)
+                )
+            }
+        }
+        
+        if (favorites.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(12.dp))
+            androidx.compose.foundation.lazy.LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(horizontal = 4.dp)
+            ) {
+                items(favorites.size) { index ->
+                    val color = favorites[index]
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(androidx.compose.ui.graphics.Color(color))
+                            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                            .pointerInput(color) {
+                                detectTapGestures(
+                                    onTap = { onColorChanged(color) },
+                                    onLongPress = { onRemoveFavorite(color) }
+                                )
+                            }
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = emojiText,
+            onValueChange = onEmojiChanged,
+            label = { Text(stringResource(R.string.emoji_label)) },
+            placeholder = { Text(stringResource(R.string.emoji_hint)) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        OutlinedTextField(
+            value = hexText,
+            onValueChange = {
+                val filtered = it.uppercase().filter { char -> char in "0123456789ABCDEF" }.take(6)
+                hexText = filtered
+                if (filtered.length == 6) {
+                    try {
+                        val color = android.graphics.Color.parseColor("#$filtered")
+                        onColorChanged(0xFF000000.toInt() or color)
+                        val newHsv = FloatArray(3)
+                        android.graphics.Color.colorToHSV(0xFF000000.toInt() or color, newHsv)
+                        h = newHsv[0]
+                        s = newHsv[1]
+                        v = newHsv[2]
+                    } catch (e: Exception) {}
+                }
+            },
+            label = { Text(stringResource(R.string.hex_color_label)) },
+            prefix = { Text("#") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(stringResource(R.string.hue, h.toInt()), style = MaterialTheme.typography.labelSmall)
+        Slider(value = h, onValueChange = { h = it; onColorChanged(android.graphics.Color.HSVToColor(floatArrayOf(h, s, v))) }, valueRange = 0f..360f)
+        
+        Text(stringResource(R.string.saturation, (s * 100).toInt()), style = MaterialTheme.typography.labelSmall)
+        Slider(value = s, onValueChange = { s = it; onColorChanged(android.graphics.Color.HSVToColor(floatArrayOf(h, s, v))) }, valueRange = 0f..1f)
+        
+        Text(stringResource(R.string.brightness, (v * 100).toInt()), style = MaterialTheme.typography.labelSmall)
+        Slider(value = v, onValueChange = { v = it; onColorChanged(android.graphics.Color.HSVToColor(floatArrayOf(h, s, v))) }, valueRange = 0f..1f)
+    }
 }

@@ -13,24 +13,29 @@ fun MainViewModel.updateBlurredWallpaper() {
     if (currentSignal == lastBlurredSignal && _blurredWallpaper.value != null) return
 
     viewModelScope.launch(Dispatchers.IO) {
-        lastBlurredSignal = currentSignal
-        // 1. 優先從本地儲存載入 (使用者自選)
-        var result = wallpaperProcessor.loadWallpaperFromFile(wallpaperFile)
+        performWallpaperUpdate()
+    }
+}
 
-        // 2. 如果沒有自選，則嘗試從系統獲取 (降級方案)
-        if (result == null) {
-            result = wallpaperProcessor.extractSystemWallpaper()
-        }
+internal fun MainViewModel.performWallpaperUpdate() {
+    lastBlurredSignal = _wallpaperUpdateSignal.value
+    // 1. 優先從本地儲存載入 (使用者自選)
+    var result = wallpaperProcessor.loadWallpaperFromFile(wallpaperFile)
 
-        if (result != null) {
-            _rawWallpaper.value = result.raw
-            _blurredWallpaper.value = result.blurred
-            _isLightWallpaper.value = result.isLightWallpaper
-        }
+    // 2. 如果沒有自選，則嘗試從系統獲取 (降級方案)
+    if (result == null) {
+        result = wallpaperProcessor.extractSystemWallpaper()
+    }
+
+    if (result != null) {
+        _rawWallpaper.value = result.raw
+        _blurredWallpaper.value = result.blurred
+        _isLightWallpaper.value = result.isLightWallpaper
     }
 }
 
 fun MainViewModel.setCustomWallpaper(bitmap: Bitmap, syncToSystem: Boolean = true) {
+    _isApplyingWallpaper.value = true
     viewModelScope.launch(Dispatchers.IO) {
         try {
             if (syncToSystem) {
@@ -38,8 +43,11 @@ fun MainViewModel.setCustomWallpaper(bitmap: Bitmap, syncToSystem: Boolean = tru
                 wm.setBitmap(bitmap)
             }
             saveWallpaperToLocal(bitmap)
+            performWallpaperUpdate()
         } catch (e: Exception) {
             e.printStackTrace()
+        } finally {
+            _isApplyingWallpaper.value = false
         }
     }
 }
@@ -51,6 +59,5 @@ fun MainViewModel.saveWallpaperToLocal(bitmap: Bitmap) {
         }
         // 發出更新訊號
         _wallpaperUpdateSignal.value = System.currentTimeMillis()
-        updateBlurredWallpaper()
     } catch (e: Exception) { e.printStackTrace() }
 }

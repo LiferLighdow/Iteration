@@ -66,7 +66,17 @@ class WallpaperProcessor(private val context: Application) {
         val screenW = dm.widthPixels
         val screenH = dm.heightPixels
 
-        // 1. 精確裁剪以符合螢幕比例
+        // 1. 優化：如果是 1x1 的純色圖片，直接返回
+        if (rawBitmap.width == 1 && rawBitmap.height == 1) {
+            val isLight = systemSuggestedLight ?: (android.graphics.Color.luminance(rawBitmap.getPixel(0, 0)) > 0.5f)
+            return WallpaperResult(
+                raw = rawBitmap.asImageBitmap(),
+                blurred = rawBitmap.asImageBitmap(),
+                isLightWallpaper = isLight
+            )
+        }
+
+        // 2. 精確裁剪以符合螢幕比例
         val wallpaperAspectRatio = rawBitmap.width.toFloat() / rawBitmap.height
         val screenAspectRatio = screenW.toFloat() / screenH
 

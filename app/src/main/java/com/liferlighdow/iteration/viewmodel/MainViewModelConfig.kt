@@ -40,6 +40,9 @@ fun MainViewModel.exportConfig(): String {
             amoledBlack = _isAmoledBlack.value,
             iconPackPackage = _iconPackPackage.value,
             password = getPassword() ?: "",
+            emojiWallpaperText = _emojiWallpaperText.value,
+            customWallpaperColor = _customWallpaperColor.value,
+            favoriteWallpaperColors = _favoriteWallpaperColors.value,
             homeMenuOptions = _homeMenuOptions.value.filterNotNull().toSet(),
             glassParams = GlassParams(
                 blur = _liquidGlassBlur.value,
@@ -173,6 +176,10 @@ fun MainViewModel.applyConfig(config: LauncherConfig) {
         putBoolean("custom_icon_use_original", settings.customIconSettings.useOriginal)
         putBoolean("custom_icon_use_original_bg", settings.customIconSettings.useOriginalBg)
         
+        putString("emoji_wallpaper_text", settings.emojiWallpaperText)
+        putInt("custom_wallpaper_color", settings.customWallpaperColor)
+        putString("favorite_wallpaper_colors", settings.favoriteWallpaperColors.joinToString(","))
+        
         putStringSet("favorite_packages", config.favorites)
         putStringSet("excluded_themed_packages", config.excludedThemed)
         putStringSet("home_menu_options", settings.homeMenuOptions)
@@ -213,6 +220,10 @@ fun MainViewModel.applyConfig(config: LauncherConfig) {
     _customIconFgColor.value = settings.customIconSettings.fgColor
     _customIconUseOriginal.value = settings.customIconSettings.useOriginal
     _customIconUseOriginalBg.value = settings.customIconSettings.useOriginalBg
+
+    _emojiWallpaperText.value = settings.emojiWallpaperText
+    _customWallpaperColor.value = settings.customWallpaperColor
+    _favoriteWallpaperColors.value = settings.favoriteWallpaperColors
 
     _favoritePackages.value = config.favorites
     _excludedThemedPackages.value = config.excludedThemed
@@ -257,6 +268,18 @@ fun MainViewModel.applyConfig(config: LauncherConfig) {
     _dockPackageNames.value = config.dock
     prefs.edit().putString("dock_packages", config.dock.joinToString(",")).apply()
     prefs.edit().putString("launch_counts", config.launchCounts).apply()
+
+    // 6. 恢復純色/Emoji 桌布 (如果有)
+    if (settings.customWallpaperColor != 0) {
+        val color = settings.customWallpaperColor
+        val emoji = settings.emojiWallpaperText
+        val bitmap = android.graphics.Bitmap.createBitmap(1, 1, android.graphics.Bitmap.Config.ARGB_8888).apply {
+            eraseColor(color)
+        }
+        // 注意：這裡我們預設恢復為 Lite 模式或純色模式，因為 Full 模式的大圖不在備份中
+        setEmojiWallpaperText(emoji)
+        setCustomWallpaper(bitmap)
+    }
 
     // 最後清空快取並統一加載一次
     iconCache.evictAll()

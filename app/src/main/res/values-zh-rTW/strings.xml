@@ -450,4 +450,14 @@
     <string name="icon_cache_size_title">圖示快取大小</string>
     <string name="icon_cache_size_desc">保存在記憶體中的圖示數量。較大的值可提高流暢度，但會佔用更多記憶體。</string>
     <string name="icon_cache_current">目前快取大小：%1$d</string>
+    <string name="applying_wallpaper">正在套用桌布</string>
+    <string name="applying_wallpaper_desc">正在為您的新樣貌優化顏色並生成效果。</string>
+    <string name="select_wallpaper_type_desc">您想要從相簿中選擇照片，還是建立一個純色的桌布？</string>
+    <string name="emoji_label">表情符號 (Emoji)</string>
+    <string name="emoji_hint">輸入一個或多個 Emoji</string>
+    <string name="wallpaper_mode_title">渲染模式</string>
+    <string name="wallpaper_mode_full">Full (系統級套用)</string>
+    <string name="wallpaper_mode_full_desc">Emoji 會直接與桌布合併。在鎖定螢幕與其他應用中也能看見。</string>
+    <string name="wallpaper_mode_lite">Lite (效能優先)</string>
+    <string name="wallpaper_mode_lite_desc">系統僅使用 1x1 純色圖片。Emoji 由啟動器即時繪製，極度省電且清晰。</string>
 </resources>

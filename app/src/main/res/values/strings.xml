@@ -490,4 +490,16 @@
     <string name="icon_cache_size_title">Icon Cache Size</string>
     <string name="icon_cache_size_desc">The number of icons to keep in memory. Larger values improve smoothness but use more RAM.</string>
     <string name="icon_cache_current">Current Cache Size: %1$d</string>
+
+    <!-- Wallpaper Application -->
+    <string name="applying_wallpaper">Applying Wallpaper</string>
+    <string name="applying_wallpaper_desc">Optimizing colors and generating effects for your new look.</string>
+    <string name="select_wallpaper_type_desc">Would you like to use a photo from your gallery or create a solid color wallpaper?</string>
+    <string name="emoji_label">Emoji</string>
+    <string name="emoji_hint">Enter one or more emojis</string>
+    <string name="wallpaper_mode_title">Rendering Mode</string>
+    <string name="wallpaper_mode_full">Full (System Wide)</string>
+    <string name="wallpaper_mode_full_desc">Emoji is baked into the image. Visible on lock screen and other apps.</string>
+    <string name="wallpaper_mode_lite">Lite (Performance)</string>
+    <string name="wallpaper_mode_lite_desc">System uses 1x1 color. Emoji is rendered by Launcher only. Best for battery.</string>
 </resources>

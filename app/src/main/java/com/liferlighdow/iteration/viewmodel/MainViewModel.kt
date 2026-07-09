@@ -393,6 +393,48 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     internal val _isLibrarySearchFocused = MutableStateFlow(false)
     val isLibrarySearchFocused = _isLibrarySearchFocused.asStateFlow()
 
+    internal val _isApplyingWallpaper = MutableStateFlow(false)
+    val isApplyingWallpaper = _isApplyingWallpaper.asStateFlow()
+
+    internal val _emojiWallpaperText = MutableStateFlow(prefs.getString("emoji_wallpaper_text", "") ?: "")
+    val emojiWallpaperText = _emojiWallpaperText.asStateFlow()
+
+    internal val _customWallpaperColor = MutableStateFlow(prefs.getInt("custom_wallpaper_color", 0))
+    val customWallpaperColor = _customWallpaperColor.asStateFlow()
+
+    internal val _favoriteWallpaperColors = MutableStateFlow(
+        prefs.getString("favorite_wallpaper_colors", "")?.split(",")?.filter { it.isNotEmpty() }?.map { it.toInt() } ?: emptyList()
+    )
+    val favoriteWallpaperColors = _favoriteWallpaperColors.asStateFlow()
+
+    fun addFavoriteWallpaperColor(color: Int) {
+        val current = _favoriteWallpaperColors.value.toMutableList()
+        if (!current.contains(color)) {
+            current.add(0, color) // Add to start
+            if (current.size > 20) current.removeAt(current.size - 1) // Limit to 20
+            _favoriteWallpaperColors.value = current
+            prefs.edit().putString("favorite_wallpaper_colors", current.joinToString(",")).apply()
+        }
+    }
+
+    fun removeFavoriteWallpaperColor(color: Int) {
+        val current = _favoriteWallpaperColors.value.toMutableList()
+        if (current.remove(color)) {
+            _favoriteWallpaperColors.value = current
+            prefs.edit().putString("favorite_wallpaper_colors", current.joinToString(",")).apply()
+        }
+    }
+
+    fun setEmojiWallpaperText(text: String) {
+        _emojiWallpaperText.value = text
+        prefs.edit().putString("emoji_wallpaper_text", text).apply()
+    }
+
+    fun setCustomWallpaperColor(color: Int) {
+        _customWallpaperColor.value = color
+        prefs.edit().putInt("custom_wallpaper_color", color).apply()
+    }
+
     fun setLibrarySearchFocused(focused: Boolean) {
         _isLibrarySearchFocused.value = focused
     }
