@@ -51,6 +51,7 @@ fun SettingsNavigation() {
             SettingsPage.CHANGE_ICON -> currentPage = SettingsPage.ICON_THEME
             SettingsPage.GLOBAL_SEARCH_MANUAL -> currentPage = SettingsPage.MANUALS
             SettingsPage.ICON_ENGINE_MANUAL -> currentPage = SettingsPage.MANUALS
+            SettingsPage.DOCK_MANUAL -> currentPage = SettingsPage.MANUALS
             else -> currentPage = SettingsPage.MAIN
         }
     }
@@ -88,12 +89,16 @@ fun SettingsNavigation() {
         SettingsPage.MANUALS -> ManualsScreen(
             onBack = { currentPage = SettingsPage.MAIN },
             onNavigateToGlobalSearchManual = { currentPage = SettingsPage.GLOBAL_SEARCH_MANUAL },
-            onNavigateToIconEngineManual = { currentPage = SettingsPage.ICON_ENGINE_MANUAL }
+            onNavigateToIconEngineManual = { currentPage = SettingsPage.ICON_ENGINE_MANUAL },
+            onNavigateToDockManual = { currentPage = SettingsPage.DOCK_MANUAL }
         )
         SettingsPage.GLOBAL_SEARCH_MANUAL -> GlobalSearchManualScreen(onBack = {
             currentPage = SettingsPage.MANUALS
         })
         SettingsPage.ICON_ENGINE_MANUAL -> com.liferlighdow.iteration.ui.IconEngineManualScreen(onBack = {
+            currentPage = SettingsPage.MANUALS
+        })
+        SettingsPage.DOCK_MANUAL -> com.liferlighdow.iteration.ui.DockStyleManualScreen(onBack = {
             currentPage = SettingsPage.MANUALS
         })
         SettingsPage.LANGUAGE -> LanguageSettingsScreen(onBack = { currentPage = SettingsPage.MAIN })

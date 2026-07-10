@@ -28,7 +28,8 @@ import com.liferlighdow.iteration.R
 fun ManualsScreen(
     onBack: () -> Unit,
     onNavigateToGlobalSearchManual: () -> Unit,
-    onNavigateToIconEngineManual: () -> Unit
+    onNavigateToIconEngineManual: () -> Unit,
+    onNavigateToDockManual: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -66,6 +67,28 @@ fun ManualsScreen(
                     }
                 }
             }
+
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth().clickable(onClick = onNavigateToDockManual),
+                    shape = RoundedCornerShape(24.dp)
+                ) {
+                    Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier.size(56.dp).background(Color(0xFF43A047).copy(alpha = 0.1f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Dashboard, null, tint = Color(0xFF43A047), modifier = Modifier.size(28.dp))
+                        }
+                        Spacer(Modifier.width(16.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(stringResource(R.string.manual_dock_style), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.manual_dock_style_desc), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = MaterialTheme.colorScheme.outline)
+                    }
+                }
+            }
             
             item {
                 Card(
@@ -83,6 +106,28 @@ fun ManualsScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(stringResource(R.string.manual_icon_cache_engine), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                             Text(stringResource(R.string.manual_icon_cache_engine_desc), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = MaterialTheme.colorScheme.outline)
+                    }
+                }
+            }
+
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth().clickable(onClick = onNavigateToDockManual),
+                    shape = RoundedCornerShape(24.dp)
+                ) {
+                    Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier.size(56.dp).background(Color(0xFF43A047).copy(alpha = 0.1f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Dashboard, null, tint = Color(0xFF43A047), modifier = Modifier.size(28.dp))
+                        }
+                        Spacer(Modifier.width(16.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(stringResource(R.string.manual_dock_style), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.manual_dock_style_desc), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = MaterialTheme.colorScheme.outline)
                     }
@@ -140,22 +185,29 @@ fun GlobalSearchManualScreen(onBack: () -> Unit) {
 
             item {
                 ManualSection(
-                    title = "Scientific Calculator",
-                    content = "Enter any math expression like '2 * (3 + 4)' or 'sin(30) * pi'. It supports powers (^), modulo (%), and scientific functions (log, ln, abs, etc.)."
+                    title = "Scientific Calculator & Bases",
+                    content = "Enter math like 'sin(30) * pi'. For integers, it automatically shows BIN (grouped by 4), HEX, and OCT conversions. Tap any result to copy it."
                 )
             }
 
             item {
                 ManualSection(
-                    title = "Smart Translator",
-                    content = "Type 'tr [text]' to translate into your system language, or use '[text] to [lang]' for specific languages. Example: 'Hello to ja' for Japanese."
+                    title = "Smart Translator (tr)",
+                    content = "Type 'tr [text]' for system language or 'tr \"[text]\" to [lang]' for specific ones. Using quotes helps when the content contains 'to'. You can also jump to Google Translate from the 'More Searches' section."
                 )
             }
 
             item {
                 ManualSection(
-                    title = "Unit & Currency Converter",
-                    content = "Convert units instantly: '50 kg to lb' or '100 usd to twd'. It works offline for units and online for live exchange rates."
+                    title = "Unit & Currency Matrix",
+                    content = "Type '100usd' or '100m' to see a full matrix of 7 major currencies or related units instantly. For a specific conversion, use '100usd to twd'."
+                )
+            }
+
+            item {
+                ManualSection(
+                    title = "Search Suggestions",
+                    content = "As you type, the launcher fetches the top 4 search suggestions from the web. Tap a suggestion to fill it into the search bar."
                 )
             }
 
@@ -173,6 +225,57 @@ fun GlobalSearchManualScreen(onBack: () -> Unit) {
                 )
             }
             
+            item { Spacer(Modifier.height(40.dp)) }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DockStyleManualScreen(onBack: () -> Unit) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.manual_dock_style)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) }
+                }
+            )
+        }
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(20.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            item {
+                ManualSection(
+                    title = "Modern (Floating)",
+                    content = "A tribute to iOS 11 to the latest versions. This style features a high-radius rounded container that floats above the wallpaper, creating a modern and layered visual experience."
+                )
+            }
+
+            item {
+                ManualSection(
+                    title = "Classic (Full Width)",
+                    content = "A tribute to iOS 7 through iOS 10 and /e/OS. A familiar, reliable edge-to-edge design with a clean translucent look that provides a solid foundation for your most-used applications."
+                )
+            }
+
+            item {
+                ManualSection(
+                    title = "Platform (3D Glass)",
+                    content = "A tribute to iPhone OS 1 through iOS 6. This style brings back the iconic 'Glass Shelf' look, simulating a thick, refractive 3D glass platform for your apps."
+                )
+            }
+
+            item {
+                ManualSection(
+                    title = "Lite (Minimalist)",
+                    content = "A tribute to Android, MIUI/HyperOS, and minimalist philosophies. By removing the background container entirely, your icons breathe freely on the wallpaper for a clean, pure look."
+                )
+            }
+
             item { Spacer(Modifier.height(40.dp)) }
         }
     }

@@ -476,6 +476,8 @@
     <string name="rename_app">Rename App</string>
     <string name="manual_global_search">Global Search</string>
     <string name="manual_global_search_desc">Master the all-in-one search powerhouse</string>
+    <string name="manual_dock_style">Dock Style</string>
+    <string name="manual_dock_style_desc">Exploring styles and origins of the Dock</string>
     <string name="manual_icon_cache_engine">Icon Cache Engine</string>
     <string name="manual_icon_cache_engine_desc">Understanding the core of Iteration\'s visuals</string>
     <string name="manual_desktop_gestures">Desktop &amp; Gestures</string>

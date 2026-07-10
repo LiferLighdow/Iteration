@@ -478,6 +478,8 @@
     <string name="rename_app">重新命名應用程式</string>
     <string name="manual_global_search">全域搜尋</string>
     <string name="manual_global_search_desc">掌握一體化搜尋強大功能</string>
+    <string name="manual_dock_style">Dock 風格</string>
+    <string name="manual_dock_style_desc">探索 Dock 的風格與起源</string>
     <string name="manual_icon_cache_engine">圖示快取引擎</string>
     <string name="manual_icon_cache_engine_desc">了解 Iteration 的視覺核心</string>
     <string name="manual_desktop_gestures">桌面與手勢</string>
