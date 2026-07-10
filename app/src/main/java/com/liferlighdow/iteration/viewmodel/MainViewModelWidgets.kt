@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import com.liferlighdow.iteration.data.AppModel
 import com.liferlighdow.iteration.data.ConfigSerializer
+import com.liferlighdow.iteration.data.TodoTask
 import com.liferlighdow.iteration.data.WidgetDisplayMode
 import com.liferlighdow.iteration.data.WidgetModel
 import com.liferlighdow.iteration.data.WidgetType
@@ -33,6 +34,7 @@ fun MainViewModel.addWidget(type: WidgetType, pageIndex: Int = -1) {
         is WidgetType.Music -> "Music"
         is WidgetType.Note -> "Note"
         is WidgetType.Weather -> "Weather"
+        is WidgetType.ToDoList -> "ToDo List"
         is WidgetType.Stack -> if (type.isWide) "Wide Widget Stacker" else "Stack"
     }
 
@@ -155,6 +157,34 @@ fun MainViewModel.updateNoteText(widgetId: String, text: String) {
     val newMinusOne = _minusOneWidgets.value.map { widget ->
         if (widget.id == widgetId && widget.widgetType is WidgetType.Note) {
             widget.copy(widgetType = widget.widgetType.copy(text = text))
+        } else widget
+    }
+    _minusOneWidgets.value = newMinusOne
+
+    saveLayout()
+    saveWidgets(newMinusOne)
+}
+
+fun MainViewModel.updateTodoTasks(widgetId: String, tasks: List<TodoTask>) {
+    fun updateItem(item: AppModel): AppModel {
+        val w = item.widget
+        if (w?.id == widgetId && w.widgetType is WidgetType.ToDoList) {
+            return item.copy(widget = w.copy(widgetType = w.widgetType.copy(tasks = tasks)))
+        }
+        if (item.isFolder) {
+            return item.copy(folderItems = item.folderItems.map { updateItem(it) })
+        }
+        return item
+    }
+
+    val currentPages = _pages.value.map { page ->
+        page.map { updateItem(it) }
+    }
+    _pages.value = currentPages
+
+    val newMinusOne = _minusOneWidgets.value.map { widget ->
+        if (widget.id == widgetId && widget.widgetType is WidgetType.ToDoList) {
+            widget.copy(widgetType = widget.widgetType.copy(tasks = tasks))
         } else widget
     }
     _minusOneWidgets.value = newMinusOne

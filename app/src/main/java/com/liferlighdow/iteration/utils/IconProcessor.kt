@@ -39,7 +39,7 @@ class IconProcessor(private val context: Context) {
         maskCache.clear()
     }
 
-    private fun getOrCreateMask(shape: IconShape, size: Int): Bitmap {
+    fun getOrCreateMask(shape: IconShape, size: Int): Bitmap {
         val key = "${shape.name}_$size"
         return maskCache.getOrPut(key) {
             val mask = Bitmap.createBitmap(size, size, Bitmap.Config.ALPHA_8)

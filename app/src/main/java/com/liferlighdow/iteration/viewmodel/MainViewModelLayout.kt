@@ -128,6 +128,25 @@ fun MainViewModel.addAppToHome(uniqueId: String) {
     reorganizeAllPages(currentPages)
 }
 
+fun MainViewModel.addShortcutToHome(packageName: String, shortcutId: String, label: String) {
+    val newItem = AppModel(
+        label = label,
+        packageName = packageName,
+        shortcutId = shortcutId,
+        uniqueId = "shortcut_${packageName}_${shortcutId}"
+    )
+    
+    val currentPages = _pages.value.map { it.toMutableList() }.toMutableList()
+    if (currentPages.isEmpty()) {
+        currentPages.add(mutableListOf(newItem))
+    } else {
+        // 找到最後一個有空間的頁面或新增一頁
+        currentPages.last().add(newItem)
+    }
+    _pages.value = currentPages
+    saveLayout()
+}
+
 fun MainViewModel.insertAtPage(pages: MutableList<MutableList<AppModel>>, index: Int, item: AppModel) {
     val safeIndex = index.coerceIn(0, pages.size)
     if (safeIndex < pages.size) {
@@ -146,6 +165,9 @@ fun MainViewModel.calculateUsedSlots(items: List<AppModel>): Int {
                 is WidgetType.Calendar -> if (type.isWide) 8 else 4
                 is WidgetType.Photo -> if (type.isWide) 8 else 4
                 is WidgetType.Music -> if (type.isWide) 8 else 4
+                is WidgetType.Note -> if (type.isWide) 8 else 4
+                is WidgetType.Weather -> if (type.isWide) 8 else 4
+                is WidgetType.ToDoList -> if (type.isWide) 8 else 4
                 is WidgetType.Stack -> 4
                 else -> 1
             }

@@ -288,7 +288,7 @@ fun FolderOverlay(
                                                             }
                                                         )
                                                     }
-                                                    if (menuOptions.contains("uninstall")) {
+                                                    if (menuOptions.contains("uninstall") && !app.isSystem) {
                                                         DropdownMenuItem(
                                                             text = { Text(stringResource(R.string.menu_uninstall)) },
                                                             leadingIcon = { Icon(Icons.Default.DeleteForever, null) },

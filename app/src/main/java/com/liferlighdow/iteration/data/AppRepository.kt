@@ -1,6 +1,7 @@
 package com.liferlighdow.iteration.data
 
 import android.content.Context
+import android.content.pm.ApplicationInfo
 import android.content.pm.LauncherApps
 import android.os.Build
 import android.os.UserManager
@@ -31,10 +32,13 @@ class AppRepository(private val context: Context) {
                     val activityName = info.name
                     val idSuffix = if (userId > 0) "@$userId" else ""
                     
+                    val isSystem = (info.applicationInfo.flags and (ApplicationInfo.FLAG_SYSTEM or ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0
+                    
                     apps.add(AppModel(
                         label = info.label.toString(),
                         packageName = pkgName,
                         userId = userId,
+                        isSystem = isSystem,
                         // 關鍵：將 Activity 名稱包含在 ID 中，區分同包名的不同分身入口
                         uniqueId = "$pkgName/$activityName$idSuffix",
                         category = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

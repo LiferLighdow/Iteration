@@ -11,6 +11,9 @@ import android.graphics.BitmapFactory
 import android.os.Build
 import android.os.UserHandle
 import android.os.UserManager
+import android.content.pm.ShortcutInfo
+import android.os.Process
+import android.widget.Toast
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.ui.graphics.ImageBitmap
@@ -19,6 +22,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.viewModelScope
 import com.liferlighdow.iteration.R
+import com.liferlighdow.iteration.PwaActivity
 import com.liferlighdow.iteration.data.AppModel
 import com.liferlighdow.iteration.data.ConfigSerializer
 import com.liferlighdow.iteration.ui.DockStyle
@@ -36,9 +40,16 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
+import coil.ImageLoader
+import coil.request.ImageRequest
+import coil.request.SuccessResult
+import android.graphics.Canvas
+import android.graphics.Paint
+import java.io.File
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.File
+import android.graphics.Rect
+import android.graphics.RectF
 import java.io.FileOutputStream
 
 /**
@@ -48,7 +59,26 @@ fun MainViewModel.getIcon(uniqueId: String): ImageBitmap? {
     val styleSuffix = currentStyleSuffix
     if (styleSuffix == "default") return null
 
-    // 1. 取得基礎 ID
+    // 1. 處理 Shortcut 類型的 ID
+    if (uniqueId.startsWith("shortcut_")) {
+        val styleSuffix = currentStyleSuffix
+        val cacheKey = "${uniqueId}_$styleSuffix"
+        iconCache[cacheKey]?.let { return it }
+
+        // 檢查磁碟快取 (Shortcut 的圖標已經在保存時轉為檔名安全格式)
+        val fileSafeId = uniqueId.replace("/", "_").replace(":", "_").replace("@", "_")
+        val diskCacheFile = File(processedIconCacheDir, "${fileSafeId}_$styleSuffix.png")
+        if (diskCacheFile.exists()) {
+            return try {
+                BitmapFactory.decodeFile(diskCacheFile.absolutePath)?.asImageBitmap()?.also {
+                    iconCache.put(cacheKey, it)
+                }
+            } catch (e: Exception) { null }
+        }
+        return null 
+    }
+
+    // 2. 取得基礎 ID (App 類型)
     val baseId = if (uniqueId.contains("@")) {
         val parts = uniqueId.split("@")
         val lastPart = parts.last()
@@ -393,6 +423,7 @@ fun MainViewModel.loadSettings() {
     loadCategoryRenames()
     loadWidgets()
     loadDock()
+    loadPwaApps()
 
     val savedStyleStr = prefs.getString("icon_style", "STANDARD") ?: "STANDARD"
     val newStyle = try { IconStyle.valueOf(savedStyleStr) } catch (e: Exception) { IconStyle.STANDARD }
@@ -549,6 +580,9 @@ fun MainViewModel.loadApps() {
             repository.getInstalledApps().also { cachedRawApps = it }
         }
 
+        // 合併 PWA 應用程式
+        val appsToProcess = rawApps + _pwaApps.value
+
         val themeColors = if (isThemed) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 dynamicLightColorScheme(getApplication())
@@ -613,7 +647,7 @@ fun MainViewModel.loadApps() {
             val semaphore = Semaphore(8)
 
             coroutineScope {
-                rawApps.map { app ->
+                appsToProcess.map { app ->
                     async {
                         semaphore.withPermit {
                             val fileSafeId = app.uniqueId.replace("/", "_").replace(":", "_").replace("@", "_")
@@ -657,7 +691,7 @@ fun MainViewModel.loadApps() {
                             app.copy(
                                 label = customLabels[app.uniqueId] ?: customLabels[app.packageName] ?: app.label,
                                 isHidden = hiddenPackages.contains(app.packageName) || hiddenPackages.contains(app.uniqueId),
-                                displayCategory = displayCategory
+                                displayCategory = if (app.isPWA) "PWA Apps" else displayCategory
                             )
                         }
                     }
@@ -687,7 +721,33 @@ fun MainViewModel.loadApps() {
                         val itemValue = pageArray.get(j)
                         val jsonStr = if (itemValue is JSONObject) itemValue.toString() else itemValue as String
                         ConfigSerializer.deserializeAppModel(jsonStr)?.let { savedApp ->
-                            if (savedApp.isFolder || savedApp.isWidget) {
+                            if (savedApp.isFolder || savedApp.isWidget || savedApp.isPWA) {
+                                // 處理 PWA 圖示快取
+                                if (savedApp.isPWA) {
+                                    val currentStyle = currentStyleSuffix
+                                    val cacheKey = "${savedApp.uniqueId}_$currentStyle"
+                                    if (iconCache[cacheKey] == null) {
+                                        viewModelScope.launch(Dispatchers.IO) {
+                                            loadPwaIcon(savedApp)
+                                        }
+                                    }
+                                }
+                                pageItems.add(savedApp)
+                            } else if (savedApp.isShortcut && !savedApp.shortcutId.isNullOrEmpty()) {
+                                // 處理 Shortcut 圖示快取
+                                val currentStyle = currentStyleSuffix
+                                val cacheKey = "${savedApp.uniqueId}_$currentStyle"
+                                if (iconCache[cacheKey] == null) {
+                                    viewModelScope.launch(Dispatchers.IO) {
+                                        val info = getShortcutInfoById(savedApp.packageName, savedApp.shortcutId, savedApp.userId)
+                                        info?.let { si ->
+                                            getShortcutIcon(si)?.let { icon ->
+                                                iconCache.put(cacheKey, icon)
+                                                triggerIconUpdate()
+                                            }
+                                        }
+                                    }
+                                }
                                 pageItems.add(savedApp)
                             } else {
                                 val baseApp = processedApps.find { it.uniqueId == savedApp.uniqueId }
@@ -756,6 +816,39 @@ fun MainViewModel.launchApp(app: AppModel) {
             userManager.getSerialNumberForUser(it) == app.userId 
         } ?: android.os.Process.myUserHandle()
 
+        // 增加 PWA 啟動邏輯
+        if (app.isPWA || app.packageName == "com.iteration.pwa" || app.uniqueId.startsWith("pwa_")) {
+            val rawUrl = (app.shortcutId ?: "").trim()
+            if (rawUrl.isEmpty()) {
+                android.util.Log.e("Iteration", "PWA URL is blank for ${app.label}")
+                return
+            }
+            
+            try {
+                val intent = Intent(getApplication(), PwaActivity::class.java).apply {
+                    putExtra("url", rawUrl)
+                    putExtra("label", app.label)
+                    putExtra("uniqueId", app.uniqueId)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                getApplication<Application>().startActivity(intent)
+                logAppLaunch(app.packageName)
+            } catch (e: Exception) {
+                android.util.Log.e("Iteration", "Failed to launch PwaActivity", e)
+                android.widget.Toast.makeText(getApplication(), "PWA Error: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+            }
+            return
+        }
+
+        // 增加 Shortcut 啟動邏輯
+        if (app.isShortcut && !app.shortcutId.isNullOrEmpty()) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
+                launcherApps.startShortcut(app.packageName, app.shortcutId, null, null, userHandle)
+            }
+            logAppLaunch(app.packageName)
+            return
+        }
+
         if (app.uniqueId.contains("/")) {
             val idWithoutTimestamp = if (app.uniqueId.contains("@")) {
                 val lastPart = app.uniqueId.substringAfterLast("@")
@@ -779,4 +872,208 @@ fun MainViewModel.launchApp(app: AppModel) {
     } catch (e: Exception) {
         e.printStackTrace()
     }
+}
+
+fun MainViewModel.getAppShortcuts(packageName: String, userId: Long): List<ShortcutInfo> {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N_MR1) return emptyList()
+    val launcherApps = getApplication<Application>().getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
+    val userManager = getApplication<Application>().getSystemService(Context.USER_SERVICE) as UserManager
+    
+    val allProfiles = userManager.userProfiles
+    val userHandle = allProfiles.find { 
+        userManager.getSerialNumberForUser(it) == userId 
+    } ?: android.os.Process.myUserHandle()
+
+    val query = LauncherApps.ShortcutQuery().apply {
+        setPackage(packageName)
+        setQueryFlags(LauncherApps.ShortcutQuery.FLAG_MATCH_DYNAMIC or 
+                     LauncherApps.ShortcutQuery.FLAG_MATCH_MANIFEST or 
+                     LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED)
+    }
+    return try {
+        launcherApps.getShortcuts(query, userHandle) ?: emptyList()
+    } catch (e: SecurityException) {
+        emptyList()
+    }
+}
+
+fun MainViewModel.launchShortcut(packageName: String, shortcutId: String, userId: Long) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N_MR1) return
+    val launcherApps = getApplication<Application>().getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
+    val userManager = getApplication<Application>().getSystemService(Context.USER_SERVICE) as UserManager
+    
+    val allProfiles = userManager.userProfiles
+    val userHandle = allProfiles.find { 
+        userManager.getSerialNumberForUser(it) == userId 
+    } ?: android.os.Process.myUserHandle()
+
+    try {
+        launcherApps.startShortcut(packageName, shortcutId, null, null, userHandle)
+        logAppLaunch(packageName)
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+}
+
+fun MainViewModel.getShortcutInfoById(packageName: String, shortcutId: String, userId: Long): ShortcutInfo? {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N_MR1) return null
+    val launcherApps = getApplication<Application>().getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
+    val userManager = getApplication<Application>().getSystemService(Context.USER_SERVICE) as UserManager
+    
+    val allProfiles = userManager.userProfiles
+    val userHandle = allProfiles.find { 
+        userManager.getSerialNumberForUser(it) == userId 
+    } ?: android.os.Process.myUserHandle()
+
+    val query = LauncherApps.ShortcutQuery().apply {
+        setPackage(packageName)
+        setShortcutIds(listOf(shortcutId))
+        setQueryFlags(LauncherApps.ShortcutQuery.FLAG_MATCH_DYNAMIC or 
+                     LauncherApps.ShortcutQuery.FLAG_MATCH_MANIFEST or 
+                     LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED)
+    }
+    return try {
+        launcherApps.getShortcuts(query, userHandle)?.firstOrNull()
+    } catch (e: SecurityException) {
+        null
+    }
+}
+
+fun MainViewModel.getShortcutIcon(shortcut: ShortcutInfo): ImageBitmap? {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N_MR1) return null
+    val launcherApps = getApplication<Application>().getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
+    return try {
+        val density = getApplication<Application>().resources.displayMetrics.densityDpi
+        launcherApps.getShortcutIconDrawable(shortcut, density)?.toBitmap()?.asImageBitmap()
+    } catch (e: Exception) {
+        null
+    }
+}
+
+/** PWA Maker 邏輯 **/
+
+fun MainViewModel.loadPwaApps() {
+    val saved = prefs.getString("pwa_apps_json", null)
+    if (saved != null) {
+        try {
+            val array = JSONArray(saved)
+            val list = mutableListOf<AppModel>()
+            for (i in 0 until array.length()) {
+                ConfigSerializer.deserializeAppModel(array.getString(i))?.let { list.add(it) }
+            }
+            _pwaApps.value = list
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+}
+
+fun MainViewModel.savePwaApps() {
+    val array = JSONArray()
+    _pwaApps.value.forEach { array.put(ConfigSerializer.serializeAppModel(it)) }
+    prefs.edit().putString("pwa_apps_json", array.toString()).apply()
+}
+
+fun MainViewModel.deletePWA(app: AppModel) {
+    val current = _pwaApps.value.toMutableList()
+    current.removeAll { it.uniqueId == app.uniqueId }
+    _pwaApps.value = current
+    savePwaApps()
+
+    // 從主畫面移除
+    val currentPages = _pages.value.map { page ->
+        page.filter { it.uniqueId != app.uniqueId }
+    }.filter { it.isNotEmpty() }
+    _pages.value = currentPages
+    saveLayout()
+    
+    // 清除圖示快取
+    val fileSafeId = app.uniqueId.replace("/", "_").replace(":", "_").replace("@", "_")
+    processedIconCacheDir.listFiles { _, name -> name.startsWith(fileSafeId) }?.forEach { it.delete() }
+    
+    loadApps()
+}
+
+fun MainViewModel.createPWA(label: String, url: String, bgColor: Int) {
+    val pwaApp = AppModel(
+        label = label,
+        packageName = "com.iteration.pwa",
+        uniqueId = "pwa_${System.currentTimeMillis()}",
+        shortcutId = url,
+        isPWA = true,
+        pwaBgColor = bgColor
+    )
+    
+    // 保存到 PWA 列表
+    val currentPwas = _pwaApps.value.toMutableList()
+    currentPwas.add(pwaApp)
+    _pwaApps.value = currentPwas
+    savePwaApps()
+    
+    // 觸發應用程式清單更新，PWA 會因為 auto-add 邏輯自動出現在桌面
+    loadApps()
+    
+    viewModelScope.launch(Dispatchers.IO) {
+        loadPwaIcon(pwaApp)
+    }
+}
+
+suspend fun MainViewModel.loadPwaIcon(app: AppModel) {
+    val styleSuffix = currentStyleSuffix
+    val fileSafeId = app.uniqueId.replace("/", "_").replace(":", "_").replace("@", "_")
+    val diskCacheFile = File(processedIconCacheDir, "${fileSafeId}_$styleSuffix.png")
+    val cacheKey = "${app.uniqueId}_$styleSuffix"
+    
+    val density = getApplication<Application>().resources.displayMetrics.density
+    val sizePx = (62 * density).toInt()
+    
+    val bitmap = generatePwaIcon(app, sizePx)
+    if (bitmap != null) {
+        val imageBitmap = bitmap.asImageBitmap()
+        saveIconToDisk(imageBitmap, diskCacheFile)
+        iconCache.put(cacheKey, imageBitmap)
+        triggerIconUpdate()
+    }
+}
+
+private suspend fun MainViewModel.generatePwaIcon(app: AppModel, sizePx: Int): Bitmap? {
+    val url = app.shortcutId ?: return null
+    val domain = try { android.net.Uri.parse(url).host ?: url } catch (e: Exception) { url }
+    val faviconUrl = "https://www.google.com/s2/favicons?sz=128&domain=$domain"
+    
+    val loader = ImageLoader(getApplication())
+    val request = ImageRequest.Builder(getApplication())
+        .data(faviconUrl)
+        .allowHardware(false)
+        .build()
+        
+    val result = (loader.execute(request) as? SuccessResult)?.drawable?.toBitmap(sizePx, sizePx)
+    
+    val finalBitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(finalBitmap)
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    
+    // 繪製背景
+    val shape = _iconShape.value
+    val mask = iconProcessor.getOrCreateMask(shape, sizePx)
+    paint.color = app.pwaBgColor
+    canvas.drawBitmap(mask, 0f, 0f, paint)
+    
+    // 繪製前景 (Favicon)
+    if (result != null) {
+        val padding = sizePx * 0.2f
+        val srcRect = Rect(0, 0, result.width, result.height)
+        val dstRect = RectF(padding, padding, sizePx - padding, sizePx - padding)
+        canvas.drawBitmap(result, srcRect, dstRect, paint)
+    } else {
+        // Fallback: 畫一個字母
+        paint.color = android.graphics.Color.WHITE
+        paint.textSize = sizePx * 0.5f
+        paint.textAlign = Paint.Align.CENTER
+        val fontMetrics = paint.fontMetrics
+        val y = (sizePx - fontMetrics.ascent - fontMetrics.descent) / 2
+        canvas.drawText(app.label.take(1).uppercase(), sizePx / 2f, y, paint)
+    }
+    
+    return finalBitmap
 }

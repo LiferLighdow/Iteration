@@ -246,23 +246,25 @@ fun AppLibraryPage(
                                             showMenu = false
                                         }
                                     )
-                                    HorizontalDivider()
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.menu_uninstall)) },
-                                        leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
-                                        onClick = {
-                                            try {
-                                                val intent = Intent(Intent.ACTION_DELETE).apply {
-                                                    data = Uri.fromParts("package", app.packageName, null)
-                                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    if (!app.isSystem) {
+                                        HorizontalDivider()
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(R.string.menu_uninstall)) },
+                                            leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
+                                            onClick = {
+                                                try {
+                                                    val intent = Intent(Intent.ACTION_DELETE).apply {
+                                                        data = Uri.fromParts("package", app.packageName, null)
+                                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                                    }
+                                                    mContext.startActivity(intent)
+                                                } catch (e: Exception) {
+                                                    Log.e("Iteration", "Uninstall failed", e)
                                                 }
-                                                mContext.startActivity(intent)
-                                            } catch (e: Exception) {
-                                                Log.e("Iteration", "Uninstall failed", e)
+                                                showMenu = false
                                             }
-                                            showMenu = false
-                                        }
-                                    )
+                                        )
+                                    }
                                 }
                                 HorizontalDivider(modifier = Modifier.padding(start = 64.dp).align(Alignment.BottomCenter), thickness = 0.5.dp, color = Color.White.copy(alpha = 0.2f))
                             }
@@ -445,6 +447,12 @@ fun LibraryItemWithMenu(
     var showRenameDialog by remember { mutableStateOf(false) }
     var renameText by remember { mutableStateOf(app.label) }
     
+    val shortcuts = remember(showMenu) {
+        if (showMenu && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N_MR1) {
+            viewModel.getAppShortcuts(app.packageName, app.userId)
+        } else emptyList()
+    }
+    
     Box {
         AppItem(
             app = app,
@@ -464,6 +472,29 @@ fun LibraryItemWithMenu(
         )
 
         DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N_MR1 && shortcuts.isNotEmpty()) {
+                shortcuts.forEach { shortcut ->
+                    DropdownMenuItem(
+                        text = { 
+                            @Suppress("NewApi")
+                            Text(shortcut.shortLabel?.toString() ?: shortcut.longLabel?.toString() ?: "") 
+                        },
+                        leadingIcon = {
+                            val icon = viewModel.getShortcutIcon(shortcut)
+                            if (icon != null) {
+                                Image(bitmap = icon, contentDescription = null, modifier = Modifier.size(24.dp))
+                            }
+                        },
+                        onClick = {
+                            @Suppress("NewApi")
+                            viewModel.launchShortcut(app.packageName, shortcut.id, app.userId)
+                            showMenu = false
+                        }
+                    )
+                }
+                HorizontalDivider()
+            }
+
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.menu_add_to_home)) },
                 leadingIcon = { Icon(Icons.Default.Add, null) },
@@ -491,25 +522,32 @@ fun LibraryItemWithMenu(
                     showMenu = false
                 }
             )
-            HorizontalDivider()
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.menu_uninstall)) },
-                leadingIcon = { Icon(Icons.Default.Delete, null) },
-                onClick = {
-                    Log.d("Iteration", "Uninstalling: ${app.packageName}")
-                    Toast.makeText(mContext, mContext.getString(R.string.uninstalling_app, app.label), Toast.LENGTH_SHORT).show()
-                    try {
-                        val intent = Intent(Intent.ACTION_DELETE).apply {
-                            data = Uri.fromParts("package", app.packageName, null)
-                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            if (!app.isSystem) {
+                HorizontalDivider()
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.menu_uninstall)) },
+                    leadingIcon = { Icon(Icons.Default.Delete, null) },
+                    onClick = {
+                        if (app.isPWA) {
+                            viewModel.deletePWA(app)
+                            showMenu = false
+                            return@DropdownMenuItem
                         }
-                        mContext.startActivity(intent)
-                    } catch (e: Exception) {
-                        Log.e("Iteration", "Uninstall failed", e)
+                        Log.d("Iteration", "Uninstalling: ${app.packageName}")
+                        Toast.makeText(mContext, mContext.getString(R.string.uninstalling_app, app.label), Toast.LENGTH_SHORT).show()
+                        try {
+                            val intent = Intent(Intent.ACTION_DELETE).apply {
+                                data = Uri.fromParts("package", app.packageName, null)
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                            }
+                            mContext.startActivity(intent)
+                        } catch (e: Exception) {
+                            Log.e("Iteration", "Uninstall failed", e)
+                        }
+                        showMenu = false
                     }
-                    showMenu = false
-                }
-            )
+                )
+            }
         }
     }
 

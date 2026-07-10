@@ -52,6 +52,27 @@ fun MainViewModel.setCustomWallpaper(bitmap: Bitmap, syncToSystem: Boolean = tru
     }
 }
 
+fun MainViewModel.setBalanceWallpaper(fullBitmap: Bitmap, liteBitmap: Bitmap) {
+    _isApplyingWallpaper.value = true
+    viewModelScope.launch(Dispatchers.IO) {
+        try {
+            val wm = WallpaperManager.getInstance(getApplication())
+            // 1. 鎖定畫面套用 Full (包含 Emoji)
+            wm.setBitmap(fullBitmap, null, true, WallpaperManager.FLAG_LOCK)
+            // 2. 主畫面套用 Lite (1x1 純色)
+            wm.setBitmap(liteBitmap, null, true, WallpaperManager.FLAG_SYSTEM)
+            
+            // 3. 啟動器內部快取使用 Lite (這樣背景才不會有重複的 Emoji)
+            saveWallpaperToLocal(liteBitmap)
+            performWallpaperUpdate()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            _isApplyingWallpaper.value = false
+        }
+    }
+}
+
 fun MainViewModel.saveWallpaperToLocal(bitmap: Bitmap) {
     try {
         FileOutputStream(wallpaperFile).use { out ->

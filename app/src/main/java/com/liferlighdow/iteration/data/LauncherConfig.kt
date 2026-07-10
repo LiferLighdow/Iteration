@@ -21,6 +21,7 @@ data class LauncherConfig(
     val userCategories: List<String> = emptyList(),
     val categoryRenames: Map<String, String> = emptyMap(),
     val excludedThemed: Set<String> = emptySet(),
+    val pwaApps: List<AppModel> = emptyList(),
     val launchCounts: String = "",
     val version: Int = 3,
     val timestamp: Long = System.currentTimeMillis()

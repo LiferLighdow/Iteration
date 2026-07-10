@@ -56,6 +56,7 @@
     <!-- App Picker -->
     <string name="select_apps">Select Apps</string>
     <string name="select_app">Select App</string>
+    <string name="no_shortcuts_available">No shortcuts available for this app</string>
 
     <!-- Search & Library -->
     <string name="search_hint">Search Apps&#8230;</string>
@@ -376,6 +377,7 @@
     <string name="choose_picture">Choose Picture</string>
     <string name="adjust_position">Adjust Position</string>
     <string name="edit_note">Edit Note</string>
+    <string name="edit_todo">Edit ToDo List</string>
     <string name="choose_location">Choose Location</string>
     <string name="note_placeholder">Enter your note here&#8230;</string>
     <string name="ip_location_auto">Use IP Location (Automatic)</string>
@@ -393,6 +395,7 @@
     <string name="available_widgets">Available Widgets</string>
     <string name="widget_note">Note</string>
     <string name="widget_note_wide">Wide Note</string>
+    <string name="widget_todo">ToDo List</string>
     <string name="widget_weather">Weather</string>
     <string name="widget_weather_forecast">Weather Forecast</string>
     <string name="network_disabled">Network Disabled</string>
@@ -406,6 +409,7 @@
     <string name="desc_photo">Display your favorite memories</string>
     <string name="desc_music">Control active media sessions</string>
     <string name="desc_note">Quickly jot down thoughts</string>
+    <string name="desc_todo">Manage your daily tasks</string>
     <string name="desc_stack_wide">Swipe through wide widgets</string>
     <string name="desc_stack">Stacked functional blocks</string>
     <string name="widget_stacker_wide">Wide Widget Stacker</string>
@@ -415,7 +419,9 @@
 
     <string name="settings_language">Language</string>
     <string name="language_english">English</string>
-    <string name="language_chinese_tw">Traditional Chinese (繁體中文)</string>
+    <string name="language_chinese_tw">Chinese (Traditional)</string>
+    <string name="language_chinese_cn">Chinese (Simplified)</string>
+    <string name="language_chinese_special">Chinese (Iteration Style)</string>
     <string name="language_system_default">System Default</string>
     <string name="language_system_default_desc">Use device settings. Falls back to English if the translation is unavailable.</string>
 
@@ -502,4 +508,15 @@
     <string name="wallpaper_mode_full_desc">Emoji is baked into the image. Visible on lock screen and other apps.</string>
     <string name="wallpaper_mode_lite">Lite (Performance)</string>
     <string name="wallpaper_mode_lite_desc">System uses 1x1 color. Emoji is rendered by Launcher only. Best for battery.</string>
+    <string name="wallpaper_mode_balance">Balance (Mixed)</string>
+    <string name="wallpaper_mode_balance_desc">Full Emoji on Lock Screen. 1x1 color on Home Screen with Launcher rendering. Best of both worlds.</string>
+
+    <!-- PWA Maker -->
+    <string name="pwa_maker_title">PWA Maker</string>
+    <string name="pwa_maker_desc">Create a lightweight web application shortcut on your home screen.</string>
+    <string name="pwa_label_hint">Application Name</string>
+    <string name="pwa_url_hint">URL (Web Address)</string>
+    <string name="pwa_created">PWA created and added to home screen</string>
+    <string name="pwa_invalid_input">Please enter a valid name and URL</string>
+    <string name="background_color">Background Color</string>
 </resources>

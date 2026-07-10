@@ -27,7 +27,7 @@ import com.liferlighdow.iteration.utils.IconShape
 import com.liferlighdow.iteration.viewmodel.*
 import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.data.AppModel
-import com.liferlighdow.iteration.ui.dialogs.WidgetPickerDialog
+import com.liferlighdow.iteration.ui.dialogs.*
 import com.liferlighdow.iteration.viewmodel.deleteFolder
 import com.liferlighdow.iteration.viewmodel.deletePage
 
@@ -37,6 +37,8 @@ fun LauncherOverlays(
     // 狀態控制
     showDesktopMenu: Boolean,
     onDismissDesktopMenu: () -> Unit,
+    showShortcutPicker: Boolean,
+    onDismissShortcutPicker: () -> Unit,
     showCreateFolderDialog: Boolean,
     onShowCreateFolder: () -> Unit,
     onDismissCreateFolder: () -> Unit,
@@ -71,6 +73,7 @@ fun LauncherOverlays(
     isLiquidGlassHomeFolderEnabled: Boolean,
     // 回調動作
     onAddWidgetClick: (Int) -> Unit,
+    onAddShortcutClick: () -> Unit,
     onWallpaperClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onAppClick: (AppModel) -> Unit
@@ -87,6 +90,10 @@ fun LauncherOverlays(
         isMultiplePages = pages.size > 1,
         isDefaultLauncher = isDefaultLauncher,
         onAddWidgetClick = { onAddWidgetClick(currentPage) },
+        onAddShortcutClick = {
+            onDismissDesktopMenu()
+            onAddShortcutClick()
+        },
         onCreateFolderClick = {
             onDismissDesktopMenu()
             onShowCreateFolder()
@@ -178,6 +185,13 @@ fun LauncherOverlays(
                     Text(stringResource(R.string.cancel))
                 }
             }
+        )
+    }
+
+    if (showShortcutPicker) {
+        ShortcutPickerDialog(
+            viewModel = viewModel,
+            onDismiss = onDismissShortcutPicker
         )
     }
 

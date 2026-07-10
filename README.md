@@ -140,6 +140,14 @@ app/src/main/java/com/liferlighdow/iteration/
 │   └── WidgetModel.kt
 │
 ├── ui/                   # UI Components & Screens
+│   ├── settings/         # Modular Settings Pages
+│   │   ├── SettingsAppScreens.kt      # Hide, Rename, Library Settings
+│   │   ├── SettingsCommon.kt          # Shared UI Components (Item, Group)
+│   │   ├── SettingsInteractionScreens.kt # Desktop & Gestures
+│   │   ├── SettingsLiquidGlassScreen.kt # Real-time Glass Workshop
+│   │   ├── SettingsMainScreen.kt      # Unified Search & Navigation
+│   │   ├── SettingsOtherScreens.kt    # Permissions, Language, Search
+│   │   └── SettingsStyleScreens.kt    # Icon Theme, Pack, & Styles
 │   ├── widgets/          # Individual Widget Components
 │   │   ├── BatteryWidget.kt
 │   │   ├── CalendarWidget.kt

@@ -40,6 +40,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import androidx.compose.ui.window.Dialog
@@ -48,6 +49,7 @@ import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.data.WeatherProvider
 import com.liferlighdow.iteration.data.WidgetDisplayMode
 import com.liferlighdow.iteration.data.WidgetModel
+import com.liferlighdow.iteration.data.TodoTask
 import com.liferlighdow.iteration.data.WidgetType
 import com.liferlighdow.iteration.viewmodel.*
 import kotlinx.coroutines.*
@@ -75,6 +77,7 @@ fun WidgetStackPickerDialog(
     }
 
     var noteToEditInStack by remember { mutableStateOf<Pair<Int, WidgetModel>?>(null) }
+    var todoToEditInStack by remember { mutableStateOf<Pair<Int, WidgetModel>?>(null) }
     var photoToAdjust by remember { mutableStateOf<WidgetModel?>(null) }
     var showLocationSearch by remember { mutableStateOf(false) }
 
@@ -177,6 +180,17 @@ fun WidgetStackPickerDialog(
                                                 )
                                             }
 
+                                            if (item.type is WidgetType.ToDoList) {
+                                                DropdownMenuItem(
+                                                    text = { Text(stringResource(R.string.edit_todo)) },
+                                                    leadingIcon = { Icon(Icons.Default.PlaylistAddCheck, null, tint = MaterialTheme.colorScheme.primary) },
+                                                    onClick = {
+                                                        todoToEditInStack = index to item
+                                                        showItemMenu = false
+                                                    }
+                                                )
+                                            }
+
                                             if (item.type is WidgetType.Weather) {
                                                 val currentProvider by viewModel.weatherProvider.collectAsState()
                                                 DropdownMenuItem(
@@ -231,6 +245,7 @@ fun WidgetStackPickerDialog(
                             Triple(WidgetType.Music(true), R.string.widget_music_wide, Icons.Default.MusicVideo),
                             Triple(WidgetType.Photo(true), R.string.widget_photo_wide, Icons.Default.Rectangle),
                             Triple(WidgetType.Note(text = "", isWide = true), null, Icons.Default.Description),
+                            Triple(WidgetType.ToDoList(tasks = emptyList(), isWide = true), R.string.widget_todo, Icons.Default.PlaylistAddCheck),
                             Triple(WidgetType.Weather(true), null, Icons.Default.WbSunny)
                         )
                     } else available
@@ -240,6 +255,7 @@ fun WidgetStackPickerDialog(
                         val label = if (labelRes != null) stringResource(labelRes) else {
                             when (type) {
                                 is WidgetType.Note -> if (type.isWide) stringResource(R.string.widget_note_wide) else stringResource(R.string.widget_note)
+                                is WidgetType.ToDoList -> stringResource(R.string.widget_todo)
                                 is WidgetType.Weather -> if (type.isWide) stringResource(R.string.widget_weather_forecast) else stringResource(R.string.widget_weather)
                                 else -> ""
                             }
@@ -248,6 +264,7 @@ fun WidgetStackPickerDialog(
                         val canAdd = when (type) {
                             is WidgetType.Photo -> true
                             is WidgetType.Note -> true
+                            is WidgetType.ToDoList -> true
                             else -> children.none { it.type::class == type::class }
                         }
 
@@ -335,6 +352,84 @@ fun WidgetStackPickerDialog(
             },
             dismissButton = {
                 TextButton(onClick = { noteToEditInStack = null }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
+    if (todoToEditInStack != null) {
+        val (index, widget) = todoToEditInStack!!
+        val initialTasks = (widget.type as? WidgetType.ToDoList)?.tasks ?: emptyList()
+
+        var tasks by remember { mutableStateOf(initialTasks) }
+        var newTaskText by remember { mutableStateOf("") }
+
+        AlertDialog(
+            onDismissRequest = { todoToEditInStack = null },
+            title = { Text(stringResource(R.string.edit_todo)) },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = newTaskText,
+                        onValueChange = { newTaskText = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Add new task...") },
+                        trailingIcon = {
+                            IconButton(onClick = {
+                                if (newTaskText.isNotBlank()) {
+                                    tasks = tasks + TodoTask(text = newTaskText)
+                                    newTaskText = ""
+                                }
+                            }) {
+                                Icon(Icons.Default.Add, null)
+                            }
+                        }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LazyColumn(modifier = Modifier.heightIn(max = 250.dp)) {
+                        items(tasks) { task ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                            ) {
+                                Checkbox(
+                                    checked = task.isDone,
+                                    onCheckedChange = { isChecked ->
+                                        tasks = tasks.map { if (it.id == task.id) it.copy(isDone = isChecked) else it }
+                                    }
+                                )
+                                Text(
+                                    text = task.text,
+                                    modifier = Modifier.weight(1f),
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        textDecoration = if (task.isDone) TextDecoration.LineThrough else null
+                                    )
+                                )
+                                IconButton(onClick = {
+                                    tasks = tasks.filter { it.id != task.id }
+                                }) {
+                                    Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error)
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    val newList = children.toMutableList()
+                    val oldWidget = newList[index]
+                    val newType = (oldWidget.type as WidgetType.ToDoList).copy(tasks = tasks)
+                    newList[index] = oldWidget.copy(widgetType = newType)
+                    children = newList
+                    todoToEditInStack = null
+                }) {
+                    Text(stringResource(R.string.done))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { todoToEditInStack = null }) {
                     Text(stringResource(R.string.cancel))
                 }
             }
@@ -636,6 +731,83 @@ fun NoteEditDialog(
 }
 
 @Composable
+fun TodoEditDialog(
+    widgetId: String,
+    initialTasks: List<TodoTask>,
+    viewModel: MainViewModel,
+    onDismiss: () -> Unit
+) {
+    var tasks by remember { mutableStateOf(initialTasks) }
+    var newTaskText by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.edit_todo)) },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = newTaskText,
+                    onValueChange = { newTaskText = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Add new task...") },
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            if (newTaskText.isNotBlank()) {
+                                tasks = tasks + TodoTask(text = newTaskText)
+                                newTaskText = ""
+                            }
+                        }) {
+                            Icon(Icons.Default.Add, null)
+                        }
+                    }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
+                    items(tasks) { task ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                        ) {
+                            Checkbox(
+                                checked = task.isDone,
+                                onCheckedChange = { isChecked ->
+                                    tasks = tasks.map { if (it.id == task.id) it.copy(isDone = isChecked) else it }
+                                }
+                            )
+                            Text(
+                                text = task.text,
+                                modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    textDecoration = if (task.isDone) TextDecoration.LineThrough else null
+                                )
+                            )
+                            IconButton(onClick = {
+                                tasks = tasks.filter { it.id != task.id }
+                            }) {
+                                Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                viewModel.updateTodoTasks(widgetId, tasks)
+                onDismiss()
+            }) {
+                Text(stringResource(R.string.done))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
+}
+
+@Composable
 fun WidgetPickerDialog(onDismiss: () -> Unit, onWidgetSelected: (WidgetType) -> Unit) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -691,6 +863,7 @@ fun WidgetPickerDialog(onDismiss: () -> Unit, onWidgetSelected: (WidgetType) -> 
                         Triple(WidgetType.Note(isWide = true), null, Icons.Default.Description),
                         Triple(WidgetType.Stack(isWide = false), R.string.widget_stacker, Icons.Default.Layers),
                         Triple(WidgetType.Stack(isWide = true), null, Icons.Default.DashboardCustomize),
+                        Triple(WidgetType.ToDoList(isWide = true), R.string.widget_todo, Icons.Default.PlaylistAddCheck),
                         Triple(WidgetType.Weather(isWide = true), null, Icons.Default.WbSunny)
                     )
 
@@ -700,6 +873,7 @@ fun WidgetPickerDialog(onDismiss: () -> Unit, onWidgetSelected: (WidgetType) -> 
                                 is WidgetType.Note -> if (type.isWide) stringResource(R.string.widget_note_wide) else stringResource(R.string.widget_note)
                                 is WidgetType.Stack -> if (type.isWide) stringResource(R.string.widget_stacker_wide) else stringResource(R.string.widget_stacker)
                                 is WidgetType.Weather -> stringResource(R.string.widget_weather_forecast)
+                                is WidgetType.ToDoList -> stringResource(R.string.widget_todo)
                                 else -> ""
                             }
                         }
@@ -711,6 +885,7 @@ fun WidgetPickerDialog(onDismiss: () -> Unit, onWidgetSelected: (WidgetType) -> 
                             is WidgetType.Photo -> stringResource(R.string.desc_photo)
                             is WidgetType.Music -> stringResource(R.string.desc_music)
                             is WidgetType.Note -> stringResource(R.string.desc_note)
+                            is WidgetType.ToDoList -> stringResource(R.string.desc_todo)
                             is WidgetType.Stack -> if (type.isWide) stringResource(R.string.desc_stack_wide) else stringResource(R.string.desc_stack)
                             else -> ""
                         }

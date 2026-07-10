@@ -175,6 +175,7 @@ fun LauncherScreen(
     var showDeleteFolderConfirm by remember { mutableStateOf(false) }
     var showDeletePageConfirm by remember { mutableStateOf(false) }
     var showWidgetPicker by remember { mutableStateOf(false) }
+    var showShortcutPicker by remember { mutableStateOf(false) }
     var widgetTargetPage by remember { mutableStateOf<Int?>(null) }
 
     // 新增：快速編輯 App 的狀態
@@ -332,59 +333,41 @@ fun LauncherScreen(
                     }
                 }
         ) {
-            Box(modifier = Modifier.fillMaxSize()) {
+            // 1.1 桌布與圖案層 (統一採樣範圍)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .layerBackdrop(backdrop)
+            ) {
+                // 底層：系統桌布圖片 (在 Lite/Balance 下是 1x1 純色)
                 rawWallpaper?.let {
                     Image(
                         bitmap = it,
                         contentDescription = null,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .layerBackdrop(backdrop),
+                        modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
                 }
 
-                // Lite 模式：啟動器層 Emoji 陣列
+                // 中層：Lite 模式即時渲染的 Emoji 陣列
                 if (emojiWallpaperText.isNotEmpty()) {
-                    val emojis = remember(emojiWallpaperText) {
-                        val list = mutableListOf<String>()
-                        val it = java.text.BreakIterator.getCharacterInstance()
-                        it.setText(emojiWallpaperText)
-                        var start = it.first()
-                        var end = it.next()
-                        while (end != java.text.BreakIterator.DONE) {
-                            list.add(emojiWallpaperText.substring(start, end))
-                            start = end
-                            end = it.next()
-                        }
-                        list
-                    }
+                    val emojis = remember(emojiWallpaperText) { parseEmojis(emojiWallpaperText) }
                     
                     if (emojis.isNotEmpty()) {
                         androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
-                            val columns = 5
-                            val itemWidth = size.width / columns
-                            val itemHeight = itemWidth * 1.2f
-                            val rows = (size.height / itemHeight).toInt() + 2
-                            
-                            val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                                textSize = itemWidth * 0.6f
-                                textAlign = android.graphics.Paint.Align.CENTER
-                            }
-                            
-                            for (row in 0 until rows) {
-                                for (col in 0 until columns) {
-                                    val emojiIndex = (row + col) % emojis.size
-                                    val x = col * itemWidth + itemWidth / 2f
-                                    val y = row * itemHeight + itemHeight / 2f - ((paint.descent() + paint.ascent()) / 2f)
-                                    // 注意：這裡使用 nativeCanvas 繪製文字
-                                    drawContext.canvas.nativeCanvas.drawText(emojis[emojiIndex], x, y, paint)
-                                }
-                            }
+                            drawEmojiPattern(
+                                drawContext.canvas.nativeCanvas,
+                                emojis,
+                                size.width.toInt(),
+                                size.height.toInt()
+                            )
                         }
                     }
                 }
-                
+            }
+            
+            // 獨立的模糊處理層 (Android 12 以下)
+            Box(modifier = Modifier.fillMaxSize()) {
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
                     blurredWallpaper?.let {
                         Image(
@@ -715,6 +698,10 @@ fun LauncherScreen(
                         onSettingsClick = onSettingsClick,
                         onLongClick = { showDockPicker = it },
                         onDeleteClick = { app ->
+                            if (app.isPWA) {
+                                viewModel.deletePWA(app)
+                                return@LauncherBottomBar
+                            }
                             try {
                                 val intent = Intent(Intent.ACTION_DELETE).apply {
                                     data = Uri.fromParts("package", app.packageName, null)
@@ -814,6 +801,8 @@ fun LauncherScreen(
             showWidgetPicker = false
             widgetTargetPage = null
         },
+        showShortcutPicker = showShortcutPicker,
+        onDismissShortcutPicker = { showShortcutPicker = false },
         showDockPicker = showDockPicker,
         onDismissDockPicker = { showDockPicker = null },
         appToEdit = appToEdit,
@@ -837,6 +826,7 @@ fun LauncherScreen(
             widgetTargetPage = page
             showWidgetPicker = true
         },
+        onAddShortcutClick = { showShortcutPicker = true },
         onWallpaperClick = { showWallpaperTypeDialog = true },
         onSettingsClick = onSettingsClick,
         onAppClick = onAppClick
@@ -942,6 +932,35 @@ fun LauncherScreen(
                             showEmojiModeSelection = null
                         }
                     )
+                    
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.wallpaper_mode_balance)) },
+                        supportingContent = { Text(stringResource(R.string.wallpaper_mode_balance_desc)) },
+                        leadingContent = { Icon(Icons.Default.Balance, null, tint = MaterialTheme.colorScheme.primary) },
+                        modifier = Modifier.clickable {
+                            // 1. 生成 Lite Bitmap (1x1)
+                            val liteBitmap = android.graphics.Bitmap.createBitmap(1, 1, android.graphics.Bitmap.Config.ARGB_8888).apply {
+                                eraseColor(data.color)
+                            }
+                            
+                            // 2. 生成 Full Bitmap (全螢幕)
+                            val dm = mContext.resources.displayMetrics
+                            val fullBitmap = android.graphics.Bitmap.createBitmap(dm.widthPixels, dm.heightPixels, android.graphics.Bitmap.Config.ARGB_8888)
+                            val canvas = android.graphics.Canvas(fullBitmap)
+                            canvas.drawColor(data.color)
+                            
+                            val emojis = parseEmojis(data.emojiText)
+                            if (emojis.isNotEmpty()) {
+                                drawEmojiPattern(canvas, emojis, dm.widthPixels, dm.heightPixels)
+                            }
+                            
+                            viewModel.setCustomWallpaperColor(data.color)
+                            viewModel.setEmojiWallpaperText(data.emojiText) // 啟動器層需要繪製
+                            viewModel.setBalanceWallpaper(fullBitmap, liteBitmap)
+                            showEmojiModeSelection = null
+                        }
+                    )
+
                     ListItem(
                         headlineContent = { Text(stringResource(R.string.wallpaper_mode_full)) },
                         supportingContent = { Text(stringResource(R.string.wallpaper_mode_full_desc)) },
@@ -952,34 +971,9 @@ fun LauncherScreen(
                             val canvas = android.graphics.Canvas(b)
                             canvas.drawColor(data.color)
                             
-                            val emojis = mutableListOf<String>()
-                            val it = java.text.BreakIterator.getCharacterInstance()
-                            it.setText(data.emojiText)
-                            var start = it.first()
-                            var end = it.next()
-                            while (end != java.text.BreakIterator.DONE) {
-                                emojis.add(data.emojiText.substring(start, end))
-                                start = end
-                                end = it.next()
-                            }
-                            
+                            val emojis = parseEmojis(data.emojiText)
                             if (emojis.isNotEmpty()) {
-                                val columns = 5
-                                val itemWidth = dm.widthPixels / columns.toFloat()
-                                val itemHeight = itemWidth * 1.2f
-                                val rows = (dm.heightPixels / itemHeight).toInt() + 2
-                                val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                                    textSize = itemWidth * 0.6f
-                                    textAlign = android.graphics.Paint.Align.CENTER
-                                }
-                                for (row in 0 until rows) {
-                                    for (col in 0 until columns) {
-                                        val emojiIndex = (row + col) % emojis.size
-                                        val x = col * itemWidth + itemWidth / 2f
-                                        val y = row * itemHeight + itemHeight / 2f - ((paint.descent() + paint.ascent()) / 2f)
-                                        canvas.drawText(emojis[emojiIndex], x, y, paint)
-                                    }
-                                }
+                                drawEmojiPattern(canvas, emojis, dm.widthPixels, dm.heightPixels)
                             }
                             viewModel.setCustomWallpaperColor(data.color)
                             viewModel.setEmojiWallpaperText("") // Full 模式不需要啟動器層 Emoji
@@ -1158,5 +1152,40 @@ fun ColorPickerInternal(
         
         Text(stringResource(R.string.brightness, (v * 100).toInt()), style = MaterialTheme.typography.labelSmall)
         Slider(value = v, onValueChange = { v = it; onColorChanged(android.graphics.Color.HSVToColor(floatArrayOf(h, s, v))) }, valueRange = 0f..1f)
+    }
+}
+
+private fun parseEmojis(text: String): List<String> {
+    val list = mutableListOf<String>()
+    val it = java.text.BreakIterator.getCharacterInstance()
+    it.setText(text)
+    var start = it.first()
+    var end = it.next()
+    while (end != java.text.BreakIterator.DONE) {
+        list.add(text.substring(start, end))
+        start = end
+        end = it.next()
+    }
+    return list
+}
+
+private fun drawEmojiPattern(canvas: android.graphics.Canvas, emojis: List<String>, width: Int, height: Int) {
+    val columns = 5
+    val itemWidth = width / columns.toFloat()
+    val itemHeight = itemWidth * 1.2f
+    val rows = (height / itemHeight).toInt() + 2
+    
+    val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+        textSize = itemWidth * 0.6f
+        textAlign = android.graphics.Paint.Align.CENTER
+    }
+
+    for (row in 0 until rows) {
+        for (col in 0 until columns) {
+            val emojiIndex = (row + col) % emojis.size
+            val x = col * itemWidth + itemWidth / 2f
+            val y = row * itemHeight + itemHeight / 2f - ((paint.descent() + paint.ascent()) / 2f)
+            canvas.drawText(emojis[emojiIndex], x, y, paint)
+        }
     }
 }

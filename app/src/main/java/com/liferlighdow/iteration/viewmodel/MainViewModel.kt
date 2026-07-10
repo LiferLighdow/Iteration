@@ -28,9 +28,7 @@ import com.liferlighdow.iteration.utils.WallpaperProcessor
 import com.liferlighdow.iteration.data.*
 import com.liferlighdow.iteration.ui.*
 import com.liferlighdow.iteration.utils.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -215,6 +213,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     internal val _favoritePackages =
         MutableStateFlow(prefs.getStringSet("favorite_packages", emptySet()) ?: emptySet())
     val favoritePackages = _favoritePackages.asStateFlow()
+
+    internal val _pwaApps = MutableStateFlow<List<AppModel>>(emptyList())
+    val pwaApps = _pwaApps.asStateFlow()
 
     internal val _doubleTapAction = MutableStateFlow(
         try {
@@ -569,8 +570,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val refreshReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == "com.liferlighdow.iteration.ACTION_REFRESH_APPS") {
-                refreshApps()
+            when (intent?.action) {
+                "com.liferlighdow.iteration.ACTION_REFRESH_APPS" -> refreshApps()
+                "com.liferlighdow.iteration.ACTION_PIN_SHORTCUT" -> {
+                    val pkg = intent.getStringExtra("package_name") ?: return
+                    val id = intent.getStringExtra("shortcut_id") ?: return
+                    val label = intent.getStringExtra("label") ?: "Shortcut"
+                    
+                    // 關鍵：立刻獲取並保存圖標
+                    viewModelScope.launch(Dispatchers.IO) {
+                        val info = getShortcutInfoById(pkg, id, 0) // 假設主用戶
+                        info?.let { si ->
+                            getShortcutIcon(si)?.let { bitmap ->
+                                // 將圖標存入自定義圖標目錄，檔名使用 shortcut 的 uniqueId
+                                val fileSafeId = "shortcut_${pkg}_${id}".replace("/", "_").replace(":", "_").replace("@", "_")
+                                saveIconToDisk(bitmap, java.io.File(processedIconCacheDir, "${fileSafeId}_${currentStyleSuffix}.png"))
+                            }
+                        }
+                        withContext(Dispatchers.Main) {
+                            addShortcutToHome(pkg, id, label)
+                        }
+                    }
+                }
             }
         }
     }
@@ -621,7 +642,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // 註冊監聽
         launcherApps.registerCallback(packageCallback)
         
-        val filter = IntentFilter("com.liferlighdow.iteration.ACTION_REFRESH_APPS")
+        val filter = IntentFilter().apply {
+            addAction("com.liferlighdow.iteration.ACTION_REFRESH_APPS")
+            addAction("com.liferlighdow.iteration.ACTION_PIN_SHORTCUT")
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             getApplication<Application>().registerReceiver(refreshReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
         } else {

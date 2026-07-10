@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.AddAPhoto
+import androidx.compose.material.icons.filled.PlaylistAddCheck
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -128,6 +129,7 @@ fun AppGrid(
     val draggingUniqueId = draggingApp?.uniqueId
     var stackToEdit by remember { mutableStateOf<WidgetModel?>(null) }
     var noteToEdit by remember { mutableStateOf<WidgetModel?>(null) }
+    var todoToEdit by remember { mutableStateOf<WidgetModel?>(null) }
     var weatherToEdit by remember { mutableStateOf<WidgetModel?>(null) }
     var photoToAdjust by remember { mutableStateOf<WidgetModel?>(null) }
     var photoToPick by remember { mutableStateOf<WidgetModel?>(null) }
@@ -178,6 +180,7 @@ fun AppGrid(
                     is WidgetType.Note -> if (type.isWide) 4 else 2
                     is WidgetType.Stack -> if (type.isWide) 4 else 2
                     is WidgetType.Weather -> if (type.isWide) 4 else 2
+                    is WidgetType.ToDoList -> if (type.isWide) 4 else 2
                     is WidgetType.Battery, is WidgetType.Clock -> 2
                     null -> 1
                 }
@@ -320,6 +323,7 @@ fun AppGrid(
                         is WidgetType.Note -> if (type.isWide) 4 else 2
                         is WidgetType.Stack -> if (type.isWide) 4 else 2
                         is WidgetType.Weather -> if (type.isWide) 4 else 2
+                        is WidgetType.ToDoList -> if (type.isWide) 4 else 2
                         is WidgetType.Battery, is WidgetType.Clock -> 2
                         null -> 1
                     }
@@ -431,6 +435,7 @@ fun AppGrid(
                             onContextMenuDismiss = { showContextMenu = false },
                             onUpdateStackToEdit = { stackToEdit = it },
                             onUpdateNoteToEdit = { noteToEdit = it },
+                            onUpdateTodoToEdit = { todoToEdit = it },
                             onUpdateWeatherToEdit = { weatherToEdit = it },
                             onUpdatePhotoToAdjust = { photoToAdjust = it },
                             onUpdatePhotoToPick = { photoToPick = it },
@@ -491,6 +496,16 @@ fun AppGrid(
             onDismiss = { noteToEdit = null }
         )
     }
+
+    if (todoToEdit != null) {
+        TodoEditDialog(
+            widgetId = todoToEdit!!.id,
+            initialTasks = (todoToEdit!!.type as WidgetType.ToDoList).tasks,
+            viewModel = viewModel,
+            onDismiss = { todoToEdit = null }
+        )
+    }
+
     if (weatherToEdit != null) {
         LocationSearchDialog(
             viewModel = viewModel,
@@ -542,6 +557,7 @@ private fun WidgetGridItem(
     onContextMenuDismiss: () -> Unit,
     onUpdateStackToEdit: (WidgetModel) -> Unit,
     onUpdateNoteToEdit: (WidgetModel) -> Unit,
+    onUpdateTodoToEdit: (WidgetModel) -> Unit,
     onUpdateWeatherToEdit: (WidgetModel) -> Unit,
     onUpdatePhotoToAdjust: (WidgetModel) -> Unit,
     onUpdatePhotoToPick: (WidgetModel) -> Unit,
@@ -554,6 +570,7 @@ private fun WidgetGridItem(
         is WidgetType.Note -> type.isWide
         is WidgetType.Stack -> type.isWide
         is WidgetType.Weather -> type.isWide
+        is WidgetType.ToDoList -> type.isWide
         else -> false
     }
 
@@ -607,6 +624,12 @@ private fun WidgetGridItem(
                         backdrop = backdrop
                     )
                     is WidgetType.Weather -> WeatherWidget(
+                        displayMode = widget.displayMode,
+                        modifier = Modifier.fillMaxSize(),
+                        backdrop = backdrop
+                    )
+                    is WidgetType.ToDoList -> TodoWidget(
+                        widget = widget,
                         displayMode = widget.displayMode,
                         modifier = Modifier.fillMaxSize(),
                         backdrop = backdrop
@@ -719,6 +742,16 @@ private fun WidgetGridItem(
                     }
                 )
             }
+            if (app.widget?.type is WidgetType.ToDoList) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.edit_todo)) },
+                    leadingIcon = { Icon(Icons.Default.PlaylistAddCheck, null, tint = MaterialTheme.colorScheme.primary) },
+                    onClick = {
+                        onUpdateTodoToEdit(app.widget!!)
+                        onContextMenuDismiss()
+                    }
+                )
+            }
             if (app.widget?.type is WidgetType.Weather) {
                 val currentProvider by viewModel.weatherProvider.collectAsState()
                 
@@ -805,12 +838,41 @@ private fun AppGridItem(
             }
         )
         val menuOptions by viewModel.homeMenuOptions.collectAsState()
+        
+        val shortcuts = remember(showContextMenu) {
+            if (showContextMenu && !app.isFolder && !app.isShortcut && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N_MR1) {
+                viewModel.getAppShortcuts(app.packageName, app.userId)
+            } else emptyList()
+        }
 
         DropdownMenu(
             expanded = showContextMenu,
             onDismissRequest = onContextMenuDismiss,
             modifier = Modifier.background(MaterialTheme.colorScheme.surface)
         ) {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N_MR1 && shortcuts.isNotEmpty()) {
+                shortcuts.forEach { shortcut ->
+                    DropdownMenuItem(
+                        text = { 
+                            @Suppress("NewApi")
+                            Text(shortcut.shortLabel?.toString() ?: shortcut.longLabel?.toString() ?: "") 
+                        },
+                        leadingIcon = {
+                            val icon = viewModel.getShortcutIcon(shortcut)
+                            if (icon != null) {
+                                Image(bitmap = icon, contentDescription = null, modifier = Modifier.size(24.dp))
+                            }
+                        },
+                        onClick = {
+                            @Suppress("NewApi")
+                            viewModel.launchShortcut(app.packageName, shortcut.id, app.userId)
+                            onContextMenuDismiss()
+                        }
+                    )
+                }
+                HorizontalDivider()
+            }
+
             if (menuOptions.contains("delete_home")) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.menu_delete_home)) },
@@ -832,7 +894,7 @@ private fun AppGridItem(
                 )
             }
             if (!app.isFolder) {
-                if (menuOptions.contains("uninstall")) {
+                if (menuOptions.contains("uninstall") && !app.isSystem) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.menu_uninstall)) },
                         leadingIcon = { Icon(Icons.Default.DeleteForever, null) },

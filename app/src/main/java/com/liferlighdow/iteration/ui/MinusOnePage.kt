@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.PlaylistAddCheck
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -87,6 +88,7 @@ fun MinusOnePage(
 
     var stackToEdit by remember { mutableStateOf<WidgetModel?>(null) }
     var noteToEdit by remember { mutableStateOf<WidgetModel?>(null) }
+    var todoToEdit by remember { mutableStateOf<WidgetModel?>(null) }
     var weatherToEdit by remember { mutableStateOf<WidgetModel?>(null) }
     var photoToAdjust by remember { mutableStateOf<WidgetModel?>(null) }
     var photoToPick by remember { mutableStateOf<WidgetModel?>(null) }
@@ -278,6 +280,7 @@ fun MinusOnePage(
                             (widget.type as? WidgetType.Calendar)?.isWide == true ||
                             (widget.type as? WidgetType.Music)?.isWide == true ||
                             (widget.type as? WidgetType.Note)?.isWide == true ||
+                            (widget.type as? WidgetType.ToDoList)?.isWide == true ||
                             (widget.type as? WidgetType.Weather)?.isWide == true ||
                             (widget.type as? WidgetType.Stack)?.isWide == true) 4 else 2
                         GridItemSpan(span)
@@ -369,6 +372,7 @@ fun MinusOnePage(
                                 is WidgetType.Photo -> PhotoWidget(widget = widget, viewModel = viewModel)
                                 is WidgetType.Music -> MusicWidget(widget = widget, displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
                                 is WidgetType.Note -> NoteWidget(widget = widget, displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
+                                is WidgetType.ToDoList -> TodoWidget(widget = widget, displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
                                 is WidgetType.Weather -> WeatherWidget(displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
                                 is WidgetType.Stack -> StackWidget(widget = widget, viewModel = viewModel, backdrop = backdrop, isMinusOnePage = true)
                             }
@@ -428,6 +432,13 @@ fun MinusOnePage(
                                         text = { Text(stringResource(R.string.edit_note)) },
                                         leadingIcon = { Icon(Icons.Default.Edit, null) },
                                         onClick = { noteToEdit = widget; showContextMenu = false }
+                                    )
+                                }
+                                if (widget.type is WidgetType.ToDoList) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.edit_todo)) },
+                                        leadingIcon = { Icon(Icons.Default.PlaylistAddCheck, null) },
+                                        onClick = { todoToEdit = widget; showContextMenu = false }
                                     )
                                 }
                                 if (widget.type is WidgetType.Weather) {
@@ -593,6 +604,15 @@ fun MinusOnePage(
             initialText = (noteToEdit!!.type as WidgetType.Note).text,
             viewModel = viewModel,
             onDismiss = { noteToEdit = null }
+        )
+    }
+
+    if (todoToEdit != null) {
+        TodoEditDialog(
+            widgetId = todoToEdit!!.id,
+            initialTasks = (todoToEdit!!.type as WidgetType.ToDoList).tasks,
+            viewModel = viewModel,
+            onDismiss = { todoToEdit = null }
         )
     }
 

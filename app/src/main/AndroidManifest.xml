@@ -61,6 +61,25 @@
             android:screenOrientation="portrait"
             android:parentActivityName=".MainActivity" />
 
+        <activity
+            android:name=".PwaActivity"
+            android:theme="@style/Theme.Iteration"
+            android:launchMode="standard"
+            android:taskAffinity="com.iteration.pwa.task"
+            android:documentLaunchMode="always"
+            android:screenOrientation="portrait"
+            android:hardwareAccelerated="true"
+            android:configChanges="orientation|screenSize|keyboardHidden|layoutDirection" />
+
+        <receiver
+            android:name=".receiver.PinShortcutReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.content.pm.action.CONFIRM_PIN_SHORTCUT" />
+                <action android:name="com.android.launcher.action.INSTALL_SHORTCUT" />
+            </intent-filter>
+        </receiver>
+
         <service
             android:name=".service.NotificationService"
             android:label="Iteration Notification Listener"

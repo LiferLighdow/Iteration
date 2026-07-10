@@ -23,6 +23,7 @@ fun LauncherMenu(
     isMultiplePages: Boolean,
     isDefaultLauncher: Boolean,
     onAddWidgetClick: () -> Unit,
+    onAddShortcutClick: () -> Unit,
     onCreateFolderClick: () -> Unit,
     onWallpaperClick: () -> Unit,
     onSetDefaultClick: () -> Unit,
@@ -45,6 +46,14 @@ fun LauncherMenu(
                     leadingContent = { Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                     modifier = Modifier.clickable {
                         onAddWidgetClick()
+                        onDismiss()
+                    }
+                )
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.menu_add_shortcut)) },
+                    leadingContent = { Icon(Icons.Default.Link, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                    modifier = Modifier.clickable {
+                        onAddShortcutClick()
                         onDismiss()
                     }
                 )

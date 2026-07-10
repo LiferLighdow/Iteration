@@ -5,6 +5,13 @@ import kotlinx.serialization.SerialName
 import java.util.UUID
 
 @Serializable
+data class TodoTask(
+    @SerialName("id") val id: String = UUID.randomUUID().toString(),
+    @SerialName("t") val text: String,
+    @SerialName("d") val isDone: Boolean = false
+)
+
+@Serializable
 sealed class WidgetType {
     @Serializable @SerialName("Battery") object Battery : WidgetType()
     @Serializable @SerialName("Clock") object Clock : WidgetType()
@@ -13,6 +20,7 @@ sealed class WidgetType {
     @Serializable @SerialName("Music") data class Music(val isWide: Boolean = false) : WidgetType()
     @Serializable @SerialName("Note") data class Note(val text: String = "", val isWide: Boolean = false) : WidgetType()
     @Serializable @SerialName("Weather") data class Weather(val isWide: Boolean = true) : WidgetType()
+    @Serializable @SerialName("ToDoList") data class ToDoList(val tasks: List<TodoTask> = emptyList(), val isWide: Boolean = true) : WidgetType()
     @Serializable @SerialName("Stack") data class Stack(val children: List<WidgetModel> = emptyList(), val isWide: Boolean = false) : WidgetType()
 }
 
