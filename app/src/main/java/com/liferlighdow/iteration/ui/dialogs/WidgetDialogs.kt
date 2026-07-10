@@ -807,8 +807,104 @@ fun TodoEditDialog(
     )
 }
 
+private data class WidgetTemplate(
+    val nameRes: Int,
+    val descRes: Int,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val sizes: List<Pair<String, WidgetType>>
+)
+
 @Composable
 fun WidgetPickerDialog(onDismiss: () -> Unit, onWidgetSelected: (WidgetType) -> Unit) {
+    var selectedTemplate by remember { mutableStateOf<WidgetTemplate?>(null) }
+    
+    val templates = remember {
+        listOf(
+            WidgetTemplate(
+                nameRes = R.string.widget_battery,
+                descRes = R.string.desc_battery,
+                icon = Icons.Default.BatteryStd,
+                sizes = listOf("2x2" to WidgetType.Battery)
+            ),
+            WidgetTemplate(
+                nameRes = R.string.widget_clock,
+                descRes = R.string.desc_clock,
+                icon = Icons.Default.Schedule,
+                sizes = listOf("2x2" to WidgetType.Clock)
+            ),
+            WidgetTemplate(
+                nameRes = R.string.widget_calendar,
+                descRes = R.string.desc_calendar,
+                icon = Icons.Default.CalendarMonth,
+                sizes = listOf(
+                    "2x2" to WidgetType.Calendar(isWide = false),
+                    "4x2" to WidgetType.Calendar(isWide = true)
+                )
+            ),
+            WidgetTemplate(
+                nameRes = R.string.widget_photo,
+                descRes = R.string.desc_photo,
+                icon = Icons.Default.AddAPhoto,
+                sizes = listOf(
+                    "2x2" to WidgetType.Photo(isWide = false),
+                    "4x2" to WidgetType.Photo(isWide = true)
+                )
+            ),
+            WidgetTemplate(
+                nameRes = R.string.widget_music,
+                descRes = R.string.desc_music,
+                icon = Icons.Default.MusicNote,
+                sizes = listOf(
+                    "2x2" to WidgetType.Music(isWide = false),
+                    "4x2" to WidgetType.Music(isWide = true)
+                )
+            ),
+            WidgetTemplate(
+                nameRes = R.string.widget_note,
+                descRes = R.string.desc_note,
+                icon = Icons.Default.Note,
+                sizes = listOf(
+                    "2x2" to WidgetType.Note(isWide = false),
+                    "4x2" to WidgetType.Note(isWide = true)
+                )
+            ),
+            WidgetTemplate(
+                nameRes = R.string.widget_todo,
+                descRes = R.string.desc_todo,
+                icon = Icons.Default.PlaylistAddCheck,
+                sizes = listOf(
+                    "4x2" to WidgetType.ToDoList(isWide = true)
+                )
+            ),
+            WidgetTemplate(
+                nameRes = R.string.widget_weather_forecast,
+                descRes = R.string.desc_todo,
+                icon = Icons.Default.WbSunny,
+                sizes = listOf(
+                    "4x2" to WidgetType.Weather(isWide = true)
+                )
+            ),
+            WidgetTemplate(
+                nameRes = R.string.widget_stacker,
+                descRes = R.string.desc_stack,
+                icon = Icons.Default.Layers,
+                sizes = listOf(
+                    "2x2" to WidgetType.Stack(isWide = false),
+                    "4x2" to WidgetType.Stack(isWide = true)
+                )
+            ),
+            WidgetTemplate(
+                nameRes = R.string.widget_rss,
+                descRes = R.string.desc_rss,
+                icon = Icons.Default.RssFeed,
+                sizes = listOf(
+                    "4x2" to WidgetType.RSS(isWide = true, isTall = false),
+                    "4x4" to WidgetType.RSS(isWide = true, isTall = true)
+                )
+            )
+        )
+    }
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -830,13 +926,13 @@ fun WidgetPickerDialog(onDismiss: () -> Unit, onWidgetSelected: (WidgetType) -> 
                         .padding(top = 28.dp, start = 28.dp, end = 28.dp, bottom = 20.dp)
                 ) {
                     Text(
-                        text = stringResource(R.string.select_widget),
+                        text = if (selectedTemplate == null) stringResource(R.string.select_widget) else stringResource(R.string.select_size),
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = stringResource(R.string.widget_picker_desc),
+                        text = if (selectedTemplate == null) stringResource(R.string.widget_picker_desc) else stringResource(selectedTemplate!!.nameRes),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -850,113 +946,159 @@ fun WidgetPickerDialog(onDismiss: () -> Unit, onWidgetSelected: (WidgetType) -> 
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    val widgets = listOf(
-                        Triple(WidgetType.Battery, R.string.widget_battery, Icons.Default.BatteryStd),
-                        Triple(WidgetType.Clock, R.string.widget_clock, Icons.Default.Schedule),
-                        Triple(WidgetType.Calendar(isWide = false), R.string.widget_calendar, Icons.Default.CalendarMonth),
-                        Triple(WidgetType.Calendar(isWide = true), R.string.widget_calendar_wide, Icons.Default.EventNote),
-                        Triple(WidgetType.Photo(isWide = false), R.string.widget_photo, Icons.Default.AddAPhoto),
-                        Triple(WidgetType.Photo(isWide = true), R.string.widget_photo_wide, Icons.Default.Rectangle),
-                        Triple(WidgetType.Music(isWide = false), R.string.widget_music, Icons.Default.MusicNote),
-                        Triple(WidgetType.Music(isWide = true), R.string.widget_music_wide, Icons.Default.MusicVideo),
-                        Triple(WidgetType.Note(isWide = false), null, Icons.Default.Note),
-                        Triple(WidgetType.Note(isWide = true), null, Icons.Default.Description),
-                        Triple(WidgetType.Stack(isWide = false), R.string.widget_stacker, Icons.Default.Layers),
-                        Triple(WidgetType.Stack(isWide = true), null, Icons.Default.DashboardCustomize),
-                        Triple(WidgetType.ToDoList(isWide = true), R.string.widget_todo, Icons.Default.PlaylistAddCheck),
-                        Triple(WidgetType.Weather(isWide = true), null, Icons.Default.WbSunny)
-                    )
-
-                    items(widgets) { (type, labelRes, icon) ->
-                        val label = if (labelRes != null) stringResource(labelRes) else {
-                            when (type) {
-                                is WidgetType.Note -> if (type.isWide) stringResource(R.string.widget_note_wide) else stringResource(R.string.widget_note)
-                                is WidgetType.Stack -> if (type.isWide) stringResource(R.string.widget_stacker_wide) else stringResource(R.string.widget_stacker)
-                                is WidgetType.Weather -> stringResource(R.string.widget_weather_forecast)
-                                is WidgetType.ToDoList -> stringResource(R.string.widget_todo)
-                                else -> ""
-                            }
-                        }
-                        
-                        val desc = when (type) {
-                            is WidgetType.Battery -> stringResource(R.string.desc_battery)
-                            is WidgetType.Clock -> stringResource(R.string.desc_clock)
-                            is WidgetType.Calendar -> if (type.isWide) stringResource(R.string.desc_calendar_wide) else stringResource(R.string.desc_calendar)
-                            is WidgetType.Photo -> stringResource(R.string.desc_photo)
-                            is WidgetType.Music -> stringResource(R.string.desc_music)
-                            is WidgetType.Note -> stringResource(R.string.desc_note)
-                            is WidgetType.ToDoList -> stringResource(R.string.desc_todo)
-                            is WidgetType.Stack -> if (type.isWide) stringResource(R.string.desc_stack_wide) else stringResource(R.string.desc_stack)
-                            else -> ""
-                        }
-
-                        Card(
-                            onClick = {
-                                onWidgetSelected(type)
-                                onDismiss()
-                            },
-                            shape = RoundedCornerShape(24.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                            ),
-                            border = BorderStroke(
-                                1.dp, 
-                                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-                            )
-                        ) {
-                            ListItem(
-                                headlineContent = { 
-                                    Text(
-                                        text = label,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold
-                                    ) 
-                                },
-                                supportingContent = {
-                                    Text(
-                                        text = desc,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                },
-                                leadingContent = { 
-                                    Box(
-                                        modifier = Modifier
-                                            .size(52.dp)
-                                            .background(
-                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                                                RoundedCornerShape(16.dp)
-                                            ),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = icon,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(26.dp)
-                                        )
+                    if (selectedTemplate == null) {
+                        items(templates) { template ->
+                            Card(
+                                onClick = {
+                                    if (template.sizes.size == 1) {
+                                        onWidgetSelected(template.sizes[0].second)
+                                        onDismiss()
+                                    } else {
+                                        selectedTemplate = template
                                     }
                                 },
-                                trailingContent = {
-                                    Icon(
-                                        Icons.Default.ChevronRight,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                                    )
+                                shape = RoundedCornerShape(24.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                                ),
+                                border = BorderStroke(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                                )
+                            ) {
+                                ListItem(
+                                    headlineContent = {
+                                        Text(
+                                            text = stringResource(template.nameRes),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    },
+                                    supportingContent = {
+                                        Text(
+                                            text = stringResource(template.descRes),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    },
+                                    leadingContent = {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(52.dp)
+                                                .background(
+                                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                                    RoundedCornerShape(16.dp)
+                                                ),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = template.icon,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(26.dp)
+                                            )
+                                        }
+                                    },
+                                    trailingContent = {
+                                        Icon(
+                                            if (template.sizes.size > 1) Icons.Default.ChevronRight else Icons.Default.Add,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                        )
+                                    },
+                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                                )
+                            }
+                        }
+                    } else {
+                        items(selectedTemplate!!.sizes) { (sizeLabel, type) ->
+                            Card(
+                                onClick = {
+                                    onWidgetSelected(type)
+                                    onDismiss()
                                 },
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                            )
+                                shape = RoundedCornerShape(24.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                                ),
+                                border = BorderStroke(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                                )
+                            ) {
+                                ListItem(
+                                    headlineContent = {
+                                        Text(
+                                            text = sizeLabel,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    },
+                                    supportingContent = {
+                                        val desc = when (type) {
+                                            is WidgetType.Calendar -> if (type.isWide) stringResource(R.string.desc_calendar_wide) else stringResource(R.string.desc_calendar)
+                                            is WidgetType.Stack -> if (type.isWide) stringResource(R.string.desc_stack_wide) else stringResource(R.string.desc_stack)
+                                            else -> stringResource(selectedTemplate!!.descRes)
+                                        }
+                                        Text(
+                                            text = desc,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    },
+                                    leadingContent = {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(52.dp)
+                                                .background(
+                                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                                    RoundedCornerShape(16.dp)
+                                                ),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = if (sizeLabel == "4x2") Icons.Default.Rectangle else Icons.Default.CropSquare,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(26.dp)
+                                            )
+                                        }
+                                    },
+                                    trailingContent = {
+                                        Icon(
+                                            Icons.Default.Add,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                        )
+                                    },
+                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                                )
+                            }
                         }
                     }
                 }
                 
                 // Footer
-                Box(
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp),
-                    contentAlignment = Alignment.CenterEnd
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    if (selectedTemplate != null) {
+                        TextButton(
+                            onClick = { selectedTemplate = null },
+                            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.back),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
                     TextButton(
                         onClick = onDismiss,
                         contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
@@ -967,6 +1109,38 @@ fun WidgetPickerDialog(onDismiss: () -> Unit, onWidgetSelected: (WidgetType) -> 
                             fontWeight = FontWeight.Bold
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun RssEditDialog(widgetId: String, initialUrl: String, viewModel: MainViewModel, onDismiss: () -> Unit) {
+    var url by remember { mutableStateOf(initialUrl) }
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            shape = RoundedCornerShape(28.dp)
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text(stringResource(R.string.edit_rss), style = MaterialTheme.typography.headlineSmall)
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = url,
+                    onValueChange = { url = it },
+                    label = { Text(stringResource(R.string.rss_url_hint)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp)
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(onClick = {
+                        viewModel.updateRssUrl(widgetId, url)
+                        onDismiss()
+                    }) { Text(stringResource(R.string.done)) }
                 }
             }
         }

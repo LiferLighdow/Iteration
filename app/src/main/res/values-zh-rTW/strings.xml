@@ -159,6 +159,7 @@
     <string name="widget_stacker">小工具堆疊</string>
     <string name="menu_choose_widgets">選擇小工具</string>
     <string name="select_widget">新增小工具</string>
+    <string name="select_size">選擇大小</string>
     <string name="minus_one_title">小工具區域</string>
     <string name="edit_widgets">編輯佈局</string>
     <string name="widget_glass_mode">玻璃模式</string>
@@ -400,6 +401,10 @@
     <string name="widget_todo">待辦清單</string>
     <string name="widget_weather">天氣</string>
     <string name="widget_weather_forecast">天氣預報</string>
+    <string name="widget_rss">RSS 訂閱源</string>
+    <string name="desc_rss">隨時掌握您最喜愛的 RSS 訂閱動態</string>
+    <string name="edit_rss">編輯 RSS 網址</string>
+    <string name="rss_url_hint">RSS 訂閱源網址 (例如 https://example.com/rss)</string>
     <string name="network_disabled">網路已禁用</string>
     <string name="loading_weather">正在載入天氣&#8230;</string>
     <string name="tap_to_retry">點擊重試</string>

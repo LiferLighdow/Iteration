@@ -35,6 +35,7 @@ fun MainViewModel.addWidget(type: WidgetType, pageIndex: Int = -1) {
         is WidgetType.Note -> "Note"
         is WidgetType.Weather -> "Weather"
         is WidgetType.ToDoList -> "ToDo List"
+        is WidgetType.RSS -> "RSS Feed"
         is WidgetType.Stack -> if (type.isWide) "Wide Widget Stacker" else "Stack"
     }
 
@@ -227,4 +228,32 @@ fun MainViewModel.saveWidgetPhoto(widgetId: String, bitmap: Bitmap) {
 fun MainViewModel.getWidgetPhoto(widgetId: String): Bitmap? {
     val file = File(widgetPhotoDir, "$widgetId.png")
     return if (file.exists()) BitmapFactory.decodeFile(file.absolutePath) else null
+}
+
+fun MainViewModel.updateRssUrl(widgetId: String, url: String) {
+    fun updateItem(item: AppModel): AppModel {
+        val w = item.widget
+        if (w?.id == widgetId && w.widgetType is WidgetType.RSS) {
+            return item.copy(widget = w.copy(widgetType = w.widgetType.copy(url = url)))
+        }
+        if (item.isFolder) {
+            return item.copy(folderItems = item.folderItems.map { updateItem(it) })
+        }
+        return item
+    }
+
+    val currentPages = _pages.value.map { page ->
+        page.map { updateItem(it) }
+    }
+    _pages.value = currentPages
+
+    val newMinusOne = _minusOneWidgets.value.map { widget ->
+        if (widget.id == widgetId && widget.widgetType is WidgetType.RSS) {
+            widget.copy(widgetType = widget.widgetType.copy(url = url))
+        } else widget
+    }
+    _minusOneWidgets.value = newMinusOne
+
+    saveLayout()
+    saveWidgets(newMinusOne)
 }

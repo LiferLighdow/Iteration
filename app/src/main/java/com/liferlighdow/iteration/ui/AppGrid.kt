@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.PlaylistAddCheck
+import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -131,6 +132,7 @@ fun AppGrid(
     var noteToEdit by remember { mutableStateOf<WidgetModel?>(null) }
     var todoToEdit by remember { mutableStateOf<WidgetModel?>(null) }
     var weatherToEdit by remember { mutableStateOf<WidgetModel?>(null) }
+    var rssToEdit by remember { mutableStateOf<WidgetModel?>(null) }
     var photoToAdjust by remember { mutableStateOf<WidgetModel?>(null) }
     var photoToPick by remember { mutableStateOf<WidgetModel?>(null) }
     var showCropDialogByUri by remember { mutableStateOf<Uri?>(null) }
@@ -181,10 +183,15 @@ fun AppGrid(
                     is WidgetType.Stack -> if (type.isWide) 4 else 2
                     is WidgetType.Weather -> if (type.isWide) 4 else 2
                     is WidgetType.ToDoList -> if (type.isWide) 4 else 2
+                    is WidgetType.RSS -> 4
                     is WidgetType.Battery, is WidgetType.Clock -> 2
                     null -> 1
                 }
-                h = 2
+                h = when (type) {
+                    is WidgetType.RSS -> if (type.isTall) 4 else 2
+                    null -> 1
+                    else -> 2
+                }
             } else {
                 w = 1; h = 1
             }
@@ -324,10 +331,15 @@ fun AppGrid(
                         is WidgetType.Stack -> if (type.isWide) 4 else 2
                         is WidgetType.Weather -> if (type.isWide) 4 else 2
                         is WidgetType.ToDoList -> if (type.isWide) 4 else 2
+                        is WidgetType.RSS -> 4
                         is WidgetType.Battery, is WidgetType.Clock -> 2
                         null -> 1
                     }
-                    h = 2
+                    h = when (type) {
+                        is WidgetType.RSS -> if (type.isTall) 4 else 2
+                        null -> 1
+                        else -> 2
+                    }
                 } else { w = 1; h = 1 }
 
                 val lastPosition = remember { object { var pos = Offset.Zero } }
@@ -437,6 +449,7 @@ fun AppGrid(
                             onUpdateNoteToEdit = { noteToEdit = it },
                             onUpdateTodoToEdit = { todoToEdit = it },
                             onUpdateWeatherToEdit = { weatherToEdit = it },
+                            onUpdateRssToEdit = { rssToEdit = it },
                             onUpdatePhotoToAdjust = { photoToAdjust = it },
                             onUpdatePhotoToPick = { photoToPick = it },
                             photoPickerLauncher = photoPickerLauncher
@@ -513,6 +526,15 @@ fun AppGrid(
         )
     }
 
+    if (rssToEdit != null) {
+        RssEditDialog(
+            widgetId = rssToEdit!!.id,
+            initialUrl = (rssToEdit!!.type as WidgetType.RSS).url,
+            viewModel = viewModel,
+            onDismiss = { rssToEdit = null }
+        )
+    }
+
     if (photoToAdjust != null) {
         val type = photoToAdjust!!.type as? WidgetType.Photo
         val uriStr = type?.uri
@@ -559,6 +581,7 @@ private fun WidgetGridItem(
     onUpdateNoteToEdit: (WidgetModel) -> Unit,
     onUpdateTodoToEdit: (WidgetModel) -> Unit,
     onUpdateWeatherToEdit: (WidgetModel) -> Unit,
+    onUpdateRssToEdit: (WidgetModel) -> Unit,
     onUpdatePhotoToAdjust: (WidgetModel) -> Unit,
     onUpdatePhotoToPick: (WidgetModel) -> Unit,
     photoPickerLauncher: androidx.activity.result.ActivityResultLauncher<String>
@@ -571,6 +594,7 @@ private fun WidgetGridItem(
         is WidgetType.Stack -> type.isWide
         is WidgetType.Weather -> type.isWide
         is WidgetType.ToDoList -> type.isWide
+        is WidgetType.RSS -> type.isWide
         else -> false
     }
 
@@ -637,6 +661,12 @@ private fun WidgetGridItem(
                     is WidgetType.Stack -> StackWidget(
                         widget = widget,
                         viewModel = viewModel,
+                        modifier = Modifier.fillMaxSize(),
+                        backdrop = backdrop
+                    )
+                    is WidgetType.RSS -> RSSWidget(
+                        widget = widget,
+                        displayMode = widget.displayMode,
                         modifier = Modifier.fillMaxSize(),
                         backdrop = backdrop
                     )
@@ -772,6 +802,16 @@ private fun WidgetGridItem(
                             if (currentProvider == WeatherProvider.MET_NORWAY) WeatherProvider.OPEN_METEO
                             else WeatherProvider.MET_NORWAY
                         )
+                        onContextMenuDismiss()
+                    }
+                )
+            }
+            if (app.widget?.type is WidgetType.RSS) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.edit_rss)) },
+                    leadingIcon = { Icon(Icons.Default.RssFeed, null, tint = MaterialTheme.colorScheme.primary) },
+                    onClick = {
+                        onUpdateRssToEdit(app.widget!!)
                         onContextMenuDismiss()
                     }
                 )

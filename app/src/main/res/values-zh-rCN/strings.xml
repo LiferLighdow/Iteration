@@ -159,6 +159,7 @@
     <string name="widget_stacker">堆叠部件</string>
     <string name="menu_choose_widgets">选择小部件</string>
     <string name="select_widget">添加小部件</string>
+    <string name="select_size">选择大小</string>
     <string name="minus_one_title">负一屏</string>
     <string name="edit_widgets">编辑布局</string>
     <string name="widget_glass_mode">玻璃模式</string>
@@ -400,6 +401,10 @@
     <string name="widget_todo">待办清单</string>
     <string name="widget_weather">天气</string>
     <string name="widget_weather_forecast">天气预报</string>
+    <string name="widget_rss">RSS 订阅源</string>
+    <string name="desc_rss">随时掌握您最喜爱的 RSS 订阅动态</string>
+    <string name="edit_rss">编辑 RSS 网址</string>
+    <string name="rss_url_hint">RSS 订阅源网址 (例如 https://example.com/rss)</string>
     <string name="network_disabled">网络已禁用</string>
     <string name="loading_weather">正在加载天气&#8230;</string>
     <string name="tap_to_retry">点击重试</string>

@@ -157,6 +157,7 @@
     <string name="widget_stacker">Widget Stacker</string>
     <string name="menu_choose_widgets">Choose Widgets</string>
     <string name="select_widget">Add Widget</string>
+    <string name="select_size">Select Size</string>
     <string name="minus_one_title">Widget Area</string>
     <string name="edit_widgets">Edit Layout</string>
     <string name="widget_glass_mode">Glass Mode</string>
@@ -398,6 +399,10 @@
     <string name="widget_todo">ToDo List</string>
     <string name="widget_weather">Weather</string>
     <string name="widget_weather_forecast">Weather Forecast</string>
+    <string name="widget_rss">RSS Feed</string>
+    <string name="desc_rss">Stay updated with your favorite RSS feeds</string>
+    <string name="edit_rss">Edit RSS URL</string>
+    <string name="rss_url_hint">RSS Feed URL (e.g. https://example.com/rss)</string>
     <string name="network_disabled">Network Disabled</string>
     <string name="loading_weather">Loading Weather&#8230;</string>
     <string name="tap_to_retry">Tap to Retry</string>
