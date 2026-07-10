@@ -112,28 +112,7 @@ fun ManualsScreen(
                 }
             }
 
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth().clickable(onClick = onNavigateToDockManual),
-                    shape = RoundedCornerShape(24.dp)
-                ) {
-                    Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier.size(56.dp).background(Color(0xFF43A047).copy(alpha = 0.1f), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.Dashboard, null, tint = Color(0xFF43A047), modifier = Modifier.size(28.dp))
-                        }
-                        Spacer(Modifier.width(16.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.manual_dock_style), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                            Text(stringResource(R.string.manual_dock_style_desc), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = MaterialTheme.colorScheme.outline)
-                    }
-                }
-            }
-            
+
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth().alpha(0.5f), // Placeholder for future manuals
