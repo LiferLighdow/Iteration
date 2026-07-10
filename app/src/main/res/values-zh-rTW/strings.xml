@@ -95,6 +95,8 @@
     <string name="grant_permission">授予權限</string>
     <string name="calendar_permission_required">需要存取日曆才能顯示您的活動。</string>
     <string name="lock_hidden_apps">鎖定隱藏應用程式</string>
+    <string name="lock_desktop">鎖定桌面</string>
+    <string name="lock_desktop_desc">防止主畫面佈局被更改</string>
 
     <!-- 設定子頁面 -->
     <string name="security_section">安全性</string>
@@ -149,7 +151,9 @@
 
     <!-- 小工具 -->
     <string name="widget_battery">電池狀態</string>
-    <string name="widget_clock">類比時鐘</string>
+    <string name="widget_clock">時鐘</string>
+    <string name="widget_clock_analog">類比時鐘</string>
+    <string name="widget_clock_digital">數位時鐘</string>
     <string name="widget_calendar">日曆</string>
     <string name="widget_calendar_wide">寬日曆</string>
     <string name="widget_photo">照片</string>
@@ -410,7 +414,7 @@
     <string name="tap_to_retry">點擊重試</string>
     <string name="widget_picker_desc">使用強大的擴充功能自定義您的主畫面</string>
     <string name="desc_battery">監視系統電池電量</string>
-    <string name="desc_clock">優雅的類比時間顯示</string>
+    <string name="desc_clock">優雅的時間顯示</string>
     <string name="desc_calendar_wide">查看您的每日行程安排</string>
     <string name="desc_calendar">快速日期概覽</string>
     <string name="desc_photo">顯示您最喜愛的回憶</string>

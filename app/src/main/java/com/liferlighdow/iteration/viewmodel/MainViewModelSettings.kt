@@ -299,6 +299,11 @@ fun MainViewModel.setShowAppLibrary(enabled: Boolean) {
     prefs.edit().putBoolean("show_app_library", enabled).apply()
 }
 
+fun MainViewModel.setDesktopLocked(locked: Boolean) {
+    _isDesktopLocked.value = locked
+    prefs.edit().putBoolean("is_desktop_locked", locked).apply()
+}
+
 fun MainViewModel.setLiquidGlassBlur(value: Float) {
     _liquidGlassBlur.value = value
     prefs.edit().putFloat("liquid_glass_blur", value).apply()

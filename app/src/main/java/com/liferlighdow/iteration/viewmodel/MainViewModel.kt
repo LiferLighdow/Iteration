@@ -170,6 +170,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     internal val _appLanguage = MutableStateFlow(prefs.getString("app_language", "") ?: "")
     val appLanguage = _appLanguage.asStateFlow()
 
+    internal val _isDesktopLocked = MutableStateFlow(prefs.getBoolean("is_desktop_locked", false))
+    val isDesktopLocked = _isDesktopLocked.asStateFlow()
+
     init {
         // Apply saved language on startup
         val savedLang = _appLanguage.value

@@ -14,7 +14,7 @@ data class TodoTask(
 @Serializable
 sealed class WidgetType {
     @Serializable @SerialName("Battery") object Battery : WidgetType()
-    @Serializable @SerialName("Clock") object Clock : WidgetType()
+    @Serializable @SerialName("Clock") data class Clock(val isDigital: Boolean = false) : WidgetType()
     @Serializable @SerialName("Calendar") data class Calendar(val isWide: Boolean = false) : WidgetType()
     @Serializable @SerialName("Photo") data class Photo(val isWide: Boolean = false, val uri: String? = null) : WidgetType()
     @Serializable @SerialName("Music") data class Music(val isWide: Boolean = false) : WidgetType()

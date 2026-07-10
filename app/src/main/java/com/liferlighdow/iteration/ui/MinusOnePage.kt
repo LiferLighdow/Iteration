@@ -101,6 +101,8 @@ fun MinusOnePage(
     val baseColor = if (isDarkTheme) Color.Black else Color.White
     val contentColor = if (isDarkTheme) Color.White else Color.Black
 
+    val isDesktopLocked by viewModel.isDesktopLocked.collectAsState()
+
     if (isSearching) {
         BackHandler {
             isSearching = false
@@ -153,28 +155,32 @@ fun MinusOnePage(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    FilledTonalIconButton(
-                        onClick = onAddClick,
-                        modifier = Modifier.liquidGlass(
-                            enabled = isLiquidGlassEnabled && isMinusOneButtonGlassEnabled,
-                            backdrop = backdrop,
-                            cornerRadius = 12.dp,
-                            blurRadius = blurRadius,
-                            refractionHeight = refractionHeight,
-                            refractionAmount = refractionAmount,
-                            chromaticAberration = chromaticAberration
-                        ),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = IconButtonDefaults.filledTonalIconButtonColors(
-                            containerColor = Color.Transparent,
-                            contentColor = contentColor
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = stringResource(R.string.add),
-                            modifier = Modifier.size(24.dp)
-                        )
+                    if (!isDesktopLocked) {
+                        FilledTonalIconButton(
+                            onClick = onAddClick,
+                            modifier = Modifier.liquidGlass(
+                                enabled = isLiquidGlassEnabled && isMinusOneButtonGlassEnabled,
+                                backdrop = backdrop,
+                                cornerRadius = 12.dp,
+                                blurRadius = blurRadius,
+                                refractionHeight = refractionHeight,
+                                refractionAmount = refractionAmount,
+                                chromaticAberration = chromaticAberration
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                containerColor = Color.Transparent,
+                                contentColor = contentColor
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = stringResource(R.string.add),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    } else {
+                        Spacer(modifier = Modifier.size(48.dp))
                     }
 
                     Button(
@@ -367,9 +373,15 @@ fun MinusOnePage(
                                     }
                                 }
                         ) {
-                            when (widget.type) {
+                            when (val type = widget.type) {
                                 is WidgetType.Battery -> BatteryWidget(displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
-                                is WidgetType.Clock -> AnalogClockWidget(displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
+                                is WidgetType.Clock -> {
+                                    if (type.isDigital) {
+                                        DigitalClockWidget(displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
+                                    } else {
+                                        AnalogClockWidget(displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
+                                    }
+                                }
                                 is WidgetType.Calendar -> CalendarWidget(widget = widget, displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
                                 is WidgetType.Photo -> PhotoWidget(widget = widget, viewModel = viewModel)
                                 is WidgetType.Music -> MusicWidget(widget = widget, displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
@@ -463,7 +475,7 @@ fun MinusOnePage(
                     }
 
                     // 底部 Edit 膠囊按鈕
-                    if (!effectiveEditMode) {
+                    if (!effectiveEditMode && !isDesktopLocked) {
                         item(span = { GridItemSpan(4) }) {
                             Box(modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
                                 Surface(

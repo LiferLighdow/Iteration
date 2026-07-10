@@ -94,6 +94,8 @@
     <string name="grant_permission">Grant Permission</string>
     <string name="calendar_permission_required">Calendar access is required to show your events.</string>
     <string name="lock_hidden_apps">Lock Hidden Apps</string>
+    <string name="lock_desktop">Lock Desktop</string>
+    <string name="lock_desktop_desc">Prevent changes to the home screen layout</string>
 
     <!-- Settings Sub-pages -->
     <string name="security_section">Security</string>
@@ -147,7 +149,9 @@
     <string name="favorites">Favorites</string>
     <!-- Widgets -->
     <string name="widget_battery">Battery Status</string>
-    <string name="widget_clock">Analog Clock</string>
+    <string name="widget_clock">Clock</string>
+    <string name="widget_clock_analog">Analog Clock</string>
+    <string name="widget_clock_digital">Digital Clock</string>
     <string name="widget_calendar">Calendar</string>
     <string name="widget_calendar_wide">Wide Calendar</string>
     <string name="widget_photo">Photo</string>
@@ -408,7 +412,7 @@
     <string name="tap_to_retry">Tap to Retry</string>
     <string name="widget_picker_desc">Customize your home screen with powerful extensions</string>
     <string name="desc_battery">Monitor system battery level</string>
-    <string name="desc_clock">Elegant analog time display</string>
+    <string name="desc_clock">Elegant time display</string>
     <string name="desc_calendar_wide">View your daily schedule</string>
     <string name="desc_calendar">Quick date overview</string>
     <string name="desc_photo">Display your favorite memories</string>

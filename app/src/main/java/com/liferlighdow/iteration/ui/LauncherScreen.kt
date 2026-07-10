@@ -116,6 +116,7 @@ fun LauncherScreen(
     val showMinusOnePage by viewModel.showMinusOnePage.collectAsState()
     val showAppLibrary by viewModel.showAppLibrary.collectAsState()
     val isApplyingWallpaper by viewModel.isApplyingWallpaper.collectAsState()
+    val isDesktopLocked by viewModel.isDesktopLocked.collectAsState()
 
     var showDesktopMenu by remember { mutableStateOf(false) }
     var showGlobalSearch by remember { mutableStateOf(false) }
@@ -476,9 +477,12 @@ fun LauncherScreen(
                                     slotBounds["$pageIndex-$idx"] = rect
                                 },
                                 onDragStart = { app, offset ->
-                                    viewModel.prepareForDrag()
-                                    draggingApp = app; touchPosition = offset; dragOffset =
-                                    Offset.Zero
+                                    if (!isDesktopLocked) {
+                                        viewModel.prepareForDrag()
+                                        draggingApp = app
+                                        touchPosition = offset
+                                        dragOffset = Offset.Zero
+                                    }
                                 },
                                 onDrag = { delta ->
                                     dragOffset += delta
@@ -559,7 +563,11 @@ fun LauncherScreen(
                                 },
                                 onBackgroundLongPress = {
                                     if (!isEditMode) {
-                                        performGestureAction(longPressAction, longPressApp)
+                                        if (isDesktopLocked) {
+                                            showDesktopMenu = true
+                                        } else {
+                                            performGestureAction(longPressAction, longPressApp)
+                                        }
                                     }
                                 },
                                 onBackgroundClick = {
@@ -625,8 +633,11 @@ fun LauncherScreen(
                                     }
                                 },
                                 onDragStart = { app, offset ->
-                                    draggingApp = app; touchPosition = offset; dragOffset =
-                                    Offset.Zero
+                                    if (!isDesktopLocked) {
+                                        draggingApp = app
+                                        touchPosition = offset
+                                        dragOffset = Offset.Zero
+                                    }
                                 },
                                 onDrag = { delta -> dragOffset += delta },
                                 onDragEnd = {

@@ -95,6 +95,8 @@
     <string name="grant_permission">授予权限</string>
     <string name="calendar_permission_required">需要访问日历才能显示您的活动。</string>
     <string name="lock_hidden_apps">锁定隐藏应用</string>
+    <string name="lock_desktop">锁定桌面</string>
+    <string name="lock_desktop_desc">防止主屏幕布局被更改</string>
 
     <!-- 设置子页面 -->
     <string name="security_section">安全性</string>
@@ -150,6 +152,8 @@
     <!-- 小部件 -->
     <string name="widget_battery">电池状态</string>
     <string name="widget_clock">时钟</string>
+    <string name="widget_clock_analog">模拟时钟</string>
+    <string name="widget_clock_digital">数字时钟</string>
     <string name="widget_calendar">日历</string>
     <string name="widget_calendar_wide">宽版日历</string>
     <string name="widget_photo">照片</string>
@@ -410,7 +414,7 @@
     <string name="tap_to_retry">点击重试</string>
     <string name="widget_picker_desc">使用强大的扩展功能自定义您的主屏幕</string>
     <string name="desc_battery">监视系统电池电量</string>
-    <string name="desc_clock">优雅的模拟时间显示</string>
+    <string name="desc_clock">优雅的时间显示</string>
     <string name="desc_calendar_wide">查看您的每日行程安排</string>
     <string name="desc_calendar">快速日期概览</string>
     <string name="desc_photo">显示您最喜爱的回忆</string>

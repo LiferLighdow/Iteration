@@ -52,9 +52,15 @@ fun StackWidget(
                 ) { page ->
                     val item = stackItems[page]
                     Box(modifier = Modifier.fillMaxSize()) {
-                        when (item.type) {
+                        when (val type = item.type) {
                             is WidgetType.Battery -> BatteryWidget(displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage)
-                            is WidgetType.Clock -> AnalogClockWidget(displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage)
+                            is WidgetType.Clock -> {
+                                if (type.isDigital) {
+                                    DigitalClockWidget(displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage)
+                                } else {
+                                    AnalogClockWidget(displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage)
+                                }
+                            }
                             is WidgetType.Calendar -> CalendarWidget(widget = item, displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage)
                             is WidgetType.Photo -> PhotoWidget(widget = item, viewModel = viewModel, modifier = Modifier.fillMaxSize())
                             is WidgetType.Music -> MusicWidget(widget = item, displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage)

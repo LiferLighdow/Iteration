@@ -151,6 +151,7 @@ fun Dock(
                     )
                     
                     val viewModel: MainViewModel = viewModel()
+                    val isDesktopLocked by viewModel.isDesktopLocked.collectAsState()
                     var showContextMenu by remember { mutableStateOf(false) }
 
                     AppItem(
@@ -171,14 +172,16 @@ fun Dock(
                             if (isEditMode) rotationZ = rotation
                         }.combinedClickable(
                             onClick = {
-                                if (app.packageName.isNotEmpty()) onAppClick(app) else onLongClick(
-                                    index
-                                )
+                                if (app.packageName.isNotEmpty()) onAppClick(app) else {
+                                    if (!isDesktopLocked) onLongClick(index)
+                                }
                             },
                             onLongClick = {
-                                if (app.packageName.isNotEmpty() && !isEditMode) showContextMenu =
-                                    true
-                                else onLongClick(index)
+                                if (app.packageName.isNotEmpty()) {
+                                    if (!isEditMode && !isDesktopLocked) showContextMenu = true
+                                } else {
+                                    if (!isDesktopLocked) onLongClick(index)
+                                }
                             }
                         ),
                         showLabel = false,

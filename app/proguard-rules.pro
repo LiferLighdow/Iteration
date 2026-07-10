@@ -19,8 +19,9 @@
     public static ** valueOf(java.lang.String);
 }
 
-# 4. 保持 NotificationService，系統需要透過類名啟動它
+# 4. 保持 Service，系統需要透過類名啟動它
 -keep class com.liferlighdow.iteration.service.NotificationService { *; }
+-keep class com.liferlighdow.iteration.service.IterationAccessibilityService { *; }
 
 # 5. 保持 Material Color Utilities，避免動態色彩提取失效或崩潰
 -keep class com.google.android.material.color.utilities.** { *; }
@@ -41,4 +42,24 @@
 # 9. Backdrop 庫規則 (避免 R8 過度優化致效能下降或崩潰)
 -keep class com.kyant.backdrop.** { *; }
 -dontwarn com.kyant.backdrop.**
+
+# 10. Shizuku/Sui 規則 (修正 Release 版本中反射失敗的問題)
+-keep class dev.rikka.shizuku.** { *; }
+-keep interface dev.rikka.shizuku.** { *; }
+-keep class rikka.shizuku.** { *; }
+-keep interface rikka.shizuku.** { *; }
+-keep class moe.shizuku.** { *; }
+-dontwarn dev.rikka.shizuku.**
+-dontwarn rikka.shizuku.**
+-dontwarn moe.shizuku.**
+
+# 保持 Binder/AIDL 接口，避免跨進程通信 (IPC) 失敗
+-keep public interface * extends android.os.IInterface
+-keep class * implements android.os.IInterface { *; }
+-keep class * extends android.os.Binder { *; }
+
+# 保持 Parcelable 的 CREATOR 欄位 (Shizuku 傳輸數據需要)
+-keepclassmembers class * implements android.os.Parcelable {
+    static ** CREATOR;
+}
 

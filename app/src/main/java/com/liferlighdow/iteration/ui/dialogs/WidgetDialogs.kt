@@ -68,6 +68,7 @@ fun WidgetStackPickerDialog(
 ) {
     var children by remember { mutableStateOf(currentChildren) }
     val mContext = LocalContext.current
+    val isDesktopLocked by viewModel.isDesktopLocked.collectAsState()
 
     // 用於處理照片選擇的狀態
     var photoTargetId by remember { mutableStateOf<String?>(null) }
@@ -112,7 +113,7 @@ fun WidgetStackPickerDialog(
                                         val moved = list.removeAt(index)
                                         list.add((index - 1).coerceAtLeast(0), moved)
                                         children = list
-                                    }, enabled = index > 0) { Icon(Icons.Default.ArrowUpward, null, modifier = Modifier.size(20.dp)) }
+                                    }, enabled = index > 0 && !isDesktopLocked) { Icon(Icons.Default.ArrowUpward, null, modifier = Modifier.size(20.dp)) }
 
                                     Box {
                                         IconButton(onClick = { showItemMenu = true }) {
@@ -211,14 +212,16 @@ fun WidgetStackPickerDialog(
                                                 )
                                             }
                                             HorizontalDivider()
-                                            DropdownMenuItem(
-                                                text = { Text(stringResource(R.string.remove), color = MaterialTheme.colorScheme.error) },
-                                                leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
-                                                onClick = {
-                                                    children = children.filterIndexed { i, _ -> i != index }
-                                                    showItemMenu = false
-                                                }
-                                            )
+                                            if (!isDesktopLocked) {
+                                                DropdownMenuItem(
+                                                    text = { Text(stringResource(R.string.remove), color = MaterialTheme.colorScheme.error) },
+                                                    leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
+                                                    onClick = {
+                                                        children = children.filterIndexed { i, _ -> i != index }
+                                                        showItemMenu = false
+                                                    }
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -231,7 +234,8 @@ fun WidgetStackPickerDialog(
 
                     val available = listOf(
                         Triple(WidgetType.Battery, R.string.widget_battery, Icons.Default.BatteryStd),
-                        Triple(WidgetType.Clock, R.string.widget_clock, Icons.Default.Schedule),
+                        Triple(WidgetType.Clock(isDigital = false), R.string.widget_clock_analog, Icons.Default.Schedule),
+                        Triple(WidgetType.Clock(isDigital = true), R.string.widget_clock_digital, Icons.Default.Schedule),
                         Triple(WidgetType.Calendar(false), R.string.widget_calendar, Icons.Default.CalendarMonth),
                         Triple(WidgetType.Music(false), R.string.widget_music, Icons.Default.MusicNote),
                         Triple(WidgetType.Photo(false), R.string.widget_photo, Icons.Default.AddAPhoto),
@@ -272,9 +276,11 @@ fun WidgetStackPickerDialog(
                             ListItem(
                                 headlineContent = { Text(label) },
                                 leadingContent = { Icon(icon, null) },
-                                modifier = Modifier.clickable {
-                                    children = children + WidgetModel(widgetType = type, label = label)
-                                }
+                                modifier = if (!isDesktopLocked) {
+                                    Modifier.clickable {
+                                        children = children + WidgetModel(widgetType = type, label = label)
+                                    }
+                                } else Modifier
                             )
                         }
                     }
@@ -818,7 +824,10 @@ private data class WidgetTemplate(
 fun WidgetPickerDialog(onDismiss: () -> Unit, onWidgetSelected: (WidgetType) -> Unit) {
     var selectedTemplate by remember { mutableStateOf<WidgetTemplate?>(null) }
     
-    val templates = remember {
+    val analogClockLabel = stringResource(R.string.widget_clock_analog)
+    val digitalClockLabel = stringResource(R.string.widget_clock_digital)
+
+    val templates = remember(analogClockLabel, digitalClockLabel) {
         listOf(
             WidgetTemplate(
                 nameRes = R.string.widget_battery,
@@ -830,7 +839,10 @@ fun WidgetPickerDialog(onDismiss: () -> Unit, onWidgetSelected: (WidgetType) -> 
                 nameRes = R.string.widget_clock,
                 descRes = R.string.desc_clock,
                 icon = Icons.Default.Schedule,
-                sizes = listOf("2x2" to WidgetType.Clock)
+                sizes = listOf(
+                    analogClockLabel to WidgetType.Clock(isDigital = false),
+                    digitalClockLabel to WidgetType.Clock(isDigital = true)
+                )
             ),
             WidgetTemplate(
                 nameRes = R.string.widget_calendar,

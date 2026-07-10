@@ -598,6 +598,8 @@ private fun WidgetGridItem(
         else -> false
     }
 
+    val isDesktopLocked by viewModel.isDesktopLocked.collectAsState()
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
@@ -613,17 +615,27 @@ private fun WidgetGridItem(
         Box(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.85f)) {
             val widget = app.widget
             if (widget != null) {
-                when (widget.type) {
+                when (val type = widget.type) {
                     is WidgetType.Battery -> BatteryWidget(
                         displayMode = widget.displayMode,
                         modifier = Modifier.fillMaxSize(),
                         backdrop = backdrop
                     )
-                    is WidgetType.Clock -> AnalogClockWidget(
-                        displayMode = widget.displayMode,
-                        modifier = Modifier.fillMaxSize(),
-                        backdrop = backdrop
-                    )
+                    is WidgetType.Clock -> {
+                        if (type.isDigital) {
+                            DigitalClockWidget(
+                                displayMode = widget.displayMode,
+                                modifier = Modifier.fillMaxSize(),
+                                backdrop = backdrop
+                            )
+                        } else {
+                            AnalogClockWidget(
+                                displayMode = widget.displayMode,
+                                modifier = Modifier.fillMaxSize(),
+                                backdrop = backdrop
+                            )
+                        }
+                    }
                     is WidgetType.Calendar -> CalendarWidget(
                         widget = widget,
                         displayMode = widget.displayMode,
@@ -673,7 +685,7 @@ private fun WidgetGridItem(
                 }
             }
 
-            if (isEditMode) {
+            if (isEditMode && !isDesktopLocked) {
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopStart)
@@ -816,15 +828,17 @@ private fun WidgetGridItem(
                     }
                 )
             }
-            HorizontalDivider()
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.menu_delete_home)) },
-                leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
-                onClick = {
-                    viewModel.removeAppFromHome(app.uniqueId)
-                    onContextMenuDismiss()
-                }
-            )
+            if (!isDesktopLocked) {
+                HorizontalDivider()
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.menu_delete_home)) },
+                    leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
+                    onClick = {
+                        viewModel.removeAppFromHome(app.uniqueId)
+                        onContextMenuDismiss()
+                    }
+                )
+            }
         }
     }
 }
@@ -878,6 +892,7 @@ private fun AppGridItem(
             }
         )
         val menuOptions by viewModel.homeMenuOptions.collectAsState()
+        val isDesktopLocked by viewModel.isDesktopLocked.collectAsState()
         
         val shortcuts = remember(showContextMenu) {
             if (showContextMenu && !app.isFolder && !app.isShortcut && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N_MR1) {
@@ -913,7 +928,7 @@ private fun AppGridItem(
                 HorizontalDivider()
             }
 
-            if (menuOptions.contains("delete_home")) {
+            if (menuOptions.contains("delete_home") && !isDesktopLocked) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.menu_delete_home)) },
                     leadingIcon = { Icon(Icons.Default.Delete, null) },
@@ -934,7 +949,7 @@ private fun AppGridItem(
                 )
             }
             if (!app.isFolder) {
-                if (menuOptions.contains("uninstall") && !app.isSystem) {
+                if (menuOptions.contains("uninstall") && !app.isSystem && !isDesktopLocked) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.menu_uninstall)) },
                         leadingIcon = { Icon(Icons.Default.DeleteForever, null) },

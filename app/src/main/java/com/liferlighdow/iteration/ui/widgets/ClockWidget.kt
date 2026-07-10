@@ -14,6 +14,8 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import com.kyant.backdrop.Backdrop
 import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.data.WidgetDisplayMode
@@ -23,6 +25,96 @@ import com.liferlighdow.iteration.ui.withGlassShadow
 import com.liferlighdow.iteration.viewmodel.MainViewModel
 import kotlinx.coroutines.delay
 import java.util.Calendar
+
+@Composable
+fun DigitalClockWidget(
+    displayMode: WidgetDisplayMode,
+    modifier: Modifier = Modifier,
+    backdrop: Backdrop? = null,
+    isMinusOnePage: Boolean = false
+) {
+    val viewModel: MainViewModel = viewModel()
+    val isLiquidGlassEnabled by viewModel.isLiquidGlassEnabled.collectAsState()
+    val isLiquidWidgetsEnabled by (if (isMinusOnePage) viewModel.isLiquidGlassMinusOneWidgetEnabled else viewModel.isLiquidGlassWidgetsEnabled).collectAsState()
+    val blurRadius by viewModel.liquidGlassBlur.collectAsState()
+    val refractionHeight by viewModel.liquidGlassRefractionHeight.collectAsState()
+    val refractionAmount by viewModel.liquidGlassRefractionAmount.collectAsState()
+    val chromaticAberration by viewModel.liquidGlassChromaticAberration.collectAsState()
+
+    val useLiquid = displayMode == WidgetDisplayMode.GLASS && isLiquidGlassEnabled && isLiquidWidgetsEnabled && backdrop != null
+
+    var time by remember { mutableStateOf(Calendar.getInstance()) }
+
+    val isGlass = displayMode == WidgetDisplayMode.GLASS
+    val containerColor = when (displayMode) {
+        WidgetDisplayMode.GLASS -> glassFallbackColor(0.2f)
+        WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.secondaryContainer
+    }
+    val contentColor = when (displayMode) {
+        WidgetDisplayMode.GLASS -> Color.White
+        WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.onSecondaryContainer
+    }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            time = Calendar.getInstance()
+            delay(1000)
+        }
+    }
+
+    val hour = time.get(Calendar.HOUR_OF_DAY).toString().padStart(2, '0')
+    val minute = time.get(Calendar.MINUTE).toString().padStart(2, '0')
+    val dayOfWeek = when (time.get(Calendar.DAY_OF_WEEK)) {
+        Calendar.SUNDAY -> "SUN"
+        Calendar.MONDAY -> "MON"
+        Calendar.TUESDAY -> "TUE"
+        Calendar.WEDNESDAY -> "WED"
+        Calendar.THURSDAY -> "THU"
+        Calendar.FRIDAY -> "FRI"
+        Calendar.SATURDAY -> "SAT"
+        else -> ""
+    }
+    val month = (time.get(Calendar.MONTH) + 1).toString()
+    val day = time.get(Calendar.DAY_OF_MONTH).toString()
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .aspectRatio(1f)
+            .then(if (useLiquid) Modifier.liquidGlass(
+                enabled = true,
+                backdrop = backdrop,
+                cornerRadius = 24.dp,
+                blurRadius = blurRadius,
+                refractionHeight = refractionHeight,
+                refractionAmount = refractionAmount,
+                chromaticAberration = chromaticAberration
+            ) else Modifier),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = if (useLiquid) Color.Transparent else containerColor)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "$hour:$minute",
+                style = MaterialTheme.typography.headlineLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 40.sp
+                ).withGlassShadow(isGlass),
+                color = contentColor
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "$dayOfWeek, $month/$day",
+                style = MaterialTheme.typography.labelMedium.withGlassShadow(isGlass),
+                color = contentColor.copy(alpha = 0.7f)
+            )
+        }
+    }
+}
 
 @Composable
 fun AnalogClockWidget(

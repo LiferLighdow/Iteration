@@ -47,6 +47,7 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
     val dockCornerRadius by viewModel.dockCornerRadius.collectAsState()
     val showMinusOnePage by viewModel.showMinusOnePage.collectAsState()
     val showAppLibrary by viewModel.showAppLibrary.collectAsState()
+    val isDesktopLocked by viewModel.isDesktopLocked.collectAsState()
     val autoAddAppsToHome by viewModel.autoAddAppsToHome.collectAsState()
     val showStatusBar by viewModel.showStatusBar.collectAsState()
     val showNavigationBar by viewModel.showNavigationBar.collectAsState()
@@ -127,6 +128,20 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
                         )
                     },
                     modifier = Modifier.clickable { viewModel.setShowAppLibrary(!showAppLibrary) }
+                )
+            }
+
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.lock_desktop)) },
+                    supportingContent = { Text(stringResource(R.string.lock_desktop_desc)) },
+                    trailingContent = {
+                        Switch(
+                            checked = isDesktopLocked,
+                            onCheckedChange = { viewModel.setDesktopLocked(it) }
+                        )
+                    },
+                    modifier = Modifier.clickable { viewModel.setDesktopLocked(!isDesktopLocked) }
                 )
             }
 

@@ -6,6 +6,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -31,58 +33,61 @@ fun LauncherMenu(
     onDeletePageClick: () -> Unit
 ) {
     if (isVisible) {
+        val isDesktopLocked by viewModel.isDesktopLocked.collectAsState()
         ModalBottomSheet(onDismissRequest = onDismiss) {
             Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.menu_edit_mode)) },
-                    leadingContent = { Icon(Icons.Default.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                    modifier = Modifier.clickable {
-                        viewModel.setEditMode(true)
-                        onDismiss()
-                    }
-                )
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.menu_add_widget)) },
-                    leadingContent = { Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                    modifier = Modifier.clickable {
-                        onAddWidgetClick()
-                        onDismiss()
-                    }
-                )
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.menu_add_shortcut)) },
-                    leadingContent = { Icon(Icons.Default.Link, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                    modifier = Modifier.clickable {
-                        onAddShortcutClick()
-                        onDismiss()
-                    }
-                )
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.menu_new_folder)) },
-                    leadingContent = { Icon(Icons.Default.CreateNewFolder, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                    modifier = Modifier.clickable {
-                        onCreateFolderClick()
-                        onDismiss()
-                    }
-                )
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.menu_add_page)) },
-                    leadingContent = { Icon(Icons.Default.PostAdd, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                    modifier = Modifier.clickable {
-                        viewModel.addEmptyPage()
-                        onDismiss()
-                    }
-                )
-
-                if (isMultiplePages) {
+                if (!isDesktopLocked) {
                     ListItem(
-                        headlineContent = { Text(stringResource(R.string.menu_delete_page), color = MaterialTheme.colorScheme.error) },
-                        leadingContent = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                        headlineContent = { Text(stringResource(R.string.menu_edit_mode)) },
+                        leadingContent = { Icon(Icons.Default.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                         modifier = Modifier.clickable {
-                            onDeletePageClick()
+                            viewModel.setEditMode(true)
                             onDismiss()
                         }
                     )
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.menu_add_widget)) },
+                        leadingContent = { Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                        modifier = Modifier.clickable {
+                            onAddWidgetClick()
+                            onDismiss()
+                        }
+                    )
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.menu_add_shortcut)) },
+                        leadingContent = { Icon(Icons.Default.Link, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                        modifier = Modifier.clickable {
+                            onAddShortcutClick()
+                            onDismiss()
+                        }
+                    )
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.menu_new_folder)) },
+                        leadingContent = { Icon(Icons.Default.CreateNewFolder, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                        modifier = Modifier.clickable {
+                            onCreateFolderClick()
+                            onDismiss()
+                        }
+                    )
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.menu_add_page)) },
+                        leadingContent = { Icon(Icons.Default.PostAdd, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                        modifier = Modifier.clickable {
+                            viewModel.addEmptyPage()
+                            onDismiss()
+                        }
+                    )
+
+                    if (isMultiplePages) {
+                        ListItem(
+                            headlineContent = { Text(stringResource(R.string.menu_delete_page), color = MaterialTheme.colorScheme.error) },
+                            leadingContent = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                            modifier = Modifier.clickable {
+                                onDeletePageClick()
+                                onDismiss()
+                            }
+                        )
+                    }
                 }
 
                 ListItem(
@@ -94,7 +99,7 @@ fun LauncherMenu(
                     }
                 )
 
-                if (!isDefaultLauncher) {
+                if (!isDefaultLauncher && !isDesktopLocked) {
                     ListItem(
                         headlineContent = { Text(stringResource(R.string.menu_set_default)) },
                         leadingContent = { Icon(Icons.Default.Home, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
