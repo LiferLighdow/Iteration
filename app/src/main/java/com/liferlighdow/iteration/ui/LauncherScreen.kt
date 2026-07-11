@@ -181,6 +181,7 @@ fun LauncherScreen(
 
     // 新增：快速編輯 App 的狀態
     var appToEdit by remember { mutableStateOf<AppModel?>(null) }
+    var appToUnfreeze by remember { mutableStateOf<AppModel?>(null) }
 
     val slotBounds = remember { mutableStateMapOf<String, Rect>() }
     var rawHoveredKey by remember { mutableStateOf<String?>(null) }
@@ -197,7 +198,7 @@ fun LauncherScreen(
     val dockApps = remember(dockPkgNames, allAppsFlat) {
         List(4) { index ->
             val pkg = dockPkgNames.getOrNull(index) ?: ""
-            allAppsFlat.find { it.packageName == pkg && !it.isHidden } 
+            allAppsFlat.find { it.packageName == pkg && !it.isHidden && !it.isFrozen }
                 ?: AppModel(label = "", packageName = "", uniqueId = "empty_dock_$index")
         }
     }
@@ -472,6 +473,8 @@ fun LauncherScreen(
                                     if (app.isFolder) {
                                         folderIconPosition = pos
                                         folderToOpenId = app.uniqueId
+                                    } else if (app.isFrozen) {
+                                        appToUnfreeze = app
                                     } else viewModel.launchApp(app)
                                 },
                                 onSlotPositioned = { idx, rect ->
@@ -629,6 +632,8 @@ fun LauncherScreen(
                                 onAppClick = { app ->
                                     if (app.isFolder) {
                                         folderToOpenId = app.uniqueId
+                                    } else if (app.isFrozen) {
+                                        appToUnfreeze = app
                                     } else {
                                         onAppClick(app)
                                     }
@@ -706,7 +711,10 @@ fun LauncherScreen(
                         myPackageName = myPackageName,
                         notificationCounts = notificationCounts,
                         onSearchClick = { showGlobalSearch = true },
-                        onAppClick = onAppClick,
+                        onAppClick = { app ->
+                            if (app.isFrozen) appToUnfreeze = app
+                            else onAppClick(app)
+                        },
                         onSettingsClick = onSettingsClick,
                         onLongClick = { showDockPicker = it },
                         onDeleteClick = { app ->
@@ -753,7 +761,10 @@ fun LauncherScreen(
             onDismiss = { showGlobalSearch = false },
             allApps = allAppsFlat,
             suggestedApps = viewModel.suggestedApps.collectAsState().value,
-            onAppClick = onAppClick,
+            onAppClick = { app ->
+                if (app.isFrozen) appToUnfreeze = app
+                else onAppClick(app)
+            },
             iconShape = iconShape,
             isLiquidGlassEnabled = isLiquidGlassEnabled,
             isLiquidGlassGlobalSearchEnabled = isLiquidGlassGlobalSearchEnabled,
@@ -841,7 +852,10 @@ fun LauncherScreen(
         onAddShortcutClick = { showShortcutPicker = true },
         onWallpaperClick = { showWallpaperTypeDialog = true },
         onSettingsClick = onSettingsClick,
-        onAppClick = onAppClick
+        onAppClick = { app ->
+            if (app.isFrozen) appToUnfreeze = app
+            else onAppClick(app)
+        }
     )
 
     if (showWallpaperTypeDialog) {
@@ -1043,6 +1057,23 @@ fun LauncherScreen(
                 }
             }
         }
+    }
+
+    if (appToUnfreeze != null) {
+        AlertDialog(
+            onDismissRequest = { appToUnfreeze = null },
+            title = { Text(stringResource(R.string.unfreeze_dialog_title)) },
+            text = { Text(stringResource(R.string.unfreeze_dialog_msg)) },
+            confirmButton = {
+                Button(onClick = {
+                    appToUnfreeze?.let { viewModel.toggleFreezeApp(it, mContext) }
+                    appToUnfreeze = null
+                }) { Text(stringResource(R.string.unfreeze)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { appToUnfreeze = null }) { Text(stringResource(R.string.cancel)) }
+            }
+        )
     }
 }
 

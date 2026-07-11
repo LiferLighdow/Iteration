@@ -31,9 +31,11 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.ui.unit.Dp
 import com.kyant.backdrop.Backdrop
 import com.liferlighdow.iteration.utils.IconShape
+import com.liferlighdow.iteration.utils.ActionMode
 import com.liferlighdow.iteration.viewmodel.*
 import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.data.AppModel
+import androidx.compose.material.icons.filled.AcUnit
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -153,6 +155,7 @@ fun Dock(
                     val viewModel: MainViewModel = viewModel()
                     val isDesktopLocked by viewModel.isDesktopLocked.collectAsState()
                     var showContextMenu by remember { mutableStateOf(false) }
+                    val context = LocalContext.current
 
                     AppItem(
                         app = app,
@@ -192,6 +195,15 @@ fun Dock(
                         expanded = showContextMenu,
                         onDismissRequest = { showContextMenu = false }
                     ) {
+                        val actionMode by viewModel.actionMode.collectAsState()
+                        if (actionMode == ActionMode.SHIZUKU || actionMode == ActionMode.ROOT) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(if (app.isFrozen) R.string.unfreeze else R.string.freeze)) },
+                                leadingIcon = { Icon(Icons.Default.AcUnit, null) },
+                                onClick = { viewModel.toggleFreezeApp(app, context); showContextMenu = false }
+                            )
+                            HorizontalDivider()
+                        }
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.replace_app)) },
                             leadingIcon = { Icon(Icons.Default.Settings, null) },

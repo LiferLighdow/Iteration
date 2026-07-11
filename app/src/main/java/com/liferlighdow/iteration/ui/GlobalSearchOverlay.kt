@@ -10,9 +10,11 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -68,6 +70,7 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.*
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun GlobalSearchOverlay(
     isVisible: Boolean,
@@ -103,6 +106,9 @@ fun GlobalSearchOverlay(
     val files by viewModel.files.collectAsState()
     val exchangeRates by viewModel.exchangeRates.collectAsState()
     val isOfflineTranslationEnabled by viewModel.isOfflineTranslationEnabled.collectAsState()
+
+    var showFrozenManager by remember { mutableStateOf(false) }
+    var appToUnfreeze by remember { mutableStateOf<AppModel?>(null) }
 
     val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
     val dateFormat = remember { SimpleDateFormat("MM/dd", Locale.getDefault()) }
@@ -301,7 +307,7 @@ fun GlobalSearchOverlay(
 
                 val filteredResults = remember(query, allApps) {
                     if (query.isBlank()) emptyList()
-                    else allApps.filter { !it.isHidden && it.label.contains(query, ignoreCase = true) }
+                    else allApps.filter { !it.isHidden && !it.isFrozen && it.label.contains(query, ignoreCase = true) }
                 }
 
                 val mathResult = remember(query) {
@@ -404,11 +410,24 @@ fun GlobalSearchOverlay(
                     if (isVisible && query.isBlank()) clipboardManager.getText()?.text else null
                 }
                 val favoriteApps = remember(favoritePackages, allApps) {
-                    allApps.filter { favoritePackages.contains(it.packageName) && !it.isHidden }.take(8)
+                    allApps.filter { favoritePackages.contains(it.packageName) && !it.isHidden && !it.isFrozen }.take(8)
                 }
                 val finalSuggestions = remember(suggestedApps, allApps) {
-                    if (suggestedApps.isNotEmpty()) suggestedApps.take(8)
-                    else allApps.filter { !it.isHidden }.take(8)
+                    if (suggestedApps.isNotEmpty()) suggestedApps.filter { !it.isFrozen }.take(8)
+                    else allApps.filter { !it.isHidden && !it.isFrozen }.take(8)
+                }
+
+                val isFrozenSearch = remember(query) { query.trim().lowercase() == "#frozen" }
+
+                val hashtagCategoryApps = remember(query, allApps) {
+                    val q = query.trim()
+                    if (q.startsWith("#") && q.length > 1 && q.lowercase() != "#frozen") {
+                        val categoryName = q.substring(1).lowercase()
+                        allApps.filter { 
+                            !it.isHidden && !it.isFrozen && 
+                            it.displayCategory.lowercase() == categoryName 
+                        }
+                    } else emptyList()
                 }
 
                 LazyColumn(
@@ -424,6 +443,61 @@ fun GlobalSearchOverlay(
                         },
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    if (isFrozenSearch) {
+                        item {
+                            Card(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).clickable {
+                                    showFrozenManager = true
+                                },
+                                shape = RoundedCornerShape(24.dp),
+                                colors = CardDefaults.cardColors(containerColor = glassFallbackColor(0.15f)),
+                                border = BorderStroke(1.dp, glassFallbackColor(0.1f))
+                            ) {
+                                Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Box(modifier = Modifier.size(48.dp).background(Color.Cyan.copy(alpha = 0.2f), CircleShape), contentAlignment = Alignment.Center) {
+                                        Icon(Icons.Default.AcUnit, null, tint = Color.White)
+                                    }
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                    Column {
+                                        Text(stringResource(R.string.system_category), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f))
+                                        Text(text = stringResource(R.string.frozen_apps_title), style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.Medium)
+                                    }
+                                    Spacer(modifier = Modifier.weight(1f))
+                                    Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
+                                }
+                            }
+                        }
+                    }
+
+                    if (hashtagCategoryApps.isNotEmpty()) {
+                        item {
+                            val categoryName = query.trim().substring(1)
+                            Text(categoryName, color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(vertical = 8.dp))
+                            Card(
+                                shape = RoundedCornerShape(24.dp),
+                                colors = CardDefaults.cardColors(containerColor = glassFallbackColor(0.15f)),
+                                border = BorderStroke(1.dp, glassFallbackColor(0.1f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column {
+                                    hashtagCategoryApps.take(4).forEach { app ->
+                                        ListItem(
+                                            headlineContent = { Text(app.label, color = Color.White) },
+                                            leadingContent = {
+                                                viewModel.getIcon(app.uniqueId)?.let { appIcon ->
+                                                    val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(48.dp * 0.238f)
+                                                    Image(bitmap = appIcon, contentDescription = null, modifier = Modifier.size(48.dp).clip(shape).background(Color.White))
+                                                }
+                                            },
+                                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                            modifier = Modifier.clickable { onAppClick(app); onDismiss() }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     if (query.isNotBlank() && mathResult != null) {
                         item {
                             Card(
@@ -916,6 +990,75 @@ fun GlobalSearchOverlay(
             }
         }
     }
+
+    if (showFrozenManager) {
+        FrozenAppsManagerDialog(
+            allApps = allApps,
+            onDismiss = { showFrozenManager = false },
+            onUnfreezeClick = { appToUnfreeze = it }
+        )
+    }
+
+    if (appToUnfreeze != null) {
+        AlertDialog(
+            onDismissRequest = { appToUnfreeze = null },
+            title = { Text(stringResource(R.string.unfreeze_dialog_title)) },
+            text = { Text(stringResource(R.string.unfreeze_dialog_msg)) },
+            confirmButton = {
+                Button(onClick = {
+                    appToUnfreeze?.let { viewModel.toggleFreezeApp(it, mContext) }
+                    appToUnfreeze = null
+                }) { Text(stringResource(R.string.unfreeze)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { appToUnfreeze = null }) { Text(stringResource(R.string.cancel)) }
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun FrozenAppsManagerDialog(
+    allApps: List<AppModel>,
+    onDismiss: () -> Unit,
+    onUnfreezeClick: (AppModel) -> Unit
+) {
+    val frozenApps = remember(allApps) { allApps.filter { it.isFrozen } }
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.frozen_apps_title)) },
+        text = {
+            if (frozenApps.isEmpty()) {
+                Text(stringResource(R.string.no_frozen_apps))
+            } else {
+                LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp)) {
+                    items(frozenApps, key = { it.uniqueId }) { app ->
+                        var showMenu by remember { mutableStateOf(false) }
+                        ListItem(
+                            headlineContent = { Text(app.label, color = Color.White) },
+                            supportingContent = { Text(app.packageName, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.6f)) },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            modifier = Modifier.combinedClickable(
+                                onClick = { onUnfreezeClick(app) },
+                                onLongClick = { showMenu = true }
+                            )
+                        )
+                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.unfreeze)) },
+                                onClick = { onUnfreezeClick(app); showMenu = false }
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.done)) }
+        }
+    )
 }
 
 @Composable

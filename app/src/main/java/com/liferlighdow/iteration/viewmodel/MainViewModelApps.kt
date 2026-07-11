@@ -28,6 +28,7 @@ import com.liferlighdow.iteration.data.ConfigSerializer
 import com.liferlighdow.iteration.ui.DockStyle
 import com.liferlighdow.iteration.ui.DynamicColorGenerator
 import com.liferlighdow.iteration.ui.ThemeMode
+import com.liferlighdow.iteration.utils.ActionMode
 import com.liferlighdow.iteration.utils.GestureAction
 import com.liferlighdow.iteration.utils.IconShape
 import com.liferlighdow.iteration.utils.IconStyle
@@ -147,6 +148,12 @@ fun MainViewModel.loadHiddenPackages() {
     hiddenPackages.addAll(saved)
 }
 
+fun MainViewModel.loadFrozenPackages() {
+    val saved = prefs.getStringSet("frozen_apps", emptySet()) ?: emptySet()
+    frozenPackages.clear()
+    frozenPackages.addAll(saved)
+}
+
 fun MainViewModel.loadCustomLabels() {
     val saved = prefs.getString("custom_labels_json", null)
     customLabels.clear()
@@ -225,6 +232,79 @@ fun MainViewModel.toggleHiddenApp(packageName: String) {
     prefs.edit().putStringSet("hidden_apps", hiddenPackages).apply()
     clearAppIconCache(packageName)
     loadApps()
+}
+
+fun MainViewModel.toggleFreezeApp(app: AppModel, context: Context) {
+    val pkg = app.packageName
+    val userId = app.userId
+    val isFrozen = app.isFrozen
+    val mode = _actionMode.value
+
+    viewModelScope.launch {
+        val success = withContext(Dispatchers.IO) {
+            if (isFrozen) {
+                // Unfreeze
+                when (mode) {
+                    ActionMode.SHIZUKU -> {
+                        executeShizukuCommandSilent(arrayOf("pm", "enable", "--user", userId.toString(), pkg))
+                    }
+                    ActionMode.ROOT -> {
+                        executeCommandSilent(arrayOf("su", "-c", "pm enable --user $userId $pkg"))
+                    }
+                    else -> false
+                }
+            } else {
+                // Freeze
+                when (mode) {
+                    ActionMode.SHIZUKU -> {
+                        executeShizukuCommandSilent(arrayOf("pm", "disable-user", "--user", userId.toString(), pkg))
+                    }
+                    ActionMode.ROOT -> {
+                        executeCommandSilent(arrayOf("su", "-c", "pm disable-user --user $userId $pkg"))
+                    }
+                    else -> false
+                }
+            }
+        }
+
+        if (success) {
+            if (isFrozen) {
+                frozenPackages.remove(pkg)
+            } else {
+                frozenPackages.add(pkg)
+                removeAppFromHomeByPackage(pkg)
+            }
+            prefs.edit().putStringSet("frozen_apps", frozenPackages).apply()
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, if (isFrozen) R.string.unfreeze_success else R.string.freeze_success, Toast.LENGTH_SHORT).show()
+                loadApps()
+            }
+        } else {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, R.string.action_failed_check_permission, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+}
+
+private fun executeShizukuCommandSilent(command: Array<String>): Boolean {
+    if (!rikka.shizuku.Shizuku.pingBinder()) return false
+    return try {
+        val method = rikka.shizuku.Shizuku::class.java.declaredMethods.find { 
+            it.name == "newProcess" && it.parameterTypes.size == 3 && it.parameterTypes[0].isArray
+        }
+        if (method != null) {
+            method.isAccessible = true
+            val process = method.invoke(null, command, null, null) as rikka.shizuku.ShizukuRemoteProcess
+            process.waitFor() == 0
+        } else false
+    } catch (e: Exception) { false }
+}
+
+private fun executeCommandSilent(command: Array<String>): Boolean {
+    return try {
+        Runtime.getRuntime().exec(command).waitFor() == 0
+    } catch (e: Exception) { false }
 }
 
 fun MainViewModel.removeAppFromHomeByPackage(packageName: String) {
@@ -417,6 +497,7 @@ fun MainViewModel.saveIconToDisk(bitmap: ImageBitmap, file: File) {
 
 fun MainViewModel.loadSettings() {
     loadHiddenPackages()
+    loadFrozenPackages()
     loadCustomLabels()
     loadUserCategories()
     loadCustomCategories()
@@ -579,7 +660,7 @@ fun MainViewModel.loadApps() {
         }
 
         val rawApps = cachedRawApps ?: withContext(Dispatchers.IO) {
-            repository.getInstalledApps().also { cachedRawApps = it }
+            repository.getInstalledApps(frozenPackages).also { cachedRawApps = it }
         }
 
         // 合併 PWA 應用程式
@@ -762,14 +843,16 @@ fun MainViewModel.loadApps() {
                                 val baseApp = processedApps.find { it.uniqueId == savedApp.uniqueId }
                                     ?: processedApps.find { it.packageName == savedApp.packageName && it.userId == savedApp.userId }
                                 baseApp?.let {
-                                    pageItems.add(it.copy(uniqueId = savedApp.uniqueId, label = customLabels[savedApp.uniqueId] ?: customLabels[savedApp.packageName] ?: it.label, isHidden = hiddenPackages.contains(savedApp.uniqueId) || hiddenPackages.contains(savedApp.packageName)))
+                                    if (!it.isFrozen) {
+                                        pageItems.add(it.copy(uniqueId = savedApp.uniqueId, label = customLabels[savedApp.uniqueId] ?: customLabels[savedApp.packageName] ?: it.label, isHidden = hiddenPackages.contains(savedApp.uniqueId) || hiddenPackages.contains(savedApp.packageName)))
+                                    }
                                 }
                             }
                         }
                     }
                     restoredPages.add(pageItems)
                 }
-                val newApps = processedApps.filter { app -> !seenApps.contains(app.uniqueId) && !seenApps.contains(app.packageName) && !app.isHidden }
+                val newApps = processedApps.filter { app -> !seenApps.contains(app.uniqueId) && !seenApps.contains(app.packageName) && !app.isHidden && !app.isFrozen }
                 if (newApps.isNotEmpty()) {
                     if (_autoAddAppsToHome.value) {
                         val isMassiveMigration = newApps.size > 20
@@ -810,7 +893,7 @@ fun MainViewModel.repaginate(allApps: List<AppModel>) {
     if (allApps.isEmpty()) {
         _pages.value = listOf(emptyList())
     } else {
-        val visibleApps = allApps.filter { !it.isHidden }
+        val visibleApps = allApps.filter { !it.isHidden && !it.isFrozen }
         _pages.value = visibleApps.chunked(pageSize)
     }
 }

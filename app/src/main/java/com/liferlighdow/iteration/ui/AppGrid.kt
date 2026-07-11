@@ -17,6 +17,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AcUnit
 import androidx.compose.material.icons.filled.BlurOn
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
@@ -64,6 +65,7 @@ import android.util.Log
 import androidx.compose.ui.unit.Dp
 import com.kyant.backdrop.Backdrop
 import com.liferlighdow.iteration.utils.IconShape
+import com.liferlighdow.iteration.utils.ActionMode
 import com.liferlighdow.iteration.viewmodel.MainViewModel
 import com.liferlighdow.iteration.viewmodel.*
 import com.liferlighdow.iteration.service.NotificationService
@@ -905,6 +907,16 @@ private fun AppGridItem(
             onDismissRequest = onContextMenuDismiss,
             modifier = Modifier.background(MaterialTheme.colorScheme.surface)
         ) {
+            val actionMode by viewModel.actionMode.collectAsState()
+            if (!app.isFolder && (actionMode == ActionMode.SHIZUKU || actionMode == ActionMode.ROOT)) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(if (app.isFrozen) R.string.unfreeze else R.string.freeze)) },
+                    leadingIcon = { Icon(Icons.Default.AcUnit, null) },
+                    onClick = { viewModel.toggleFreezeApp(app, mContext); onContextMenuDismiss() }
+                )
+                HorizontalDivider()
+            }
+
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N_MR1 && shortcuts.isNotEmpty()) {
                 shortcuts.forEach { shortcut ->
                     DropdownMenuItem(

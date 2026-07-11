@@ -36,6 +36,15 @@
     <string name="menu_uninstall">Uninstall</string>
     <string name="menu_hide">Hide</string>
     <string name="menu_app_info">App Info</string>
+    <string name="freeze">Freeze</string>
+    <string name="unfreeze">Unfreeze</string>
+    <string name="freeze_success">App frozen</string>
+    <string name="unfreeze_success">App unfrozen</string>
+    <string name="action_failed_check_permission">Action failed, check Shizuku/ROOT permission</string>
+    <string name="unfreeze_dialog_title">Unfreeze App</string>
+    <string name="unfreeze_dialog_msg">This app is frozen. Do you want to unfreeze it?</string>
+    <string name="frozen_apps_title">Frozen Apps Management</string>
+    <string name="no_frozen_apps">No frozen apps found</string>
     <string name="menu_add_favorite">Add to Favorites</string>
     <string name="menu_remove_favorite">Remove from Favorites</string>
     <string name="menu_manage_apps">Manage Apps</string>

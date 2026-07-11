@@ -33,6 +33,15 @@
     <string name="menu_uninstall">解除安裝</string>
     <string name="menu_hide">隱藏</string>
     <string name="menu_app_info">應用資訊</string>
+    <string name="freeze">凍結</string>
+    <string name="unfreeze">解凍</string>
+    <string name="freeze_success">應用已凍結</string>
+    <string name="unfreeze_success">應用已解凍</string>
+    <string name="action_failed_check_permission">操作失敗，請檢查 Shizuku/ROOT 權限</string>
+    <string name="unfreeze_dialog_title">解凍應用</string>
+    <string name="unfreeze_dialog_msg">此應用目前處於凍結狀態，是否要解凍？</string>
+    <string name="frozen_apps_title">凍結應用管理</string>
+    <string name="no_frozen_apps">未發現被凍結的應用</string>
     <string name="menu_add_favorite">新增至最愛</string>
     <string name="menu_remove_favorite">從最愛移除</string>
     <string name="menu_manage_apps">管理應用</string>

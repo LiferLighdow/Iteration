@@ -61,6 +61,7 @@ import com.liferlighdow.iteration.viewmodel.*
 import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.viewmodel.addAppToHome
 import com.liferlighdow.iteration.data.AppModel
+import com.liferlighdow.iteration.utils.ActionMode
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -100,6 +101,7 @@ fun AppLibraryPage(
     // 用於重新命名的狀態
     var appToRename by remember { mutableStateOf<AppModel?>(null) }
     var newLabelText by remember { mutableStateOf("") }
+    var appToUnfreeze by remember { mutableStateOf<AppModel?>(null) }
 
     BackHandler(enabled = isSearchFocused || searchQuery.isNotEmpty() || (selectedCategory != null && selectedCategory != "All")) {
         if (selectedCategory != null && selectedCategory != "All") viewModel.setSelectedCategory("All")
@@ -107,8 +109,8 @@ fun AppLibraryPage(
     }
 
     // 分類目錄邏輯：僅用於顯示「資料夾」按鈕，不涉及過濾
-    val normalApps = remember(allApps) { allApps.filter { !it.isHidden } }
-    val hiddenApps = remember(allApps) { allApps.filter { it.isHidden } }
+    val normalApps = remember(allApps) { allApps.filter { !it.isHidden && !it.isFrozen } }
+    val hiddenApps = remember(allApps) { allApps.filter { it.isHidden && !it.isFrozen } }
     val categories = remember(normalApps, userCategories) {
         val grouped = normalApps.groupBy { it.displayCategory }
         val result = mutableListOf<Pair<String, List<AppModel>>>()
@@ -118,7 +120,7 @@ fun AppLibraryPage(
         result
     }
     
-    val hiddenAppsCount = remember(allApps) { allApps.count { it.isHidden } }
+    val hiddenAppsCount = remember(allApps) { allApps.count { it.isHidden && !it.isFrozen } }
     val showHiddenFolder = hiddenAppsCount > 0 && searchQuery.isBlank() && (selectedCategory == null || selectedCategory == "All")
 
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = horizontalPadding)) {
@@ -222,16 +224,38 @@ fun AppLibraryPage(
                                         if (appIcon != null) {
                                             val listIconSize = 40.dp
                                             val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(listIconSize * 0.238f)
-                                            Image(bitmap = appIcon, contentDescription = null, modifier = Modifier.size(listIconSize).clip(shape).background(Color.White))
+                                            val colorFilter = remember(app.isFrozen) {
+                                                if (app.isFrozen) {
+                                                    androidx.compose.ui.graphics.ColorFilter.colorMatrix(androidx.compose.ui.graphics.ColorMatrix().apply { setToSaturation(0f) })
+                                                } else null
+                                            }
+                                            Image(
+                                                bitmap = appIcon,
+                                                contentDescription = null,
+                                                colorFilter = colorFilter,
+                                                modifier = Modifier.size(listIconSize).clip(shape).background(Color.White)
+                                            )
                                         }
                                     },
                                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                                     modifier = Modifier.combinedClickable(
-                                        onClick = { onAppClick(app) },
+                                        onClick = { 
+                                            if (app.isFrozen) appToUnfreeze = app
+                                            else onAppClick(app) 
+                                        },
                                         onLongClick = { showMenu = true }
                                     )
                                 )
                                 DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                                    val actionMode by viewModel.actionMode.collectAsState()
+                                    if (actionMode == ActionMode.SHIZUKU || actionMode == ActionMode.ROOT) {
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(if (app.isFrozen) R.string.unfreeze else R.string.freeze)) },
+                                            leadingIcon = { Icon(Icons.Default.AcUnit, null, tint = MaterialTheme.colorScheme.primary) },
+                                            onClick = { viewModel.toggleFreezeApp(app, mContext); showMenu = false }
+                                        )
+                                        HorizontalDivider()
+                                    }
                                     DropdownMenuItem(text = { Text(stringResource(R.string.menu_add_to_home)) }, leadingIcon = { Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.primary) }, onClick = { viewModel.addAppToHome(app.uniqueId); showMenu = false })
                                     DropdownMenuItem(text = { Text(stringResource(R.string.rename)) }, leadingIcon = { Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary) }, onClick = { appToRename = app; newLabelText = app.label; showMenu = false })
                                     DropdownMenuItem(text = { Text(stringResource(if (app.isHidden) R.string.unhide else R.string.hide)) }, leadingIcon = { Icon(if (app.isHidden) Icons.Default.Visibility else Icons.Default.VisibilityOff, null, tint = MaterialTheme.colorScheme.primary) }, onClick = { viewModel.toggleHiddenApp(app.uniqueId); showMenu = false })
@@ -302,6 +326,7 @@ fun AppLibraryPage(
                             isLocked = name == "Hidden Apps" && !isHiddenUnlocked,
                             onAppClick = { 
                                 if (name == "Hidden Apps" && !isHiddenUnlocked) showPasswordDialog = true 
+                                else if (it.isFrozen) appToUnfreeze = it
                                 else onAppClick(it) 
                             },
                             onMoreClick = { 
@@ -323,6 +348,23 @@ fun AppLibraryPage(
             R.string.hidden_apps_title)) }, text = { OutlinedTextField(value = passwordInput, onValueChange = { passwordInput = it }, label = { Text(stringResource(
             R.string.password_hint)) }, singleLine = true, visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(), trailingIcon = { val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff; IconButton(onClick = { passwordVisible = !passwordVisible }) { Icon(imageVector = image, contentDescription = null) } }) }, confirmButton = { Button(onClick = { if (passwordInput == viewModel.getPassword()) { isHiddenUnlocked = true; showPasswordDialog = false } }) { Text(stringResource(
             R.string.unlock)) } })
+    }
+
+    if (appToUnfreeze != null) {
+        AlertDialog(
+            onDismissRequest = { appToUnfreeze = null },
+            title = { Text(stringResource(R.string.unfreeze_dialog_title)) },
+            text = { Text(stringResource(R.string.unfreeze_dialog_msg)) },
+            confirmButton = {
+                Button(onClick = {
+                    appToUnfreeze?.let { viewModel.toggleFreezeApp(it, mContext) }
+                    appToUnfreeze = null
+                }) { Text(stringResource(R.string.unfreeze)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { appToUnfreeze = null }) { Text(stringResource(R.string.cancel)) }
+            }
+        )
     }
 }
 
@@ -473,6 +515,16 @@ fun LibraryItemWithMenu(
         )
 
         DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+            val actionMode by viewModel.actionMode.collectAsState()
+            if (actionMode == ActionMode.SHIZUKU || actionMode == ActionMode.ROOT) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(if (app.isFrozen) R.string.unfreeze else R.string.freeze)) },
+                    leadingIcon = { Icon(Icons.Default.AcUnit, null) },
+                    onClick = { viewModel.toggleFreezeApp(app, mContext); showMenu = false }
+                )
+                HorizontalDivider()
+            }
+
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N_MR1 && shortcuts.isNotEmpty()) {
                 shortcuts.forEach { shortcut ->
                     DropdownMenuItem(

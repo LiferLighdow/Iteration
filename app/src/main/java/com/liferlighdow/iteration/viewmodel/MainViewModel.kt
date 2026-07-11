@@ -401,6 +401,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     )
     val libraryShape = _libraryShape.asStateFlow()
 
+    internal val frozenPackages = mutableSetOf<String>()
     internal val hiddenPackages = mutableSetOf<String>()
     internal val customLabels = mutableMapOf<String, String>()
     internal val customCategories = mutableMapOf<String, String>()
@@ -479,9 +480,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _searchQuery,
         _selectedCategory
     ) { apps: List<AppModel>, query: String, category: String ->
-        if (query.isEmpty() && category == "All") return@combine apps
+        val activeApps = apps.filter { !it.isFrozen }
+        if (query.isEmpty() && category == "All") return@combine activeApps
 
-        apps.filter { app ->
+        activeApps.filter { app ->
             val matchesQuery =
                 if (query.isEmpty()) true else app.label.contains(query, ignoreCase = true)
             val matchesCategory = when (category) {

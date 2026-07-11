@@ -37,6 +37,13 @@
     <string name="menu_uninstall">卸载</string>
     <string name="menu_hide">隐藏</string>
     <string name="menu_app_info">应用信息</string>
+    <string name="freeze">冻结</string>
+    <string name="unfreeze">解冻</string>
+    <string name="freeze_success">应用已冻结</string>
+    <string name="unfreeze_success">应用已解冻</string>
+    <string name="action_failed_check_permission">操作失败，请检查 Shizuku/ROOT 权限</string>
+    <string name="unfreeze_dialog_title">解冻应用</string>
+    <string name="unfreeze_dialog_msg">此应用目前处于冻结状态，是否要解冻？</string>
     <string name="menu_add_favorite">添加至收藏</string>
     <string name="menu_remove_favorite">从收藏移除</string>
     <string name="menu_manage_apps">管理应用</string>

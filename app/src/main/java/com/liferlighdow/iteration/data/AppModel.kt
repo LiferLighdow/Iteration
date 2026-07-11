@@ -18,7 +18,8 @@ data class AppModel(
     @SerialName("sid") val shortcutId: String? = null,
     @SerialName("is") val isSystem: Boolean = false,
     @SerialName("pwa") val isPWA: Boolean = false,
-    @SerialName("pbc") val pwaBgColor: Int = 0xFF2196F3.toInt()
+    @SerialName("pbc") val pwaBgColor: Int = 0xFF2196F3.toInt(),
+    @SerialName("if") val isFrozen: Boolean = false
 ) {
     val isWidget: Boolean get() = widget != null
     val isShortcut: Boolean get() = shortcutId != null

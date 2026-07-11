@@ -47,6 +47,9 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
+
 @Composable
 fun AppItem(
     app: AppModel,
@@ -87,6 +90,12 @@ fun AppItem(
 
     val currentShape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(iconSize * 0.238f)
 
+    val colorFilter = remember(app.isFrozen) {
+        if (app.isFrozen) {
+            ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+        } else null
+    }
+
     Column(
         modifier = modifier
             .padding(vertical = if (showLabel) 4.dp else 0.dp)
@@ -105,6 +114,7 @@ fun AppItem(
                 Image(
                     bitmap = displayIcon,
                     contentDescription = null,
+                    colorFilter = colorFilter,
                     modifier = Modifier
                         .offset(y = iconSize * 0.7f)
                         .size(iconSize)
@@ -174,6 +184,7 @@ fun AppItem(
                         Image(
                             bitmap = targetBitmap,
                             contentDescription = null,
+                            colorFilter = colorFilter,
                             modifier = Modifier
                                 .size(iconSize)
                                 .clip(currentShape)
@@ -258,10 +269,16 @@ fun FolderPreviewIcon(
 ) {
     val currentShape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(size * 0.238f)
     val appIcon = app?.let { if (!it.isFolder) getIcon(it.uniqueId) else null }
+    val colorFilter = remember(app?.isFrozen) {
+        if (app?.isFrozen == true) {
+            ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+        } else null
+    }
     if (appIcon != null) {
         Image(
             bitmap = appIcon,
             contentDescription = null,
+            colorFilter = colorFilter,
             modifier = Modifier
                 .size(size)
                 .clip(currentShape)
