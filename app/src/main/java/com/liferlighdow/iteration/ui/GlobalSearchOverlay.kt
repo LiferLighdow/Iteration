@@ -105,7 +105,6 @@ fun GlobalSearchOverlay(
     val calendarEvents by viewModel.calendarEvents.collectAsState()
     val files by viewModel.files.collectAsState()
     val exchangeRates by viewModel.exchangeRates.collectAsState()
-    val isOfflineTranslationEnabled by viewModel.isOfflineTranslationEnabled.collectAsState()
 
     var showFrozenManager by remember { mutableStateOf(false) }
     var appToUnfreeze by remember { mutableStateOf<AppModel?>(null) }
@@ -127,8 +126,8 @@ fun GlobalSearchOverlay(
         }
     }
 
-    // 翻譯邏輯 (支援線上與 ML Kit 離線切換)
-    LaunchedEffect(query, isOfflineTranslationEnabled) {
+    // 翻譯邏輯 (統一使用線上翻譯)
+    LaunchedEffect(query) {
         val q = query.trim()
         if (!q.startsWith("tr ", ignoreCase = true)) {
             translationResult = null
@@ -162,44 +161,37 @@ fun GlobalSearchOverlay(
         translationResult = null // 開始翻譯前先清空舊結果
         isTranslating = true
 
-        if (isOfflineTranslationEnabled) {
-            // ML Kit 離線翻譯
-            val result = viewModel.translateOffline(textToTranslate, targetLang)
-            translationResult = result
-            isTranslating = false
-        } else {
-            // 聯網翻譯邏輯 (Legacy API)
-            withContext(Dispatchers.IO) {
-                try {
-                    val url = URL(
-                        "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=$targetLang&dt=t&q=${
-                            URLEncoder.encode(
-                                textToTranslate,
-                                "UTF-8"
-                            )
-                        }"
-                    )
-                    val conn = url.openConnection() as HttpURLConnection
-                    conn.requestMethod = "GET"
-                    conn.connectTimeout = 8000
-                    conn.readTimeout = 8000
-                    conn.setRequestProperty("User-Agent", "Mozilla/5.0")
-                    if (conn.responseCode == 200) {
-                        val res = conn.inputStream.bufferedReader().use { it.readText() }
-                        val jsonArray = JSONArray(res)
-                        val resultParts = jsonArray.getJSONArray(0)
-                        val translatedText = StringBuilder()
-                        for (i in 0 until resultParts.length()) {
-                            val part = resultParts.getJSONArray(i).optString(0, "")
-                            if (part != "null") translatedText.append(part)
-                        }
-                        withContext(Dispatchers.Main) { translationResult = translatedText.toString() }
+        // 聯網翻譯邏輯 (Legacy API)
+        withContext(Dispatchers.IO) {
+            try {
+                val url = URL(
+                    "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=$targetLang&dt=t&q=${
+                        URLEncoder.encode(
+                            textToTranslate,
+                            "UTF-8"
+                        )
+                    }"
+                )
+                val conn = url.openConnection() as HttpURLConnection
+                conn.requestMethod = "GET"
+                conn.connectTimeout = 8000
+                conn.readTimeout = 8000
+                conn.setRequestProperty("User-Agent", "Mozilla/5.0")
+                if (conn.responseCode == 200) {
+                    val res = conn.inputStream.bufferedReader().use { it.readText() }
+                    val jsonArray = JSONArray(res)
+                    val resultParts = jsonArray.getJSONArray(0)
+                    val translatedText = StringBuilder()
+                    for (i in 0 until resultParts.length()) {
+                        val part = resultParts.getJSONArray(i).optString(0, "")
+                        if (part != "null") translatedText.append(part)
                     }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                } finally {
-                    withContext(Dispatchers.Main) { isTranslating = false }
+                    withContext(Dispatchers.Main) { translationResult = translatedText.toString() }
                 }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                withContext(Dispatchers.Main) { isTranslating = false }
             }
         }
     }
@@ -657,12 +649,7 @@ fun GlobalSearchOverlay(
                                     }
                                     Spacer(modifier = Modifier.width(16.dp))
                                     Column(modifier = Modifier.weight(1f)) {
-                                        val engineLabel = if (isOfflineTranslationEnabled) {
-                                            "${stringResource(R.string.translator)} (Offline)"
-                                        } else {
-                                            "${stringResource(R.string.translator)} (Online)"
-                                        }
-                                        Text(engineLabel, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f))
+                                        Text(stringResource(R.string.translator), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f))
                                         if (isTranslating) LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(2.dp).padding(top = 8.dp), color = Color.White)
                                         else Text(text = translationResult ?: "", style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.Medium)
                                     }

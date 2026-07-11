@@ -77,8 +77,6 @@ dependencies {
     implementation(libs.backdrop)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.work.runtime)
-    implementation(libs.mlkit.translate)
-    implementation(libs.kotlinx.coroutines.play.services)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.espresso.core)

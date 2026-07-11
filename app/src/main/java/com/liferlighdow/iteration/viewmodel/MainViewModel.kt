@@ -136,10 +136,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     internal val _isSystemNetworkEnabled = MutableStateFlow(true)
     val isSystemNetworkEnabled = _isSystemNetworkEnabled.asStateFlow()
 
-    internal val _isOfflineTranslationEnabled =
-        MutableStateFlow(prefs.getBoolean("offline_translation_enabled", false))
-    val isOfflineTranslationEnabled = _isOfflineTranslationEnabled.asStateFlow()
-
     val exchangeRates = currencyRepository.exchangeRates
     val weatherInfo = weatherRepository.weatherInfo
     val weatherError = weatherRepository.weatherError
@@ -652,7 +648,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             "show_app_library" -> _showAppLibrary.value = sharedPreferences.getBoolean(key, true)
             "new_version_available" -> _newVersionAvailable.value = sharedPreferences.getString(key, null)
             "new_version_download_url" -> _newVersionDownloadUrl.value = sharedPreferences.getString(key, null)
-            "offline_translation_enabled" -> _isOfflineTranslationEnabled.value = sharedPreferences.getBoolean(key, false)
             "icon_cache_size" -> {
                 val newSize = sharedPreferences.getInt(key, 250)
                 _iconCacheSize.value = newSize

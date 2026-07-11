@@ -457,8 +457,3 @@ fun MainViewModel.resetLiquidGlassParams() {
     setLiquidGlassRefractionAmount(48f)
     setLiquidGlassChromaticAberration(true)
 }
-
-fun MainViewModel.setOfflineTranslationEnabled(enabled: Boolean) {
-    _isOfflineTranslationEnabled.value = enabled
-    prefs.edit().putBoolean("offline_translation_enabled", enabled).apply()
-}
