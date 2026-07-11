@@ -547,6 +547,9 @@
     <string name="update_dialog_message">Iteration Launcher 有新版本可用 (%1$s)。您想要現在下載嗎？</string>
     <string name="update_dialog_download">下載</string>
     <string name="update_dialog_cancel">取消</string>
+    <string name="update_download_title">Iteration 更新 %1$s</string>
+    <string name="update_download_description">正在下載最新版本&#8230;</string>
+    <string name="update_download_started">已開始下載更新</string>
 
     <!-- 桌布應用 -->
     <string name="applying_wallpaper">正在套用桌布</string>

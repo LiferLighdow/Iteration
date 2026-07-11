@@ -84,7 +84,7 @@ fun performGestureAction(
     }
 }
 
-private fun executeShizukuCommand(command: Array<String>, context: Context) {
+internal fun executeShizukuCommand(command: Array<String>, context: Context) {
     if (!Shizuku.pingBinder()) {
         Toast.makeText(context, context.getString(R.string.shizuku_not_running), Toast.LENGTH_SHORT).show()
         return
@@ -123,7 +123,7 @@ private fun executeShizukuCommand(command: Array<String>, context: Context) {
     }
 }
 
-private fun executeCommand(command: Array<String>, context: Context) {
+internal fun executeCommand(command: Array<String>, context: Context) {
     thread {
         try {
             Runtime.getRuntime().exec(command).waitFor()

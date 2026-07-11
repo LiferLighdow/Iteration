@@ -27,6 +27,12 @@ class IterationAccessibilityService : AccessibilityService() {
         return super.onUnbind(intent)
     }
 
+    override fun onDestroy() {
+        Log.d(TAG, "Service Destroyed")
+        instance = null
+        super.onDestroy()
+    }
+
     fun lockScreen() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             val success = performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN)

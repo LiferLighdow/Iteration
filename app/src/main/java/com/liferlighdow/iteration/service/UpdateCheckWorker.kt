@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
@@ -20,8 +21,6 @@ class UpdateCheckWorker(
         if (interval == 0) return Result.success()
 
         try {
-            // Using GitHub API for latest release. 
-            // Repository: LiferLighdow/Iteration
             val url = URL("https://api.github.com/repos/LiferLighdow/Iteration/releases/latest")
             val connection = url.openConnection() as HttpURLConnection
             connection.connectTimeout = 10000
@@ -37,10 +36,13 @@ class UpdateCheckWorker(
                     .getPackageInfo(applicationContext.packageName, 0).versionName ?: "0.0.0"
 
                 if (isNewerVersion(latestVersion, currentVersion)) {
-                    prefs.edit().putString("new_version_available", latestVersion).apply()
-                    // We might need a way to notify the UI. 
-                    // Since the app might not be running, we just store it.
-                    // When the app starts or if it is running, it can check this pref.
+                    val assets = json.optJSONArray("assets")
+                    val downloadUrl = if (assets != null) getBestAbiMatch(assets) else null
+                    
+                    prefs.edit()
+                        .putString("new_version_available", latestVersion)
+                        .putString("new_version_download_url", downloadUrl)
+                        .apply()
                 }
             }
         } catch (e: Exception) {
@@ -49,6 +51,41 @@ class UpdateCheckWorker(
         }
 
         return Result.success()
+    }
+
+    private fun getBestAbiMatch(assets: JSONArray): String? {
+        val deviceAbis = android.os.Build.SUPPORTED_ABIS
+        
+        // 優先順序：根據設備支援的 ABI 順序尋找
+        for (abi in deviceAbis) {
+            val searchPattern = when {
+                abi.contains("arm64-v8a") -> "arm64-v8a"
+                abi.contains("armeabi-v7a") -> "armeabi-v7a"
+                abi.contains("x86_64") -> "x86_64"
+                abi.contains("x86") -> "x86"
+                else -> null
+            }
+            
+            if (searchPattern != null) {
+                for (i in 0 until assets.length()) {
+                    val asset = assets.getJSONObject(i)
+                    val name = asset.getString("name").lowercase()
+                    if (name.contains(searchPattern) && name.endsWith(".apk")) {
+                        return asset.getString("browser_download_url")
+                    }
+                }
+            }
+        }
+        
+        // 如果找不到精確匹配，找 universal 版本
+        for (i in 0 until assets.length()) {
+            val asset = assets.getJSONObject(i)
+            val name = asset.getString("name").lowercase()
+            if (name.contains("universal") && name.endsWith(".apk")) {
+                return asset.getString("browser_download_url")
+            }
+        }
+        return null
     }
 
     private fun isNewerVersion(latest: String, current: String): Boolean {

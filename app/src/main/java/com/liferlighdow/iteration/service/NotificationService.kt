@@ -93,6 +93,23 @@ class NotificationService : NotificationListenerService() {
         findActiveMediaSession()
     }
 
+    override fun onListenerDisconnected() {
+        super.onListenerDisconnected()
+        clearMediaResources()
+    }
+
+    override fun onDestroy() {
+        clearMediaResources()
+        super.onDestroy()
+    }
+
+    private fun clearMediaResources() {
+        activeController?.unregisterCallback(controllerCallback)
+        activeController = null
+        _currentMedia.value = null
+        _notifications.value = emptyMap()
+    }
+
     private fun updateCounts() {
         val activeNotifs = try {
             activeNotifications

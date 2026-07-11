@@ -547,6 +547,9 @@
     <string name="update_dialog_message">A new version of Iteration Launcher is available (%1$s). Would you like to download it?</string>
     <string name="update_dialog_download">Download</string>
     <string name="update_dialog_cancel">Cancel</string>
+    <string name="update_download_title">Iteration Update %1$s</string>
+    <string name="update_download_description">Downloading latest version...</string>
+    <string name="update_download_started">Update download started</string>
 
     <!-- Wallpaper Application -->
     <string name="applying_wallpaper">Applying Wallpaper</string>

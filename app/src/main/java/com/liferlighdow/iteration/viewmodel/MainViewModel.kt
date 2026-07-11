@@ -49,6 +49,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     internal val iconProcessor = IconProcessor(application)
     internal val iconPackManager = IconPackManager(application)
     internal val wallpaperProcessor = WallpaperProcessor(application)
+    internal val updateManager = UpdateManager(application)
     internal val wallpaperFile = File(application.filesDir, "launcher_wallpaper.png")
 
     internal val _blurredWallpaper = MutableStateFlow<ImageBitmap?>(null)
@@ -179,6 +180,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     internal val _newVersionAvailable = MutableStateFlow(prefs.getString("new_version_available", null))
     val newVersionAvailable = _newVersionAvailable.asStateFlow()
+
+    internal val _newVersionDownloadUrl = MutableStateFlow(prefs.getString("new_version_download_url", null))
+    val newVersionDownloadUrl = _newVersionDownloadUrl.asStateFlow()
 
     internal val _appLanguage = MutableStateFlow(prefs.getString("app_language", "") ?: "")
     val appLanguage = _appLanguage.asStateFlow()
@@ -647,6 +651,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             "show_minus_one" -> _showMinusOnePage.value = sharedPreferences.getBoolean(key, true)
             "show_app_library" -> _showAppLibrary.value = sharedPreferences.getBoolean(key, true)
             "new_version_available" -> _newVersionAvailable.value = sharedPreferences.getString(key, null)
+            "new_version_download_url" -> _newVersionDownloadUrl.value = sharedPreferences.getString(key, null)
             "offline_translation_enabled" -> _isOfflineTranslationEnabled.value = sharedPreferences.getBoolean(key, false)
             "icon_cache_size" -> {
                 val newSize = sharedPreferences.getInt(key, 250)
@@ -734,5 +739,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setPassword(password: String?) {
         prefs.edit().putString("password", password).apply()
+    }
+
+    fun startDownload(url: String, version: String) {
+        updateManager.startDownload(url, version)
+    }
+
+    fun installDownloadedUpdate() {
+        updateManager.installDownloadedUpdate(_actionMode.value)
+    }
+
+    fun dismissUpdateDialog() {
+        prefs.edit()
+            .remove("new_version_available")
+            .remove("new_version_download_url")
+            .apply()
+        _newVersionAvailable.value = null
+        _newVersionDownloadUrl.value = null
     }
 }
