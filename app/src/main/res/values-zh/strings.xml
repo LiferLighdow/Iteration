@@ -471,6 +471,12 @@
     <string name="icon_cache_size_title">圖示快取大小</string>
     <string name="icon_cache_size_desc">保存在記憶體中的圖示數量。較大的值可提高流暢度，但會佔用更多記憶體。</string>
     <string name="icon_cache_current">目前快取大小：%1$d</string>
+
+    <string name="icon_size_title">圖示尺寸</string>
+    <string name="icon_size_desc">調整應用程式圖示的渲染解析度 (32px 到 256px)。</string>
+    <string name="icon_size_current">目前尺寸：%1$d px</string>
+    <string name="icon_size_recommend">裝置建議值</string>
+    <string name="icon_size_recommend_desc">將解析度與螢幕物理像素對齊，以獲得最佳清晰度與效能。</string>
     <string name="settings_update_check_interval">檢查更新頻率</string>
     <string name="settings_update_check_interval_desc">設定自動檢查更新的時間間隔（0 到 36 小時，0 為不檢查）。</string>
     <string name="settings_update_check_hours">%1$d 小時</string>

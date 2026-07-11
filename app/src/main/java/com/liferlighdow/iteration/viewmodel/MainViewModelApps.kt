@@ -465,8 +465,9 @@ fun MainViewModel.loadSettings() {
         ThemeMode.FOLLOW_SYSTEM
     }
     val newAmoled = prefs.getBoolean("amoled_black", false)
+    val newIconSize = prefs.getInt("icon_size_px", -1)
 
-    if (_iconStyle.value != newStyle || _isThemedIconsEnabled.value != newThemed || _iconPackPackage.value != newIconPackPackage || _iconShape.value != newShape || _libraryShape.value != newLibShape || _excludedThemedPackages.value != newExcluded || _desktopRows.value != newRows || _dockStyle.value != newDockStyle) {
+    if (_iconStyle.value != newStyle || _isThemedIconsEnabled.value != newThemed || _iconPackPackage.value != newIconPackPackage || _iconShape.value != newShape || _libraryShape.value != newLibShape || _excludedThemedPackages.value != newExcluded || _desktopRows.value != newRows || _dockStyle.value != newDockStyle || _iconSizePx.value != newIconSize) {
         _iconStyle.value = newStyle
         _iconShape.value = newShape
         _libraryShape.value = newLibShape
@@ -475,6 +476,7 @@ fun MainViewModel.loadSettings() {
         _excludedThemedPackages.value = newExcluded
         _desktopRows.value = newRows
         _dockStyle.value = newDockStyle
+        _iconSizePx.value = newIconSize
     }
 
     _searchEngineUrl.value = newSearchEngine
@@ -620,10 +622,21 @@ fun MainViewModel.loadApps() {
             "C_${customBg.toString(16)}_${customFg.toString(16)}_${if (customOriginal) "O" else "M"}_${if (customOriginalBg) "OB" else "CB"}"
         } else "N"
 
-        val newStyleSuffix = if (currentIconPack.isNotEmpty()) {
-            "IP_V13_${currentIconPack.hashCode()}_${currentShape.name}_${currentStyle.name}_${if (isThemed) "T_$colorKey" else "N"}_$customKey"
+        // 根據拉條設定決定渲染解析度 (畫質)
+        val density = getApplication<Application>().resources.displayMetrics.density
+        val userIconSize = _iconSizePx.value
+        
+        // 關鍵優化：即便在預設模式下，也進行 16px 階梯對齊，以適配 fractional density
+        val renderingSizePx = if (userIconSize > 0) {
+            userIconSize 
         } else {
-            "V13_${currentStyle.name}_${currentShape.name}_${if (isThemed) "T_$colorKey" else "N"}_$customKey"
+            (Math.round(62 * density / 16f) * 16).toInt().coerceIn(32, 256)
+        }
+
+        val newStyleSuffix = if (currentIconPack.isNotEmpty()) {
+            "IP_V13_${currentIconPack.hashCode()}_${currentShape.name}_${currentStyle.name}_${if (isThemed) "T_$colorKey" else "N"}_${customKey}_Q$renderingSizePx"
+        } else {
+            "V13_${currentStyle.name}_${currentShape.name}_${if (isThemed) "T_$colorKey" else "N"}_${customKey}_Q$renderingSizePx"
         }
 
         if (currentStyleSuffix != newStyleSuffix) {
@@ -641,8 +654,6 @@ fun MainViewModel.loadApps() {
         }
 
         val processedApps: List<AppModel> = withContext(Dispatchers.Default) {
-            val density = getApplication<Application>().resources.displayMetrics.density
-            val sizePx = (62 * density).toInt()
             val styleSuffix = currentStyleSuffix
             val semaphore = Semaphore(8)
 
@@ -668,9 +679,17 @@ fun MainViewModel.loadApps() {
                                         iconCache.put(cacheKey, it.asImageBitmap())
                                     }
                                 } else {
-                                    val processed = processNewIcon(app, currentIconPack, isThemed, isExcluded, themeColors, currentStyle, currentShape, sizePx, customBg, customFg, customOriginal, customOriginalBg, activityInfoCache)
-                                    saveIconToDisk(processed, diskCacheFile)
-                                    iconCache.put(cacheKey, processed)
+                                    // 關鍵修改：區分 PWA 與一般 App 的生成邏輯
+                                    val processed = if (app.isPWA) {
+                                        generatePwaIcon(app, renderingSizePx)?.asImageBitmap()
+                                    } else {
+                                        processNewIcon(app, currentIconPack, isThemed, isExcluded, themeColors, currentStyle, currentShape, renderingSizePx, customBg, customFg, customOriginal, customOriginalBg, activityInfoCache)
+                                    }
+                                    
+                                    processed?.let {
+                                        saveIconToDisk(it, diskCacheFile)
+                                        iconCache.put(cacheKey, it)
+                                    }
                                 }
                             }
 
@@ -722,16 +741,6 @@ fun MainViewModel.loadApps() {
                         val jsonStr = if (itemValue is JSONObject) itemValue.toString() else itemValue as String
                         ConfigSerializer.deserializeAppModel(jsonStr)?.let { savedApp ->
                             if (savedApp.isFolder || savedApp.isWidget || savedApp.isPWA) {
-                                // 處理 PWA 圖示快取
-                                if (savedApp.isPWA) {
-                                    val currentStyle = currentStyleSuffix
-                                    val cacheKey = "${savedApp.uniqueId}_$currentStyle"
-                                    if (iconCache[cacheKey] == null) {
-                                        viewModelScope.launch(Dispatchers.IO) {
-                                            loadPwaIcon(savedApp)
-                                        }
-                                    }
-                                }
                                 pageItems.add(savedApp)
                             } else if (savedApp.isShortcut && !savedApp.shortcutId.isNullOrEmpty()) {
                                 // 處理 Shortcut 圖示快取
@@ -1055,9 +1064,16 @@ suspend fun MainViewModel.loadPwaIcon(app: AppModel) {
     val cacheKey = "${app.uniqueId}_$styleSuffix"
     
     val density = getApplication<Application>().resources.displayMetrics.density
-    val sizePx = (62 * density).toInt()
+    val userIconSize = _iconSizePx.value
     
-    val bitmap = generatePwaIcon(app, sizePx)
+    // PWA 圖示生成同步階梯對齊邏輯
+    val renderingSizePx = if (userIconSize > 0) {
+        userIconSize 
+    } else {
+        (Math.round(62 * density / 16f) * 16).toInt().coerceIn(32, 256)
+    }
+    
+    val bitmap = generatePwaIcon(app, renderingSizePx)
     if (bitmap != null) {
         val imageBitmap = bitmap.asImageBitmap()
         saveIconToDisk(imageBitmap, diskCacheFile)

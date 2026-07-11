@@ -561,7 +561,13 @@ fun LanguageSettingsScreen(onBack: () -> Unit) {
 fun AdvancedSettingsScreen(onBack: () -> Unit) {
     val viewModel: MainViewModel = viewModel()
     val cacheSize by viewModel.iconCacheSize.collectAsState()
+    val iconSize by viewModel.iconSizePx.collectAsState()
     val updateInterval by viewModel.updateCheckInterval.collectAsState()
+    val density = LocalContext.current.resources.displayMetrics.density
+    
+    // 預設值同樣套用 16px 階梯對齊邏輯，確保 UI 顯示一致
+    val snappedDefault = (Math.round(62 * density / 16f) * 16).toInt().coerceIn(32, 256)
+    val effectiveIconSize = if (iconSize > 0) iconSize else snappedDefault
 
     Scaffold(
         topBar = {
@@ -578,6 +584,85 @@ fun AdvancedSettingsScreen(onBack: () -> Unit) {
         LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
             item {
                 PaddingRemaining(16.dp) {
+                    Text(
+                        stringResource(R.string.icon_size_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        stringResource(R.string.icon_size_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        stringResource(R.string.icon_size_current, effectiveIconSize),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                    ) {
+                        IconButton(onClick = {
+                            viewModel.setIconSizePx((effectiveIconSize - 16).coerceAtLeast(32))
+                        }) {
+                            Icon(Icons.Default.Remove, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        }
+
+                        Slider(
+                            value = effectiveIconSize.toFloat(),
+                            onValueChange = { 
+                                // 滑動時同樣進行 16px 對齊
+                                val snapped = (Math.round(it / 16f) * 16).coerceIn(32, 256)
+                                viewModel.setIconSizePx(snapped) 
+                            },
+                            valueRange = 32f..256f,
+                            steps = 13, // (256-32)/16 - 1 = 13 steps
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        IconButton(onClick = {
+                            viewModel.setIconSizePx((effectiveIconSize + 16).coerceAtMost(256))
+                        }) {
+                            Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        TextButton(
+                            onClick = { viewModel.applyRecommendedIconSize() },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.textButtonColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                        ) {
+                            Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.icon_size_recommend))
+                        }
+                        
+                        TextButton(
+                            onClick = { viewModel.setIconSizePx(-1) },
+                            enabled = iconSize != -1,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(stringResource(R.string.restore_default))
+                        }
+                    }
+
+                    Text(
+                        stringResource(R.string.icon_size_recommend_desc),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp))
+
                     Text(
                         stringResource(R.string.icon_cache_size_title),
                         style = MaterialTheme.typography.titleMedium,

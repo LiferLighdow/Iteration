@@ -515,6 +515,12 @@
     <string name="icon_cache_size_desc">The number of icons to keep in memory. Larger values improve smoothness but use more RAM.</string>
     <string name="icon_cache_current">Current Cache Size: %1$d</string>
 
+    <string name="icon_size_title">Icon Size</string>
+    <string name="icon_size_desc">Adjust the rendering resolution of app icons (32px to 256px).</string>
+    <string name="icon_size_current">Current Size: %1$d px</string>
+    <string name="icon_size_recommend">Recommended for Device</string>
+    <string name="icon_size_recommend_desc">Matches resolution to your physical screen pixels for optimal clarity and performance.</string>
+
     <string name="settings_update_check_interval">Update Check Interval</string>
     <string name="settings_update_check_interval_desc">How often to check for updates (0 to 36 hours, 0 to disable).</string>
     <string name="settings_update_check_hours">%1$d hours</string>

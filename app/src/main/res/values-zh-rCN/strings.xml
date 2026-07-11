@@ -508,6 +508,12 @@
     <string name="icon_cache_size_desc">保存在内存中的图标数量。较大的值可提高流畅度，但会占用更多内存。</string>
     <string name="icon_cache_current">当前缓存大小：%1$d</string>
 
+    <string name="icon_size_title">图标尺寸</string>
+    <string name="icon_size_desc">调整应用图标的渲染分辨率 (32px 到 256px)。</string>
+    <string name="icon_size_current">当前尺寸：%1$d px</string>
+    <string name="icon_size_recommend">设备建议值</string>
+    <string name="icon_size_recommend_desc">将分辨率与屏幕物理像素对齐，以獲得最佳清晰度与性能。</string>
+
     <!-- 壁纸应用 -->
     <string name="applying_wallpaper">正在应用壁纸</string>
     <string name="applying_wallpaper_desc">正在优化颜色并生成效果。</string>

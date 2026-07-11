@@ -296,6 +296,7 @@ fun LauncherScreen(
         val isBalanced = userRows == -1
         val rows = if (isBalanced) 6 else if (userRows > 0) userRows else (if (maxHeight / maxWidth < 2.0f) 5 else 6)
 
+        // 畫質調整不會影響這個顯示尺寸
         val iconSize = if (isBalanced) 60.dp else 62.dp
         val labelFontSize = if (isBalanced) 11.sp else 12.sp
         val iconSizePx = with(density) { iconSize.toPx() }

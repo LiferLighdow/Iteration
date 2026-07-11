@@ -220,8 +220,9 @@ fun AppLibraryPage(
                                     leadingContent = {
                                         val appIcon = viewModel.getIcon(app.uniqueId)
                                         if (appIcon != null) {
-                                            val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(40.dp * 0.238f)
-                                            Image(bitmap = appIcon, contentDescription = null, modifier = Modifier.size(40.dp).clip(shape).background(Color.White))
+                                            val listIconSize = 40.dp
+                                            val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(listIconSize * 0.238f)
+                                            Image(bitmap = appIcon, contentDescription = null, modifier = Modifier.size(listIconSize).clip(shape).background(Color.White))
                                         }
                                     },
                                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),

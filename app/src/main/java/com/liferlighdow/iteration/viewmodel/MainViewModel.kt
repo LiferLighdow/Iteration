@@ -164,6 +164,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     internal val _iconCacheSize = MutableStateFlow(prefs.getInt("icon_cache_size", 250))
     val iconCacheSize = _iconCacheSize.asStateFlow()
 
+    internal val _iconSizePx = MutableStateFlow(prefs.getInt("icon_size_px", -1)) // -1 means use default based on density
+    val iconSizePx = _iconSizePx.asStateFlow()
+
     internal val _showMinusOnePage = MutableStateFlow(prefs.getBoolean("show_minus_one", true))
     val showMinusOnePage = _showMinusOnePage.asStateFlow()
 

@@ -392,6 +392,24 @@ fun MainViewModel.setIconCacheSize(size: Int) {
     prefs.edit().putInt("icon_cache_size", size).apply()
 }
 
+fun MainViewModel.setIconSizePx(size: Int) {
+    _iconSizePx.value = size
+    prefs.edit().putInt("icon_size_px", size).apply()
+    loadApps() // 重新載入以觸發解析度切換
+}
+
+fun MainViewModel.applyRecommendedIconSize() {
+    val density = getApplication<android.app.Application>().resources.displayMetrics.density
+    val rawRecommended = 62 * density
+    
+    // 階梯式 Guard 邏輯：
+    // 1. 將建議像素對齊到 16 的倍數，這對 GPU 紋理上傳與內存對齊最友好。
+    // 2. 使用四捨五入確保最接近物理像素。
+    val snapped = (Math.round(rawRecommended / 16f) * 16).toInt().coerceIn(32, 256)
+    
+    setIconSizePx(snapped)
+}
+
 fun MainViewModel.setUpdateCheckInterval(hours: Int) {
     _updateCheckInterval.value = hours
     prefs.edit().putInt("update_check_interval", hours).apply()
