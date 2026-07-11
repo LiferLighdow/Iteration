@@ -57,6 +57,9 @@
     *   **Smart System Default**: Type `tr [text]` to instantly translate into your device's current system language.
     *   **Lightning Fast**: Powered by high-performance asynchronous requests with intelligent debouncing.
 *   **Customizable Search Engines**: Switch between Google, Bing, DuckDuckGo, Baidu, WolframAlpha, Perplexity, and more.
+*   **System Commands**: Trigger actions directly from the search bar. Use `wifi`, `bt`, `alarm [time]`, `timer [sec]`, `battery`, or `settings` for instant system control.
+*   **Deep Content Integration**: Beyond apps, it now searches your **Calendar Events** (displaying upcoming schedules) and **Local Files/Folders** across your device.
+*   **Clean List Management**: Intelligent "View All" mechanism for file search results to maintain a minimalist aesthetic while allowing deep browsing.
 
 ### 🌤️ Weather & Location (Privacy-First)
 *   **Adaptive Weather Widget**: A native 4x2 widget providing real-time conditions and a 5-day forecast.
@@ -90,6 +93,7 @@
     *   **Ultimate Custom Style**: High-precision control using a full **HSV + Alpha color picker**.
     *   **Smart Original Hybrid**: Toggle between custom colors and original app icons/backgrounds independently.
     *   **IPS (Icon Pack Studio) Advanced Parsing**: Custom XML & binary stream parser for full compatibility with modern dynamic icon packs.
+*   **Automated Release Tracking**: Integrated background update checker. Users can configure the frequency (0 to 36 hours) to receive Material 3 notifications when new versions are available on GitHub.
 
 ### 📂 Advanced Folder & Library
 *   **Context-Aware Menus**: Full shortcut and management support inside folders even in non-edit mode.
@@ -99,11 +103,16 @@
     *   **Fast Categorization**: Zero-lag filtering and background-processed group management.
 *   **Privacy & Security**: **Hide Apps** with a secure **Password Gate**.
 
+### 🌐 PWA Ecosystem (Integrated Web Apps)
+*   **PWA Maker**: Transform any URL into a high-performance, standalone desktop application with a single tap.
+*   **PWA Manage**: A dedicated management suite to customize your web apps. Edit labels, update URLs, choose custom background colors, or apply unique icons using the built-in cropper.
+
 ### 🖖 Gesture System & Permissions
 *   **Intelligent Priority**: Smart gesture handling that prioritizes widget scrolling over home screen gestures.
 *   **Search Lock**: Horizontal paging is automatically disabled when the App Library search is focused.
 *   **Centralized Permission Center**: A dedicated "Permissions" page for **Contacts**, **Notifications**, and **Accessibility**.
 *   **Local Privacy Control**: Fully configurable network access; your personal data processing remains on-device by default.
+*   **Advanced Storage Permission**: Seamless integration with Android 11's "Manage All Files" API to enable comprehensive file and folder discovery.
 
 ---
 

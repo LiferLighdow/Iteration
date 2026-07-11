@@ -58,7 +58,7 @@ fun SettingsMainScreen(
     val allSettingsItems = remember {
         listOf(
             SettingsMetadata(context.getString(R.string.settings_icon_theme), context.getString(R.string.settings_icon_theme_desc), Icons.Default.Palette, Color(0xFF4285F4), onNavigateToIconTheme),
-            SettingsMetadata(context.getString(R.string.pwa_maker_title), context.getString(R.string.pwa_maker_desc), Icons.Default.Public, Color(0xFF009688), onNavigateToPwaMaker),
+            SettingsMetadata(context.getString(R.string.pwa_manage_title), context.getString(R.string.pwa_manage_desc), Icons.Default.Public, Color(0xFF009688), onNavigateToPwaMaker),
             SettingsMetadata(context.getString(R.string.liquid_glass_title), context.getString(R.string.settings_liquid_glass_desc), Icons.Default.BlurOn, Color(0xFF34A853), {
                 if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) {
                     showApiWarningDialog = true
@@ -219,8 +219,8 @@ fun SettingsMainScreen(
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                         SettingsItem(
-                            headline = stringResource(R.string.pwa_maker_title),
-                            supporting = stringResource(R.string.pwa_maker_desc),
+                            headline = stringResource(R.string.pwa_manage_title),
+                            supporting = stringResource(R.string.pwa_manage_desc),
                             icon = Icons.Default.Public,
                             iconColor = Color(0xFF009688),
                             onClick = onNavigateToPwaMaker

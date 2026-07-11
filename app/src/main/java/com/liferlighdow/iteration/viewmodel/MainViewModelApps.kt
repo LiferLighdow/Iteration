@@ -1018,6 +1018,36 @@ fun MainViewModel.createPWA(label: String, url: String, bgColor: Int) {
     }
 }
 
+fun MainViewModel.updatePWA(uniqueId: String, newLabel: String, newUrl: String, newBgColor: Int) {
+    val currentPwas = _pwaApps.value.map {
+        if (it.uniqueId == uniqueId) {
+            it.copy(label = newLabel, shortcutId = newUrl, pwaBgColor = newBgColor)
+        } else it
+    }
+    _pwaApps.value = currentPwas
+    savePwaApps()
+    
+    // 同步更新已在桌面上的項目
+    _pages.value = _pages.value.map { page ->
+        page.map { app ->
+            if (app.uniqueId == uniqueId) {
+                app.copy(label = newLabel, shortcutId = newUrl, pwaBgColor = newBgColor)
+            } else app
+        }
+    }
+    saveLayout()
+    loadApps()
+    
+    // 如果 URL 改變，可能需要重新載入圖示
+    val oldApp = _pwaApps.value.find { it.uniqueId == uniqueId }
+    if (oldApp?.shortcutId != newUrl) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val updatedApp = _pwaApps.value.find { it.uniqueId == uniqueId }
+            if (updatedApp != null) loadPwaIcon(updatedApp)
+        }
+    }
+}
+
 suspend fun MainViewModel.loadPwaIcon(app: AppModel) {
     val styleSuffix = currentStyleSuffix
     val fileSafeId = app.uniqueId.replace("/", "_").replace(":", "_").replace("@", "_")

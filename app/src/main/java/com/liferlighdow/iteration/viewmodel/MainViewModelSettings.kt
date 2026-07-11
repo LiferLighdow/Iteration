@@ -10,6 +10,9 @@ import com.liferlighdow.iteration.utils.IconShape
 import com.liferlighdow.iteration.utils.IconStyle
 import com.liferlighdow.iteration.ui.DockStyle
 import com.liferlighdow.iteration.ui.ThemeMode
+import com.liferlighdow.iteration.service.UpdateCheckWorker
+import androidx.work.*
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -387,6 +390,35 @@ fun MainViewModel.setShowNavigationBar(enabled: Boolean) {
 fun MainViewModel.setIconCacheSize(size: Int) {
     _iconCacheSize.value = size
     prefs.edit().putInt("icon_cache_size", size).apply()
+}
+
+fun MainViewModel.setUpdateCheckInterval(hours: Int) {
+    _updateCheckInterval.value = hours
+    prefs.edit().putInt("update_check_interval", hours).apply()
+    
+    val workManager = WorkManager.getInstance(getApplication())
+    if (hours > 0) {
+        val request = PeriodicWorkRequestBuilder<UpdateCheckWorker>(
+            hours.toLong(), TimeUnit.HOURS
+        ).setConstraints(
+            Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+        ).build()
+        
+        workManager.enqueueUniquePeriodicWork(
+            "update_check",
+            ExistingPeriodicWorkPolicy.UPDATE,
+            request
+        )
+    } else {
+        workManager.cancelUniqueWork("update_check")
+    }
+}
+
+fun MainViewModel.dismissUpdateDialog() {
+    _newVersionAvailable.value = null
+    prefs.edit().remove("new_version_available").apply()
 }
 
 fun MainViewModel.setAppLanguage(languageCode: String) {

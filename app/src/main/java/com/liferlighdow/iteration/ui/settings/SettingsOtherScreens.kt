@@ -1,16 +1,20 @@
 package com.liferlighdow.iteration.ui.settings
 
+import android.graphics.Bitmap
 import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -18,6 +22,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -26,7 +31,9 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.service.IterationAccessibilityService
+import com.liferlighdow.iteration.data.AppModel
 import com.liferlighdow.iteration.utils.ActionMode
+import com.liferlighdow.iteration.utils.IconShape
 import com.liferlighdow.iteration.viewmodel.*
 import rikka.shizuku.Shizuku
 import kotlin.math.roundToInt
@@ -60,6 +67,23 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
         )
     }
 
+    var hasStoragePermission by remember {
+        mutableStateOf(
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.READ_EXTERNAL_STORAGE
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    var hasAllFilesPermission by remember {
+        mutableStateOf(
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                android.os.Environment.isExternalStorageManager()
+            } else true
+        )
+    }
+
     // 通知權限狀態
     var isNotificationEnabled by remember {
         mutableStateOf(
@@ -85,6 +109,12 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         hasCalendarPermission = isGranted
+    }
+
+    val storageLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        hasStoragePermission = isGranted
     }
 
     Scaffold(
@@ -181,6 +211,52 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
                         }
                     }
                 )
+            }
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.permission_files)) },
+                    supportingContent = { Text(stringResource(R.string.permission_files_desc)) },
+                    trailingContent = {
+                        Switch(
+                            checked = hasStoragePermission,
+                            onCheckedChange = {
+                                if (!hasStoragePermission) {
+                                    storageLauncher.launch(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+                                }
+                            }
+                        )
+                    },
+                    modifier = Modifier.clickable {
+                        if (!hasStoragePermission) {
+                            storageLauncher.launch(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+                        }
+                    }
+                )
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                item {
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.permission_files_manage)) },
+                        supportingContent = { Text(stringResource(R.string.permission_files_manage_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = hasAllFilesPermission,
+                                onCheckedChange = {
+                                    val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                                        data = Uri.fromParts("package", context.packageName, null)
+                                    }
+                                    context.startActivity(intent)
+                                }
+                            )
+                        },
+                        modifier = Modifier.clickable {
+                            val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                                data = Uri.fromParts("package", context.packageName, null)
+                            }
+                            context.startActivity(intent)
+                        }
+                    )
+                }
             }
             item {
                 ListItem(
@@ -317,6 +393,9 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
                 isNotificationEnabled = NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)
                 isServiceActive = isAccessibilityEnabled()
                 viewModel.checkSystemNetworkStatus()
+                viewModel.loadContacts()
+                viewModel.loadCalendarEvents()
+                viewModel.loadFiles()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -482,6 +561,7 @@ fun LanguageSettingsScreen(onBack: () -> Unit) {
 fun AdvancedSettingsScreen(onBack: () -> Unit) {
     val viewModel: MainViewModel = viewModel()
     val cacheSize by viewModel.iconCacheSize.collectAsState()
+    val updateInterval by viewModel.updateCheckInterval.collectAsState()
 
     Scaffold(
         topBar = {
@@ -539,6 +619,51 @@ fun AdvancedSettingsScreen(onBack: () -> Unit) {
                             Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    Text(
+                        stringResource(R.string.settings_update_check_interval),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        stringResource(R.string.settings_update_check_interval_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        stringResource(R.string.settings_update_check_hours, updateInterval),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                    ) {
+                        IconButton(onClick = {
+                            viewModel.setUpdateCheckInterval((updateInterval - 1).coerceAtLeast(0))
+                        }) {
+                            Icon(Icons.Default.Remove, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        }
+
+                        Slider(
+                            value = updateInterval.toFloat(),
+                            onValueChange = { viewModel.setUpdateCheckInterval(it.roundToInt()) },
+                            valueRange = 0f..36f,
+                            steps = 35,
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        IconButton(onClick = {
+                            viewModel.setUpdateCheckInterval((updateInterval + 1).coerceAtMost(36))
+                        }) {
+                            Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
                 }
             }
         }
@@ -555,8 +680,6 @@ fun PwaMakerScreen(onBack: () -> Unit) {
     var url by remember { mutableStateOf("") }
     var bgColor by remember { mutableIntStateOf(0xFF2196F3.toInt()) }
     
-    val iconShape by viewModel.iconShape.collectAsState()
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -628,5 +751,196 @@ fun PwaMakerScreen(onBack: () -> Unit) {
             
             item { Spacer(modifier = Modifier.height(40.dp)) }
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PwaManageScreen(onBack: () -> Unit, onNavigateToPwaMaker: () -> Unit) {
+    val viewModel: MainViewModel = viewModel()
+    val pwaApps by viewModel.pwaApps.collectAsState()
+    var editingApp by remember { mutableStateOf<AppModel?>(null) }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.pwa_manage_title)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        LazyColumn(
+            modifier = Modifier.padding(innerPadding).fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 32.dp)
+        ) {
+            item {
+                Text(
+                    stringResource(R.string.pwa_maker_title),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 32.dp, top = 16.dp, bottom = 8.dp)
+                )
+            }
+            item {
+                SettingsGroup {
+                    SettingsItem(
+                        headline = stringResource(R.string.pwa_maker_title),
+                        supporting = stringResource(R.string.pwa_maker_desc),
+                        icon = Icons.Default.Add,
+                        iconColor = MaterialTheme.colorScheme.primary,
+                        onClick = onNavigateToPwaMaker
+                    )
+                }
+            }
+
+            item {
+                Text(
+                    stringResource(R.string.pwa_manage_title),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 32.dp, top = 16.dp, bottom = 8.dp)
+                )
+            }
+
+            if (pwaApps.isEmpty()) {
+                item {
+                    Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                        Text(stringResource(R.string.pwa_list_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            } else {
+                item {
+                    SettingsGroup {
+                        pwaApps.forEachIndexed { index, app ->
+                            SettingsItem(
+                                headline = app.label,
+                                supporting = app.shortcutId,
+                                icon = Icons.Default.Public,
+                                iconColor = Color(app.pwaBgColor),
+                                onClick = { editingApp = app }
+                            )
+                            if (index < pwaApps.size - 1) {
+                                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (editingApp != null) {
+        EditPwaDialog(
+            app = editingApp!!,
+            onDismiss = { editingApp = null },
+            onSave = { label, url, color ->
+                viewModel.updatePWA(editingApp!!.uniqueId, label, url, color)
+                editingApp = null
+            },
+            onDelete = {
+                viewModel.deletePWA(editingApp!!)
+                editingApp = null
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EditPwaDialog(
+    app: AppModel,
+    onDismiss: () -> Unit,
+    onSave: (String, String, Int) -> Unit,
+    onDelete: () -> Unit
+) {
+    val viewModel: MainViewModel = viewModel()
+    var label by remember { mutableStateOf(app.label) }
+    var url by remember { mutableStateOf(app.shortcutId ?: "") }
+    var bgColor by remember { mutableIntStateOf(app.pwaBgColor) }
+    
+    var pickedImageUri by remember { mutableStateOf<Uri?>(null) }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        pickedImageUri = uri
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.edit_pwa)) },
+        text = {
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                item {
+                    OutlinedTextField(
+                        value = label,
+                        onValueChange = { label = it },
+                        label = { Text(stringResource(R.string.pwa_label_hint)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = url,
+                        onValueChange = { url = it },
+                        label = { Text(stringResource(R.string.pwa_url_hint)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
+                item {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().clickable { launcher.launch("image/*") }
+                    ) {
+                        Text(stringResource(R.string.settings_change_icon), style = MaterialTheme.typography.titleSmall)
+                        Spacer(modifier = Modifier.weight(1f))
+                        val appIcon = viewModel.getIcon(app.uniqueId)
+                        if (appIcon != null) {
+                            Image(
+                                bitmap = appIcon,
+                                contentDescription = null,
+                                modifier = Modifier.size(32.dp).clip(RoundedCornerShape(4.dp))
+                            )
+                        } else {
+                            Icon(Icons.Default.Image, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                }
+                item {
+                    Text(stringResource(R.string.background_color), style = MaterialTheme.typography.titleSmall)
+                    ColorPicker(initialColor = bgColor, onColorChanged = { bgColor = it })
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onSave(label, url, bgColor) }) {
+                Text(stringResource(R.string.save_changes))
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDelete,
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text(stringResource(R.string.delete))
+            }
+        }
+    )
+
+    if (pickedImageUri != null) {
+        IconCropperDialog(
+            uri = pickedImageUri!!,
+            onDismiss = { pickedImageUri = null },
+            onConfirm = { croppedBitmap ->
+                viewModel.setCustomIcon(app.uniqueId, croppedBitmap)
+                pickedImageUri = null
+            }
+        )
     }
 }

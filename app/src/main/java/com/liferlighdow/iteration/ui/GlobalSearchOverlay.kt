@@ -52,6 +52,8 @@ import com.liferlighdow.iteration.viewmodel.MainViewModel
 import com.liferlighdow.iteration.viewmodel.*
 import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.SettingsActivity
+import com.liferlighdow.iteration.utils.CommandProcessor
+import com.liferlighdow.iteration.utils.CommandResult
 import org.json.JSONArray
 import com.liferlighdow.iteration.data.AppModel
 import kotlinx.coroutines.Dispatchers
@@ -61,6 +63,8 @@ import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 import kotlin.math.*
 
@@ -85,17 +89,26 @@ fun GlobalSearchOverlay(
     var translationResult by remember { mutableStateOf<String?>(null) }
     var isTranslating by remember { mutableStateOf(false) }
     var webSuggestions by remember { mutableStateOf<List<String>>(emptyList()) }
+    var isFilesExpanded by remember(query) { mutableStateOf(false) }
     val mContext = LocalContext.current
     val focusManager = LocalFocusManager.current
     val clipboardManager = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
-
+    val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+    val dateFormat = remember { SimpleDateFormat("MM/dd", Locale.getDefault()) }
+    val viewModel: MainViewModel = viewModel()
+    
     // 當關閉時清空搜尋詞並強制清除焦點
     LaunchedEffect(isVisible) {
         if (!isVisible) {
             query = ""
             translationResult = null
             focusManager.clearFocus(force = true)
+        } else {
+            // 每次開啟搜尋時，異步更新一下外部資料
+            viewModel.loadContacts()
+            viewModel.loadCalendarEvents()
+            viewModel.loadFiles()
         }
     }
 
@@ -183,10 +196,11 @@ fun GlobalSearchOverlay(
         }
     }
 
-    val viewModel: MainViewModel = viewModel()
     val favoritePackages by viewModel.favoritePackages.collectAsState()
     val searchEngineUrl by viewModel.searchEngineUrl.collectAsState()
     val contacts by viewModel.contacts.collectAsState()
+    val calendarEvents by viewModel.calendarEvents.collectAsState()
+    val files by viewModel.files.collectAsState()
     val exchangeRates by viewModel.exchangeRates.collectAsState()
 
     // --- 核心改進：互動式動畫交棒 ---
@@ -314,9 +328,24 @@ fun GlobalSearchOverlay(
                     query.trim().startsWith("tr ", ignoreCase = true)
                 }
 
+                val systemCommands = remember(query) {
+                    if (query.isBlank()) emptyList()
+                    else CommandProcessor.process(query, mContext)
+                }
+
                 val filteredContacts = remember(query, contacts) {
                     if (query.isBlank()) emptyList()
                     else contacts.filter { it.name.contains(query, ignoreCase = true) || it.phoneNumber.contains(query) }
+                }
+
+                val filteredCalendar = remember(query, calendarEvents) {
+                    if (query.isBlank()) emptyList()
+                    else calendarEvents.filter { it.title.contains(query, ignoreCase = true) || it.calendarName?.contains(query, ignoreCase = true) == true }
+                }
+
+                val filteredFiles = remember(query, files) {
+                    if (query.isBlank()) emptyList()
+                    else files.filter { it.name.contains(query, ignoreCase = true) }
                 }
 
                 val currencyResult = remember(query, exchangeRates) {
@@ -415,6 +444,45 @@ fun GlobalSearchOverlay(
                                                 clipboardManager.setText(AnnotatedString(oct))
                                                 Toast.makeText(mContext, mContext.getString(R.string.result_copied, oct), Toast.LENGTH_SHORT).show()
                                             }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (query.isNotBlank() && systemCommands.isNotEmpty()) {
+                        item {
+                            Card(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                                shape = RoundedCornerShape(24.dp),
+                                colors = CardDefaults.cardColors(containerColor = glassFallbackColor(0.15f)),
+                                border = BorderStroke(1.dp, glassFallbackColor(0.1f))
+                            ) {
+                                Column {
+                                    systemCommands.forEachIndexed { index, command ->
+                                        Row(modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                command.action(mContext)
+                                                onDismiss()
+                                            }
+                                            .padding(20.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Box(modifier = Modifier.size(48.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f), CircleShape), contentAlignment = Alignment.Center) {
+                                                Icon(command.icon, null, tint = Color.White)
+                                            }
+                                            Spacer(modifier = Modifier.width(16.dp))
+                                            Column {
+                                                Text(command.description, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f))
+                                                Text(text = command.label, style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.Bold)
+                                            }
+                                            Spacer(modifier = Modifier.weight(1f))
+                                            Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
+                                        }
+                                        if (index < systemCommands.size - 1) {
+                                            HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), color = Color.White.copy(alpha = 0.1f))
                                         }
                                     }
                                 }
@@ -640,6 +708,118 @@ fun GlobalSearchOverlay(
                                                     onDismiss()
                                                 }
                                             )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        if (filteredCalendar.isNotEmpty()) {
+                            item {
+                                Text(stringResource(R.string.calendar), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(vertical = 8.dp))
+                                Card(
+                                    shape = RoundedCornerShape(24.dp),
+                                    colors = CardDefaults.cardColors(containerColor = glassFallbackColor(0.15f)),
+                                    border = BorderStroke(1.dp, glassFallbackColor(0.1f)),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column {
+                                        filteredCalendar.take(5).forEach { event ->
+                                            ListItem(
+                                                headlineContent = { Text(event.title, color = Color.White) },
+                                                supportingContent = { 
+                                                    val timeStr = "${dateFormat.format(Date(event.startTime))} ${timeFormat.format(Date(event.startTime))} - ${timeFormat.format(Date(event.endTime))}"
+                                                    Text(timeStr, color = Color.White.copy(alpha = 0.6f)) 
+                                                },
+                                                leadingContent = {
+                                                    Box(modifier = Modifier.size(40.dp).background(Color.White.copy(alpha = 0.1f), CircleShape), contentAlignment = Alignment.Center) {
+                                                        Icon(Icons.Default.Event, null, tint = Color.White)
+                                                    }
+                                                },
+                                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                                modifier = Modifier.clickable {
+                                                    val uri = Uri.parse("content://com.android.calendar/events/${event.id}")
+                                                    val intent = Intent(Intent.ACTION_VIEW).setData(uri)
+                                                    mContext.startActivity(intent)
+                                                    onDismiss()
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        if (filteredFiles.isNotEmpty()) {
+                            item {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(stringResource(R.string.files), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelMedium)
+                                    Text("${filteredFiles.size} results", color = Color.White.copy(alpha = 0.4f), style = MaterialTheme.typography.labelSmall)
+                                }
+                                Card(
+                                    shape = RoundedCornerShape(24.dp),
+                                    colors = CardDefaults.cardColors(containerColor = glassFallbackColor(0.15f)),
+                                    border = BorderStroke(1.dp, glassFallbackColor(0.1f)),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column {
+                                        val displayFiles = if (isFilesExpanded) filteredFiles.take(50) else filteredFiles.take(3)
+                                        displayFiles.forEachIndexed { index, file ->
+                                            ListItem(
+                                                headlineContent = { Text(file.name, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                                supportingContent = { Text(file.path, color = Color.White.copy(alpha = 0.4f), style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                                leadingContent = {
+                                                    val icon = if (file.isDirectory) Icons.Default.Folder else Icons.Default.Description
+                                                    Box(modifier = Modifier.size(40.dp).background(Color.White.copy(alpha = 0.05f), CircleShape), contentAlignment = Alignment.Center) {
+                                                        Icon(icon, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
+                                                    }
+                                                },
+                                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                                modifier = Modifier.clickable {
+                                                    try {
+                                                        val fileObj = java.io.File(file.path)
+                                                        val uri = androidx.core.content.FileProvider.getUriForFile(
+                                                            mContext,
+                                                            "${mContext.packageName}.fileprovider",
+                                                            fileObj
+                                                        )
+                                                        
+                                                        val intent = Intent(Intent.ACTION_VIEW).apply {
+                                                            setDataAndType(uri, mContext.contentResolver.getType(uri) ?: "*/*")
+                                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                                        }
+                                                        mContext.startActivity(intent)
+                                                    } catch (e: Exception) {
+                                                        Toast.makeText(mContext, "Cannot open: ${file.name}", Toast.LENGTH_SHORT).show()
+                                                    }
+                                                    onDismiss()
+                                                }
+                                            )
+                                            if (index < displayFiles.size - 1) {
+                                                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color.White.copy(alpha = 0.05f))
+                                            }
+                                        }
+
+                                        if (!isFilesExpanded && filteredFiles.size > 3) {
+                                            HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clickable { isFilesExpanded = true }
+                                                    .padding(vertical = 12.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    text = stringResource(R.string.view_all),
+                                                    color = Color.White.copy(alpha = 0.7f),
+                                                    style = MaterialTheme.typography.labelLarge
+                                                )
+                                            }
                                         }
                                     }
                                 }

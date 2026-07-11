@@ -172,7 +172,14 @@
     <string name="permission_contacts">聯絡之權限</string>
     <string name="permission_contacts_desc">允許在全域搜尋中搜尋聯絡人，但我不會自動幫你打電話啦~</string>
     <string name="permission_calendar">日曆之權限</string>
-    <string name="permission_calendar_desc">允許存取日曆以在小工具中顯示您的行程活動，我會準時提醒你的！</string>
+    <string name="permission_calendar_desc">允許存取日曆以在搜尋和小工具中顯示您的行程活動</string>
+    <string name="permission_files">儲存空間與文件</string>
+    <string name="permission_files_desc">在您的裝置中搜尋檔案與資料夾。</string>
+    <string name="permission_files_manage">管理所有文件</string>
+    <string name="permission_files_manage_desc">在 Android 11+ 上進行全裝置文件搜尋所需。</string>
+    <string name="calendar">日历</string>
+    <string name="files">文件</string>
+    <string name="view_all">顯示全部</string>
     <string name="permission_notifications">通知之權限</string>
     <string name="permission_notifications_desc">拿到了我就能顯示通知小圓點和計數器。</string>
     <string name="permission_accessibility">無障礙服務</string>
@@ -464,6 +471,13 @@
     <string name="icon_cache_size_title">圖示快取大小</string>
     <string name="icon_cache_size_desc">保存在記憶體中的圖示數量。較大的值可提高流暢度，但會佔用更多記憶體。</string>
     <string name="icon_cache_current">目前快取大小：%1$d</string>
+    <string name="settings_update_check_interval">檢查更新頻率</string>
+    <string name="settings_update_check_interval_desc">設定自動檢查更新的時間間隔（0 到 36 小時，0 為不檢查）。</string>
+    <string name="settings_update_check_hours">%1$d 小時</string>
+    <string name="update_dialog_title">發現新版本</string>
+    <string name="update_dialog_message">Iteration Launcher 有新版本可用 (%1$s)。您想要現在下載嗎？</string>
+    <string name="update_dialog_download">下載</string>
+    <string name="update_dialog_cancel">取消</string>
     <string name="applying_wallpaper">正在套用桌布</string>
     <string name="applying_wallpaper_desc">正在為您的新樣貌優化顏色並生成效果。</string>
     <string name="select_wallpaper_type_desc">您想要從相簿中選擇照片，還是建立一個純色的桌布？</string>
@@ -476,4 +490,18 @@
     <string name="wallpaper_mode_lite_desc">系統僅使用 1x1 純色圖片。Emoji 由啟動器即時繪製，極度省電且清晰。</string>
     <string name="wallpaper_mode_balance">平衡模式</string>
     <string name="wallpaper_mode_balance_desc">鎖定畫面顯示完整圖案，主畫面則使用 Lite 渲染。兼顧美觀與效能。</string>
+
+    <!-- PWA 管理 -->
+    <string name="pwa_manage_title">PWA 管理</string>
+    <string name="pwa_manage_desc">管理並建立漸進式網頁應用程式 (PWA)。</string>
+    <string name="pwa_maker_title">PWA 製作工具</string>
+    <string name="pwa_maker_desc">在主螢幕上建立輕量級的網頁應用程式捷徑。</string>
+    <string name="pwa_list_empty">尚未建立任何 PWA 應用程式。</string>
+    <string name="edit_pwa">編輯 PWA</string>
+    <string name="save_changes">保存變更</string>
+    <string name="pwa_label_hint">應用程式名稱</string>
+    <string name="pwa_url_hint">網址 (Web Address)</string>
+    <string name="pwa_created">PWA 已建立並新增至桌面</string>
+    <string name="pwa_invalid_input">請輸入有效的名稱與網址</string>
+    <string name="background_color">背景顏色</string>
 </resources>

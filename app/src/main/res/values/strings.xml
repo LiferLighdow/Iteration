@@ -197,7 +197,14 @@
     <string name="permission_contacts">Contacts Access</string>
     <string name="permission_contacts_desc">Allow searching for contacts in global search</string>
     <string name="permission_calendar">Calendar Access</string>
-    <string name="permission_calendar_desc">Allow access to your calendar to show events in widgets</string>
+    <string name="permission_calendar_desc">Allow access to your calendar to show events in search and widgets</string>
+    <string name="permission_files">Storage &amp; Files</string>
+    <string name="permission_files_desc">Search for files and folders within your device.</string>
+    <string name="permission_files_manage">Manage All Files</string>
+    <string name="permission_files_manage_desc">Required for full device file search on Android 11+.</string>
+    <string name="calendar">Calendar</string>
+    <string name="files">Files</string>
+    <string name="view_all">View All</string>
     <string name="permission_notifications">Notification Access</string>
     <string name="permission_notifications_desc">Required to show notification dots and badges</string>
     <string name="permission_accessibility">Accessibility Service</string>
@@ -508,6 +515,14 @@
     <string name="icon_cache_size_desc">The number of icons to keep in memory. Larger values improve smoothness but use more RAM.</string>
     <string name="icon_cache_current">Current Cache Size: %1$d</string>
 
+    <string name="settings_update_check_interval">Update Check Interval</string>
+    <string name="settings_update_check_interval_desc">How often to check for updates (0 to 36 hours, 0 to disable).</string>
+    <string name="settings_update_check_hours">%1$d hours</string>
+    <string name="update_dialog_title">New Version Available</string>
+    <string name="update_dialog_message">A new version of Iteration Launcher is available (%1$s). Would you like to download it?</string>
+    <string name="update_dialog_download">Download</string>
+    <string name="update_dialog_cancel">Cancel</string>
+
     <!-- Wallpaper Application -->
     <string name="applying_wallpaper">Applying Wallpaper</string>
     <string name="applying_wallpaper_desc">Optimizing colors and generating effects for your new look.</string>
@@ -522,9 +537,14 @@
     <string name="wallpaper_mode_balance">Balance (Mixed)</string>
     <string name="wallpaper_mode_balance_desc">Full Emoji on Lock Screen. 1x1 color on Home Screen with Launcher rendering. Best of both worlds.</string>
 
-    <!-- PWA Maker -->
+    <!-- PWA Manage -->
+    <string name="pwa_manage_title">PWA Manage</string>
+    <string name="pwa_manage_desc">Manage and create Progressive Web Apps.</string>
     <string name="pwa_maker_title">PWA Maker</string>
     <string name="pwa_maker_desc">Create a lightweight web application shortcut on your home screen.</string>
+    <string name="pwa_list_empty">No PWA apps created yet.</string>
+    <string name="edit_pwa">Edit PWA</string>
+    <string name="save_changes">Save Changes</string>
     <string name="pwa_label_hint">Application Name</string>
     <string name="pwa_url_hint">URL (Web Address)</string>
     <string name="pwa_created">PWA created and added to home screen</string>

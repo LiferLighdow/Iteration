@@ -199,7 +199,14 @@
     <string name="permission_contacts">聯絡人存取</string>
     <string name="permission_contacts_desc">允許在全域搜尋中搜尋聯絡人</string>
     <string name="permission_calendar">日曆存取</string>
-    <string name="permission_calendar_desc">允許存取日曆以在小工具中顯示活動</string>
+    <string name="permission_calendar_desc">允許存取您的日曆以在搜尋和小工具中顯示活動</string>
+    <string name="permission_files">儲存空間與檔案</string>
+    <string name="permission_files_desc">在您的裝置中搜尋檔案與資料夾。</string>
+    <string name="permission_files_manage">管理所有檔案</string>
+    <string name="permission_files_manage_desc">在 Android 11+ 上進行全裝置檔案搜尋所需。</string>
+    <string name="calendar">日曆</string>
+    <string name="files">檔案</string>
+    <string name="view_all">顯示全部</string>
     <string name="permission_notifications">通知存取</string>
     <string name="permission_notifications_desc">顯示通知點與圖章所需</string>
     <string name="permission_accessibility">無障礙服務</string>
@@ -510,6 +517,14 @@
     <string name="icon_cache_size_desc">保存在記憶體中的圖示數量。較大的值可提高流暢度，但會佔用更多記憶體。</string>
     <string name="icon_cache_current">目前快取大小：%1$d</string>
 
+    <string name="settings_update_check_interval">檢查更新頻率</string>
+    <string name="settings_update_check_interval_desc">設定自動檢查更新的時間間隔（0 到 36 小時，0 為不檢查）。</string>
+    <string name="settings_update_check_hours">%1$d 小時</string>
+    <string name="update_dialog_title">發現新版本</string>
+    <string name="update_dialog_message">Iteration Launcher 有新版本可用 (%1$s)。您想要現在下載嗎？</string>
+    <string name="update_dialog_download">下載</string>
+    <string name="update_dialog_cancel">取消</string>
+
     <!-- 桌布應用 -->
     <string name="applying_wallpaper">正在套用桌布</string>
     <string name="applying_wallpaper_desc">正在優化顏色並生成效果。</string>
@@ -524,9 +539,14 @@
     <string name="wallpaper_mode_balance">平衡（混合模式）</string>
     <string name="wallpaper_mode_balance_desc">鎖定螢幕顯示完整表情符號。主畫面使用精簡渲染。兼顧兩者優點。</string>
 
-    <!-- PWA 製作工具 -->
+    <!-- PWA 管理 -->
+    <string name="pwa_manage_title">PWA 管理</string>
+    <string name="pwa_manage_desc">管理並建立漸進式網頁應用程式 (PWA)。</string>
     <string name="pwa_maker_title">PWA 製作工具</string>
-    <string name="pwa_maker_desc">在主螢幕上建立輕量級的網頁應用程式捷徑。</string>
+    <string name="pwa_maker_desc">在主畫面上建立輕量級的網頁應用程式捷徑。</string>
+    <string name="pwa_list_empty">尚未建立任何 PWA 應用程式。</string>
+    <string name="edit_pwa">編輯 PWA</string>
+    <string name="save_changes">儲存變更</string>
     <string name="pwa_label_hint">應用程式名稱</string>
     <string name="pwa_url_hint">網址 (URL)</string>
     <string name="pwa_created">PWA 已建立並加入主螢幕</string>

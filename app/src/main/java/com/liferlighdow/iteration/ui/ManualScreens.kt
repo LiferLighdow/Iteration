@@ -158,7 +158,21 @@ fun GlobalSearchManualScreen(onBack: () -> Unit) {
             item {
                 ManualSection(
                     title = "Basic Usage",
-                    content = "Swipe down on the home screen to open Global Search. It searches your apps and contacts simultaneously."
+                    content = "Swipe down on the home screen to open Global Search. It searches your apps, contacts, calendar events, and files simultaneously."
+                )
+            }
+
+            item {
+                ManualSection(
+                    title = "System Commands",
+                    content = "Trigger system actions directly. Type 'wifi', 'bt', 'alarm 7:30', 'timer 60', 'battery', or 'settings' to perform quick actions or jump to specific system pages."
+                )
+            }
+
+            item {
+                ManualSection(
+                    title = "Expanded Data Search",
+                    content = "Beyond apps, it now searches your Contacts (one-tap to call), Calendar Events (shows upcoming schedule), and Files/Folders across your device storage."
                 )
             }
 

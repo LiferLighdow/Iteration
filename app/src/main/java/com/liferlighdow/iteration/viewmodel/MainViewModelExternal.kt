@@ -9,14 +9,19 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Build
+import android.provider.CalendarContract
 import android.provider.ContactsContract
 import android.provider.MediaStore
+import android.os.Environment
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewModelScope
+import com.liferlighdow.iteration.data.CalendarEventModel
 import com.liferlighdow.iteration.data.ContactModel
+import com.liferlighdow.iteration.data.FileModel
 import com.liferlighdow.iteration.data.WeatherProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.io.File
 
 fun MainViewModel.checkSystemNetworkStatus() {
     val cm = getApplication<Application>().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -98,5 +103,137 @@ fun MainViewModel.loadContacts() {
             }
         }
         _contacts.value = contactList.distinctBy { it.phoneNumber }
+    }
+}
+
+fun MainViewModel.loadCalendarEvents() {
+    viewModelScope.launch(Dispatchers.IO) {
+        val context = getApplication<Application>()
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALENDAR) != PackageManager.PERMISSION_GRANTED) {
+            return@launch
+        }
+
+        val eventList = mutableListOf<CalendarEventModel>()
+        val uri = CalendarContract.Events.CONTENT_URI
+        val projection = arrayOf(
+            CalendarContract.Events._ID,
+            CalendarContract.Events.TITLE,
+            CalendarContract.Events.DTSTART,
+            CalendarContract.Events.DTEND,
+            CalendarContract.Events.EVENT_LOCATION,
+            CalendarContract.Events.CALENDAR_DISPLAY_NAME
+        )
+        
+        val selection = "${CalendarContract.Events.DTSTART} >= ?"
+        val selectionArgs = arrayOf(System.currentTimeMillis().toString())
+
+        context.contentResolver.query(uri, projection, selection, selectionArgs, "${CalendarContract.Events.DTSTART} ASC")?.use { cursor ->
+            val idIdx = cursor.getColumnIndex(CalendarContract.Events._ID)
+            val titleIdx = cursor.getColumnIndex(CalendarContract.Events.TITLE)
+            val startIdx = cursor.getColumnIndex(CalendarContract.Events.DTSTART)
+            val endIdx = cursor.getColumnIndex(CalendarContract.Events.DTEND)
+            val locIdx = cursor.getColumnIndex(CalendarContract.Events.EVENT_LOCATION)
+            val calIdx = cursor.getColumnIndex(CalendarContract.Events.CALENDAR_DISPLAY_NAME)
+
+            while (cursor.moveToNext()) {
+                eventList.add(CalendarEventModel(
+                    id = cursor.getLong(idIdx),
+                    title = cursor.getString(titleIdx) ?: "No Title",
+                    startTime = cursor.getLong(startIdx),
+                    endTime = cursor.getLong(endIdx),
+                    location = cursor.getString(locIdx),
+                    calendarName = cursor.getString(calIdx)
+                ))
+                if (eventList.size >= 50) break
+            }
+        }
+        _calendarEvents.value = eventList
+    }
+}
+
+fun MainViewModel.loadFiles() {
+    viewModelScope.launch(Dispatchers.IO) {
+        val context = getApplication<Application>()
+        val hasBasicPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            true // We assume media permissions are enough for MediaStore
+        } else {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+        }
+        
+        val hasAllFilesPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Environment.isExternalStorageManager()
+        } else hasBasicPermission
+
+        if (!hasBasicPermission && !hasAllFilesPermission) return@launch
+
+        val fileList = mutableListOf<FileModel>()
+        
+        // 1. Use MediaStore - works even with Scoped Storage for many items
+        try {
+            val externalUri = MediaStore.Files.getContentUri("external")
+            val projection = arrayOf(
+                MediaStore.Files.FileColumns.DISPLAY_NAME,
+                MediaStore.Files.FileColumns.DATA,
+                MediaStore.Files.FileColumns.SIZE,
+                MediaStore.Files.FileColumns.DATE_MODIFIED
+            )
+            
+            context.contentResolver.query(
+                externalUri, 
+                projection, 
+                null, null, 
+                "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC"
+            )?.use { cursor ->
+                val nameIdx = cursor.getColumnIndex(MediaStore.Files.FileColumns.DISPLAY_NAME)
+                val dataIdx = cursor.getColumnIndex(MediaStore.Files.FileColumns.DATA)
+                val sizeIdx = cursor.getColumnIndex(MediaStore.Files.FileColumns.SIZE)
+                val dateIdx = cursor.getColumnIndex(MediaStore.Files.FileColumns.DATE_MODIFIED)
+                
+                while (cursor.moveToNext() && fileList.size < 2000) {
+                    val path = cursor.getString(dataIdx) ?: continue
+                    val file = File(path)
+                    fileList.add(FileModel(
+                        name = cursor.getString(nameIdx) ?: file.name,
+                        path = path,
+                        isDirectory = file.isDirectory,
+                        size = cursor.getLong(sizeIdx),
+                        lastModified = cursor.getLong(dateIdx) * 1000
+                    ))
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // 2. Manual scan - only if we have full access
+        if (hasAllFilesPermission) {
+            val root = Environment.getExternalStorageDirectory()
+            val commonDirs = listOf(
+                root, 
+                File(root, "Download"), 
+                File(root, "Documents"), 
+                File(root, "Pictures"), 
+                File(root, "Music"),
+                File(root, "Movies"),
+                File(root, "DCIM")
+            )
+            
+            for (dir in commonDirs) {
+                if (!dir.exists()) continue
+                dir.listFiles()?.forEach { file ->
+                    if (!file.name.startsWith(".")) {
+                        fileList.add(FileModel(
+                            name = file.name,
+                            path = file.absolutePath,
+                            isDirectory = file.isDirectory,
+                            size = file.length(),
+                            lastModified = file.lastModified()
+                        ))
+                    }
+                }
+            }
+        }
+        
+        _files.value = fileList.distinctBy { it.path }.sortedByDescending { it.lastModified }
     }
 }

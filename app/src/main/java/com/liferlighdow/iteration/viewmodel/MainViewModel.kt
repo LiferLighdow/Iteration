@@ -167,6 +167,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     internal val _showMinusOnePage = MutableStateFlow(prefs.getBoolean("show_minus_one", true))
     val showMinusOnePage = _showMinusOnePage.asStateFlow()
 
+    internal val _updateCheckInterval = MutableStateFlow(prefs.getInt("update_check_interval", 0))
+    val updateCheckInterval = _updateCheckInterval.asStateFlow()
+
+    internal val _newVersionAvailable = MutableStateFlow(prefs.getString("new_version_available", null))
+    val newVersionAvailable = _newVersionAvailable.asStateFlow()
+
     internal val _appLanguage = MutableStateFlow(prefs.getString("app_language", "") ?: "")
     val appLanguage = _appLanguage.asStateFlow()
 
@@ -174,6 +180,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val isDesktopLocked = _isDesktopLocked.asStateFlow()
 
     init {
+        // Initial setup for update check if interval is set
+        if (_updateCheckInterval.value > 0) {
+            setUpdateCheckInterval(_updateCheckInterval.value)
+        }
+
         // Apply saved language on startup
         val savedLang = _appLanguage.value
         if (savedLang.isNotEmpty()) {
@@ -485,6 +496,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     internal val _contacts = MutableStateFlow<List<ContactModel>>(emptyList())
     val contacts = _contacts.asStateFlow()
 
+    internal val _calendarEvents = MutableStateFlow<List<CalendarEventModel>>(emptyList())
+    val calendarEvents = _calendarEvents.asStateFlow()
+
+    internal val _files = MutableStateFlow<List<FileModel>>(emptyList())
+    val files = _files.asStateFlow()
+
     internal val customIconDir = File(application.filesDir, "custom_icons").apply { mkdirs() }
     internal val processedIconCacheDir = File(application.cacheDir, "processed_icons").apply { mkdirs() }
     internal var pageSize = 20
@@ -619,6 +636,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             "themed_icons" -> _isThemedIconsEnabled.value = sharedPreferences.getBoolean(key, false)
             "show_minus_one" -> _showMinusOnePage.value = sharedPreferences.getBoolean(key, true)
             "show_app_library" -> _showAppLibrary.value = sharedPreferences.getBoolean(key, true)
+            "new_version_available" -> _newVersionAvailable.value = sharedPreferences.getString(key, null)
             "icon_cache_size" -> {
                 val newSize = sharedPreferences.getInt(key, 250)
                 _iconCacheSize.value = newSize
@@ -639,6 +657,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             updateBlurredWallpaper()
             fetchExchangeRates()
             fetchWeather()
+            loadContacts()
+            loadCalendarEvents()
+            loadFiles()
             checkSystemNetworkStatus()
         }
 
