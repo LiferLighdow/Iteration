@@ -524,6 +524,16 @@
     <string name="settings_update_check_interval">Update Check Interval</string>
     <string name="settings_update_check_interval_desc">How often to check for updates (0 to 36 hours, 0 to disable).</string>
     <string name="settings_update_check_hours">%1$d hours</string>
+    <string name="settings_offline_translation">Offline Translation (ML Kit)</string>
+    <string name="settings_offline_translation_desc">Use on-device models for translation. Requires downloading language data (~30MB).</string>
+    <string name="settings_translate">Translation</string>
+    <string name="settings_translate_desc">Manage offline models and translator settings</string>
+    <string name="language_not_downloaded">Not Downloaded</string>
+    <string name="language_downloading">Downloading&#8230;</string>
+    <string name="language_downloaded">Downloaded</string>
+    <string name="available_languages">Available Languages</string>
+    <string name="download_model">Download Model</string>
+    <string name="delete_model">Delete Model</string>
     <string name="update_dialog_title">New Version Available</string>
     <string name="update_dialog_message">A new version of Iteration Launcher is available (%1$s). Would you like to download it?</string>
     <string name="update_dialog_download">Download</string>

@@ -526,6 +526,16 @@
     <string name="settings_update_check_interval">檢查更新頻率</string>
     <string name="settings_update_check_interval_desc">設定自動檢查更新的時間間隔（0 到 36 小時，0 為不檢查）。</string>
     <string name="settings_update_check_hours">%1$d 小時</string>
+    <string name="settings_offline_translation">離線翻譯 (ML Kit)</string>
+    <string name="settings_offline_translation_desc">使用裝置本地模型進行翻譯。需要下載語言數據 (約 30MB)。</string>
+    <string name="settings_translate">翻譯設定</string>
+    <string name="settings_translate_desc">管理離線模型與翻譯功能</string>
+    <string name="language_not_downloaded">未下載</string>
+    <string name="language_downloading">正在下載&#8230;</string>
+    <string name="language_downloaded">已下載</string>
+    <string name="available_languages">可用語言</string>
+    <string name="download_model">下載模型</string>
+    <string name="delete_model">刪除模型</string>
     <string name="update_dialog_title">發現新版本</string>
     <string name="update_dialog_message">Iteration Launcher 有新版本可用 (%1$s)。您想要現在下載嗎？</string>
     <string name="update_dialog_download">下載</string>

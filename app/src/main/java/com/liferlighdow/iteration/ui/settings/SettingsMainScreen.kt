@@ -44,7 +44,8 @@ fun SettingsMainScreen(
     onNavigateToManuals: () -> Unit,
     onNavigateToLanguage: () -> Unit,
     onNavigateToAdvanced: () -> Unit,
-    onNavigateToPwaMaker: () -> Unit
+    onNavigateToPwaMaker: () -> Unit,
+    onNavigateToTranslate: () -> Unit
 ) {
     val viewModel: MainViewModel = viewModel()
     val context = LocalContext.current
@@ -73,6 +74,7 @@ fun SettingsMainScreen(
             SettingsMetadata(context.getString(R.string.settings_permissions), context.getString(R.string.settings_permissions_desc), Icons.Default.Security, Color(0xFF607D8B), onNavigateToPermissions),
             SettingsMetadata(context.getString(R.string.settings_language), context.getString(R.string.language_system_default), Icons.Default.Language, Color(0xFF3F51B5), onNavigateToLanguage),
             SettingsMetadata(context.getString(R.string.settings_advanced), context.getString(R.string.settings_advanced_desc), Icons.Default.Settings, Color(0xFF607D8B), onNavigateToAdvanced),
+            SettingsMetadata(context.getString(R.string.settings_translate), context.getString(R.string.settings_translate_desc), Icons.Default.Translate, Color(0xFF2196F3), onNavigateToTranslate),
             SettingsMetadata(context.getString(R.string.user_manual_title), context.getString(R.string.user_manual_desc), Icons.AutoMirrored.Filled.MenuBook, Color(0xFFFF9800), onNavigateToManuals),
             SettingsMetadata(context.getString(R.string.settings_hide_apps), context.getString(R.string.settings_hide_apps_desc), Icons.Default.VisibilityOff, Color(0xFF795548), {
                 if (viewModel.getPassword().isNullOrEmpty()) onNavigateToHideApps() else {} // 觸發 PasswordGate
@@ -294,6 +296,14 @@ fun SettingsMainScreen(
                             icon = Icons.Default.Search,
                             iconColor = Color(0xFF00ACC1),
                             onClick = onNavigateToSearch
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        SettingsItem(
+                            headline = stringResource(R.string.settings_translate),
+                            supporting = stringResource(R.string.settings_translate_desc),
+                            icon = Icons.Default.Translate,
+                            iconColor = Color(0xFF2196F3),
+                            onClick = onNavigateToTranslate
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                         SettingsItem(

@@ -71,7 +71,8 @@ fun SettingsNavigation() {
             onNavigateToManuals = { currentPage = SettingsPage.MANUALS },
             onNavigateToLanguage = { currentPage = SettingsPage.LANGUAGE },
             onNavigateToAdvanced = { currentPage = SettingsPage.ADVANCED },
-            onNavigateToPwaMaker = { currentPage = SettingsPage.PWA_MANAGE }
+            onNavigateToPwaMaker = { currentPage = SettingsPage.PWA_MANAGE },
+            onNavigateToTranslate = { currentPage = SettingsPage.TRANSLATE }
         )
         SettingsPage.HIDE_APPS -> HideAppsScreen(onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.RENAME_APPS -> RenameAppsScreen(onBack = { currentPage = SettingsPage.MAIN })
@@ -108,5 +109,6 @@ fun SettingsNavigation() {
             onNavigateToPwaMaker = { currentPage = SettingsPage.PWA_MAKER }
         )
         SettingsPage.PWA_MAKER -> PwaMakerScreen(onBack = { currentPage = SettingsPage.PWA_MANAGE })
+        SettingsPage.TRANSLATE -> TranslateSettingsScreen(onBack = { currentPage = SettingsPage.MAIN })
     }
 }

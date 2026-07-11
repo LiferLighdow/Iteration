@@ -94,9 +94,18 @@ fun GlobalSearchOverlay(
     val focusManager = LocalFocusManager.current
     val clipboardManager = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
+    val viewModel: MainViewModel = viewModel()
+
+    val favoritePackages by viewModel.favoritePackages.collectAsState()
+    val searchEngineUrl by viewModel.searchEngineUrl.collectAsState()
+    val contacts by viewModel.contacts.collectAsState()
+    val calendarEvents by viewModel.calendarEvents.collectAsState()
+    val files by viewModel.files.collectAsState()
+    val exchangeRates by viewModel.exchangeRates.collectAsState()
+    val isOfflineTranslationEnabled by viewModel.isOfflineTranslationEnabled.collectAsState()
+
     val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
     val dateFormat = remember { SimpleDateFormat("MM/dd", Locale.getDefault()) }
-    val viewModel: MainViewModel = viewModel()
     
     // 當關閉時清空搜尋詞並強制清除焦點
     LaunchedEffect(isVisible) {
@@ -112,57 +121,80 @@ fun GlobalSearchOverlay(
         }
     }
 
-    // 聯網翻譯邏輯 (優化：嚴格 tr 觸發與引號解析)
-    LaunchedEffect(query) {
+    // 翻譯邏輯 (支援線上與 ML Kit 離線切換)
+    LaunchedEffect(query, isOfflineTranslationEnabled) {
         val q = query.trim()
-        if (!q.startsWith("tr ", ignoreCase = true)) { translationResult = null; return@LaunchedEffect }
+        if (!q.startsWith("tr ", ignoreCase = true)) {
+            translationResult = null
+            return@LaunchedEffect
+        }
 
         val rawContent = q.substring(3).trim()
-        if (rawContent.isBlank()) { translationResult = null; return@LaunchedEffect }
+        if (rawContent.isBlank()) {
+            translationResult = null
+            return@LaunchedEffect
+        }
 
         val textToTranslate: String
         val targetLang: String
 
-        // 嘗試匹配 tr "text" to "lang" 格式，支援引號選配
-        // Regex 解釋：
-        // (?:["'](.+?)["']|(.+?)) -> 匹配有引號或無引號的內容
-        // \s+to\s+ -> 匹配中間的 "to"
-        // (?:["']([a-zA-Z-]+)["']|([a-zA-Z-]+)) -> 匹配有引號或無引號的語言代碼
-        val pattern = Regex("""^(?:["'](.+?)["']|(.+?))\s+to\s+(?:["']([a-zA-Z-]+)["']|([a-zA-Z-]+))$""", RegexOption.IGNORE_CASE)
+        val pattern = Regex(
+            """^(?:["'](.+?)["']|(.+?))\s+to\s+(?:["']([a-zA-Z-]+)["']|([a-zA-Z-]+))$""",
+            RegexOption.IGNORE_CASE
+        )
         val match = pattern.find(rawContent)
 
         if (match != null) {
-            // groupValues 1或2 是內容，3或4 是語言
             textToTranslate = match.groupValues[1].takeIf { it.isNotEmpty() } ?: match.groupValues[2]
             targetLang = match.groupValues[3].takeIf { it.isNotEmpty() } ?: match.groupValues[4]
         } else {
-            // 若不符合 to 格式，則整段翻譯，去除外層引號（如果有）
             textToTranslate = rawContent.removeSurrounding("\"").removeSurrounding("'")
             targetLang = Locale.getDefault().toLanguageTag()
         }
 
         delay(500)
+        translationResult = null // 開始翻譯前先清空舊結果
         isTranslating = true
-        withContext(Dispatchers.IO) {
-            try {
-                val url = URL("https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=$targetLang&dt=t&q=${URLEncoder.encode(textToTranslate, "UTF-8")}")
-                val conn = url.openConnection() as HttpURLConnection
-                conn.requestMethod = "GET"
-                conn.connectTimeout = 8000
-                conn.readTimeout = 8000
-                conn.setRequestProperty("User-Agent", "Mozilla/5.0")
-                if (conn.responseCode == 200) {
-                    val res = conn.inputStream.bufferedReader().use { it.readText() }
-                    val jsonArray = JSONArray(res)
-                    val resultParts = jsonArray.getJSONArray(0)
-                    val translatedText = StringBuilder()
-                    for (i in 0 until resultParts.length()) {
-                        val part = resultParts.getJSONArray(i).optString(0, "")
-                        if (part != "null") translatedText.append(part)
+
+        if (isOfflineTranslationEnabled) {
+            // ML Kit 離線翻譯
+            val result = viewModel.translateOffline(textToTranslate, targetLang)
+            translationResult = result
+            isTranslating = false
+        } else {
+            // 聯網翻譯邏輯 (Legacy API)
+            withContext(Dispatchers.IO) {
+                try {
+                    val url = URL(
+                        "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=$targetLang&dt=t&q=${
+                            URLEncoder.encode(
+                                textToTranslate,
+                                "UTF-8"
+                            )
+                        }"
+                    )
+                    val conn = url.openConnection() as HttpURLConnection
+                    conn.requestMethod = "GET"
+                    conn.connectTimeout = 8000
+                    conn.readTimeout = 8000
+                    conn.setRequestProperty("User-Agent", "Mozilla/5.0")
+                    if (conn.responseCode == 200) {
+                        val res = conn.inputStream.bufferedReader().use { it.readText() }
+                        val jsonArray = JSONArray(res)
+                        val resultParts = jsonArray.getJSONArray(0)
+                        val translatedText = StringBuilder()
+                        for (i in 0 until resultParts.length()) {
+                            val part = resultParts.getJSONArray(i).optString(0, "")
+                            if (part != "null") translatedText.append(part)
+                        }
+                        withContext(Dispatchers.Main) { translationResult = translatedText.toString() }
                     }
-                    withContext(Dispatchers.Main) { translationResult = translatedText.toString() }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                } finally {
+                    withContext(Dispatchers.Main) { isTranslating = false }
                 }
-            } catch (e: Exception) {} finally { withContext(Dispatchers.Main) { isTranslating = false } }
+            }
         }
     }
 
@@ -195,13 +227,6 @@ fun GlobalSearchOverlay(
             }
         }
     }
-
-    val favoritePackages by viewModel.favoritePackages.collectAsState()
-    val searchEngineUrl by viewModel.searchEngineUrl.collectAsState()
-    val contacts by viewModel.contacts.collectAsState()
-    val calendarEvents by viewModel.calendarEvents.collectAsState()
-    val files by viewModel.files.collectAsState()
-    val exchangeRates by viewModel.exchangeRates.collectAsState()
 
     // --- 核心改進：互動式動畫交棒 ---
     val progress = remember { Animatable(0f) }
@@ -558,7 +583,12 @@ fun GlobalSearchOverlay(
                                     }
                                     Spacer(modifier = Modifier.width(16.dp))
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text(stringResource(R.string.translator), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f))
+                                        val engineLabel = if (isOfflineTranslationEnabled) {
+                                            "${stringResource(R.string.translator)} (Offline)"
+                                        } else {
+                                            "${stringResource(R.string.translator)} (Online)"
+                                        }
+                                        Text(engineLabel, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f))
                                         if (isTranslating) LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(2.dp).padding(top = 8.dp), color = Color.White)
                                         else Text(text = translationResult ?: "", style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.Medium)
                                     }

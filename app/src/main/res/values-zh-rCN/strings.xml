@@ -514,6 +514,17 @@
     <string name="icon_size_recommend">设备建议值</string>
     <string name="icon_size_recommend_desc">将分辨率与屏幕物理像素对齐，以獲得最佳清晰度与性能。</string>
 
+    <string name="settings_offline_translation">离线翻译 (ML Kit)</string>
+    <string name="settings_offline_translation_desc">使用设备本地模型进行翻译。需要下载语言数据 (约 30MB)。</string>
+    <string name="settings_translate">翻译设置</string>
+    <string name="settings_translate_desc">管理离线模型与翻译功能</string>
+    <string name="language_not_downloaded">未下载</string>
+    <string name="language_downloading">正在下载&#8230;</string>
+    <string name="language_downloaded">已下载</string>
+    <string name="available_languages">可用语言</string>
+    <string name="download_model">下载模型</string>
+    <string name="delete_model">删除模型</string>
+
     <!-- 壁纸应用 -->
     <string name="applying_wallpaper">正在应用壁纸</string>
     <string name="applying_wallpaper_desc">正在优化颜色并生成效果。</string>

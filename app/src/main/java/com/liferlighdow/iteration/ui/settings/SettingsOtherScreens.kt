@@ -36,6 +36,7 @@ import com.liferlighdow.iteration.utils.ActionMode
 import com.liferlighdow.iteration.utils.IconShape
 import com.liferlighdow.iteration.viewmodel.*
 import rikka.shizuku.Shizuku
+import java.util.Locale
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -1027,5 +1028,139 @@ fun EditPwaDialog(
                 pickedImageUri = null
             }
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TranslateSettingsScreen(onBack: () -> Unit) {
+    val viewModel: MainViewModel = viewModel()
+    val context = LocalContext.current
+    val isOfflineEnabled by viewModel.isOfflineTranslationEnabled.collectAsState()
+    val downloadedModels by viewModel.downloadedModels.collectAsState()
+    val downloadProgress by viewModel.downloadProgress.collectAsState()
+    val deletingModels by viewModel.deletingModels.collectAsState()
+    val isNetworkEnabled by viewModel.isNetworkAccessEnabled.collectAsState()
+    
+    LaunchedEffect(Unit) {
+        viewModel.refreshDownloadedModels()
+    }
+
+    val availableLanguages = remember {
+        com.google.mlkit.nl.translate.TranslateLanguage.getAllLanguages().sortedBy { 
+            Locale.forLanguageTag(it).displayLanguage 
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.settings_translate)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        LazyColumn(
+            modifier = Modifier.padding(innerPadding).fillMaxSize()
+        ) {
+            item {
+                SettingsGroup {
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.settings_offline_translation)) },
+                        supportingContent = { Text(stringResource(R.string.settings_offline_translation_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = isOfflineEnabled,
+                                onCheckedChange = { viewModel.setOfflineTranslationEnabled(it) }
+                            )
+                        },
+                        modifier = Modifier.clickable { viewModel.setOfflineTranslationEnabled(!isOfflineEnabled) },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
+                }
+            }
+
+            item {
+                Text(
+                    stringResource(R.string.available_languages),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 32.dp, top = 24.dp, bottom = 8.dp)
+                )
+            }
+
+            items(availableLanguages) { lang ->
+                val isDownloaded = downloadedModels.contains(lang)
+                val progress = downloadProgress[lang]
+                val isDownloading = progress != null
+                val isDeleting = deletingModels.contains(lang)
+                val label = Locale.forLanguageTag(lang).displayLanguage
+                
+                ListItem(
+                    headlineContent = { Text(label) },
+                    supportingContent = {
+                        Column {
+                            val statusText = when {
+                                isDeleting -> stringResource(R.string.delete) + "..."
+                                isDownloading -> {
+                                    if (progress!! >= 1.0f) stringResource(R.string.language_downloaded)
+                                    else "${stringResource(R.string.language_downloading)} ${(progress * 100).toInt()}%"
+                                }
+                                isDownloaded -> stringResource(R.string.language_downloaded)
+                                else -> stringResource(R.string.language_not_downloaded)
+                            }
+                            Text(statusText)
+                            
+                            if (isDownloading && progress!! < 1.0f) {
+                                LinearProgressIndicator(
+                                    progress = { progress },
+                                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            } else if (isDeleting) {
+                                // 刪除時跑無限向前的進度條
+                                LinearProgressIndicator(
+                                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+                    },
+                    trailingContent = {
+                        when {
+                            isDeleting -> {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.error)
+                            }
+                            isDownloading && progress!! < 1.0f -> {
+                                IconButton(onClick = { viewModel.cancelDownload(lang) }) {
+                                    Icon(Icons.Default.Close, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                                }
+                            }
+                            isDownloaded -> {
+                                IconButton(onClick = { viewModel.deleteModel(lang) }) {
+                                    Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                                }
+                            }
+                            else -> {
+                                IconButton(onClick = {
+                                    if (isNetworkEnabled) {
+                                        viewModel.downloadModel(lang)
+                                    } else {
+                                        Toast.makeText(context, context.getString(R.string.network_disabled), Toast.LENGTH_SHORT).show()
+                                    }
+                                }) {
+                                    Icon(Icons.Default.Download, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                }
+                            }
+                        }
+                    },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                )
+            }
+        }
     }
 }

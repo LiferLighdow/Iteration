@@ -135,6 +135,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     internal val _isSystemNetworkEnabled = MutableStateFlow(true)
     val isSystemNetworkEnabled = _isSystemNetworkEnabled.asStateFlow()
 
+    internal val _isOfflineTranslationEnabled =
+        MutableStateFlow(prefs.getBoolean("offline_translation_enabled", false))
+    val isOfflineTranslationEnabled = _isOfflineTranslationEnabled.asStateFlow()
+
     val exchangeRates = currencyRepository.exchangeRates
     val weatherInfo = weatherRepository.weatherInfo
     val weatherError = weatherRepository.weatherError
@@ -506,6 +510,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val files = _files.asStateFlow()
 
     internal val customIconDir = File(application.filesDir, "custom_icons").apply { mkdirs() }
+    // 翻譯模型通常由 ML Kit 自行管理在 files/ 下，但圖標我們明確放在 cache
     internal val processedIconCacheDir = File(application.cacheDir, "processed_icons").apply { mkdirs() }
     internal var pageSize = 20
     internal var dragBackupPages: List<List<AppModel>>? = null
@@ -640,6 +645,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             "show_minus_one" -> _showMinusOnePage.value = sharedPreferences.getBoolean(key, true)
             "show_app_library" -> _showAppLibrary.value = sharedPreferences.getBoolean(key, true)
             "new_version_available" -> _newVersionAvailable.value = sharedPreferences.getString(key, null)
+            "offline_translation_enabled" -> _isOfflineTranslationEnabled.value = sharedPreferences.getBoolean(key, false)
             "icon_cache_size" -> {
                 val newSize = sharedPreferences.getInt(key, 250)
                 _iconCacheSize.value = newSize
