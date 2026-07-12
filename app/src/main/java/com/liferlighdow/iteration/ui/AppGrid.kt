@@ -186,6 +186,7 @@ fun AppGrid(
                     is WidgetType.Weather -> if (type.isWide) 4 else 2
                     is WidgetType.ToDoList -> if (type.isWide) 4 else 2
                     is WidgetType.RSS -> 4
+                    is WidgetType.InfoHub -> 4
                     is WidgetType.Battery, is WidgetType.Clock -> 2
                     null -> 1
                 }
@@ -334,6 +335,7 @@ fun AppGrid(
                         is WidgetType.Weather -> if (type.isWide) 4 else 2
                         is WidgetType.ToDoList -> if (type.isWide) 4 else 2
                         is WidgetType.RSS -> 4
+                        is WidgetType.InfoHub -> 4
                         is WidgetType.Battery, is WidgetType.Clock -> 2
                         null -> 1
                     }
@@ -597,6 +599,7 @@ private fun WidgetGridItem(
         is WidgetType.Weather -> type.isWide
         is WidgetType.ToDoList -> type.isWide
         is WidgetType.RSS -> type.isWide
+        is WidgetType.InfoHub -> true
         else -> false
     }
 
@@ -680,6 +683,11 @@ private fun WidgetGridItem(
                     )
                     is WidgetType.RSS -> RSSWidget(
                         widget = widget,
+                        displayMode = widget.displayMode,
+                        modifier = Modifier.fillMaxSize(),
+                        backdrop = backdrop
+                    )
+                    is WidgetType.InfoHub -> InfoHubWidget(
                         displayMode = widget.displayMode,
                         modifier = Modifier.fillMaxSize(),
                         backdrop = backdrop

@@ -37,6 +37,7 @@ fun MainViewModel.addWidget(type: WidgetType, pageIndex: Int = -1) {
         is WidgetType.ToDoList -> "ToDo List"
         is WidgetType.RSS -> "RSS Feed"
         is WidgetType.Stack -> if (type.isWide) "Wide Widget Stacker" else "Stack"
+        is WidgetType.InfoHub -> "Info Hub"
     }
 
     if (pageIndex == -1) {

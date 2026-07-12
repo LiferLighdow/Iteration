@@ -426,6 +426,8 @@
     <string name="widget_weather_forecast">Weather Forecast</string>
     <string name="widget_rss">RSS Feed</string>
     <string name="desc_rss">Stay updated with your favorite RSS feeds</string>
+    <string name="widget_info_hub">Info Hub</string>
+    <string name="desc_info_hub">A comprehensive dashboard of your phone status.</string>
     <string name="edit_rss">Edit RSS URL</string>
     <string name="rss_url_hint">RSS Feed URL (e.g. https://example.com/rss)</string>
     <string name="network_disabled">Network Disabled</string>

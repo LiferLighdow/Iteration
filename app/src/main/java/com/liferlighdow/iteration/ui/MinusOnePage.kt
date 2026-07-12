@@ -290,7 +290,8 @@ fun MinusOnePage(
                             (widget.type as? WidgetType.ToDoList)?.isWide == true ||
                             (widget.type as? WidgetType.Weather)?.isWide == true ||
                             (widget.type as? WidgetType.RSS)?.isWide == true ||
-                            (widget.type as? WidgetType.Stack)?.isWide == true) 4 else 2
+                            (widget.type as? WidgetType.Stack)?.isWide == true ||
+                            widget.type is WidgetType.InfoHub) 4 else 2
                         GridItemSpan(span)
                     }) { widget ->
                         var showContextMenu by remember { mutableStateOf(false) }
@@ -389,6 +390,7 @@ fun MinusOnePage(
                                 is WidgetType.ToDoList -> TodoWidget(widget = widget, displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
                                 is WidgetType.Weather -> WeatherWidget(displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
                                 is WidgetType.RSS -> RSSWidget(widget = widget, displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
+                                is WidgetType.InfoHub -> InfoHubWidget(displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
                                 is WidgetType.Stack -> StackWidget(widget = widget, viewModel = viewModel, backdrop = backdrop, isMinusOnePage = true)
                             }
 

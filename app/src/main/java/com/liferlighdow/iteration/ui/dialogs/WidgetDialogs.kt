@@ -250,7 +250,8 @@ fun WidgetStackPickerDialog(
                             Triple(WidgetType.Photo(true), R.string.widget_photo_wide, Icons.Default.Rectangle),
                             Triple(WidgetType.Note(text = "", isWide = true), null, Icons.Default.Description),
                             Triple(WidgetType.ToDoList(tasks = emptyList(), isWide = true), R.string.widget_todo, Icons.Default.PlaylistAddCheck),
-                            Triple(WidgetType.Weather(true), null, Icons.Default.WbSunny)
+                            Triple(WidgetType.Weather(true), null, Icons.Default.WbSunny),
+                            Triple(WidgetType.InfoHub, R.string.widget_info_hub, Icons.Default.Info)
                         )
                     } else available
 
@@ -912,6 +913,14 @@ fun WidgetPickerDialog(onDismiss: () -> Unit, onWidgetSelected: (WidgetType) -> 
                 sizes = listOf(
                     "4x2" to WidgetType.RSS(isWide = true, isTall = false),
                     "4x4" to WidgetType.RSS(isWide = true, isTall = true)
+                )
+            ),
+            WidgetTemplate(
+                nameRes = R.string.widget_info_hub,
+                descRes = R.string.desc_info_hub,
+                icon = Icons.Default.Info,
+                sizes = listOf(
+                    "4x2" to WidgetType.InfoHub
                 )
             )
         )
