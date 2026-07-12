@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.ContactsContract
+import android.provider.Settings
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Animatable
@@ -34,6 +36,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -45,6 +49,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.kyant.backdrop.Backdrop
@@ -107,6 +112,7 @@ fun GlobalSearchOverlay(
     val exchangeRates by viewModel.exchangeRates.collectAsState()
 
     var showFrozenManager by remember { mutableStateOf(false) }
+    var showPrivateManager by remember { mutableStateOf(false) }
     var appToUnfreeze by remember { mutableStateOf<AppModel?>(null) }
 
     val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
@@ -262,7 +268,10 @@ fun GlobalSearchOverlay(
         ) {
             Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
                 OutlinedTextField(
-                    value = query, onValueChange = { query = it },
+                    value = query, onValueChange = { 
+                        query = it 
+                        viewModel.setSearchQuery(it)
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 20.dp)
@@ -299,7 +308,7 @@ fun GlobalSearchOverlay(
 
                 val filteredResults = remember(query, allApps) {
                     if (query.isBlank()) emptyList()
-                    else allApps.filter { !it.isHidden && !it.isFrozen && it.label.contains(query, ignoreCase = true) }
+                    else allApps.filter { !it.isHidden && !it.isFrozen && !it.isPrivate && it.label.contains(query, ignoreCase = true) }
                 }
 
                 val mathResult = remember(query) {
@@ -402,21 +411,23 @@ fun GlobalSearchOverlay(
                     if (isVisible && query.isBlank()) clipboardManager.getText()?.text else null
                 }
                 val favoriteApps = remember(favoritePackages, allApps) {
-                    allApps.filter { favoritePackages.contains(it.packageName) && !it.isHidden && !it.isFrozen }.take(8)
+                    allApps.filter { favoritePackages.contains(it.packageName) && !it.isHidden && !it.isFrozen && !it.isPrivate }.take(8)
                 }
                 val finalSuggestions = remember(suggestedApps, allApps) {
-                    if (suggestedApps.isNotEmpty()) suggestedApps.filter { !it.isFrozen }.take(8)
-                    else allApps.filter { !it.isHidden && !it.isFrozen }.take(8)
+                    if (suggestedApps.isNotEmpty()) suggestedApps.filter { !it.isFrozen && !it.isPrivate }.take(8)
+                    else allApps.filter { !it.isHidden && !it.isFrozen && !it.isPrivate }.take(8)
                 }
 
                 val isFrozenSearch = remember(query) { query.trim().lowercase() == "#frozen" }
+                val isPrivateSearch = remember(query) { query.trim().lowercase() == "#private" }
+                val isPrivateLocked by viewModel.isPrivateSpaceLocked.collectAsState()
 
                 val hashtagCategoryApps = remember(query, allApps) {
                     val q = query.trim()
-                    if (q.startsWith("#") && q.length > 1 && q.lowercase() != "#frozen") {
+                    if (q.startsWith("#") && q.length > 1 && q.lowercase() != "#frozen" && q.lowercase() != "#private") {
                         val categoryName = q.substring(1).lowercase()
                         allApps.filter { 
-                            !it.isHidden && !it.isFrozen && 
+                            !it.isHidden && !it.isFrozen && !it.isPrivate && 
                             it.displayCategory.lowercase() == categoryName 
                         }
                     } else emptyList()
@@ -453,6 +464,32 @@ fun GlobalSearchOverlay(
                                     Column {
                                         Text(stringResource(R.string.system_category), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f))
                                         Text(text = stringResource(R.string.frozen_apps_title), style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.Medium)
+                                    }
+                                    Spacer(modifier = Modifier.weight(1f))
+                                    Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
+                                }
+                            }
+                        }
+                    }
+
+                    if (isPrivateSearch) {
+                        item {
+                            Card(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).clickable {
+                                    showPrivateManager = true
+                                },
+                                shape = RoundedCornerShape(24.dp),
+                                colors = CardDefaults.cardColors(containerColor = glassFallbackColor(0.15f)),
+                                border = BorderStroke(1.dp, glassFallbackColor(0.1f))
+                            ) {
+                                Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Box(modifier = Modifier.size(48.dp).background(Color.Magenta.copy(alpha = 0.2f), CircleShape), contentAlignment = Alignment.Center) {
+                                        Icon(if (isPrivateLocked) Icons.Default.Lock else Icons.Default.LockOpen, null, tint = Color.White)
+                                    }
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                    Column {
+                                        Text(stringResource(R.string.private_space_title), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f))
+                                        Text(text = if (isPrivateLocked) stringResource(R.string.private_space_locked) else stringResource(R.string.view_all), style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.Medium)
                                     }
                                     Spacer(modifier = Modifier.weight(1f))
                                     Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
@@ -503,7 +540,7 @@ fun GlobalSearchOverlay(
                                         .fillMaxWidth()
                                         .clickable {
                                             clipboardManager.setText(AnnotatedString(mathResult))
-                                            Toast.makeText(mContext, mContext.getString(R.string.result_copied, mathResult), Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(mContext, "Result Copied: $mathResult", Toast.LENGTH_SHORT).show()
                                         }
                                         .padding(20.dp),
                                         verticalAlignment = Alignment.CenterVertically
@@ -525,15 +562,15 @@ fun GlobalSearchOverlay(
                                         Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                             BaseConversionRow("BIN", bin) {
                                                 clipboardManager.setText(AnnotatedString(bin))
-                                                Toast.makeText(mContext, mContext.getString(R.string.result_copied, bin), Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(mContext, "Result Copied: $bin", Toast.LENGTH_SHORT).show()
                                             }
                                             BaseConversionRow("HEX", hex) {
                                                 clipboardManager.setText(AnnotatedString(hex))
-                                                Toast.makeText(mContext, mContext.getString(R.string.result_copied, hex), Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(mContext, "Result Copied: $hex", Toast.LENGTH_SHORT).show()
                                             }
                                             BaseConversionRow("OCT", oct) {
                                                 clipboardManager.setText(AnnotatedString(oct))
-                                                Toast.makeText(mContext, mContext.getString(R.string.result_copied, oct), Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(mContext, "Result Copied: $oct", Toast.LENGTH_SHORT).show()
                                             }
                                         }
                                     }
@@ -612,7 +649,7 @@ fun GlobalSearchOverlay(
                                             autoUnitConversions.forEach { (label, value) ->
                                                 BaseConversionRow(label, value) {
                                                     clipboardManager.setText(AnnotatedString(value))
-                                                    Toast.makeText(mContext, mContext.getString(R.string.result_copied, value), Toast.LENGTH_SHORT).show()
+                                                    Toast.makeText(mContext, "Result Copied: $value", Toast.LENGTH_SHORT).show()
                                                 }
                                             }
                                         }
@@ -636,7 +673,7 @@ fun GlobalSearchOverlay(
                                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).clickable {
                                     translationResult?.let {
                                         clipboardManager.setText(AnnotatedString(it))
-                                        Toast.makeText(mContext, mContext.getString(R.string.translation_copied), Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(mContext, "Translation Copied", Toast.LENGTH_SHORT).show()
                                     }
                                 },
                                 shape = RoundedCornerShape(24.dp),
@@ -716,11 +753,26 @@ fun GlobalSearchOverlay(
 
                         if (favoriteApps.isNotEmpty()) {
                             item {
-                                Text(stringResource(R.string.favorites), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp, bottom = 12.dp))
-                                Box(modifier = Modifier.fillMaxWidth().height(180.dp)) {
-                                    LazyVerticalGrid(columns = GridCells.Fixed(4), modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(16.dp), userScrollEnabled = false) {
-                                        items(favoriteApps) { app ->
-                                            AppItem(app = app, iconSize = 56.dp, iconShape = iconShape, getIcon = { pkg -> viewModel.getIcon(pkg) }, onAppClick = { onAppClick(app); onDismiss() })
+                                Text(stringResource(R.string.favorites), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 12.dp, bottom = 12.dp))
+                                Column(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(24.dp)
+                                ) {
+                                    favoriteApps.chunked(4).forEach { rowApps ->
+                                        Row(modifier = Modifier.fillMaxWidth()) {
+                                            rowApps.forEach { app ->
+                                                AppItem(
+                                                    app = app,
+                                                    modifier = Modifier.weight(1f),
+                                                    iconSize = 56.dp,
+                                                    iconShape = iconShape,
+                                                    getIcon = { pkg -> viewModel.getIcon(pkg) },
+                                                    onAppClick = { onAppClick(app); onDismiss() }
+                                                )
+                                            }
+                                            repeat(4 - rowApps.size) {
+                                                Spacer(modifier = Modifier.weight(1f))
+                                            }
                                         }
                                     }
                                 }
@@ -729,11 +781,26 @@ fun GlobalSearchOverlay(
                         }
 
                         item {
-                            Text(stringResource(R.string.app_suggestions), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp, bottom = 12.dp))
-                            Box(modifier = Modifier.fillMaxWidth().height(180.dp)) {
-                                LazyVerticalGrid(columns = GridCells.Fixed(4), modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(16.dp), userScrollEnabled = false) {
-                                    items(finalSuggestions) { app ->
-                                        AppItem(app = app, iconSize = 56.dp, iconShape = iconShape, getIcon = { pkg -> viewModel.getIcon(pkg) }, onAppClick = { onAppClick(app); onDismiss() })
+                            Text(stringResource(R.string.app_suggestions), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 12.dp, bottom = 12.dp))
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                                verticalArrangement = Arrangement.spacedBy(24.dp)
+                            ) {
+                                finalSuggestions.chunked(4).forEach { rowApps ->
+                                    Row(modifier = Modifier.fillMaxWidth()) {
+                                        rowApps.forEach { app ->
+                                            AppItem(
+                                                app = app,
+                                                modifier = Modifier.weight(1f),
+                                                iconSize = 56.dp,
+                                                iconShape = iconShape,
+                                                getIcon = { pkg -> viewModel.getIcon(pkg) },
+                                                onAppClick = { onAppClick(app); onDismiss() }
+                                            )
+                                        }
+                                        repeat(4 - rowApps.size) {
+                                            Spacer(modifier = Modifier.weight(1f))
+                                        }
                                     }
                                 }
                             }
@@ -986,6 +1053,14 @@ fun GlobalSearchOverlay(
         )
     }
 
+    if (showPrivateManager) {
+        PrivateSpaceManagerDialog(
+            allApps = allApps,
+            onDismiss = { showPrivateManager = false },
+            onAppClick = { onAppClick(it); onDismiss() }
+        )
+    }
+
     if (appToUnfreeze != null) {
         AlertDialog(
             onDismissRequest = { appToUnfreeze = null },
@@ -1011,7 +1086,14 @@ fun FrozenAppsManagerDialog(
     onDismiss: () -> Unit,
     onUnfreezeClick: (AppModel) -> Unit
 ) {
-    val frozenApps = remember(allApps) { allApps.filter { it.isFrozen } }
+    val viewModel: MainViewModel = viewModel()
+    val iconShape by viewModel.iconShape.collectAsState()
+    
+    // 修復：根據包名與用戶 ID 進行去重，解決同一個 App 出現多個選項的問題
+    val frozenApps = remember(allApps) { 
+        allApps.filter { it.isFrozen }
+            .distinctBy { "${it.packageName}@${it.userId}" } 
+    }
     
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1026,6 +1108,20 @@ fun FrozenAppsManagerDialog(
                         ListItem(
                             headlineContent = { Text(app.label, color = Color.White) },
                             supportingContent = { Text(app.packageName, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.6f)) },
+                            leadingContent = {
+                                val icon = viewModel.getIcon(app.uniqueId)
+                                if (icon != null) {
+                                    val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(40.dp * 0.238f)
+                                    // 凍結應用顯示黑白圖示，更有「凍結」感
+                                    val colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+                                    Image(
+                                        bitmap = icon, 
+                                        contentDescription = null, 
+                                        colorFilter = colorFilter,
+                                        modifier = Modifier.size(40.dp).clip(shape).background(Color.White)
+                                    )
+                                }
+                            },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                             modifier = Modifier.combinedClickable(
                                 onClick = { onUnfreezeClick(app) },
@@ -1037,6 +1133,123 @@ fun FrozenAppsManagerDialog(
                                 text = { Text(stringResource(R.string.unfreeze)) },
                                 onClick = { onUnfreezeClick(app); showMenu = false }
                             )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.done)) }
+        }
+    )
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun PrivateSpaceManagerDialog(
+    allApps: List<AppModel>,
+    onDismiss: () -> Unit,
+    onAppClick: (AppModel) -> Unit
+) {
+    val viewModel: MainViewModel = viewModel()
+    val mContext = LocalContext.current
+    val privateApps = remember(allApps) { allApps.filter { it.isPrivate && !it.uniqueId.startsWith("private_seed") } }
+    val isLocked by viewModel.isPrivateSpaceLocked.collectAsState()
+    val iconShape by viewModel.iconShape.collectAsState()
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { 
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.private_space_title), modifier = Modifier.weight(1f))
+                if (!isLocked) {
+                    IconButton(onClick = { 
+                        allApps.find { it.isPrivate }?.userId?.let { viewModel.lockPrivateSpace(it) }
+                    }) {
+                        Icon(Icons.Default.LockOpen, null)
+                    }
+                }
+            }
+        },
+        text = {
+            if (isLocked) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp).clickable {
+                            allApps.find { it.isPrivate }?.userId?.let { viewModel.unlockPrivateSpace(it) }
+                        },
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(stringResource(R.string.private_space_locked_desc), textAlign = TextAlign.Center)
+                }
+            } else {
+                if (privateApps.isEmpty()) {
+                    Text("No apps in Private Space.")
+                } else {
+                    LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp)) {
+                        items(privateApps, key = { it.uniqueId }) { app ->
+                            var showMenu by remember { mutableStateOf(false) }
+                            Box {
+                                ListItem(
+                                    headlineContent = { Text(app.label) },
+                                    leadingContent = {
+                                        val icon = viewModel.getIcon(app.uniqueId)
+                                        if (icon != null) {
+                                            val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(40.dp * 0.238f)
+                                            Image(
+                                                bitmap = icon, 
+                                                contentDescription = null, 
+                                                modifier = Modifier.size(40.dp).clip(shape).background(Color.White)
+                                            )
+                                        }
+                                    },
+                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                    modifier = Modifier.combinedClickable(
+                                        onClick = { onAppClick(app) },
+                                        onLongClick = { showMenu = true }
+                                    )
+                                )
+                                
+                                DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.menu_app_info)) },
+                                        leadingIcon = { Icon(Icons.Default.Info, null) },
+                                        onClick = {
+                                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                                data = Uri.parse("package:${app.packageName}")
+                                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                            }
+                                            mContext.startActivity(intent)
+                                            showMenu = false
+                                        }
+                                    )
+                                    if (!app.isSystem) {
+                                        HorizontalDivider()
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(R.string.menu_uninstall)) },
+                                            leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
+                                            onClick = {
+                                                try {
+                                                    val intent = Intent(Intent.ACTION_DELETE).apply {
+                                                        data = Uri.fromParts("package", app.packageName, null)
+                                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                                    }
+                                                    mContext.startActivity(intent)
+                                                } catch (e: Exception) {
+                                                    Log.e("Iteration", "Uninstall failed", e)
+                                                }
+                                                showMenu = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -1081,7 +1294,7 @@ private fun UnitConverterCard(result: String, context: Context, clipboard: Clipb
     Card(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).clickable {
             clipboard.setText(AnnotatedString(result))
-            Toast.makeText(context, context.getString(R.string.result_copied, result), Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Result Copied: $result", Toast.LENGTH_SHORT).show()
         },
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = glassFallbackColor(0.15f)),

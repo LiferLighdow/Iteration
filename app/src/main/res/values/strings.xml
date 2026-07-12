@@ -79,6 +79,11 @@
     <string name="search_store">Search on Store</string>
     <string name="search_maps">Search on Maps</string>
     <string name="hidden_apps_title">Hidden Apps</string>
+    <string name="private_space_title">Private Space</string>
+    <string name="private_space_locked">Private Space is locked</string>
+    <string name="unlock_private_space">Unlock Private Space</string>
+    <string name="lock_private_space">Lock Private Space</string>
+    <string name="private_space_locked_desc">Private Space is currently locked. Tap the lock icon to unlock.</string>
     <string name="password_hint">Enter Password</string>
 
     <!-- Settings Main -->

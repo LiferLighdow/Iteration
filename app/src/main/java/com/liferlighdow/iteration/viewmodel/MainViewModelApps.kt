@@ -417,7 +417,9 @@ fun MainViewModel.updateSuggestions() {
         .map { it.first }
         .toList()
 
-    _suggestedApps.value = _allApps.value.filter { topPackages.contains(it.packageName) && !it.isHidden }
+    _suggestedApps.value = _allApps.value.filter { 
+        topPackages.contains(it.packageName) && !it.isHidden && !it.isPrivate && !it.isFrozen 
+    }
 }
 
 fun MainViewModel.logAppLaunch(packageName: String) {
@@ -471,18 +473,18 @@ fun MainViewModel.processNewIcon(
     } catch (e: Exception) { null }
 
     if (isExcluded) {
-        return iconProcessor.processIcon(finalRawIcon, false, null, IconStyle.STANDARD, currentShape, sizePx, customBgColor = 0, customFgColor = 0, customUseOriginal = true, customUseOriginalBg = true)
+        return iconProcessor.processIcon(finalRawIcon, false, null, IconStyle.STANDARD, currentShape, sizePx, customBgColor = 0, customFgColor = 0, customUseOriginal = true, customUseOriginalBg = true, userId = app.userId)
     }
 
     return if (currentIconPack.isNotEmpty()) {
         val ipIcon = iconPackManager.getIcon(app.packageName, app.uniqueId)
         if (ipIcon != null) {
-            iconProcessor.processIcon(ipIcon, false, null, IconStyle.STANDARD, currentShape, sizePx, isIconPack = true)
+            iconProcessor.processIcon(ipIcon, false, null, IconStyle.STANDARD, currentShape, sizePx, isIconPack = true, userId = app.userId, isPrivate = app.isPrivate)
         } else {
-            iconProcessor.processIcon(finalRawIcon, false, null, IconStyle.CUSTOM, currentShape, sizePx, customBgColor = 0, customFgColor = 0, customUseOriginal = true, customUseOriginalBg = true)
+            iconProcessor.processIcon(finalRawIcon, false, null, IconStyle.CUSTOM, currentShape, sizePx, customBgColor = 0, customFgColor = 0, customUseOriginal = true, customUseOriginalBg = true, userId = app.userId, isPrivate = app.isPrivate)
         }
     } else {
-        iconProcessor.processIcon(finalRawIcon, isThemed, themeColors, currentStyle, currentShape, sizePx, customBgColor = customBg, customFgColor = customFg, customUseOriginal = customOriginal, customUseOriginalBg = customOriginalBg)
+        iconProcessor.processIcon(finalRawIcon, isThemed, themeColors, currentStyle, currentShape, sizePx, customBgColor = customBg, customFgColor = customFg, customUseOriginal = customOriginal, customUseOriginalBg = customOriginalBg, userId = app.userId, isPrivate = app.isPrivate)
     }
 }
 
@@ -641,7 +643,6 @@ fun MainViewModel.loadApps() {
         delay(300)
         withContext(Dispatchers.Default) {
             loadSettings()
-            updateSuggestions()
         }
         updateBlurredWallpaper()
 
@@ -791,7 +792,11 @@ fun MainViewModel.loadApps() {
                             app.copy(
                                 label = customLabels[app.uniqueId] ?: customLabels[app.packageName] ?: app.label,
                                 isHidden = hiddenPackages.contains(app.packageName) || hiddenPackages.contains(app.uniqueId),
-                                displayCategory = if (app.isPWA) "PWA Apps" else displayCategory
+                                displayCategory = when {
+                                    app.isPrivate -> "Private"
+                                    app.isPWA -> "PWA Apps"
+                                    else -> displayCategory
+                                }
                             )
                         }
                     }
@@ -801,6 +806,7 @@ fun MainViewModel.loadApps() {
 
         _allApps.value = processedApps
         triggerIconUpdate()
+        updateSuggestions()
 
         val seenApps = (prefs.getStringSet("seen_apps", null) ?: emptySet()).toMutableSet()
         val isMigration = prefs.getStringSet("seen_apps", null) == null
@@ -843,7 +849,7 @@ fun MainViewModel.loadApps() {
                                 val baseApp = processedApps.find { it.uniqueId == savedApp.uniqueId }
                                     ?: processedApps.find { it.packageName == savedApp.packageName && it.userId == savedApp.userId }
                                 baseApp?.let {
-                                    if (!it.isFrozen) {
+                                    if (!it.isFrozen && !it.isPrivate) {
                                         pageItems.add(it.copy(uniqueId = savedApp.uniqueId, label = customLabels[savedApp.uniqueId] ?: customLabels[savedApp.packageName] ?: it.label, isHidden = hiddenPackages.contains(savedApp.uniqueId) || hiddenPackages.contains(savedApp.packageName)))
                                     }
                                 }
@@ -852,7 +858,7 @@ fun MainViewModel.loadApps() {
                     }
                     restoredPages.add(pageItems)
                 }
-                val newApps = processedApps.filter { app -> !seenApps.contains(app.uniqueId) && !seenApps.contains(app.packageName) && !app.isHidden && !app.isFrozen }
+                val newApps = processedApps.filter { app -> !seenApps.contains(app.uniqueId) && !seenApps.contains(app.packageName) && !app.isHidden && !app.isFrozen && !app.isPrivate }
                 if (newApps.isNotEmpty()) {
                     if (_autoAddAppsToHome.value) {
                         val isMassiveMigration = newApps.size > 20

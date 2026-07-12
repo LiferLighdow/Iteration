@@ -78,6 +78,11 @@
     <string name="search_store">商店搜尋</string>
     <string name="search_maps">地圖搜尋</string>
     <string name="hidden_apps_title">隱藏的應用程式</string>
+    <string name="private_space_title">私密空間</string>
+    <string name="private_space_locked">私密空間已鎖定</string>
+    <string name="unlock_private_space">解鎖私密空間</string>
+    <string name="lock_private_space">鎖定私密空間</string>
+    <string name="private_space_locked_desc">私密空間目前已鎖定。請點擊鎖頭圖示進行解鎖。</string>
     <string name="password_hint">輸入密碼</string>
 
     <!-- 設定主頁 -->

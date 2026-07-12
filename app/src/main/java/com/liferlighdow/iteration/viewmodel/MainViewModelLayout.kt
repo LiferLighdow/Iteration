@@ -30,6 +30,7 @@ fun MainViewModel.handleAppDrop(
     // 1. 取得移動物件 (包含從資料夾內抓取)
     if (isFromLibrary) {
         val baseApp = _allApps.value.find { it.uniqueId == fromId }
+        if (baseApp?.isPrivate == true) return // 禁止從庫中將私密應用拖放至桌面
         movingItem = baseApp?.copy(uniqueId = "${fromId}@${System.currentTimeMillis()}")
     } else {
         // 遞迴尋找：檢查頁面與資料夾
@@ -117,6 +118,8 @@ fun MainViewModel.handleAppDrop(
 
 fun MainViewModel.addAppToHome(uniqueId: String) {
     val baseApp = _allApps.value.find { it.uniqueId == uniqueId } ?: return
+    if (baseApp.isPrivate) return // 禁止將私密空間應用新增至主畫面
+
     val newItem = baseApp.copy(uniqueId = "${uniqueId}@${System.currentTimeMillis()}")
     
     val currentPages = _pages.value.map { it.toMutableList() }.toMutableList()

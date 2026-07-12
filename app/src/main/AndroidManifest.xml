@@ -16,6 +16,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="rikka.shizuku.permission.RECEIVE_BINDER" />
+    <uses-permission android:name="android.permission.ACCESS_HIDDEN_PROFILES" />
 
     <uses-feature android:name="android.hardware.telephony" android:required="false" />
 
@@ -46,6 +47,9 @@
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
+            android:excludeFromRecents="true"
+            android:stateNotNeeded="true"
+            android:clearTaskOnLaunch="true"
             android:screenOrientation="portrait"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize">
             <intent-filter android:priority="1">
@@ -60,6 +64,7 @@
             android:name=".SettingsActivity"
             android:label="@string/settings_title"
             android:screenOrientation="portrait"
+            android:taskAffinity="com.liferlighdow.iteration.settings"
             android:parentActivityName=".MainActivity" />
 
         <activity

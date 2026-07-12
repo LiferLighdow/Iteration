@@ -1,6 +1,7 @@
 package com.liferlighdow.iteration.utils
 
 import android.content.Context
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -10,9 +11,14 @@ import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
+import android.graphics.Rect
+import android.graphics.RectF
 import android.graphics.drawable.AdaptiveIconDrawable
+import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.os.Build
+import android.os.UserHandle
+import android.os.UserManager
 import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -20,19 +26,14 @@ import androidx.core.graphics.ColorUtils
 import java.util.concurrent.ConcurrentHashMap
 
 class IconProcessor(private val context: Context) {
-    // 預先分配常用的繪圖工具，避免在循環中創建
     private val threadPaint = object : ThreadLocal<Paint>() {
         override fun initialValue(): Paint =
             Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
-    }
-    private val threadMatrix = object : ThreadLocal<ColorMatrix>() {
-        override fun initialValue(): ColorMatrix = ColorMatrix()
     }
     private val threadMatrixArray = object : ThreadLocal<FloatArray>() {
         override fun initialValue(): FloatArray = FloatArray(20)
     }
 
-    // 緩存 Mask（遮罩），使用 ConcurrentHashMap 確保線程安全
     private val maskCache = ConcurrentHashMap<String, Bitmap>()
 
     fun clearCache() {
@@ -67,19 +68,18 @@ class IconProcessor(private val context: Context) {
         customBgColor: Int = 0,
         customFgColor: Int = 0,
         customUseOriginal: Boolean = false,
-        customUseOriginalBg: Boolean = false
+        customUseOriginalBg: Boolean = false,
+        userId: Long = 0,
+        isPrivate: Boolean = false
     ): ImageBitmap {
-        // 1. 基礎檢查
         if (icon == null) {
             return Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888).asImageBitmap()
         }
 
-        // 2. 準備畫布與底圖
         val output = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(output)
         val paint = threadPaint.get()!!
 
-        // 3. 處理顏色邏輯 (這部分保持原本的高級染色邏輯，但優化效能)
         val m3Colors = if (isThemed && themeColors != null) {
             val p = themeColors.primary
             val op = themeColors.onPrimary
@@ -88,17 +88,14 @@ class IconProcessor(private val context: Context) {
             m3 to m3On
         } else null
 
-        val bgColor = determineBgColor(style, isThemed, m3Colors?.first,
-            customBgColor, customUseOriginalBg)
+        val bgColor = determineBgColor(style, isThemed, m3Colors?.first, customBgColor, customUseOriginalBg)
         val fgColor = determineFgColor(style, isThemed, m3Colors, customFgColor, customUseOriginal)
 
-        // 4. 繪製
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && icon is AdaptiveIconDrawable) {
             val scale = 1.45f
             val scaledSize = (sizePx * scale).toInt()
             val offset = (sizePx - scaledSize) / 2
 
-            // 繪製背景
             if (bgColor != null) {
                 paint.color = bgColor
                 paint.xfermode = null
@@ -110,11 +107,9 @@ class IconProcessor(private val context: Context) {
                 }
             }
 
-            // 繪製前景（處理染色）
             val filter = createColorFilter(fgColor)
             var drawnMonochrome = false
 
-            // 嘗試單色層 (Android 13+)
             if (filter != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !(style == IconStyle.CUSTOM && customUseOriginal)) {
                 icon.monochrome?.let { mono ->
                     mono.colorFilter = filter
@@ -134,15 +129,12 @@ class IconProcessor(private val context: Context) {
                 }
             }
         } else {
-            // 傳統圖標繪製
             if (bgColor != null) {
                 paint.color = bgColor
                 paint.xfermode = null
                 canvas.drawRect(0f, 0f, sizePx.toFloat(), sizePx.toFloat(), paint)
             }
-
             if (fgColor != null) icon.setTint(fgColor)
-
             if (isIconPack) {
                 val iconScale = 1.15f
                 val s = (sizePx * iconScale).toInt()
@@ -155,18 +147,64 @@ class IconProcessor(private val context: Context) {
             icon.setTintList(null)
         }
 
-        // 5. 關鍵優化：使用 PorterDuff 遮罩裁切路徑，取代 clipPath
-        // 這種方式邊緣最平滑且效能最好
         val mask = getOrCreateMask(shape, sizePx)
         paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
         canvas.drawBitmap(mask, 0f, 0f, paint)
         paint.xfermode = null
 
+        if (isPrivate) {
+            drawPrivateBadge(canvas, sizePx)
+        } else if (userId > 0) {
+            drawWorkBadge(canvas, output, sizePx, userId)
+        }
+
         return output.asImageBitmap()
     }
 
-    private fun determineBgColor(style: IconStyle, isThemed: Boolean, m3Color: Int?,
-                                 customBg: Int, customUseOrigBg: Boolean): Int? {
+    private fun drawPrivateBadge(canvas: Canvas, sizePx: Int) {
+        val badgeSize = (sizePx * 0.35f).toInt()
+        val margin = (sizePx * 0.05f).toInt()
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+        
+        // 繪製背景圓圈
+        paint.color = Color.parseColor("#CC000000")
+        val centerX = sizePx - badgeSize/2f - margin
+        val centerY = sizePx - badgeSize/2f - margin
+        canvas.drawCircle(centerX, centerY, badgeSize/2f, paint)
+        
+        // 手動繪製鎖頭圖標 (Lock Icon)
+        paint.color = Color.WHITE
+        val lockWidth = badgeSize * 0.45f
+        val lockHeight = badgeSize * 0.35f
+        val top = centerY - lockHeight * 0.1f
+        
+        // 1. 鎖身 (Rect)
+        val bodyRect = RectF(centerX - lockWidth/2, top, centerX + lockWidth/2, top + lockHeight)
+        canvas.drawRoundRect(bodyRect, 4f, 4f, paint)
+        
+        // 2. 鎖勾 (Arc)
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = badgeSize * 0.08f
+        val hookRadius = lockWidth * 0.35f
+        val hookRect = RectF(centerX - hookRadius, bodyRect.top - hookRadius * 1.2f, centerX + hookRadius, bodyRect.top + hookRadius * 0.8f)
+        canvas.drawArc(hookRect, 180f, 180f, false, paint)
+    }
+
+    private fun drawWorkBadge(canvas: Canvas, bitmap: Bitmap, sizePx: Int, userId: Long) {
+        val userManager = context.getSystemService(Context.USER_SERVICE) as? UserManager ?: return
+        val userHandle = userManager.getUserForSerialNumber(userId) ?: return
+        try {
+            val drawable = BitmapDrawable(context.resources, bitmap)
+            val badgedDrawable = context.packageManager.getUserBadgedIcon(drawable, userHandle)
+            if (badgedDrawable != drawable) {
+                canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
+                badgedDrawable.setBounds(0, 0, sizePx, sizePx)
+                badgedDrawable.draw(canvas)
+            }
+        } catch (e: Exception) {}
+    }
+
+    private fun determineBgColor(style: IconStyle, isThemed: Boolean, m3Color: Int?, customBg: Int, customUseOrigBg: Boolean): Int? {
         if (style == IconStyle.CUSTOM) return if (customUseOrigBg) null else customBg
         if (isThemed && m3Color != null) {
             return when (style) {
@@ -178,7 +216,6 @@ class IconProcessor(private val context: Context) {
             }
         }
         return when (style) {
-            IconStyle.STANDARD -> null
             IconStyle.BLACK -> Color.BLACK
             IconStyle.WHITE -> Color.WHITE
             IconStyle.GLASS -> Color.argb(120, 255, 255, 255)
@@ -211,16 +248,11 @@ class IconProcessor(private val context: Context) {
         val r = Color.red(fgColor).toFloat()
         val g = Color.green(fgColor).toFloat()
         val b = Color.blue(fgColor).toFloat()
-
-        // 清空矩陣
         for (i in 0..19) matrixArray[i] = 0f
-
-        // 快速染色矩陣
         matrixArray[0] = 0f; matrixArray[4] = r
         matrixArray[6] = 0f; matrixArray[9] = g
         matrixArray[12] = 0f; matrixArray[14] = b
         matrixArray[18] = 1f
-
         return ColorMatrixColorFilter(matrixArray)
     }
 }

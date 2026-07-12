@@ -10,6 +10,7 @@ import android.content.pm.LauncherApps
 import android.graphics.BitmapFactory
 import android.os.Build
 import android.os.UserHandle
+import android.os.UserManager
 import android.util.LruCache
 import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.ImageBitmap
@@ -185,6 +186,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     internal val _isDesktopLocked = MutableStateFlow(prefs.getBoolean("is_desktop_locked", false))
     val isDesktopLocked = _isDesktopLocked.asStateFlow()
+
+    internal val _isPrivateSpaceVisible = MutableStateFlow(false)
+    val isPrivateSpaceVisible = _isPrivateSpaceVisible.asStateFlow()
+
+    internal val _isPrivateSpaceLocked = _allApps.map { apps ->
+        apps.any { it.isPrivate && it.isLocked }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, true)
+    val isPrivateSpaceLocked = _isPrivateSpaceLocked
 
     init {
         // Initial setup for update check if interval is set
@@ -480,7 +489,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _searchQuery,
         _selectedCategory
     ) { apps: List<AppModel>, query: String, category: String ->
-        val activeApps = apps.filter { !it.isFrozen }
+        // 過濾掉被凍結的應用與私密空間應用 (確保私密應用不進入普通庫)
+        val activeApps = apps.filter { !it.isFrozen && !it.isPrivate }
+        
         if (query.isEmpty() && category == "All") return@combine activeApps
 
         activeApps.filter { app ->
@@ -495,7 +506,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun setSearchQuery(query: String) { _searchQuery.value = query }
+    fun setSearchQuery(query: String) { 
+        _searchQuery.value = query 
+    }
+
     fun setSelectedCategory(category: String) { _selectedCategory.value = category }
     // --------------------------
 
@@ -601,7 +615,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val refreshReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
-                "com.liferlighdow.iteration.ACTION_REFRESH_APPS" -> refreshApps()
+                "com.liferlighdow.iteration.ACTION_REFRESH_APPS",
+                Intent.ACTION_MANAGED_PROFILE_UNLOCKED,
+                Intent.ACTION_MANAGED_PROFILE_AVAILABLE,
+                Intent.ACTION_MANAGED_PROFILE_UNAVAILABLE,
+                "android.intent.action.PROFILE_ACCESSIBLE",
+                "android.intent.action.PROFILE_INACCESSIBLE" -> refreshApps()
                 "com.liferlighdow.iteration.ACTION_PIN_SHORTCUT" -> {
                     val pkg = intent.getStringExtra("package_name") ?: return
                     val id = intent.getStringExtra("shortcut_id") ?: return
@@ -628,6 +647,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { sharedPreferences, key ->
         when (key) {
+            "is_desktop_locked" -> {
+                val locked = sharedPreferences.getBoolean(key, false)
+                _isDesktopLocked.value = locked
+                if (locked) _isEditMode.value = false
+            }
+            "liquid_glass_enabled" -> _isLiquidGlassEnabled.value = sharedPreferences.getBoolean(key, false)
+            "liquid_glass_dock" -> _isLiquidGlassDockEnabled.value = sharedPreferences.getBoolean(key, false)
+            "liquid_glass_home_folder" -> _isLiquidGlassHomeFolderEnabled.value = sharedPreferences.getBoolean(key, false)
+            "liquid_glass_app_library_folder" -> _isLiquidGlassAppLibraryFolderEnabled.value = sharedPreferences.getBoolean(key, false)
+            "liquid_glass_global_search" -> _isLiquidGlassGlobalSearchEnabled.value = sharedPreferences.getBoolean(key, false)
+            "liquid_glass_app_library_search" -> _isLiquidGlassAppLibrarySearchEnabled.value = sharedPreferences.getBoolean(key, false)
+            "liquid_glass_widgets" -> _isLiquidGlassWidgetsEnabled.value = sharedPreferences.getBoolean(key, false)
             "dock_style" -> {
                 try {
                     _dockStyle.value = DockStyle.valueOf(sharedPreferences.getString(key, "MODERN") ?: "MODERN")
@@ -646,6 +677,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             "themed_icons" -> _isThemedIconsEnabled.value = sharedPreferences.getBoolean(key, false)
             "show_minus_one" -> _showMinusOnePage.value = sharedPreferences.getBoolean(key, true)
             "show_app_library" -> _showAppLibrary.value = sharedPreferences.getBoolean(key, true)
+            "auto_add_apps_to_home" -> _autoAddAppsToHome.value = sharedPreferences.getBoolean(key, true)
+            "show_status_bar" -> _showStatusBar.value = sharedPreferences.getBoolean(key, true)
+            "show_nav_handle" -> _showNavigationBar.value = sharedPreferences.getBoolean(key, true)
+            "theme_mode" -> {
+                try {
+                    _themeMode.value = ThemeMode.valueOf(sharedPreferences.getString(key, "FOLLOW_SYSTEM") ?: "FOLLOW_SYSTEM")
+                } catch (_: Exception) {}
+            }
+            "icon_shape" -> {
+                try {
+                    _iconShape.value = IconShape.valueOf(sharedPreferences.getString(key, "DEFAULT") ?: "DEFAULT")
+                } catch (_: Exception) {}
+            }
             "new_version_available" -> _newVersionAvailable.value = sharedPreferences.getString(key, null)
             "new_version_download_url" -> _newVersionDownloadUrl.value = sharedPreferences.getString(key, null)
             "icon_cache_size" -> {
@@ -680,6 +724,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val filter = IntentFilter().apply {
             addAction("com.liferlighdow.iteration.ACTION_REFRESH_APPS")
             addAction("com.liferlighdow.iteration.ACTION_PIN_SHORTCUT")
+            addAction(Intent.ACTION_MANAGED_PROFILE_UNLOCKED)
+            addAction(Intent.ACTION_MANAGED_PROFILE_AVAILABLE)
+            addAction(Intent.ACTION_MANAGED_PROFILE_UNAVAILABLE)
+            if (Build.VERSION.SDK_INT >= 35) {
+                // Android 15 私密空間專用廣播
+                addAction("android.intent.action.PROFILE_ACCESSIBLE")
+                addAction("android.intent.action.PROFILE_INACCESSIBLE")
+            }
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             getApplication<Application>().registerReceiver(refreshReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
@@ -751,5 +803,78 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             .apply()
         _newVersionAvailable.value = null
         _newVersionDownloadUrl.value = null
+    }
+
+    fun unlockPrivateSpace(userId: Long) {
+        viewModelScope.launch(Dispatchers.Default) {
+            val userManager = getApplication<Application>().getSystemService(Context.USER_SERVICE) as UserManager
+            val launcherApps = getApplication<Application>().getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
+            val userHandle = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                userManager.getUserForSerialNumber(userId)
+            } else null
+
+            if (userHandle != null) {
+                withContext(Dispatchers.Main) {
+                    try {
+                        val clazz = LauncherApps::class.java
+                        val method = try {
+                            clazz.getMethod("requestQuietModeEnabled", Boolean::class.javaPrimitiveType, UserHandle::class.java, android.content.IntentSender::class.java)
+                        } catch (e: Exception) {
+                            try {
+                                clazz.getMethod("requestQuietModeEnabled", Boolean::class.javaPrimitiveType, UserHandle::class.java)
+                            } catch (e2: Exception) { null }
+                        }
+
+                        if (method != null) {
+                            if (method.parameterTypes.size == 3) {
+                                method.invoke(launcherApps, false, userHandle, null)
+                            } else {
+                                method.invoke(launcherApps, false, userHandle)
+                            }
+                        } else {
+                            val intent = Intent("android.settings.PRIVATE_SPACE_SETTINGS")
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            getApplication<Application>().startActivity(intent)
+                        }
+                    } catch (e: Exception) {
+                        try {
+                            val intent = Intent(android.provider.Settings.ACTION_SETTINGS)
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            getApplication<Application>().startActivity(intent)
+                        } catch (e3: Exception) {
+                            android.widget.Toast.makeText(getApplication(), "Unlock in Settings", android.widget.Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fun lockPrivateSpace(userId: Long) {
+        viewModelScope.launch(Dispatchers.Default) {
+            val userManager = getApplication<Application>().getSystemService(Context.USER_SERVICE) as UserManager
+            val launcherApps = getApplication<Application>().getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
+            val userHandle = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                userManager.getUserForSerialNumber(userId)
+            } else null
+
+            if (userHandle != null) {
+                withContext(Dispatchers.Main) {
+                    try {
+                        val clazz = LauncherApps::class.java
+                        val method = clazz.methods.find { it.name == "requestQuietModeEnabled" }
+                        if (method != null) {
+                            if (method.parameterTypes.size == 3) {
+                                method.invoke(launcherApps, true, userHandle, null)
+                            } else {
+                                method.invoke(launcherApps, true, userHandle)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+        }
     }
 }
