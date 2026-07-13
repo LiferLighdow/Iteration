@@ -44,6 +44,7 @@ class SettingsActivity : AppCompatActivity() {
 @Composable
 fun SettingsNavigation() {
     var currentPage by remember { mutableStateOf(SettingsPage.MAIN) }
+    var workshopWidgetId by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     
     BackHandler(enabled = currentPage != SettingsPage.MAIN) {
@@ -52,6 +53,7 @@ fun SettingsNavigation() {
             SettingsPage.GLOBAL_SEARCH_MANUAL -> currentPage = SettingsPage.MANUALS
             SettingsPage.ICON_ENGINE_MANUAL -> currentPage = SettingsPage.MANUALS
             SettingsPage.DOCK_MANUAL -> currentPage = SettingsPage.MANUALS
+            SettingsPage.WIDGET_WORKSHOP -> currentPage = SettingsPage.WIDGET_MAKER
             else -> currentPage = SettingsPage.MAIN
         }
     }
@@ -71,7 +73,8 @@ fun SettingsNavigation() {
             onNavigateToManuals = { currentPage = SettingsPage.MANUALS },
             onNavigateToLanguage = { currentPage = SettingsPage.LANGUAGE },
             onNavigateToAdvanced = { currentPage = SettingsPage.ADVANCED },
-            onNavigateToPwaMaker = { currentPage = SettingsPage.PWA_MANAGE }
+            onNavigateToPwaMaker = { currentPage = SettingsPage.PWA_MANAGE },
+            onNavigateToWidgetMaker = { currentPage = SettingsPage.WIDGET_MAKER }
         )
         SettingsPage.HIDE_APPS -> HideAppsScreen(onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.RENAME_APPS -> RenameAppsScreen(onBack = { currentPage = SettingsPage.MAIN })
@@ -108,5 +111,17 @@ fun SettingsNavigation() {
             onNavigateToPwaMaker = { currentPage = SettingsPage.PWA_MAKER }
         )
         SettingsPage.PWA_MAKER -> PwaMakerScreen(onBack = { currentPage = SettingsPage.PWA_MANAGE })
+        SettingsPage.WIDGET_MAKER -> WidgetMakerScreen(
+            onBack = { currentPage = SettingsPage.MAIN },
+            onNavigateToWorkshop = { id: String ->
+                workshopWidgetId = id
+                currentPage = SettingsPage.WIDGET_WORKSHOP 
+            }
+        )
+        SettingsPage.WIDGET_WORKSHOP -> WidgetWorkshopScreen(
+            widgetId = workshopWidgetId ?: "",
+            onBack = { currentPage = SettingsPage.WIDGET_MAKER }
+        )
     }
 }
+

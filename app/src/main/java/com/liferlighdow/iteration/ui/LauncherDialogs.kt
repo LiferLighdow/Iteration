@@ -212,6 +212,7 @@ fun LauncherOverlays(
     // 5. Widget 選擇器
     if (showWidgetPicker) {
         WidgetPickerDialog(
+            viewModel = viewModel,
             onDismiss = onDismissWidgetPicker,
             onWidgetSelected = {
                 viewModel.addWidget(it, currentPage)

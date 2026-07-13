@@ -244,6 +244,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         MutableStateFlow(prefs.getStringSet("favorite_packages", emptySet()) ?: emptySet())
     val favoritePackages = _favoritePackages.asStateFlow()
 
+    internal val _customWidgets = MutableStateFlow<List<WidgetModel>>(emptyList())
+    val customWidgets = _customWidgets.asStateFlow()
+
     internal val _pwaApps = MutableStateFlow<List<AppModel>>(emptyList())
     val pwaApps = _pwaApps.asStateFlow()
 
@@ -708,6 +711,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             loadSettings()
             delay(100)
             loadApps()
+            loadCustomWidgets()
             delay(500)
             updateBlurredWallpaper()
             fetchExchangeRates()

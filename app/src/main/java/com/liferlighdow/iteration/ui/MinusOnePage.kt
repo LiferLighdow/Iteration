@@ -58,6 +58,7 @@ import com.liferlighdow.iteration.data.WeatherProvider
 import com.liferlighdow.iteration.data.WidgetDisplayMode
 import com.liferlighdow.iteration.data.WidgetModel
 import com.liferlighdow.iteration.data.WidgetType
+import com.liferlighdow.iteration.data.CustomComponent
 import com.liferlighdow.iteration.data.AppModel
 import com.liferlighdow.iteration.utils.IconShape
 
@@ -291,6 +292,7 @@ fun MinusOnePage(
                             (widget.type as? WidgetType.Weather)?.isWide == true ||
                             (widget.type as? WidgetType.RSS)?.isWide == true ||
                             (widget.type as? WidgetType.Stack)?.isWide == true ||
+                            (widget.type as? WidgetType.Custom)?.size == "4x2" ||
                             widget.type is WidgetType.InfoHub) 4 else 2
                         GridItemSpan(span)
                     }) { widget ->
@@ -392,6 +394,7 @@ fun MinusOnePage(
                                 is WidgetType.RSS -> RSSWidget(widget = widget, displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
                                 is WidgetType.InfoHub -> InfoHubWidget(displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
                                 is WidgetType.Stack -> StackWidget(widget = widget, viewModel = viewModel, backdrop = backdrop, isMinusOnePage = true)
+                                is WidgetType.Custom -> CustomWidget(widget = widget, backdrop = backdrop, isMinusOnePage = true)
                             }
 
                             if (effectiveEditMode) {

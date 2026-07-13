@@ -401,7 +401,7 @@ fun LauncherScreen(
                     beyondViewportPageCount = 1,
                     flingBehavior = PagerDefaults.flingBehavior(
                         state = pagerState,
-                        snapPositionalThreshold = 0.25f,
+                        snapPositionalThreshold = 0.4f,
                         snapAnimationSpec = spring(
                             dampingRatio = Spring.DampingRatioNoBouncy,
                             stiffness = 180f

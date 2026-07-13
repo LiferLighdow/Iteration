@@ -822,8 +822,15 @@ private data class WidgetTemplate(
 )
 
 @Composable
-fun WidgetPickerDialog(onDismiss: () -> Unit, onWidgetSelected: (WidgetType) -> Unit) {
+fun WidgetPickerDialog(
+    viewModel: MainViewModel,
+    onDismiss: () -> Unit,
+    onWidgetSelected: (WidgetType) -> Unit
+) {
     var selectedTemplate by remember { mutableStateOf<WidgetTemplate?>(null) }
+    var showCustomList by remember { mutableStateOf(false) }
+    
+    val customWidgets by viewModel.customWidgets.collectAsState()
     
     val analogClockLabel = stringResource(R.string.widget_clock_analog)
     val digitalClockLabel = stringResource(R.string.widget_clock_digital)
@@ -947,13 +954,15 @@ fun WidgetPickerDialog(onDismiss: () -> Unit, onWidgetSelected: (WidgetType) -> 
                         .padding(top = 28.dp, start = 28.dp, end = 28.dp, bottom = 20.dp)
                 ) {
                     Text(
-                        text = if (selectedTemplate == null) stringResource(R.string.select_widget) else stringResource(R.string.select_size),
+                        text = if (selectedTemplate == null && !showCustomList) stringResource(R.string.select_widget) else stringResource(R.string.select_size),
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = if (selectedTemplate == null) stringResource(R.string.widget_picker_desc) else stringResource(selectedTemplate!!.nameRes),
+                        text = if (selectedTemplate == null && !showCustomList) stringResource(R.string.widget_picker_desc) 
+                               else if (showCustomList) stringResource(R.string.widget_maker_title)
+                               else stringResource(selectedTemplate!!.nameRes),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -967,7 +976,33 @@ fun WidgetPickerDialog(onDismiss: () -> Unit, onWidgetSelected: (WidgetType) -> 
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    if (selectedTemplate == null) {
+                    if (selectedTemplate == null && !showCustomList) {
+                        // My Custom Widgets Entry
+                        if (customWidgets.isNotEmpty()) {
+                            item {
+                                Card(
+                                    onClick = { showCustomList = true },
+                                    shape = RoundedCornerShape(24.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                                    ),
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+                                ) {
+                                    ListItem(
+                                        headlineContent = { Text(stringResource(R.string.widget_maker_title), fontWeight = FontWeight.Bold) },
+                                        supportingContent = { Text(stringResource(R.string.widget_maker_list_title)) },
+                                        leadingContent = {
+                                            Box(modifier = Modifier.size(52.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
+                                                Icon(Icons.Default.AutoAwesome, null, tint = MaterialTheme.colorScheme.primary)
+                                            }
+                                        },
+                                        trailingContent = { Icon(Icons.Default.ChevronRight, null) },
+                                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                                    )
+                                }
+                            }
+                        }
+
                         items(templates) { template ->
                             Card(
                                 onClick = {
@@ -1027,6 +1062,35 @@ fun WidgetPickerDialog(onDismiss: () -> Unit, onWidgetSelected: (WidgetType) -> 
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                                         )
                                     },
+                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                                )
+                            }
+                        }
+                    } else if (showCustomList) {
+                        items(customWidgets) { widget ->
+                             Card(
+                                onClick = {
+                                    onWidgetSelected(widget.widgetType)
+                                    onDismiss()
+                                },
+                                shape = RoundedCornerShape(24.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                                ),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                            ) {
+                                ListItem(
+                                    headlineContent = { Text(widget.label, fontWeight = FontWeight.Bold) },
+                                    supportingContent = {
+                                        val size = (widget.type as? WidgetType.Custom)?.size ?: ""
+                                        Text("Custom Widget ($size)")
+                                    },
+                                    leadingContent = {
+                                        Box(modifier = Modifier.size(52.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
+                                            Icon(Icons.Default.Widgets, null, tint = MaterialTheme.colorScheme.primary)
+                                        }
+                                    },
+                                    trailingContent = { Icon(Icons.Default.Add, null) },
                                     colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                                 )
                             }
@@ -1107,9 +1171,9 @@ fun WidgetPickerDialog(onDismiss: () -> Unit, onWidgetSelected: (WidgetType) -> 
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (selectedTemplate != null) {
+                    if (selectedTemplate != null || showCustomList) {
                         TextButton(
-                            onClick = { selectedTemplate = null },
+                            onClick = { selectedTemplate = null; showCustomList = false },
                             contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
                         ) {
                             Text(

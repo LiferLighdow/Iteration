@@ -10,11 +10,14 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -26,13 +29,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.service.IterationAccessibilityService
-import com.liferlighdow.iteration.data.AppModel
+import com.liferlighdow.iteration.data.*
 import com.liferlighdow.iteration.utils.ActionMode
+import com.liferlighdow.iteration.ui.widgets.*
 import com.liferlighdow.iteration.utils.IconShape
 import com.liferlighdow.iteration.viewmodel.*
 import rikka.shizuku.Shizuku
@@ -1031,3 +1036,500 @@ fun EditPwaDialog(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun WidgetMakerScreen(onBack: () -> Unit, onNavigateToWorkshop: (String) -> Unit) {
+    val viewModel: MainViewModel = viewModel()
+    val customWidgets by viewModel.customWidgets.collectAsState()
+    var showSizeDialog by remember { mutableStateOf(false) }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.widget_maker_title)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        LazyColumn(
+            modifier = Modifier.padding(innerPadding).fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 32.dp)
+        ) {
+            item {
+                Text(
+                    stringResource(R.string.widget_maker_new),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 32.dp, top = 16.dp, bottom = 8.dp)
+                )
+            }
+            item {
+                SettingsGroup {
+                    SettingsItem(
+                        headline = stringResource(R.string.widget_maker_new),
+                        supporting = stringResource(R.string.widget_maker_desc),
+                        icon = Icons.Default.Add,
+                        iconColor = MaterialTheme.colorScheme.primary,
+                        onClick = { showSizeDialog = true }
+                    )
+                }
+            }
+
+            item {
+                Text(
+                    stringResource(R.string.widget_maker_list_title),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 32.dp, top = 16.dp, bottom = 8.dp)
+                )
+            }
+
+            if (customWidgets.isEmpty()) {
+                item {
+                    Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                        Text(stringResource(R.string.widget_maker_no_widgets), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            } else {
+                item {
+                    SettingsGroup {
+                        customWidgets.forEachIndexed { index, widget ->
+                            val size = (widget.type as? WidgetType.Custom)?.size ?: "Unknown"
+                            SettingsItem(
+                                headline = widget.label,
+                                supporting = "Size: $size",
+                                icon = Icons.Default.Widgets,
+                                iconColor = Color(0xFF673AB7),
+                                onClick = { onNavigateToWorkshop(widget.id) }
+                            )
+                            if (index < customWidgets.size - 1) {
+                                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showSizeDialog) {
+        AlertDialog(
+            onDismissRequest = { showSizeDialog = false },
+            title = { Text(stringResource(R.string.widget_maker_select_size)) },
+            text = {
+                Column {
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.widget_size_2x2)) },
+                        leadingContent = { Icon(Icons.Default.Square, null) },
+                        modifier = Modifier.clickable {
+                            viewModel.createCustomWidget("2x2")
+                            showSizeDialog = false
+                        }
+                    )
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.widget_size_4x2)) },
+                        leadingContent = { Icon(Icons.Default.Rectangle, null) },
+                        modifier = Modifier.clickable {
+                            viewModel.createCustomWidget("4x2")
+                            showSizeDialog = false
+                        }
+                    )
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showSizeDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun WidgetWorkshopScreen(widgetId: String, onBack: () -> Unit) {
+    val viewModel: MainViewModel = viewModel()
+    val customWidgets by viewModel.customWidgets.collectAsState()
+    val widget = remember(widgetId, customWidgets) { customWidgets.find { it.id == widgetId } }
+    
+    var selectedTab by remember { mutableIntStateOf(0) }
+    var editingComponent by remember { mutableStateOf<CustomComponent?>(null) }
+    var showAddComponentDialog by remember { mutableStateOf(false) }
+    var showRenameDialog by remember { mutableStateOf(false) }
+
+    val tabs = listOf(
+        stringResource(R.string.workshop_tab_items),
+        stringResource(R.string.workshop_tab_layer),
+        stringResource(R.string.workshop_tab_touch)
+    )
+
+    if (widget == null) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        LaunchedEffect(Unit) { onBack() }
+        return
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { 
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { showRenameDialog = true }) {
+                        Text(widget.label, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Spacer(Modifier.width(4.dp))
+                        Icon(Icons.Default.Edit, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = {
+                        if (editingComponent != null) editingComponent = null else onBack()
+                    }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                    }
+                },
+                actions = {
+                    if (editingComponent == null) {
+                        IconButton(onClick = { /* Undo */ }) { Icon(Icons.Default.Undo, null) }
+                        IconButton(onClick = { /* Redo */ }) { Icon(Icons.Default.Redo, null) }
+                        IconButton(onClick = { /* Save */ }) { Icon(Icons.Default.Save, null) }
+                        IconButton(onClick = { showAddComponentDialog = true }) { Icon(Icons.Default.Add, null) }
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+        ) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                val size = (widget.type as? WidgetType.Custom)?.size ?: "2x2"
+                val aspectRatio = if (size == "4x2") 2f else 1f
+                
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.9f)
+                        .aspectRatio(aspectRatio)
+                ) {
+                    CustomWidget(widget = widget)
+                }
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(320.dp)
+                    .background(MaterialTheme.colorScheme.surface)
+            ) {
+                if (editingComponent == null) {
+                    PrimaryTabRow(selectedTabIndex = selectedTab) {
+                        tabs.forEachIndexed { index, title ->
+                            Tab(
+                                selected = selectedTab == index,
+                                onClick = { selectedTab = index },
+                                text = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                            )
+                        }
+                    }
+
+                    when (selectedTab) {
+                        0 -> WorkshopItemsTab(
+                            widget = widget,
+                            onEdit = { editingComponent = it },
+                            onToggleVisible = { componentId ->
+                                val comp = (widget.type as? WidgetType.Custom)?.components?.find { it.id == componentId }
+                                if (comp != null) {
+                                    viewModel.updateComponentInCustomWidget(widgetId, when(comp) {
+                                        is CustomComponent.Text -> comp.copy(isVisible = !comp.isVisible)
+                                        is CustomComponent.Shape -> comp.copy(isVisible = !comp.isVisible)
+                                    })
+                                }
+                            },
+                            onMove = { id, up -> viewModel.moveComponentInCustomWidget(widgetId, id, up) }
+                        )
+                        1 -> WorkshopLayerTab(widget)
+                        2 -> WorkshopTouchTab(widget)
+                    }
+                } else {
+                    WorkshopComponentDetailEditor(
+                        component = editingComponent!!,
+                        onUpdate = { updated: CustomComponent ->
+                            viewModel.updateComponentInCustomWidget(widgetId, updated)
+                            editingComponent = updated
+                        },
+                        onDelete = {
+                            viewModel.removeComponentFromCustomWidget(widgetId, editingComponent!!.id)
+                            editingComponent = null
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    if (showAddComponentDialog) {
+        AddComponentDialog(
+            onDismiss = { showAddComponentDialog = false },
+            onAdd = { type ->
+                viewModel.addComponentToCustomWidget(widgetId, type)
+                showAddComponentDialog = false
+            }
+        )
+    }
+
+    if (showRenameDialog) {
+        var newName by remember { mutableStateOf(widget.label) }
+        AlertDialog(
+            onDismissRequest = { showRenameDialog = false },
+            title = { Text(stringResource(R.string.rename)) },
+            text = {
+                OutlinedTextField(
+                    value = newName,
+                    onValueChange = { newName = it },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    viewModel.updateCustomWidgetLabel(widgetId, newName)
+                    showRenameDialog = false
+                }) {
+                    Text(stringResource(R.string.save))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRenameDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+}
+
+@Composable
+fun WorkshopItemsTab(
+    widget: WidgetModel,
+    onEdit: (CustomComponent) -> Unit,
+    onToggleVisible: (String) -> Unit,
+    onMove: (String, Boolean) -> Unit
+) {
+    val components = (widget.type as? WidgetType.Custom)?.components ?: emptyList()
+    
+    if (components.isEmpty()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(stringResource(R.string.widget_maker_no_widgets), style = MaterialTheme.typography.bodyMedium)
+        }
+    } else {
+        LazyColumn(Modifier.fillMaxSize()) {
+            itemsIndexed(components) { index, component ->
+                ListItem(
+                    headlineContent = { Text(component.name) },
+                    leadingContent = {
+                        val icon = when (component) {
+                            is CustomComponent.Text -> Icons.Default.TextFields
+                            is CustomComponent.Shape -> Icons.Default.Category
+                        }
+                        Icon(icon, null)
+                    },
+                    trailingContent = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = { onMove(component.id, true) }, enabled = index > 0) { 
+                                Icon(Icons.Default.ArrowUpward, null) 
+                            }
+                            IconButton(onClick = { onMove(component.id, false) }, enabled = index < components.size - 1) { 
+                                Icon(Icons.Default.ArrowDownward, null) 
+                            }
+                            Checkbox(checked = component.isVisible, onCheckedChange = { onToggleVisible(component.id) })
+                        }
+                    },
+                    modifier = Modifier.clickable { onEdit(component) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun AddComponentDialog(onDismiss: () -> Unit, onAdd: (String) -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.workshop_add_component)) },
+        text = {
+            Column {
+                ListItem(
+                    headlineContent = { Text("Text") },
+                    leadingContent = { Icon(Icons.Default.TextFields, null) },
+                    modifier = Modifier.clickable { onAdd("TEXT") }
+                )
+                ListItem(
+                    headlineContent = { Text("Shape") },
+                    leadingContent = { Icon(Icons.Default.Category, null) },
+                    modifier = Modifier.clickable { onAdd("SHAPE") }
+                )
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+        }
+    )
+}
+
+@Composable
+fun WorkshopLayerTab(widget: WidgetModel) {
+    Column(Modifier.padding(16.dp).fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text(stringResource(R.string.workshop_tab_layer), style = MaterialTheme.typography.titleMedium)
+        Text("Overall widget scaling and alignment options will be here.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+fun WorkshopTouchTab(widget: WidgetModel) {
+    Column(Modifier.padding(16.dp).fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text(stringResource(R.string.workshop_tab_touch), style = MaterialTheme.typography.titleMedium)
+        Text("Configure what happens when the widget is tapped.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+fun CoordinateControl(label: String, value: Float, onUpdate: (Float) -> Unit) {
+    Column(modifier = Modifier.width(160.dp)) {
+        Text(label, style = MaterialTheme.typography.labelMedium)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = { onUpdate(value - 1f) }) {
+                Icon(Icons.Default.Remove, null, modifier = Modifier.size(20.dp))
+            }
+            OutlinedTextField(
+                value = value.toInt().toString(),
+                onValueChange = { it.toFloatOrNull()?.let { v -> onUpdate(v) } },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                textStyle = androidx.compose.ui.text.TextStyle(textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            )
+            IconButton(onClick = { onUpdate(value + 1f) }) {
+                Icon(Icons.Default.Add, null, modifier = Modifier.size(20.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun WorkshopComponentDetailEditor(
+    component: CustomComponent,
+    onUpdate: (CustomComponent) -> Unit,
+    onDelete: () -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Editing: ${component.name}", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                IconButton(onClick = onDelete) {
+                    Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error)
+                }
+            }
+        }
+        
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                CoordinateControl(
+                    label = "X Offset",
+                    value = component.x,
+                    onUpdate = { v ->
+                        onUpdate(when(component) {
+                            is CustomComponent.Text -> component.copy(x = v)
+                            is CustomComponent.Shape -> component.copy(x = v)
+                        })
+                    }
+                )
+                CoordinateControl(
+                    label = "Y Offset",
+                    value = component.y,
+                    onUpdate = { v ->
+                        onUpdate(when(component) {
+                            is CustomComponent.Text -> component.copy(y = v)
+                            is CustomComponent.Shape -> component.copy(y = v)
+                        })
+                    }
+                )
+            }
+        }
+
+        if (component is CustomComponent.Text) {
+            item {
+                OutlinedTextField(
+                    value = component.content,
+                    onValueChange = { onUpdate(component.copy(content = it)) },
+                    label = { Text("Content") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            item {
+                Text("Font Size: ${component.fontSize}")
+                Slider(
+                    value = component.fontSize.toFloat(),
+                    onValueChange = { onUpdate(component.copy(fontSize = it.toInt())) },
+                    valueRange = 8f..72f
+                )
+            }
+            item {
+                Text("Color")
+                ColorPicker(initialColor = component.color, onColorChanged = { onUpdate(component.copy(color = it)) })
+            }
+        }
+
+        if (component is CustomComponent.Shape) {
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = component.width.toInt().toString(),
+                        onValueChange = { 
+                            val v = it.toFloatOrNull() ?: 10f
+                            onUpdate(component.copy(width = v))
+                        },
+                        label = { Text("Width") },
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = component.height.toInt().toString(),
+                        onValueChange = { 
+                            val v = it.toFloatOrNull() ?: 10f
+                            onUpdate(component.copy(height = v))
+                        },
+                        label = { Text("Height") },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+            item {
+                Text("Corner Radius: ${component.cornerRadius.toInt()}")
+                Slider(
+                    value = component.cornerRadius,
+                    onValueChange = { onUpdate(component.copy(cornerRadius = it)) },
+                    valueRange = 0f..100f
+                )
+            }
+            item {
+                Text("Color")
+                ColorPicker(initialColor = component.color, onColorChanged = { onUpdate(component.copy(color = it)) })
+            }
+        }
+    }
+}

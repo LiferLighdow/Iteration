@@ -191,6 +191,7 @@
     <string name="import_success">Configuration imported successfully. Restarting launcher&#8230;</string>
     <string name="import_failed">Failed to import configuration. File may be corrupted.</string>
 
+
     <!-- Restart -->
     <string name="settings_restart_launcher">Restart Launcher</string>
     <string name="settings_restart_desc">Reload the launcher process to apply all changes</string>
@@ -572,7 +573,7 @@
     <string name="wallpaper_mode_balance">Balance (Mixed)</string>
     <string name="wallpaper_mode_balance_desc">Full Emoji on Lock Screen. 1x1 color on Home Screen with Launcher rendering. Best of both worlds.</string>
 
-    <!-- PWA Manage -->
+    <!-- PWA & Widget Maker -->
     <string name="pwa_manage_title">PWA Manage</string>
     <string name="pwa_manage_desc">Manage and create Progressive Web Apps.</string>
     <string name="pwa_maker_title">PWA Maker</string>
@@ -585,4 +586,20 @@
     <string name="pwa_created">PWA created and added to home screen</string>
     <string name="pwa_invalid_input">Please enter a valid name and URL</string>
     <string name="background_color">Background Color</string>
+    <string name="widget_maker_title">Widget Maker</string>
+    <string name="widget_maker_desc">Design and create your own custom widgets.</string>
+    <string name="widget_maker_list_title">My Widgets</string>
+    <string name="widget_maker_new">New Widget</string>
+    <string name="widget_maker_select_size">Select Widget Size</string>
+    <string name="widget_size_2x2">Small (2x2)</string>
+    <string name="widget_size_4x2">Medium (4x2)</string>
+    <string name="widget_maker_no_widgets">No custom widgets yet. Tap + to create one.</string>
+    <string name="widget_workshop_title">Workshop</string>
+    <string name="workshop_tab_items">Items</string>
+    <string name="workshop_tab_background">Background</string>
+    <string name="workshop_tab_layer">Layer</string>
+    <string name="workshop_tab_touch">Touch</string>
+    <string name="workshop_add_component">Add Component</string>
+    <string name="workshop_preview">Preview</string>
+
 </resources>

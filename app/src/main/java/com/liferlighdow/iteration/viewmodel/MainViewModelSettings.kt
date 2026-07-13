@@ -122,10 +122,10 @@ fun MainViewModel.resetGestures() {
 
 fun MainViewModel.applySuggestedGestures() {
     setDoubleTapAction(GestureAction.LOCK_SCREEN)
-    setSwipeUpAction(GestureAction.OPEN_SYSTEM_SETTINGS)
+    setSwipeUpAction(GestureAction.LAUNCHER_SETTINGS)
     setSwipeDownAction(GestureAction.OPEN_GLOBAL_SEARCH)
     setLongPressAction(GestureAction.OPEN_DESKTOP_MENU)
-    setTwoFingerSwipeUpAction(GestureAction.LAUNCHER_SETTINGS)
+    setTwoFingerSwipeUpAction(GestureAction.OPEN_SYSTEM_SETTINGS)
     setTwoFingerSwipeDownAction(GestureAction.OPEN_NOTIFICATIONS)
 }
 

@@ -172,6 +172,9 @@ fun MainViewModel.calculateUsedSlots(items: List<AppModel>): Int {
                 is WidgetType.Weather -> if (type.isWide) 8 else 4
                 is WidgetType.ToDoList -> if (type.isWide) 8 else 4
                 is WidgetType.Stack -> 4
+                is WidgetType.RSS -> 8
+                is WidgetType.InfoHub -> 8
+                is WidgetType.Custom -> if (type.size == "4x2") 8 else 4
                 else -> 1
             }
         } else 1

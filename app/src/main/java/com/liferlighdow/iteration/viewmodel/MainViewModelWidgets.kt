@@ -26,7 +26,7 @@ fun MainViewModel.loadWidgets() {
 }
 
 fun MainViewModel.addWidget(type: WidgetType, pageIndex: Int = -1) {
-    val label = when (type) {
+    var label = when (type) {
         is WidgetType.Battery -> "Battery"
         is WidgetType.Clock -> "Clock"
         is WidgetType.Calendar -> "Calendar"
@@ -38,6 +38,13 @@ fun MainViewModel.addWidget(type: WidgetType, pageIndex: Int = -1) {
         is WidgetType.RSS -> "RSS Feed"
         is WidgetType.Stack -> if (type.isWide) "Wide Widget Stacker" else "Stack"
         is WidgetType.InfoHub -> "Info Hub"
+        is WidgetType.Custom -> "Custom Widget"
+    }
+
+    if (type is WidgetType.Custom) {
+        _customWidgets.value.find { it.widgetType == type }?.let {
+            label = it.label
+        }
     }
 
     if (pageIndex == -1) {

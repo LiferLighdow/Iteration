@@ -77,7 +77,9 @@ import com.liferlighdow.iteration.data.WeatherProvider
 import com.liferlighdow.iteration.data.WidgetDisplayMode
 import com.liferlighdow.iteration.data.WidgetModel
 import com.liferlighdow.iteration.data.WidgetType
+import com.liferlighdow.iteration.data.CustomComponent
 import com.liferlighdow.iteration.viewmodel.removeAppFromHome
+import androidx.compose.foundation.shape.RoundedCornerShape
 import kotlin.math.abs
 
 fun calculateOverlap(r1: Rect, r2: Rect): Float {
@@ -187,6 +189,7 @@ fun AppGrid(
                     is WidgetType.ToDoList -> if (type.isWide) 4 else 2
                     is WidgetType.RSS -> 4
                     is WidgetType.InfoHub -> 4
+                    is WidgetType.Custom -> if (type.size == "4x2") 4 else 2
                     is WidgetType.Battery, is WidgetType.Clock -> 2
                     null -> 1
                 }
@@ -270,7 +273,7 @@ fun AppGrid(
                                 // 2. 方向鎖定邏輯 (僅在單指時運作)
                                 if (directionLocked == 0) {
                                     if (kotlin.math.abs(totalDragY) > touchSlop || kotlin.math.abs(totalDragX) > touchSlop) {
-                                        if (kotlin.math.abs(totalDragY) > kotlin.math.abs(totalDragX) * 0.7f) {
+                                        if (kotlin.math.abs(totalDragY) > kotlin.math.abs(totalDragX) * 1.2f) {
                                             directionLocked = 1 // 垂直
                                         } else {
                                             directionLocked = 2 // 水平
@@ -279,22 +282,25 @@ fun AppGrid(
                                 }
 
                                 when (directionLocked) {
-                                    1 -> { // 單指垂直：全域搜尋拉動
+                                    1 -> { // 單指垂直：全域搜尋拉動 (採用防誤觸高門檻)
                                         event.changes.forEach { it.consume() }
                                         onBackgroundDragY(totalDragY)
                                         if (!hasTriggered) {
-                                            if (totalDragY > 80f) { // 調降至 80px
+                                            if (totalDragY > 80f) { // 下滑搜尋保持 80px 靈敏度
                                                 onBackgroundSwipeDown(); hasTriggered = true
-                                            } else if (totalDragY < -120f) { // 上滑保持稍微高一點避免誤觸
+                                            } else if (totalDragY < -180f) { // 上滑門檻調高至 180px 以徹底防止誤觸
                                                 onBackgroundSwipeUp(); hasTriggered = true
                                             }
                                         }
                                     }
                                     3 -> { // 多指模式：觸發雙指手勢
-                                        if (!hasTriggered && kotlin.math.abs(totalDragY) > touchSlop * 2) {
-                                            if (totalDragY > 0) onBackgroundTwoFingerSwipeDown()
-                                            else onBackgroundTwoFingerSwipeUp()
-                                            hasTriggered = true
+                                        if (!hasTriggered) {
+                                            // 雙指手勢通常較為刻意，採用較平衡的門檻
+                                            if (totalDragY > 80f) {
+                                                onBackgroundTwoFingerSwipeDown(); hasTriggered = true
+                                            } else if (totalDragY < -120f) {
+                                                onBackgroundTwoFingerSwipeUp(); hasTriggered = true
+                                            }
                                         }
                                         // 多指手勢也需消耗事件，防止 Pager 亂動
                                         event.changes.forEach { it.consume() }
@@ -336,8 +342,9 @@ fun AppGrid(
                         is WidgetType.ToDoList -> if (type.isWide) 4 else 2
                         is WidgetType.RSS -> 4
                         is WidgetType.InfoHub -> 4
+                        is WidgetType.Custom -> if (type.size == "4x2") 4 else 2
                         is WidgetType.Battery, is WidgetType.Clock -> 2
-                        null -> 1
+                        else -> 1
                     }
                     h = when (type) {
                         is WidgetType.RSS -> if (type.isTall) 4 else 2
@@ -600,6 +607,7 @@ private fun WidgetGridItem(
         is WidgetType.ToDoList -> type.isWide
         is WidgetType.RSS -> type.isWide
         is WidgetType.InfoHub -> true
+        is WidgetType.Custom -> type.size == "4x2"
         else -> false
     }
 
@@ -689,6 +697,11 @@ private fun WidgetGridItem(
                     )
                     is WidgetType.InfoHub -> InfoHubWidget(
                         displayMode = widget.displayMode,
+                        modifier = Modifier.fillMaxSize(),
+                        backdrop = backdrop
+                    )
+                    is WidgetType.Custom -> CustomWidget(
+                        widget = widget,
                         modifier = Modifier.fillMaxSize(),
                         backdrop = backdrop
                     )
@@ -852,6 +865,7 @@ private fun WidgetGridItem(
         }
     }
 }
+
 
 @Composable
 private fun AppGridItem(
@@ -1031,3 +1045,5 @@ private fun AppGridItem(
         }
     }
 }
+
+

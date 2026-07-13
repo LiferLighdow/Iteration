@@ -44,7 +44,8 @@ fun SettingsMainScreen(
     onNavigateToManuals: () -> Unit,
     onNavigateToLanguage: () -> Unit,
     onNavigateToAdvanced: () -> Unit,
-    onNavigateToPwaMaker: () -> Unit
+    onNavigateToPwaMaker: () -> Unit,
+    onNavigateToWidgetMaker: () -> Unit
 ) {
     val viewModel: MainViewModel = viewModel()
     val context = LocalContext.current
@@ -59,6 +60,7 @@ fun SettingsMainScreen(
         listOf(
             SettingsMetadata(context.getString(R.string.settings_icon_theme), context.getString(R.string.settings_icon_theme_desc), Icons.Default.Palette, Color(0xFF4285F4), onNavigateToIconTheme),
             SettingsMetadata(context.getString(R.string.pwa_manage_title), context.getString(R.string.pwa_manage_desc), Icons.Default.Public, Color(0xFF009688), onNavigateToPwaMaker),
+            SettingsMetadata(context.getString(R.string.widget_maker_title), context.getString(R.string.widget_maker_desc), Icons.Default.Widgets, Color(0xFF673AB7), onNavigateToWidgetMaker),
             SettingsMetadata(context.getString(R.string.liquid_glass_title), context.getString(R.string.settings_liquid_glass_desc), Icons.Default.BlurOn, Color(0xFF34A853), {
                 if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) {
                     showApiWarningDialog = true
@@ -224,6 +226,14 @@ fun SettingsMainScreen(
                             icon = Icons.Default.Public,
                             iconColor = Color(0xFF009688),
                             onClick = onNavigateToPwaMaker
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        SettingsItem(
+                            headline = stringResource(R.string.widget_maker_title),
+                            supporting = stringResource(R.string.widget_maker_desc),
+                            icon = Icons.Default.Widgets,
+                            iconColor = Color(0xFF673AB7),
+                            onClick = onNavigateToWidgetMaker
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                         SettingsItem(
