@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,9 +38,9 @@ import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.service.IterationAccessibilityService
 import com.liferlighdow.iteration.data.*
 import com.liferlighdow.iteration.utils.ActionMode
-import com.liferlighdow.iteration.ui.widgets.*
 import com.liferlighdow.iteration.utils.IconShape
 import com.liferlighdow.iteration.viewmodel.*
+import com.liferlighdow.iteration.ui.widgets.*
 import rikka.shizuku.Shizuku
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -1209,6 +1210,7 @@ fun WidgetWorkshopScreen(widgetId: String, onBack: () -> Unit) {
                 .padding(innerPadding)
                 .fillMaxSize()
         ) {
+            // 1. Preview Area
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -1229,19 +1231,38 @@ fun WidgetWorkshopScreen(widgetId: String, onBack: () -> Unit) {
                 }
             }
 
+            // 2. Editor Panel
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(320.dp)
+                    .height(350.dp)
                     .background(MaterialTheme.colorScheme.surface)
             ) {
                 if (editingComponent == null) {
-                    PrimaryTabRow(selectedTabIndex = selectedTab) {
+                    // --- 仿圖片中的極簡 TabRow ---
+                    TabRow(
+                        selectedTabIndex = selectedTab,
+                        containerColor = Color.Transparent,
+                        contentColor = MaterialTheme.colorScheme.primary,
+                        divider = {},
+                        indicator = { tabPositions ->
+                            TabRowDefaults.SecondaryIndicator(
+                                Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    ) {
                         tabs.forEachIndexed { index, title ->
                             Tab(
                                 selected = selectedTab == index,
                                 onClick = { selectedTab = index },
-                                text = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                                text = { 
+                                    Text(
+                                        text = title, 
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = if (selectedTab == index) androidx.compose.ui.text.font.FontWeight.Bold else null
+                                    ) 
+                                }
                             )
                         }
                     }
@@ -1256,6 +1277,7 @@ fun WidgetWorkshopScreen(widgetId: String, onBack: () -> Unit) {
                                     viewModel.updateComponentInCustomWidget(widgetId, when(comp) {
                                         is CustomComponent.Text -> comp.copy(isVisible = !comp.isVisible)
                                         is CustomComponent.Shape -> comp.copy(isVisible = !comp.isVisible)
+                                        is CustomComponent.Progress -> comp.copy(isVisible = !comp.isVisible)
                                     })
                                 }
                             },
@@ -1337,28 +1359,50 @@ fun WorkshopItemsTab(
     } else {
         LazyColumn(Modifier.fillMaxSize()) {
             itemsIndexed(components) { index, component ->
-                ListItem(
-                    headlineContent = { Text(component.name) },
-                    leadingContent = {
-                        val icon = when (component) {
-                            is CustomComponent.Text -> Icons.Default.TextFields
-                            is CustomComponent.Shape -> Icons.Default.Category
+                // --- 仿圖片中的列表佈局 ---
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onEdit(component) }
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // 1. Icon
+                    val icon = when (component) {
+                        is CustomComponent.Text -> Icons.Default.TextFields
+                        is CustomComponent.Shape -> Icons.Default.Category
+                        is CustomComponent.Progress -> Icons.Default.DonutLarge
+                    }
+                    Icon(icon, null, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.onSurface)
+                    
+                    Spacer(Modifier.width(16.dp))
+
+                    // 2. Name
+                    Text(
+                        text = component.name, 
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    // 3. Arrows (Middle-Right)
+                    Row {
+                        IconButton(onClick = { onMove(component.id, true) }, enabled = index > 0, modifier = Modifier.size(36.dp)) { 
+                            Icon(Icons.Default.ArrowUpward, null, modifier = Modifier.size(20.dp), tint = if (index > 0) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)) 
                         }
-                        Icon(icon, null)
-                    },
-                    trailingContent = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = { onMove(component.id, true) }, enabled = index > 0) { 
-                                Icon(Icons.Default.ArrowUpward, null) 
-                            }
-                            IconButton(onClick = { onMove(component.id, false) }, enabled = index < components.size - 1) { 
-                                Icon(Icons.Default.ArrowDownward, null) 
-                            }
-                            Checkbox(checked = component.isVisible, onCheckedChange = { onToggleVisible(component.id) })
+                        IconButton(onClick = { onMove(component.id, false) }, enabled = index < components.size - 1, modifier = Modifier.size(36.dp)) { 
+                            Icon(Icons.Default.ArrowDownward, null, modifier = Modifier.size(20.dp), tint = if (index < components.size - 1) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)) 
                         }
-                    },
-                    modifier = Modifier.clickable { onEdit(component) }
-                )
+                    }
+
+                    Spacer(Modifier.width(8.dp))
+
+                    // 4. Checkbox (Far Right)
+                    Checkbox(
+                        checked = component.isVisible, 
+                        onCheckedChange = { onToggleVisible(component.id) },
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             }
         }
     }
@@ -1373,13 +1417,21 @@ fun AddComponentDialog(onDismiss: () -> Unit, onAdd: (String) -> Unit) {
             Column {
                 ListItem(
                     headlineContent = { Text("Text") },
+                    supportingContent = { Text("Support variables like [TIME], [BATT]") },
                     leadingContent = { Icon(Icons.Default.TextFields, null) },
                     modifier = Modifier.clickable { onAdd("TEXT") }
                 )
                 ListItem(
                     headlineContent = { Text("Shape") },
+                    supportingContent = { Text("Simple rectangle or circle background") },
                     leadingContent = { Icon(Icons.Default.Category, null) },
                     modifier = Modifier.clickable { onAdd("SHAPE") }
+                )
+                ListItem(
+                    headlineContent = { Text("Progress Bar") },
+                    supportingContent = { Text("Dynamic data progress indicator") },
+                    leadingContent = { Icon(Icons.Default.DonutLarge, null) },
+                    modifier = Modifier.clickable { onAdd("PROGRESS") }
                 )
             }
         },
@@ -1402,27 +1454,52 @@ fun WorkshopLayerTab(widget: WidgetModel) {
 fun WorkshopTouchTab(widget: WidgetModel) {
     Column(Modifier.padding(16.dp).fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(stringResource(R.string.workshop_tab_touch), style = MaterialTheme.typography.titleMedium)
-        Text("Configure what happens when the widget is tapped.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Configure touch actions within each component's detail editor.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
 @Composable
-fun CoordinateControl(label: String, value: Float, onUpdate: (Float) -> Unit) {
-    Column(modifier = Modifier.width(160.dp)) {
-        Text(label, style = MaterialTheme.typography.labelMedium)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { onUpdate(value - 1f) }) {
-                Icon(Icons.Default.Remove, null, modifier = Modifier.size(20.dp))
+fun CoordinateControl(
+    label: String,
+    value: Float,
+    onUpdate: (Float) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(top = 4.dp)
+        ) {
+            FilledTonalIconButton(
+                onClick = { onUpdate(value - 1f) },
+                modifier = Modifier.size(32.dp),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Icon(Icons.Default.Remove, null, modifier = Modifier.size(16.dp))
             }
+            
             OutlinedTextField(
                 value = value.toInt().toString(),
                 onValueChange = { it.toFloatOrNull()?.let { v -> onUpdate(v) } },
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).height(48.dp).padding(horizontal = 4.dp),
+                textStyle = androidx.compose.ui.text.TextStyle(
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    fontSize = 14.sp
+                ),
                 singleLine = true,
-                textStyle = androidx.compose.ui.text.TextStyle(textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                shape = RoundedCornerShape(8.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                )
             )
-            IconButton(onClick = { onUpdate(value + 1f) }) {
-                Icon(Icons.Default.Add, null, modifier = Modifier.size(20.dp))
+
+            FilledTonalIconButton(
+                onClick = { onUpdate(value + 1f) },
+                modifier = Modifier.size(32.dp),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
             }
         }
     }
@@ -1435,20 +1512,37 @@ fun WorkshopComponentDetailEditor(
     onDelete: () -> Unit
 ) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
+        // --- 大標題區塊 (仿啟動器主設定頁面) ---
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Editing: ${component.name}", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error)
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // 返回按鈕樣式與主設定頁同步
+                    IconButton(onClick = { /* 這裡由外層 handle */ }, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null, modifier = Modifier.size(24.dp))
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = component.name,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = onDelete) {
+                        Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error)
+                    }
                 }
+                HorizontalDivider(modifier = Modifier.padding(top = 8.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             }
         }
         
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("Position", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 CoordinateControl(
                     label = "X Offset",
                     value = component.x,
@@ -1456,8 +1550,10 @@ fun WorkshopComponentDetailEditor(
                         onUpdate(when(component) {
                             is CustomComponent.Text -> component.copy(x = v)
                             is CustomComponent.Shape -> component.copy(x = v)
+                            is CustomComponent.Progress -> component.copy(x = v)
                         })
-                    }
+                    },
+                    modifier = Modifier.weight(1f)
                 )
                 CoordinateControl(
                     label = "Y Offset",
@@ -1466,69 +1562,219 @@ fun WorkshopComponentDetailEditor(
                         onUpdate(when(component) {
                             is CustomComponent.Text -> component.copy(y = v)
                             is CustomComponent.Shape -> component.copy(y = v)
+                            is CustomComponent.Progress -> component.copy(y = v)
                         })
-                    }
+                    },
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
 
         if (component is CustomComponent.Text) {
             item {
-                OutlinedTextField(
-                    value = component.content,
-                    onValueChange = { onUpdate(component.copy(content = it)) },
-                    label = { Text("Content") },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Text("Content", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Column(modifier = Modifier.padding(top = 8.dp)) {
+                    Text("Variables: [TIME], [DATE], [BATT], [GREET]", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+                    Spacer(Modifier.height(4.dp))
+                    OutlinedTextField(
+                        value = component.content,
+                        onValueChange = { onUpdate(component.copy(content = it)) },
+                        label = { Text("Formula") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                }
             }
             item {
-                Text("Font Size: ${component.fontSize}")
-                Slider(
-                    value = component.fontSize.toFloat(),
-                    onValueChange = { onUpdate(component.copy(fontSize = it.toInt())) },
-                    valueRange = 8f..72f
-                )
-            }
-            item {
-                Text("Color")
-                ColorPicker(initialColor = component.color, onColorChanged = { onUpdate(component.copy(color = it)) })
+                Text("Appearance", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Column(modifier = Modifier.padding(top = 8.dp)) {
+                    Text("Font Size: ${component.fontSize}")
+                    Slider(
+                        value = component.fontSize.toFloat(),
+                        onValueChange = { onUpdate(component.copy(fontSize = it.toInt())) },
+                        valueRange = 8f..120f
+                    )
+                    Text("Color")
+                    ColorPicker(initialColor = component.color, onColorChanged = { onUpdate(component.copy(color = it)) })
+                }
             }
         }
 
         if (component is CustomComponent.Shape) {
             item {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = component.width.toInt().toString(),
-                        onValueChange = { 
-                            val v = it.toFloatOrNull() ?: 10f
-                            onUpdate(component.copy(width = v))
-                        },
-                        label = { Text("Width") },
-                        modifier = Modifier.weight(1f)
+                Text("Type", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    CustomShapeType.entries.forEach { type ->
+                        FilterChip(
+                            selected = component.shapeType == type,
+                            onClick = { onUpdate(component.copy(shapeType = type)) },
+                            label = { Text(type.name.lowercase().replaceFirstChar { it.uppercase() }) }
+                        )
+                    }
+                }
+            }
+
+            item {
+                Text("Dimensions", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                    CoordinateControl("Width", component.width, { onUpdate(component.copy(width = it)) }, Modifier.weight(1f))
+                    CoordinateControl("Height", component.height, { onUpdate(component.copy(height = it)) }, Modifier.weight(1f))
+                }
+            }
+
+            if (component.shapeType == CustomShapeType.RECTANGLE) {
+                item {
+                    Text("Corner Radius: ${component.cornerRadius.toInt()}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                    Slider(
+                        value = component.cornerRadius,
+                        onValueChange = { onUpdate(component.copy(cornerRadius = it)) },
+                        valueRange = 0f..200f,
+                        modifier = Modifier.padding(top = 4.dp)
                     )
+                }
+            }
+
+            item {
+                Text("Appearance", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                ColorPicker(initialColor = component.color, onColorChanged = { onUpdate(component.copy(color = it)) })
+            }
+        }
+
+        if (component is CustomComponent.Progress) {
+            item {
+                Text("Data Binding", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Column(modifier = Modifier.padding(top = 8.dp)) {
+                    Text("Formula (e.g. [BATT] or 50)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+                    Spacer(Modifier.height(4.dp))
                     OutlinedTextField(
-                        value = component.height.toInt().toString(),
-                        onValueChange = { 
-                            val v = it.toFloatOrNull() ?: 10f
-                            onUpdate(component.copy(height = v))
-                        },
-                        label = { Text("Height") },
-                        modifier = Modifier.weight(1f)
+                        value = component.valueFormula,
+                        onValueChange = { onUpdate(component.copy(valueFormula = it)) },
+                        label = { Text("Progress Formula") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
                     )
                 }
             }
             item {
-                Text("Corner Radius: ${component.cornerRadius.toInt()}")
-                Slider(
-                    value = component.cornerRadius,
-                    onValueChange = { onUpdate(component.copy(cornerRadius = it)) },
-                    valueRange = 0f..100f
-                )
+                Text("Type", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
+                    Text("Circular Style", modifier = Modifier.weight(1f))
+                    Switch(checked = component.isCircular, onCheckedChange = { onUpdate(component.copy(isCircular = it)) })
+                }
             }
             item {
-                Text("Color")
-                ColorPicker(initialColor = component.color, onColorChanged = { onUpdate(component.copy(color = it)) })
+                Text("Dimensions", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Column(modifier = Modifier.padding(top = 8.dp)) {
+                    Text("Size: ${component.size.toInt()}")
+                    Slider(value = component.size, onValueChange = { onUpdate(component.copy(size = it)) }, valueRange = 10f..400f)
+                    
+                    if (component.isCircular) {
+                        Text("Stroke Width: ${component.strokeWidth.toInt()}")
+                        Slider(value = component.strokeWidth, onValueChange = { onUpdate(component.copy(strokeWidth = it)) }, valueRange = 1f..60f)
+                    }
+                }
+            }
+            item {
+                Text("Appearance", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Column(modifier = Modifier.padding(top = 8.dp)) {
+                    Text("Progress Color")
+                    ColorPicker(initialColor = component.color, onColorChanged = { onUpdate(component.copy(color = it)) })
+                    Spacer(Modifier.height(16.dp))
+                    Text("Track Color")
+                    ColorPicker(initialColor = component.trackColor, onColorChanged = { onUpdate(component.copy(trackColor = it)) })
+                }
+            }
+        }
+
+        item {
+            Text("Logic Binding", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            Column(modifier = Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = component.visibilityFormula ?: "",
+                    onValueChange = { onUpdate(when(component) {
+                        is CustomComponent.Text -> component.copy(visibilityFormula = it.ifBlank { null })
+                        is CustomComponent.Shape -> component.copy(visibilityFormula = it.ifBlank { null })
+                        is CustomComponent.Progress -> component.copy(visibilityFormula = it.ifBlank { null })
+                    }) },
+                    label = { Text("Visibility (e.g. HIDE_LOW_BATT)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                
+                OutlinedTextField(
+                    value = when(component) {
+                        is CustomComponent.Text -> component.colorFormula
+                        is CustomComponent.Shape -> component.colorFormula
+                        is CustomComponent.Progress -> component.colorFormula
+                    } ?: "",
+                    onValueChange = { onUpdate(when(component) {
+                        is CustomComponent.Text -> component.copy(colorFormula = it.ifBlank { null })
+                        is CustomComponent.Shape -> component.copy(colorFormula = it.ifBlank { null })
+                        is CustomComponent.Progress -> component.copy(colorFormula = it.ifBlank { null })
+                    }) },
+                    label = { Text("Color Formula (e.g. BATT_COLOR)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+            }
+        }
+
+        item {
+            Text("Interaction", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            val currentAction = component.clickAction ?: WidgetClickAction()
+            
+            var expanded by remember { mutableStateOf(false) }
+            val options = WidgetActionType.entries.filter { it != WidgetActionType.NONE }
+            
+            Column(modifier = Modifier.padding(top = 8.dp)) {
+                Box {
+                    OutlinedButton(
+                        onClick = { expanded = true }, 
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Action: ${currentAction.type}")
+                        Spacer(Modifier.weight(1f))
+                        Icon(Icons.Default.ArrowDropDown, null)
+                    }
+                    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                        DropdownMenuItem(text = { Text("NONE") }, onClick = {
+                            onUpdate(when(component) {
+                                is CustomComponent.Text -> component.copy(clickAction = null)
+                                is CustomComponent.Shape -> component.copy(clickAction = null)
+                                is CustomComponent.Progress -> component.copy(clickAction = null)
+                            })
+                            expanded = false
+                        })
+                        options.forEach { type ->
+                            DropdownMenuItem(text = { Text(type.name) }, onClick = {
+                                onUpdate(when(component) {
+                                    is CustomComponent.Text -> component.copy(clickAction = WidgetClickAction(type = type))
+                                    is CustomComponent.Shape -> component.copy(clickAction = WidgetClickAction(type = type))
+                                    is CustomComponent.Progress -> component.copy(clickAction = WidgetClickAction(type = type))
+                                })
+                                expanded = false
+                            })
+                        }
+                    }
+                }
+
+                if (currentAction.type == WidgetActionType.OPEN_APP) {
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = currentAction.value ?: "",
+                        onValueChange = { v ->
+                            onUpdate(when(component) {
+                                is CustomComponent.Text -> component.copy(clickAction = currentAction.copy(value = v))
+                                is CustomComponent.Shape -> component.copy(clickAction = currentAction.copy(value = v))
+                                is CustomComponent.Progress -> component.copy(clickAction = currentAction.copy(value = v))
+                            })
+                        },
+                        label = { Text("App Package Name") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                }
             }
         }
     }

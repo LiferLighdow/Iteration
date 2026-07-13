@@ -58,6 +58,7 @@ fun MainViewModel.addComponentToCustomWidget(widgetId: String, type: String) {
             val newComponent = when (type) {
                 "TEXT" -> CustomComponent.Text(name = "Text ${widget.widgetType.components.size + 1}")
                 "SHAPE" -> CustomComponent.Shape(name = "Shape ${widget.widgetType.components.size + 1}")
+                "PROGRESS" -> CustomComponent.Progress(name = "Progress ${widget.widgetType.components.size + 1}")
                 else -> null
             }
             if (newComponent != null) {
@@ -68,6 +69,7 @@ fun MainViewModel.addComponentToCustomWidget(widgetId: String, type: String) {
     _customWidgets.value = newList
     saveCustomWidgets(newList)
 }
+
 
 fun MainViewModel.updateComponentInCustomWidget(widgetId: String, updated: CustomComponent) {
     val newList = _customWidgets.value.map { widget ->

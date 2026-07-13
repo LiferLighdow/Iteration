@@ -28,12 +28,30 @@ sealed class WidgetType {
 }
 
 @Serializable
+enum class WidgetActionType {
+    NONE, OPEN_APP, OPEN_SEARCH, OPEN_DRAWER, LAUNCHER_SETTINGS
+}
+
+@Serializable
+data class WidgetClickAction(
+    val type: WidgetActionType = WidgetActionType.NONE,
+    val value: String? = null // package name, or other parameters
+)
+
+@Serializable
+enum class CustomShapeType {
+    RECTANGLE, CIRCLE, TRIANGLE
+}
+
+@Serializable
 sealed class CustomComponent {
     abstract val id: String
     abstract val name: String
     abstract val x: Float
     abstract val y: Float
     abstract val isVisible: Boolean
+    abstract val visibilityFormula: String?
+    abstract val clickAction: WidgetClickAction?
 
     @Serializable @SerialName("Text")
     data class Text(
@@ -42,9 +60,12 @@ sealed class CustomComponent {
         override val x: Float = 0f,
         override val y: Float = 0f,
         override val isVisible: Boolean = true,
+        override val visibilityFormula: String? = null,
+        override val clickAction: WidgetClickAction? = null,
         val content: String = "Hello World",
         val fontSize: Int = 16,
-        val color: Int = 0xFFFFFFFF.toInt()
+        val color: Int = 0xFFFFFFFF.toInt(),
+        val colorFormula: String? = null
     ) : CustomComponent()
 
     @Serializable @SerialName("Shape")
@@ -54,12 +75,37 @@ sealed class CustomComponent {
         override val x: Float = 0f,
         override val y: Float = 0f,
         override val isVisible: Boolean = true,
+        override val visibilityFormula: String? = null,
+        override val clickAction: WidgetClickAction? = null,
+        val shapeType: CustomShapeType = CustomShapeType.RECTANGLE,
         val width: Float = 100f,
         val height: Float = 100f,
         val color: Int = 0x88FFFFFF.toInt(),
+        val colorFormula: String? = null,
         val cornerRadius: Float = 12f
     ) : CustomComponent()
+
+
+    @Serializable @SerialName("Progress")
+    data class Progress(
+        override val id: String = UUID.randomUUID().toString(),
+        override val name: String = "Progress",
+        override val x: Float = 0f,
+        override val y: Float = 0f,
+        override val isVisible: Boolean = true,
+        override val visibilityFormula: String? = null,
+        override val clickAction: WidgetClickAction? = null,
+        val valueFormula: String = "[BATT]",
+        val size: Float = 100f,
+        val strokeWidth: Float = 8f,
+        val color: Int = 0xFF4CAF50.toInt(),
+        val colorFormula: String? = null,
+        val trackColor: Int = 0x33FFFFFF.toInt(),
+        val isCircular: Boolean = true
+    ) : CustomComponent()
 }
+
+
 
 
 @Serializable
