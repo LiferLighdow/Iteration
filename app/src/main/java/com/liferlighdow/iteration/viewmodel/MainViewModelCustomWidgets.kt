@@ -59,6 +59,7 @@ fun MainViewModel.addComponentToCustomWidget(widgetId: String, type: String) {
                 "TEXT" -> CustomComponent.Text(name = "Text ${widget.widgetType.components.size + 1}")
                 "SHAPE" -> CustomComponent.Shape(name = "Shape ${widget.widgetType.components.size + 1}")
                 "PROGRESS" -> CustomComponent.Progress(name = "Progress ${widget.widgetType.components.size + 1}")
+                "IMAGE" -> CustomComponent.Image(name = "Image ${widget.widgetType.components.size + 1}")
                 else -> null
             }
             if (newComponent != null) {
@@ -69,6 +70,22 @@ fun MainViewModel.addComponentToCustomWidget(widgetId: String, type: String) {
     _customWidgets.value = newList
     saveCustomWidgets(newList)
 }
+
+fun MainViewModel.updateCustomWidgetGlobal(widgetId: String, scale: Float? = null, x: Float? = null, y: Float? = null) {
+    val newList = _customWidgets.value.map { widget ->
+        if (widget.id == widgetId && widget.widgetType is WidgetType.Custom) {
+            val newType = widget.widgetType.copy(
+                globalScale = scale ?: widget.widgetType.globalScale,
+                globalX = x ?: widget.widgetType.globalX,
+                globalY = y ?: widget.widgetType.globalY
+            )
+            widget.copy(widgetType = newType)
+        } else widget
+    }
+    _customWidgets.value = newList
+    saveCustomWidgets(newList)
+}
+
 
 
 fun MainViewModel.updateComponentInCustomWidget(widgetId: String, updated: CustomComponent) {

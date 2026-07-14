@@ -899,7 +899,7 @@ fun MainViewModel.repaginate(allApps: List<AppModel>) {
     if (allApps.isEmpty()) {
         _pages.value = listOf(emptyList())
     } else {
-        val visibleApps = allApps.filter { !it.isHidden && !it.isFrozen }
+        val visibleApps = allApps.filter { !it.isHidden && !it.isFrozen && !it.isPrivate }
         _pages.value = visibleApps.chunked(pageSize)
     }
 }

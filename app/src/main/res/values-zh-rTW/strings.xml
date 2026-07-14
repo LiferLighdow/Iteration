@@ -428,6 +428,8 @@
     <string name="desc_rss">隨時掌握您最喜愛的 RSS 訂閱動態</string>
     <string name="widget_info_hub">資訊中心</string>
     <string name="desc_info_hub">超級蝦趴的手機狀態資訊大合集</string>
+    <string name="widget_info_hub2">資訊中心 2</string>
+    <string name="desc_info_hub2">進階系統儀表板，包含網路與顯示資訊。</string>
     <string name="edit_rss">編輯 RSS 網址</string>
     <string name="rss_url_hint">RSS 訂閱源網址 (例如 https://example.com/rss)</string>
     <string name="network_disabled">網路已禁用</string>
@@ -536,6 +538,10 @@
     <string name="icon_size_current">目前尺寸：%1$d px</string>
     <string name="icon_size_recommend">裝置建議值</string>
     <string name="icon_size_recommend_desc">將解析度與螢幕物理像素對齊，以獲得最佳清晰度與效能。</string>
+
+    <string name="icon_scale_title">Icon 尺寸微調</string>
+    <string name="icon_scale_desc">微調桌面圖標的顯示大小 (90% 到 110%)。</string>
+    <string name="icon_scale_current">當前比例：%1$d%%</string>
 
     <string name="settings_update_check_interval">檢查更新頻率</string>
     <string name="settings_update_check_interval_desc">設定自動檢查更新的時間間隔（0 到 36 小時，0 為不檢查）。</string>

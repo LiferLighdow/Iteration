@@ -79,6 +79,7 @@ fun FolderOverlay(
         var tempName by remember(currentFolder.label) { mutableStateOf(currentFolder.label) }
         var showMoreMenu by remember { mutableStateOf(false) }
         var showAppPicker by remember { mutableStateOf(false) }
+        val iconScaleFactor by viewModel.iconScale.collectAsState()
 
         // 使用自定義全螢幕 Overlay 取代 Dialog，以實現 iOS 感的縮放與模糊
         Box(
@@ -232,7 +233,7 @@ fun FolderOverlay(
                                                 AppItem(
                                                     app = app,
                                                     onAppClick = null, // 設為 null，避免內部 clickable 攔截手勢
-                                                    iconSize = 64.dp,
+                                                    iconSize = 64.dp * iconScaleFactor,
                                                     isLiquidGlass = isLiquidGlassEnabled && isLiquidGlassHomeFolderEnabled,
                                                     backdrop = backdrop,
                                                     iconShape = iconShape,

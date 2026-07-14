@@ -34,6 +34,10 @@ import android.content.Context
 import android.content.Intent
 import android.app.Activity
 import android.widget.Toast
+import coil.compose.AsyncImage
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
 
 val TriangleShape = GenericShape { size, _ ->
     moveTo(size.width / 2f, 0f)
@@ -47,7 +51,9 @@ fun CustomWidget(
     widget: WidgetModel,
     modifier: Modifier = Modifier,
     backdrop: Backdrop? = null,
-    isMinusOnePage: Boolean = false
+    isMinusOnePage: Boolean = false,
+    onLongClick: (() -> Unit)? = null, // 新增：傳遞給子組件
+    workshopComponentModifier: ((CustomComponent) -> Modifier)? = null
 ) {
     val type = widget.type as? WidgetType.Custom ?: return
     val viewModel: MainViewModel = viewModel()
@@ -77,9 +83,12 @@ fun CustomWidget(
         WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.surfaceVariant
     }
 
+    val aspectRatio = if (type.size == "4x2") 2f else 1f
+
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .aspectRatio(aspectRatio)
             .then(if (useLiquid) Modifier.liquidGlass(
                 enabled = true,
                 backdrop = backdrop,
@@ -92,7 +101,17 @@ fun CustomWidget(
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = if (useLiquid) Color.Transparent else containerColor)
     ) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    scaleX = type.globalScale
+                    scaleY = type.globalScale
+                    translationX = type.globalX.dp.toPx()
+                    translationY = type.globalY.dp.toPx()
+                },
+            contentAlignment = Alignment.Center
+        ) {
             // 使用 key(tick) 強制觸入定時重新渲染
             key(tick) {
                 type.components.forEach { comp ->
@@ -101,7 +120,11 @@ fun CustomWidget(
                     }
                     
                     if (isVisible) {
-                        CustomComponentRenderer(comp) { action ->
+                        CustomComponentRenderer(
+                            component = comp,
+                            modifier = workshopComponentModifier?.invoke(comp) ?: Modifier,
+                            onLongClick = onLongClick
+                        ) { action ->
                             handleWidgetClick(action, context)
                         }
                     }
@@ -140,18 +163,25 @@ fun handleWidgetClick(action: WidgetClickAction?, context: Context) {
 }
 
 @Composable
-fun CustomComponentRenderer(component: CustomComponent, onClick: (WidgetClickAction?) -> Unit) {
+fun CustomComponentRenderer(
+    component: CustomComponent,
+    modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null, // 新增：傳遞長按事件給父層
+    onClick: (WidgetClickAction?) -> Unit
+) {
     val context = LocalContext.current
     val color = remember(component, context) {
         val baseColor = when (component) {
             is CustomComponent.Text -> component.color
             is CustomComponent.Shape -> component.color
             is CustomComponent.Progress -> component.color
+            is CustomComponent.Image -> 0
         }
         val formula = when (component) {
             is CustomComponent.Text -> component.colorFormula
             is CustomComponent.Shape -> component.colorFormula
             is CustomComponent.Progress -> component.colorFormula
+            is CustomComponent.Image -> null
         }
         WidgetParser.parseColor(formula, baseColor, context)
     }
@@ -159,10 +189,21 @@ fun CustomComponentRenderer(component: CustomComponent, onClick: (WidgetClickAct
     Box(
         modifier = Modifier
             .offset(x = component.x.dp, y = component.y.dp)
-            .clickable(
-                enabled = component.clickAction != null && component.clickAction?.type != WidgetActionType.NONE,
-                onClick = { onClick(component.clickAction) }
-            )
+            .then(modifier)
+            .pointerInput(component.id, component.clickAction) {
+                detectTapGestures(
+                    onTap = { 
+                        if (component.clickAction != null && component.clickAction?.type != WidgetActionType.NONE) {
+                            onClick(component.clickAction)
+                        }
+                    },
+                    onLongPress = { 
+                        // 如果有傳入長按回調，則執行（通常是彈出 Widget 菜單）
+                        onLongClick?.invoke() 
+                    }
+                )
+            },
+        contentAlignment = Alignment.Center
     ) {
         when (component) {
             is CustomComponent.Text -> {
@@ -209,10 +250,17 @@ fun CustomComponentRenderer(component: CustomComponent, onClick: (WidgetClickAct
                     )
                 }
             }
+            is CustomComponent.Image -> {
+                AsyncImage(
+                    model = component.uri,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(component.width.dp, component.height.dp)
+                        .clip(RoundedCornerShape(component.cornerRadius.dp))
+                        .graphicsLayer { alpha = component.opacity },
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                )
+            }
         }
     }
 }
-
-
-
-

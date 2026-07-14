@@ -289,7 +289,7 @@ fun AppPickerDialog(
                 )
 
                 val filtered = remember(query, allApps) {
-                    allApps.filter { it.label.contains(query, ignoreCase = true) }
+                    allApps.filter { !it.isFrozen && !it.isPrivate && it.label.contains(query, ignoreCase = true) }
                         .sortedBy { it.label.lowercase() }
                 }
 
@@ -401,7 +401,7 @@ fun MultiAppPickerDialog(
                 )
 
                 val filtered = remember(query, allApps) {
-                    allApps.filter { it.label.contains(query, ignoreCase = true) }
+                    allApps.filter { !it.isFrozen && !it.isPrivate && it.label.contains(query, ignoreCase = true) }
                         .sortedBy { it.label.lowercase() }
                 }
 

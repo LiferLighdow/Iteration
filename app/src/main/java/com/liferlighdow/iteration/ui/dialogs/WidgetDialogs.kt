@@ -251,7 +251,8 @@ fun WidgetStackPickerDialog(
                             Triple(WidgetType.Note(text = "", isWide = true), null, Icons.Default.Description),
                             Triple(WidgetType.ToDoList(tasks = emptyList(), isWide = true), R.string.widget_todo, Icons.Default.PlaylistAddCheck),
                             Triple(WidgetType.Weather(true), null, Icons.Default.WbSunny),
-                            Triple(WidgetType.InfoHub, R.string.widget_info_hub, Icons.Default.Info)
+                            Triple(WidgetType.InfoHub, R.string.widget_info_hub, Icons.Default.Info),
+                            Triple(WidgetType.InfoHub2, R.string.widget_info_hub2, Icons.Default.Dashboard)
                         )
                     } else available
 
@@ -834,8 +835,10 @@ fun WidgetPickerDialog(
     
     val analogClockLabel = stringResource(R.string.widget_clock_analog)
     val digitalClockLabel = stringResource(R.string.widget_clock_digital)
+    val infoHubV1Label = stringResource(R.string.widget_info_hub)
+    val infoHubV2Label = stringResource(R.string.widget_info_hub2)
 
-    val templates = remember(analogClockLabel, digitalClockLabel) {
+    val templates = remember(analogClockLabel, digitalClockLabel, infoHubV1Label, infoHubV2Label) {
         listOf(
             WidgetTemplate(
                 nameRes = R.string.widget_battery,
@@ -927,7 +930,8 @@ fun WidgetPickerDialog(
                 descRes = R.string.desc_info_hub,
                 icon = Icons.Default.Info,
                 sizes = listOf(
-                    "4x2" to WidgetType.InfoHub
+                    infoHubV1Label to WidgetType.InfoHub,
+                    infoHubV2Label to WidgetType.InfoHub2
                 )
             )
         )
@@ -1123,6 +1127,8 @@ fun WidgetPickerDialog(
                                         val desc = when (type) {
                                             is WidgetType.Calendar -> if (type.isWide) stringResource(R.string.desc_calendar_wide) else stringResource(R.string.desc_calendar)
                                             is WidgetType.Stack -> if (type.isWide) stringResource(R.string.desc_stack_wide) else stringResource(R.string.desc_stack)
+                                            is WidgetType.InfoHub -> stringResource(R.string.desc_info_hub)
+                                            is WidgetType.InfoHub2 -> stringResource(R.string.desc_info_hub2)
                                             else -> stringResource(selectedTemplate!!.descRes)
                                         }
                                         Text(
@@ -1142,7 +1148,7 @@ fun WidgetPickerDialog(
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Icon(
-                                                imageVector = if (sizeLabel == "4x2") Icons.Default.Rectangle else Icons.Default.CropSquare,
+                                                imageVector = if (sizeLabel == "4x2" || sizeLabel == infoHubV1Label || sizeLabel == infoHubV2Label) Icons.Default.Rectangle else Icons.Default.CropSquare,
                                                 contentDescription = null,
                                                 tint = MaterialTheme.colorScheme.primary,
                                                 modifier = Modifier.size(26.dp)

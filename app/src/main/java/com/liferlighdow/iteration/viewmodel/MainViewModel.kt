@@ -169,6 +169,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     internal val _iconSizePx = MutableStateFlow(prefs.getInt("icon_size_px", -1)) // -1 means use default based on density
     val iconSizePx = _iconSizePx.asStateFlow()
 
+    internal val _iconScale = MutableStateFlow(prefs.getFloat("icon_scale", 1.0f))
+    val iconScale = _iconScale.asStateFlow()
+
     internal val _showMinusOnePage = MutableStateFlow(prefs.getBoolean("show_minus_one", true))
     val showMinusOnePage = _showMinusOnePage.asStateFlow()
 
@@ -700,6 +703,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _iconCacheSize.value = newSize
                 iconCache.resize(newSize)
             }
+            "icon_scale" -> {
+                _iconScale.value = sharedPreferences.getFloat(key, 1.0f)
+            }
         }
     }
 
@@ -790,6 +796,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setPassword(password: String?) {
         prefs.edit().putString("password", password).apply()
+    }
+
+    fun setIconScale(scale: Float) {
+        prefs.edit().putFloat("icon_scale", scale).apply()
+        _iconScale.value = scale
     }
 
     fun startDownload(url: String, version: String) {

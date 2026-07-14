@@ -110,6 +110,7 @@ fun GlobalSearchOverlay(
     val calendarEvents by viewModel.calendarEvents.collectAsState()
     val files by viewModel.files.collectAsState()
     val exchangeRates by viewModel.exchangeRates.collectAsState()
+    val iconScaleFactor by viewModel.iconScale.collectAsState()
 
     var showFrozenManager by remember { mutableStateOf(false) }
     var showPrivateManager by remember { mutableStateOf(false) }
@@ -764,7 +765,7 @@ fun GlobalSearchOverlay(
                                                 AppItem(
                                                     app = app,
                                                     modifier = Modifier.weight(1f),
-                                                    iconSize = 56.dp,
+                                                    iconSize = 56.dp * iconScaleFactor,
                                                     iconShape = iconShape,
                                                     getIcon = { pkg -> viewModel.getIcon(pkg) },
                                                     onAppClick = { onAppClick(app); onDismiss() }
@@ -792,7 +793,7 @@ fun GlobalSearchOverlay(
                                             AppItem(
                                                 app = app,
                                                 modifier = Modifier.weight(1f),
-                                                iconSize = 56.dp,
+                                                iconSize = 56.dp * iconScaleFactor,
                                                 iconShape = iconShape,
                                                 getIcon = { pkg -> viewModel.getIcon(pkg) },
                                                 onAppClick = { onAppClick(app); onDismiss() }

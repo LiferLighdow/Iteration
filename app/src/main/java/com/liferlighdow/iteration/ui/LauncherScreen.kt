@@ -117,6 +117,7 @@ fun LauncherScreen(
     val showAppLibrary by viewModel.showAppLibrary.collectAsState()
     val isApplyingWallpaper by viewModel.isApplyingWallpaper.collectAsState()
     val isDesktopLocked by viewModel.isDesktopLocked.collectAsState()
+    val iconScaleFactor by viewModel.iconScale.collectAsState()
 
     var showDesktopMenu by remember { mutableStateOf(false) }
     var showGlobalSearch by remember { mutableStateOf(false) }
@@ -129,7 +130,29 @@ fun LauncherScreen(
 
     val mContext = LocalContext.current
     val actionMode by viewModel.actionMode.collectAsState()
-    
+    val scope = rememberCoroutineScope()
+
+    // --- iOS 風格進入動畫狀態 ---
+    var isEntering by remember { mutableStateOf(false) }
+    val enterScale by animateFloatAsState(
+        targetValue = if (isEntering) 1f else 1.1f, // 從略大縮小回原狀，模擬從 App 抽離感
+        animationSpec = spring(
+            dampingRatio = 0.8f, // 適度回彈
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "enterScale"
+    )
+    val enterAlpha by animateFloatAsState(
+        targetValue = if (isEntering) 1f else 0f,
+        animationSpec = tween(durationMillis = 350),
+        label = "enterAlpha"
+    )
+    val enterBlur by animateDpAsState(
+        targetValue = if (isEntering) 0.dp else 15.dp,
+        animationSpec = tween(durationMillis = 300),
+        label = "enterBlur"
+    )
+
     fun performGestureAction(action: GestureAction, pkg: String) {
         com.liferlighdow.iteration.utils.performGestureAction(
             action = action,
@@ -147,6 +170,12 @@ fun LauncherScreen(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 viewModel.loadApps()
+                // 觸發進入動畫
+                isEntering = false
+                scope.launch {
+                    delay(16) // 確保在下一幀觸發，產生明顯的動畫起始點
+                    isEntering = true
+                }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -230,7 +259,6 @@ fun LauncherScreen(
         initialPage = if (showMinusOnePage) 1 else 0,
         pageCount = { pageCount }
     )
-    val scope = rememberCoroutineScope()
     
     // 控制 Search Pill 與分頁點切換的邏輯
     var isUserInteracting by remember { mutableStateOf(false) }
@@ -298,7 +326,8 @@ fun LauncherScreen(
         val rows = if (isBalanced) 6 else if (userRows > 0) userRows else (if (maxHeight / maxWidth < 2.0f) 5 else 6)
 
         // 畫質調整不會影響這個顯示尺寸
-        val iconSize = if (isBalanced) 60.dp else 62.dp
+        val baseIconSize = if (isBalanced) 60.dp else 62.dp
+        val iconSize = baseIconSize * iconScaleFactor
         val labelFontSize = if (isBalanced) 11.sp else 12.sp
         val iconSizePx = with(density) { iconSize.toPx() }
         val columns = 4
@@ -328,10 +357,12 @@ fun LauncherScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
-                    scaleX = launcherScale
-                    scaleY = launcherScale
+                    val combinedScale = launcherScale * enterScale
+                    scaleX = combinedScale
+                    scaleY = combinedScale
+                    alpha = enterAlpha
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        val blurPx = with(density) { launcherBlur.toPx() }
+                        val blurPx = with(density) { (launcherBlur + enterBlur).toPx() }
                         renderEffect = if (blurPx > 0f) BlurEffect(blurPx, blurPx) else null
                     }
                 }
@@ -627,7 +658,7 @@ fun LauncherScreen(
                                 refractionAmount = refractionAmount,
                                 chromaticAberration = chromaticAberration,
                                 horizontalPadding = horizontalPadding,
-                                iconSize = if (isBalanced) 70.dp else 72.dp,
+                                iconSize = (if (isBalanced) 70.dp else 72.dp) * iconScaleFactor,
                                 labelFontSize = labelFontSize,
                                 onAppClick = { app ->
                                     if (app.isFolder) {

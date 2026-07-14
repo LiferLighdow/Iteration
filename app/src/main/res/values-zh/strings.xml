@@ -486,6 +486,9 @@
     <string name="icon_size_current">目前尺寸：%1$d px</string>
     <string name="icon_size_recommend">裝置建議值</string>
     <string name="icon_size_recommend_desc">將解析度與螢幕物理像素對齊，以獲得最佳清晰度與效能。</string>
+    <string name="icon_scale_title">Icon 尺寸微調</string>
+    <string name="icon_scale_desc">微調桌面圖標的顯示大小 (90% 到 110%)。</string>
+    <string name="icon_scale_current">當前比例：%1$d%%</string>
     <string name="settings_update_check_interval">檢查更新頻率</string>
     <string name="settings_update_check_interval_desc">設定自動檢查更新的時間間隔（0 到 36 小時，0 為不檢查）。</string>
     <string name="settings_update_check_hours">%1$d 小時</string>

@@ -521,6 +521,10 @@
     <string name="icon_size_recommend">设备建议值</string>
     <string name="icon_size_recommend_desc">将分辨率与屏幕物理像素对齐，以獲得最佳清晰度与性能。</string>
 
+    <string name="icon_scale_title">Icon 尺寸微调</string>
+    <string name="icon_scale_desc">微调桌面图标的显示大小 (90% 到 110%)。</string>
+    <string name="icon_scale_current">当前比例：%1$d%%</string>
+
     <string name="settings_offline_translation">离线翻译 (ML Kit)</string>
     <string name="settings_offline_translation_desc">使用设备本地模型进行翻译。需要下载语言数据 (约 30MB)。</string>
     <string name="settings_translate">翻译设置</string>

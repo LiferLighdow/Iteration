@@ -189,6 +189,7 @@ fun AppGrid(
                     is WidgetType.ToDoList -> if (type.isWide) 4 else 2
                     is WidgetType.RSS -> 4
                     is WidgetType.InfoHub -> 4
+                    is WidgetType.InfoHub2 -> 4
                     is WidgetType.Custom -> if (type.size == "4x2") 4 else 2
                     is WidgetType.Battery, is WidgetType.Clock -> 2
                     null -> 1
@@ -342,6 +343,7 @@ fun AppGrid(
                         is WidgetType.ToDoList -> if (type.isWide) 4 else 2
                         is WidgetType.RSS -> 4
                         is WidgetType.InfoHub -> 4
+                        is WidgetType.InfoHub2 -> 4
                         is WidgetType.Custom -> if (type.size == "4x2") 4 else 2
                         is WidgetType.Battery, is WidgetType.Clock -> 2
                         else -> 1
@@ -463,6 +465,7 @@ fun AppGrid(
                             onUpdateRssToEdit = { rssToEdit = it },
                             onUpdatePhotoToAdjust = { photoToAdjust = it },
                             onUpdatePhotoToPick = { photoToPick = it },
+                            onShowContextMenu = { showContextMenu = true },
                             photoPickerLauncher = photoPickerLauncher
                         )
                     } else {
@@ -595,6 +598,7 @@ private fun WidgetGridItem(
     onUpdateRssToEdit: (WidgetModel) -> Unit,
     onUpdatePhotoToAdjust: (WidgetModel) -> Unit,
     onUpdatePhotoToPick: (WidgetModel) -> Unit,
+    onShowContextMenu: () -> Unit,
     photoPickerLauncher: androidx.activity.result.ActivityResultLauncher<String>
 ) {
     val isWide = when (val type = app.widget?.type) {
@@ -607,6 +611,7 @@ private fun WidgetGridItem(
         is WidgetType.ToDoList -> type.isWide
         is WidgetType.RSS -> type.isWide
         is WidgetType.InfoHub -> true
+        is WidgetType.InfoHub2 -> true
         is WidgetType.Custom -> type.size == "4x2"
         else -> false
     }
@@ -700,10 +705,16 @@ private fun WidgetGridItem(
                         modifier = Modifier.fillMaxSize(),
                         backdrop = backdrop
                     )
+                    is WidgetType.InfoHub2 -> InfoHub2Widget(
+                        displayMode = widget.displayMode,
+                        modifier = Modifier.fillMaxSize(),
+                        backdrop = backdrop
+                    )
                     is WidgetType.Custom -> CustomWidget(
                         widget = widget,
                         modifier = Modifier.fillMaxSize(),
-                        backdrop = backdrop
+                        backdrop = backdrop,
+                        onLongClick = onShowContextMenu
                     )
                 }
             }

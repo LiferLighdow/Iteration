@@ -22,7 +22,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,6 +43,10 @@ import com.liferlighdow.iteration.ui.widgets.*
 import rikka.shizuku.Shizuku
 import java.util.Locale
 import kotlin.math.roundToInt
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -670,6 +673,53 @@ fun AdvancedSettingsScreen(onBack: () -> Unit) {
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp))
 
+                    // --- 新增：Icon 尺寸微調 (95% - 105%) ---
+                    val iconScale by viewModel.iconScale.collectAsState()
+                    Text(
+                        stringResource(R.string.icon_scale_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        stringResource(R.string.icon_scale_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        stringResource(R.string.icon_scale_current, (iconScale * 100).roundToInt()),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                    ) {
+                        IconButton(onClick = {
+                            viewModel.setIconScale((iconScale - 0.002f).coerceAtLeast(0.9f))
+                        }) {
+                            Icon(Icons.Default.Remove, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        }
+
+                        Slider(
+                            value = iconScale,
+                            onValueChange = { viewModel.setIconScale(it) },
+                            valueRange = 0.9f..1.1f,
+                            steps = 99, // 100等分
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        IconButton(onClick = {
+                            viewModel.setIconScale((iconScale + 0.002f).coerceAtMost(1.1f))
+                        }) {
+                            Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp))
+
                     Text(
                         stringResource(R.string.icon_cache_size_title),
                         style = MaterialTheme.typography.titleMedium,
@@ -1163,6 +1213,17 @@ fun WidgetWorkshopScreen(widgetId: String, onBack: () -> Unit) {
     var showAddComponentDialog by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
 
+    // 用於圖片選取的 Launcher
+    val imagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        uri?.let {
+            if (editingComponent is CustomComponent.Image) {
+                val updated = (editingComponent as CustomComponent.Image).copy(uri = it.toString())
+                viewModel.updateComponentInCustomWidget(widgetId, updated)
+                editingComponent = updated
+            }
+        }
+    }
+
     val tabs = listOf(
         stringResource(R.string.workshop_tab_items),
         stringResource(R.string.workshop_tab_layer),
@@ -1211,6 +1272,7 @@ fun WidgetWorkshopScreen(widgetId: String, onBack: () -> Unit) {
                 .fillMaxSize()
         ) {
             // 1. Preview Area
+            val density = LocalDensity.current.density
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -1227,7 +1289,25 @@ fun WidgetWorkshopScreen(widgetId: String, onBack: () -> Unit) {
                         .fillMaxWidth(0.9f)
                         .aspectRatio(aspectRatio)
                 ) {
-                    CustomWidget(widget = widget)
+                    CustomWidget(
+                        widget = widget,
+                        workshopComponentModifier = { comp ->
+                            // 拖動邏輯
+                            Modifier.pointerInput(comp.id) {
+                                detectDragGestures { change, dragAmount ->
+                                    change.consume()
+                                    val updated = when(comp) {
+                                        is CustomComponent.Text -> comp.copy(x = comp.x + dragAmount.x / density, y = comp.y + dragAmount.y / density)
+                                        is CustomComponent.Shape -> comp.copy(x = comp.x + dragAmount.x / density, y = comp.y + dragAmount.y / density)
+                                        is CustomComponent.Progress -> comp.copy(x = comp.x + dragAmount.x / density, y = comp.y + dragAmount.y / density)
+                                        is CustomComponent.Image -> comp.copy(x = comp.x + dragAmount.x / density, y = comp.y + dragAmount.y / density)
+                                    }
+                                    viewModel.updateComponentInCustomWidget(widgetId, updated)
+                                    if (editingComponent?.id == comp.id) editingComponent = updated
+                                }
+                            }
+                        }
+                    )
                 }
             }
 
@@ -1239,7 +1319,6 @@ fun WidgetWorkshopScreen(widgetId: String, onBack: () -> Unit) {
                     .background(MaterialTheme.colorScheme.surface)
             ) {
                 if (editingComponent == null) {
-                    // --- 仿圖片中的極簡 TabRow ---
                     TabRow(
                         selectedTabIndex = selectedTab,
                         containerColor = Color.Transparent,
@@ -1278,6 +1357,7 @@ fun WidgetWorkshopScreen(widgetId: String, onBack: () -> Unit) {
                                         is CustomComponent.Text -> comp.copy(isVisible = !comp.isVisible)
                                         is CustomComponent.Shape -> comp.copy(isVisible = !comp.isVisible)
                                         is CustomComponent.Progress -> comp.copy(isVisible = !comp.isVisible)
+                                        is CustomComponent.Image -> comp.copy(isVisible = !comp.isVisible)
                                     })
                                 }
                             },
@@ -1296,7 +1376,8 @@ fun WidgetWorkshopScreen(widgetId: String, onBack: () -> Unit) {
                         onDelete = {
                             viewModel.removeComponentFromCustomWidget(widgetId, editingComponent!!.id)
                             editingComponent = null
-                        }
+                        },
+                        onPickImage = { imagePickerLauncher.launch("image/*") }
                     )
                 }
             }
@@ -1359,7 +1440,6 @@ fun WorkshopItemsTab(
     } else {
         LazyColumn(Modifier.fillMaxSize()) {
             itemsIndexed(components) { index, component ->
-                // --- 仿圖片中的列表佈局 ---
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1367,24 +1447,22 @@ fun WorkshopItemsTab(
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // 1. Icon
                     val icon = when (component) {
                         is CustomComponent.Text -> Icons.Default.TextFields
                         is CustomComponent.Shape -> Icons.Default.Category
                         is CustomComponent.Progress -> Icons.Default.DonutLarge
+                        is CustomComponent.Image -> Icons.Default.Image
                     }
                     Icon(icon, null, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.onSurface)
                     
                     Spacer(Modifier.width(16.dp))
 
-                    // 2. Name
                     Text(
                         text = component.name, 
                         style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier.weight(1f)
                     )
 
-                    // 3. Arrows (Middle-Right)
                     Row {
                         IconButton(onClick = { onMove(component.id, true) }, enabled = index > 0, modifier = Modifier.size(36.dp)) { 
                             Icon(Icons.Default.ArrowUpward, null, modifier = Modifier.size(20.dp), tint = if (index > 0) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)) 
@@ -1396,7 +1474,6 @@ fun WorkshopItemsTab(
 
                     Spacer(Modifier.width(8.dp))
 
-                    // 4. Checkbox (Far Right)
                     Checkbox(
                         checked = component.isVisible, 
                         onCheckedChange = { onToggleVisible(component.id) },
@@ -1433,6 +1510,12 @@ fun AddComponentDialog(onDismiss: () -> Unit, onAdd: (String) -> Unit) {
                     leadingContent = { Icon(Icons.Default.DonutLarge, null) },
                     modifier = Modifier.clickable { onAdd("PROGRESS") }
                 )
+                ListItem(
+                    headlineContent = { Text("Image") },
+                    supportingContent = { Text("Custom picture from gallery") },
+                    leadingContent = { Icon(Icons.Default.Image, null) },
+                    modifier = Modifier.clickable { onAdd("IMAGE") }
+                )
             }
         },
         confirmButton = {},
@@ -1444,9 +1527,29 @@ fun AddComponentDialog(onDismiss: () -> Unit, onAdd: (String) -> Unit) {
 
 @Composable
 fun WorkshopLayerTab(widget: WidgetModel) {
-    Column(Modifier.padding(16.dp).fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text(stringResource(R.string.workshop_tab_layer), style = MaterialTheme.typography.titleMedium)
-        Text("Overall widget scaling and alignment options will be here.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    val viewModel: MainViewModel = viewModel()
+    val custom = widget.type as? WidgetType.Custom ?: return
+    
+    LazyColumn(Modifier.padding(16.dp).fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        item {
+            Text(stringResource(R.string.workshop_tab_layer), style = MaterialTheme.typography.titleLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+        }
+        item {
+            Text("Global Scale", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            Slider(
+                value = custom.globalScale,
+                onValueChange = { viewModel.updateCustomWidgetGlobal(widget.id, scale = it) },
+                valueRange = 0.5f..2.5f,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
+        item {
+            Text("Global Offset", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = 8.dp)) {
+                CoordinateControl("X", custom.globalX, { viewModel.updateCustomWidgetGlobal(widget.id, x = it) }, Modifier.weight(1f))
+                CoordinateControl("Y", custom.globalY, { viewModel.updateCustomWidgetGlobal(widget.id, y = it) }, Modifier.weight(1f))
+            }
+        }
     }
 }
 
@@ -1509,19 +1612,18 @@ fun CoordinateControl(
 fun WorkshopComponentDetailEditor(
     component: CustomComponent,
     onUpdate: (CustomComponent) -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onPickImage: () -> Unit = {}
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        // --- 大標題區塊 (仿啟動器主設定頁面) ---
         item {
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    // 返回按鈕樣式與主設定頁同步
-                    IconButton(onClick = { /* 這裡由外層 handle */ }, modifier = Modifier.size(32.dp)) {
+                    IconButton(onClick = { /* Back */ }, modifier = Modifier.size(32.dp)) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, null, modifier = Modifier.size(24.dp))
                     }
                     Spacer(Modifier.width(8.dp))
@@ -1551,6 +1653,7 @@ fun WorkshopComponentDetailEditor(
                             is CustomComponent.Text -> component.copy(x = v)
                             is CustomComponent.Shape -> component.copy(x = v)
                             is CustomComponent.Progress -> component.copy(x = v)
+                            is CustomComponent.Image -> component.copy(x = v)
                         })
                     },
                     modifier = Modifier.weight(1f)
@@ -1563,6 +1666,7 @@ fun WorkshopComponentDetailEditor(
                             is CustomComponent.Text -> component.copy(y = v)
                             is CustomComponent.Shape -> component.copy(y = v)
                             is CustomComponent.Progress -> component.copy(y = v)
+                            is CustomComponent.Image -> component.copy(y = v)
                         })
                     },
                     modifier = Modifier.weight(1f)
@@ -1574,7 +1678,7 @@ fun WorkshopComponentDetailEditor(
             item {
                 Text("Content", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                 Column(modifier = Modifier.padding(top = 8.dp)) {
-                    Text("Variables: [TIME], [DATE], [BATT], [GREET]", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+                    Text("Variables: [TIME], [DATE], [BATT], [GREET], [RAM], [WIFI]", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
                     Spacer(Modifier.height(4.dp))
                     OutlinedTextField(
                         value = component.content,
@@ -1686,6 +1790,33 @@ fun WorkshopComponentDetailEditor(
             }
         }
 
+        if (component is CustomComponent.Image) {
+            item {
+                Text("Image Source", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Button(onClick = onPickImage, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                    Icon(Icons.Default.PhotoLibrary, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Pick from Gallery")
+                }
+            }
+            item {
+                Text("Dimensions", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                    CoordinateControl("Width", component.width, { onUpdate(component.copy(width = it)) }, Modifier.weight(1f))
+                    CoordinateControl("Height", component.height, { onUpdate(component.copy(height = it)) }, Modifier.weight(1f))
+                }
+            }
+            item {
+                Text("Appearance", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Column(modifier = Modifier.padding(top = 8.dp)) {
+                    Text("Corner Radius: ${component.cornerRadius.toInt()}")
+                    Slider(value = component.cornerRadius, onValueChange = { onUpdate(component.copy(cornerRadius = it)) }, valueRange = 0f..200f)
+                    Text("Opacity: ${(component.opacity * 100).toInt()}%")
+                    Slider(value = component.opacity, onValueChange = { onUpdate(component.copy(opacity = it)) }, valueRange = 0f..1f)
+                }
+            }
+        }
+
         item {
             Text("Logic Binding", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             Column(modifier = Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1695,27 +1826,32 @@ fun WorkshopComponentDetailEditor(
                         is CustomComponent.Text -> component.copy(visibilityFormula = it.ifBlank { null })
                         is CustomComponent.Shape -> component.copy(visibilityFormula = it.ifBlank { null })
                         is CustomComponent.Progress -> component.copy(visibilityFormula = it.ifBlank { null })
+                        is CustomComponent.Image -> component.copy(visibilityFormula = it.ifBlank { null })
                     }) },
                     label = { Text("Visibility (e.g. HIDE_LOW_BATT)") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 )
                 
-                OutlinedTextField(
-                    value = when(component) {
-                        is CustomComponent.Text -> component.colorFormula
-                        is CustomComponent.Shape -> component.colorFormula
-                        is CustomComponent.Progress -> component.colorFormula
-                    } ?: "",
-                    onValueChange = { onUpdate(when(component) {
-                        is CustomComponent.Text -> component.copy(colorFormula = it.ifBlank { null })
-                        is CustomComponent.Shape -> component.copy(colorFormula = it.ifBlank { null })
-                        is CustomComponent.Progress -> component.copy(colorFormula = it.ifBlank { null })
-                    }) },
-                    label = { Text("Color Formula (e.g. BATT_COLOR)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                )
+                if (component !is CustomComponent.Image) {
+                    OutlinedTextField(
+                        value = when(component) {
+                            is CustomComponent.Text -> component.colorFormula
+                            is CustomComponent.Shape -> component.colorFormula
+                            is CustomComponent.Progress -> component.colorFormula
+                            else -> null
+                        } ?: "",
+                        onValueChange = { onUpdate(when(component) {
+                            is CustomComponent.Text -> component.copy(colorFormula = it.ifBlank { null })
+                            is CustomComponent.Shape -> component.copy(colorFormula = it.ifBlank { null })
+                            is CustomComponent.Progress -> component.copy(colorFormula = it.ifBlank { null })
+                            else -> component
+                        }) },
+                        label = { Text("Color Formula (e.g. BATT_COLOR)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                }
             }
         }
 
@@ -1743,6 +1879,7 @@ fun WorkshopComponentDetailEditor(
                                 is CustomComponent.Text -> component.copy(clickAction = null)
                                 is CustomComponent.Shape -> component.copy(clickAction = null)
                                 is CustomComponent.Progress -> component.copy(clickAction = null)
+                                is CustomComponent.Image -> component.copy(clickAction = null)
                             })
                             expanded = false
                         })
@@ -1752,6 +1889,7 @@ fun WorkshopComponentDetailEditor(
                                     is CustomComponent.Text -> component.copy(clickAction = WidgetClickAction(type = type))
                                     is CustomComponent.Shape -> component.copy(clickAction = WidgetClickAction(type = type))
                                     is CustomComponent.Progress -> component.copy(clickAction = WidgetClickAction(type = type))
+                                    is CustomComponent.Image -> component.copy(clickAction = WidgetClickAction(type = type))
                                 })
                                 expanded = false
                             })
@@ -1768,6 +1906,7 @@ fun WorkshopComponentDetailEditor(
                                 is CustomComponent.Text -> component.copy(clickAction = currentAction.copy(value = v))
                                 is CustomComponent.Shape -> component.copy(clickAction = currentAction.copy(value = v))
                                 is CustomComponent.Progress -> component.copy(clickAction = currentAction.copy(value = v))
+                                is CustomComponent.Image -> component.copy(clickAction = currentAction.copy(value = v))
                             })
                         },
                         label = { Text("App Package Name") },

@@ -44,7 +44,7 @@ fun ShortcutPickerDialog(
     val appsWithShortcuts by produceState<List<AppModel>>(initialValue = emptyList(), allApps) {
         value = withContext(Dispatchers.IO) {
             allApps.filter { app ->
-                !app.isFolder && viewModel.getAppShortcuts(app.packageName, app.userId).isNotEmpty()
+                !app.isFolder && !app.isFrozen && !app.isPrivate && viewModel.getAppShortcuts(app.packageName, app.userId).isNotEmpty()
             }
         }
     }

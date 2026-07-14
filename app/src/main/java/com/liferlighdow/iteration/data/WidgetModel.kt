@@ -24,7 +24,14 @@ sealed class WidgetType {
     @Serializable @SerialName("Stack") data class Stack(val children: List<WidgetModel> = emptyList(), val isWide: Boolean = false) : WidgetType()
     @Serializable @SerialName("RSS") data class RSS(val url: String = "", val isWide: Boolean = true, val isTall: Boolean = false) : WidgetType()
     @Serializable @SerialName("InfoHub") object InfoHub : WidgetType()
-    @Serializable @SerialName("Custom") data class Custom(val size: String, val components: List<CustomComponent> = emptyList()) : WidgetType()
+    @Serializable @SerialName("InfoHub2") object InfoHub2 : WidgetType()
+    @Serializable @SerialName("Custom") data class Custom(
+        val size: String, 
+        val components: List<CustomComponent> = emptyList(),
+        val globalScale: Float = 1.0f,
+        val globalX: Float = 0f,
+        val globalY: Float = 0f
+    ) : WidgetType()
 }
 
 @Serializable
@@ -102,6 +109,22 @@ sealed class CustomComponent {
         val colorFormula: String? = null,
         val trackColor: Int = 0x33FFFFFF.toInt(),
         val isCircular: Boolean = true
+    ) : CustomComponent()
+
+    @Serializable @SerialName("Image")
+    data class Image(
+        override val id: String = UUID.randomUUID().toString(),
+        override val name: String = "Image",
+        override val x: Float = 0f,
+        override val y: Float = 0f,
+        override val isVisible: Boolean = true,
+        override val visibilityFormula: String? = null,
+        override val clickAction: WidgetClickAction? = null,
+        val uri: String? = null,
+        val width: Float = 100f,
+        val height: Float = 100f,
+        val cornerRadius: Float = 12f,
+        val opacity: Float = 1.0f
     ) : CustomComponent()
 }
 

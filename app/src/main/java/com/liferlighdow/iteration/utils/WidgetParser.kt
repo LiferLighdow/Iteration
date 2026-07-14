@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
+import android.app.ActivityManager
+import android.net.wifi.WifiManager
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -12,25 +14,23 @@ object WidgetParser {
     fun parseText(formula: String, context: Context): String {
         var result = formula
         
-        // 1. Battery [BATT]
+        // --- 1. Variables ---
+        // Battery [BATT]
         if (result.contains("[BATT]")) {
-            val batteryLevel = getBatteryLevel(context)
-            result = result.replace("[BATT]", batteryLevel.toString())
+            result = result.replace("[BATT]", getBatteryLevel(context).toString())
         }
         
-        // 2. Time [TIME]
+        // Time [TIME]
         if (result.contains("[TIME]")) {
-            val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
-            result = result.replace("[TIME]", time)
+            result = result.replace("[TIME]", SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date()))
         }
         
-        // 3. Date [DATE]
+        // Date [DATE]
         if (result.contains("[DATE]")) {
-            val date = SimpleDateFormat("MM/dd", Locale.getDefault()).format(Date())
-            result = result.replace("[DATE]", date)
+            result = result.replace("[DATE]", SimpleDateFormat("MM/dd", Locale.getDefault()).format(Date()))
         }
         
-        // 4. Greeting [GREET]
+        // Greeting [GREET]
         if (result.contains("[GREET]")) {
             val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
             val greeting = when (hour) {
@@ -40,9 +40,61 @@ object WidgetParser {
             }
             result = result.replace("[GREET]", greeting)
         }
+
+        // RAM [RAM]
+        if (result.contains("[RAM]")) {
+            result = result.replace("[RAM]", getAvailableRam(context))
+        }
+
+        // WIFI [WIFI]
+        if (result.contains("[WIFI]")) {
+            result = result.replace("[WIFI]", getWifiSsid(context))
+        }
+
+        // --- 2. Conditional Logic: [IF:condition, true, false] ---
+        // Simple regex-based IF parser for [IF:BATT<20, Low, Full]
+        if (result.contains("[IF:")) {
+            val pattern = Regex("\\[IF:(.*?), (.*?), (.*?)\\]")
+            result = pattern.replace(result) { match ->
+                val condition = match.groups[1]?.value ?: ""
+                val trueVal = match.groups[2]?.value ?: ""
+                val falseVal = match.groups[3]?.value ?: ""
+                
+                if (evaluateCondition(condition, context)) trueVal else falseVal
+            }
+        }
         
         return result
     }
+
+    private fun evaluateCondition(condition: String, context: Context): Boolean {
+        return when {
+            condition.startsWith("BATT<") -> {
+                val threshold = condition.substring(5).toIntOrNull() ?: 0
+                getBatteryLevel(context) < threshold
+            }
+            condition.startsWith("BATT>") -> {
+                val threshold = condition.substring(5).toIntOrNull() ?: 0
+                getBatteryLevel(context) > threshold
+            }
+            else -> false
+        }
+    }
+
+    private fun getAvailableRam(context: Context): String {
+        val mi = ActivityManager.MemoryInfo()
+        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        activityManager.getMemoryInfo(mi)
+        val availableMegs = mi.availMem / 0x100000L
+        return "${availableMegs}MB"
+    }
+
+    private fun getWifiSsid(context: Context): String {
+        val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        val info = wifiManager.connectionInfo
+        return info.ssid.replace("\"", "").let { if (it == "<unknown ssid>") "Disconnected" else it }
+    }
+
     
     fun parseValue(formula: String, context: Context): Float {
         // Try to parse as pure number first

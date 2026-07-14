@@ -130,21 +130,33 @@ fun Dock(
         }
 
         // 2. 內容層 (App 圖示)
+        val dockContentHeight = when (dockStyle) {
+            DockStyle.CLASSIC -> 94.dp
+            DockStyle.PLATFORM -> 90.dp
+            else -> 100.dp
+        }
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = when(dockStyle) {
-                    DockStyle.CLASSIC -> 10.dp + navPadding
-                    else -> 20.dp + navPadding
-                })
+                .padding(bottom = navPadding)
+                .height(dockContentHeight)
                 .padding(horizontal = horizontalPadding),
             horizontalArrangement = Arrangement.SpaceAround,
-            verticalAlignment = Alignment.Bottom
+            verticalAlignment = when(dockStyle) {
+                DockStyle.PLATFORM -> Alignment.Bottom
+                else -> Alignment.CenterVertically
+            }
         ) {
+            val contentBottomPadding = if (dockStyle == DockStyle.PLATFORM) 20.dp else 0.dp
+            
             apps.forEachIndexed { index, app ->
                 Box(
-                    modifier = Modifier.weight(1f),
-                    contentAlignment = Alignment.Center
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .padding(bottom = contentBottomPadding),
+                    contentAlignment = if (dockStyle == DockStyle.PLATFORM) Alignment.BottomCenter else Alignment.Center
                 ) {
                     val infiniteTransition = rememberInfiniteTransition(label = "jiggle")
                     val rotation by infiniteTransition.animateFloat(

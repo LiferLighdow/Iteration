@@ -293,7 +293,8 @@ fun MinusOnePage(
                             (widget.type as? WidgetType.RSS)?.isWide == true ||
                             (widget.type as? WidgetType.Stack)?.isWide == true ||
                             (widget.type as? WidgetType.Custom)?.size == "4x2" ||
-                            widget.type is WidgetType.InfoHub) 4 else 2
+                            widget.type is WidgetType.InfoHub ||
+                            widget.type is WidgetType.InfoHub2) 4 else 2
                         GridItemSpan(span)
                     }) { widget ->
                         var showContextMenu by remember { mutableStateOf(false) }
@@ -393,8 +394,14 @@ fun MinusOnePage(
                                 is WidgetType.Weather -> WeatherWidget(displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
                                 is WidgetType.RSS -> RSSWidget(widget = widget, displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
                                 is WidgetType.InfoHub -> InfoHubWidget(displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
+                                is WidgetType.InfoHub2 -> InfoHub2Widget(displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
                                 is WidgetType.Stack -> StackWidget(widget = widget, viewModel = viewModel, backdrop = backdrop, isMinusOnePage = true)
-                                is WidgetType.Custom -> CustomWidget(widget = widget, backdrop = backdrop, isMinusOnePage = true)
+                                is WidgetType.Custom -> CustomWidget(
+                                    widget = widget, 
+                                    backdrop = backdrop, 
+                                    isMinusOnePage = true,
+                                    onLongClick = { showContextMenu = true }
+                                )
                             }
 
                             if (effectiveEditMode) {
@@ -519,7 +526,7 @@ fun MinusOnePage(
 
                 val filteredApps = remember(searchQuery, allApps) {
                     if (searchQuery.isBlank()) emptyList()
-                    else allApps.filter { !it.isHidden && it.label.contains(searchQuery, ignoreCase = true) }
+                    else allApps.filter { !it.isHidden && !it.isFrozen && !it.isPrivate && it.label.contains(searchQuery, ignoreCase = true) }
                 }
 
                 val filteredContacts = remember(searchQuery, contacts) {

@@ -671,8 +671,9 @@ fun ChangeIconScreen(onBack: () -> Unit) {
     var searchQuery by remember { mutableStateOf("") }
 
     val filteredApps = remember(allApps, searchQuery) {
-        if (searchQuery.isEmpty()) allApps
-        else allApps.filter { it.label.contains(searchQuery, ignoreCase = true) }
+        val base = allApps.filter { !it.isFrozen && !it.isPrivate }
+        if (searchQuery.isEmpty()) base
+        else base.filter { it.label.contains(searchQuery, ignoreCase = true) }
     }
 
     var selectedApp by remember { mutableStateOf<AppModel?>(null) }

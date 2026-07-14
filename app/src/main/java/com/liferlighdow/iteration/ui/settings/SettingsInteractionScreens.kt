@@ -756,7 +756,7 @@ fun MultiAppExclusionPickerDialog(
                 )
 
                 val filteredApps = remember(allApps, searchQuery) {
-                    allApps.filter { it.label.contains(searchQuery, ignoreCase = true) }
+                    allApps.filter { !it.isFrozen && !it.isPrivate && it.label.contains(searchQuery, ignoreCase = true) }
                         .sortedBy { it.label.lowercase() }
                 }
 

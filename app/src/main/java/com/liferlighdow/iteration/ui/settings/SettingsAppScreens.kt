@@ -198,8 +198,8 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
                 SearchBar(searchQuery) { searchQuery = it }
             }
             
-            val filteredApps = if (searchQuery.isEmpty()) allApps
-                              else allApps.filter { it.label.contains(searchQuery, ignoreCase = true) }
+            val filteredApps = if (searchQuery.isEmpty()) allApps.filter { !it.isFrozen && !it.isPrivate }
+                              else allApps.filter { !it.isFrozen && !it.isPrivate && it.label.contains(searchQuery, ignoreCase = true) }
 
             items(filteredApps, key = { it.uniqueId }) { app ->
                 ListItem(
@@ -311,8 +311,9 @@ fun RenameAppsScreen(onBack: () -> Unit) {
     var searchQuery by remember { mutableStateOf("") }
 
     val filteredApps = remember(allApps, searchQuery) {
-        if (searchQuery.isEmpty()) allApps
-        else allApps.filter { it.label.contains(searchQuery, ignoreCase = true) }
+        val base = allApps.filter { !it.isFrozen && !it.isPrivate }
+        if (searchQuery.isEmpty()) base
+        else base.filter { it.label.contains(searchQuery, ignoreCase = true) }
     }
 
     var editingApp by remember { mutableStateOf<AppModel?>(null) }
@@ -387,6 +388,7 @@ fun HideAppsScreen(onBack: () -> Unit) {
 
     val filteredApps = remember(allApps, searchQuery, appFilter) {
         allApps.filter { app ->
+            if (app.isFrozen || app.isPrivate) return@filter false
             val matchesSearch = if (searchQuery.isEmpty()) true else app.label.contains(searchQuery, ignoreCase = true)
             val matchesFilter = when (appFilter) {
                 AppFilter.ALL -> true
