@@ -132,6 +132,7 @@ fun InfoHubWidget(
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .aspectRatio(2f)
             .then(if (useLiquid) Modifier.liquidGlass(
                 enabled = true,
                 backdrop = backdrop,
@@ -147,12 +148,12 @@ fun InfoHubWidget(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Bottom
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 // Left Section: Time & Device
                 Column(
@@ -161,7 +162,7 @@ fun InfoHubWidget(
                 ) {
                     Text(
                         text = currentTime,
-                        style = MaterialTheme.typography.displaySmall.copy(
+                        style = MaterialTheme.typography.headlineMedium.copy(
                             fontWeight = FontWeight.Black,
                             letterSpacing = (-1).sp
                         ).withGlassShadow(isGlass),
@@ -169,7 +170,7 @@ fun InfoHubWidget(
                     )
                     Text(
                         text = currentDate,
-                        style = MaterialTheme.typography.labelMedium.withGlassShadow(isGlass),
+                        style = MaterialTheme.typography.labelSmall.withGlassShadow(isGlass),
                         color = contentColor.copy(alpha = 0.8f)
                     )
                 }
@@ -177,14 +178,14 @@ fun InfoHubWidget(
                 // Right Section: Device Status Tags
                 Column(
                     horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                    verticalArrangement = Arrangement.spacedBy(1.dp)
                 ) {
                     StatusTag(uptimeText, Icons.Default.Timer, contentColor)
                     StatusTag(Build.MODEL, Icons.Default.Smartphone, contentColor)
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             // Stats Grid - Two columns
             Row(modifier = Modifier.fillMaxWidth()) {
@@ -198,7 +199,7 @@ fun InfoHubWidget(
                         contentColor = contentColor,
                         isGlass = isGlass
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     InfoRow(
                         label = "RAM",
                         value = ramText.split(" / ").first(),
@@ -220,7 +221,7 @@ fun InfoHubWidget(
                         contentColor = contentColor,
                         isGlass = isGlass
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     InfoRow(
                         label = "Patch",
                         value = Build.VERSION.SECURITY_PATCH,

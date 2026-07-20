@@ -3,6 +3,7 @@ package com.liferlighdow.iteration.ui.settings
 import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -208,7 +209,18 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
                     leadingContent = {
                         val appIcon = viewModel.getIcon(app.uniqueId)
                         if (appIcon != null) {
-                            Image(bitmap = appIcon, contentDescription = null, modifier = Modifier.size(40.dp).clip(shape).background(Color.White))
+                            Image(
+                                bitmap = appIcon,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(shape)
+                                    .border(
+                                        width = 0.5.dp,
+                                        color = Color.Black.copy(alpha = 0.1f),
+                                        shape = shape
+                                    )
+                            )
                         }
                     },
                     modifier = Modifier.clickable { selectingAppForCategory = app }
@@ -342,7 +354,18 @@ fun RenameAppsScreen(onBack: () -> Unit) {
                         leadingContent = {
                             val appIcon = viewModel.getIcon(app.uniqueId)
                             if (appIcon != null) {
-                                Image(bitmap = appIcon, contentDescription = null, modifier = Modifier.size(40.dp).clip(shape).background(Color.White))
+                                Image(
+                                    bitmap = appIcon,
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(shape)
+                                        .border(
+                                            width = 0.5.dp,
+                                            color = Color.Black.copy(alpha = 0.1f),
+                                            shape = shape
+                                        )
+                                )
                             }
                         },
                         trailingContent = {
@@ -497,7 +520,19 @@ fun HideAppsScreen(onBack: () -> Unit) {
                 ) {
                     val appIcon = viewModel.getIcon(app.packageName)
                     if (appIcon != null) {
-                        Image(bitmap = appIcon, contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)).background(Color.White))
+                        val shape8 = RoundedCornerShape(8.dp)
+                        Image(
+                            bitmap = appIcon,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(shape8)
+                                .border(
+                                    width = 0.5.dp,
+                                    color = Color.Black.copy(alpha = 0.1f),
+                                    shape = shape8
+                                )
+                        )
                     }
                     Text(text = app.label, modifier = Modifier.weight(1f).padding(horizontal = 12.dp))
                     Checkbox(checked = app.isHidden, onCheckedChange = { viewModel.toggleHiddenApp(app.packageName) })

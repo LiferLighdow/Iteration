@@ -120,6 +120,7 @@ fun InfoHub2Widget(
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .aspectRatio(2f)
             .then(if (useLiquid) Modifier.liquidGlass(
                 enabled = true,
                 backdrop = backdrop,
@@ -135,12 +136,12 @@ fun InfoHub2Widget(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Bottom
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(
                     modifier = Modifier.weight(1f),
@@ -156,21 +157,21 @@ fun InfoHub2Widget(
                     )
                     Text(
                         text = "Dash Board v2",
-                        style = MaterialTheme.typography.labelMedium.withGlassShadow(isGlass),
+                        style = MaterialTheme.typography.labelSmall.withGlassShadow(isGlass),
                         color = contentColor.copy(alpha = 0.8f)
                     )
                 }
 
                 Column(
                     horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                    verticalArrangement = Arrangement.spacedBy(1.dp)
                 ) {
                     StatusTag2(androidVersion, Icons.Default.Android, contentColor)
                     StatusTag2("${refreshRate.toInt()}Hz Display", Icons.Default.Refresh, contentColor)
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             Row(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.weight(1f)) {
@@ -183,7 +184,7 @@ fun InfoHub2Widget(
                         contentColor = contentColor,
                         isGlass = isGlass
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     InfoRow2(
                         label = "Brightness",
                         value = "$brightness%",
@@ -205,7 +206,7 @@ fun InfoHub2Widget(
                         contentColor = contentColor,
                         isGlass = isGlass
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     InfoRow2(
                         label = "IP Address",
                         value = ipAddress,

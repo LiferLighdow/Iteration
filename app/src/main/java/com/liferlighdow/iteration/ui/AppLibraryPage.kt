@@ -15,6 +15,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -90,6 +91,7 @@ fun AppLibraryPage(
     val isSearchFocused by viewModel.isLibrarySearchFocused.collectAsState()
     val filteredApps by viewModel.filteredLibraryApps.collectAsState()
     val isPrivateSpaceLocked by viewModel.isPrivateSpaceLocked.collectAsState()
+    val menuOptions by viewModel.homeMenuOptions.collectAsState()
     
     var isHiddenUnlocked by remember { mutableStateOf(false) }
     var showPasswordDialog by remember { mutableStateOf(false) }
@@ -259,7 +261,14 @@ fun AppLibraryPage(
                                                 bitmap = appIcon,
                                                 contentDescription = null,
                                                 colorFilter = colorFilter,
-                                                modifier = Modifier.size(listIconSize).clip(shape).background(Color.White)
+                                                modifier = Modifier
+                                                    .size(listIconSize)
+                                                    .clip(shape)
+                                                    .border(
+                                                        width = 0.5.dp,
+                                                        color = Color.White.copy(alpha = 0.3f),
+                                                        shape = shape
+                                                    )
                                             )
                                         }
                                     },
@@ -274,7 +283,7 @@ fun AppLibraryPage(
                                 )
                                 DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                                     val actionMode by viewModel.actionMode.collectAsState()
-                                    if (actionMode == ActionMode.SHIZUKU || actionMode == ActionMode.ROOT) {
+                                    if (menuOptions.contains("freeze") && (actionMode == ActionMode.SHIZUKU || actionMode == ActionMode.ROOT)) {
                                         DropdownMenuItem(
                                             text = { Text(stringResource(if (app.isFrozen) R.string.unfreeze else R.string.freeze)) },
                                             leadingIcon = { Icon(Icons.Default.AcUnit, null, tint = MaterialTheme.colorScheme.primary) },
@@ -305,6 +314,11 @@ fun AppLibraryPage(
                                             text = { Text(stringResource(R.string.menu_uninstall)) },
                                             leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
                                             onClick = {
+                                                if (app.isPWA) {
+                                                    viewModel.deletePWA(app)
+                                                    showMenu = false
+                                                    return@DropdownMenuItem
+                                                }
                                                 try {
                                                     val intent = Intent(Intent.ACTION_DELETE).apply {
                                                         data = Uri.fromParts("package", app.packageName, null)
@@ -588,8 +602,10 @@ fun LibraryItemWithMenu(
     var showRenameDialog by remember { mutableStateOf(false) }
     var renameText by remember { mutableStateOf(app.label) }
     
+    val menuOptions by viewModel.homeMenuOptions.collectAsState()
+    
     val shortcuts = remember(showMenu) {
-        if (showMenu && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N_MR1) {
+        if (showMenu && menuOptions.contains("shortcuts") && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N_MR1) {
             viewModel.getAppShortcuts(app.packageName, app.userId)
         } else emptyList()
     }
@@ -614,7 +630,7 @@ fun LibraryItemWithMenu(
 
         DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
             val actionMode by viewModel.actionMode.collectAsState()
-            if (actionMode == ActionMode.SHIZUKU || actionMode == ActionMode.ROOT) {
+            if (menuOptions.contains("freeze") && (actionMode == ActionMode.SHIZUKU || actionMode == ActionMode.ROOT)) {
                 DropdownMenuItem(
                     text = { Text(stringResource(if (app.isFrozen) R.string.unfreeze else R.string.freeze)) },
                     leadingIcon = { Icon(Icons.Default.AcUnit, null) },

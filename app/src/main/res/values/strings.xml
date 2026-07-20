@@ -48,6 +48,8 @@
     <string name="menu_add_favorite">Add to Favorites</string>
     <string name="menu_remove_favorite">Remove from Favorites</string>
     <string name="menu_manage_apps">Manage Apps</string>
+    <string name="menu_shortcuts">App Shortcuts</string>
+    <string name="menu_freeze">Freeze/Unfreeze</string>
     <string name="menu_edit">Edit</string>
 
     <!-- Folder Dialog -->

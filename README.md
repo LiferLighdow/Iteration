@@ -32,7 +32,7 @@
     *   **Customizable Effects**: Adjustable blur radius (0-50), physical refraction height, refraction amount, and chromatic aberration.
 *   **Desktop Customization**:
     *   **Page Visibility Control**: Fully toggleable **Minus One (Widget) Page** and **App Library** via settings. Users can choose to hide these specialized pages for a cleaner desktop.
-    *   **Flexible Layouts**: Choose between 4x5, 4x6, 4x7, or "Auto (Adaptive)" based on screen aspect ratio.
+    *   **Flexible Layouts**: Choose between 4x5, 4x6, or "Auto (Adaptive)" based on screen aspect ratio.
     *   **Dock Styles**: Switch between **Modern (Floating)** round dock, **Classic (Full Width)** iOS-style dock, and the nostalgic **Platform (3D Glass)** style.
     *   **3D Platform Dock (iOS 6 Inspired)**: A high-fidelity reconstruction of the classic 3D glass platform.
         *   **Trapezoidal Perspective**: Custom geometric shape providing a deep sense of desktop depth.

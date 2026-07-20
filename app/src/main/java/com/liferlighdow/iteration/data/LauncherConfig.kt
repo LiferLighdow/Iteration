@@ -60,7 +60,7 @@ data class LauncherSettings(
     val emojiWallpaperText: String = "",
     val customWallpaperColor: Int = 0,
     val favoriteWallpaperColors: List<Int> = emptyList(),
-    val homeMenuOptions: Set<String> = setOf("delete_home", "edit", "uninstall", "hide", "app_info", "favorite"),
+    val homeMenuOptions: Set<String> = setOf("delete_home", "edit", "uninstall", "shortcuts", "freeze", "hide", "app_info", "favorite"),
     val glassParams: GlassParams = GlassParams(),
     val gestures: GestureSettings = GestureSettings(),
     val customIconSettings: CustomIconSettings = CustomIconSettings()

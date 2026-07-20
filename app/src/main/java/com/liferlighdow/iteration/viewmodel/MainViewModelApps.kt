@@ -619,7 +619,7 @@ fun MainViewModel.loadSettings() {
     _twoFingerSwipeUpApp.value = prefs.getString("two_finger_swipe_up_app", "") ?: ""
     _twoFingerSwipeDownApp.value = prefs.getString("two_finger_swipe_down_app", "") ?: ""
 
-    _homeMenuOptions.value = prefs.getStringSet("home_menu_options", setOf("delete_home", "uninstall")) ?: setOf("delete_home", "uninstall")
+    _homeMenuOptions.value = prefs.getStringSet("home_menu_options", setOf("delete_home", "uninstall", "shortcuts", "freeze")) ?: setOf("delete_home", "uninstall", "shortcuts", "freeze")
     _favoritePackages.value = prefs.getStringSet("favorite_packages", emptySet()) ?: emptySet()
 }
 
@@ -1117,6 +1117,9 @@ fun MainViewModel.createPWA(label: String, url: String, bgColor: Int) {
 }
 
 fun MainViewModel.updatePWA(uniqueId: String, newLabel: String, newUrl: String, newBgColor: Int) {
+    val oldPwa = _pwaApps.value.find { it.uniqueId == uniqueId }
+    val urlChanged = oldPwa?.shortcutId != newUrl
+    
     val currentPwas = _pwaApps.value.map {
         if (it.uniqueId == uniqueId) {
             it.copy(label = newLabel, shortcutId = newUrl, pwaBgColor = newBgColor)
@@ -1125,20 +1128,25 @@ fun MainViewModel.updatePWA(uniqueId: String, newLabel: String, newUrl: String, 
     _pwaApps.value = currentPwas
     savePwaApps()
     
-    // 同步更新已在桌面上的項目
+    // 同步更新已在桌面上的項目 (包含資料夾內部)
     _pages.value = _pages.value.map { page ->
         page.map { app ->
-            if (app.uniqueId == uniqueId) {
+            if (app.uniqueId == uniqueId || app.uniqueId.startsWith("$uniqueId@")) {
                 app.copy(label = newLabel, shortcutId = newUrl, pwaBgColor = newBgColor)
+            } else if (app.isFolder) {
+                app.copy(folderItems = app.folderItems.map { fApp ->
+                    if (fApp.uniqueId == uniqueId || fApp.uniqueId.startsWith("$uniqueId@")) {
+                        fApp.copy(label = newLabel, shortcutId = newUrl, pwaBgColor = newBgColor)
+                    } else fApp
+                })
             } else app
         }
     }
     saveLayout()
     loadApps()
     
-    // 如果 URL 改變，可能需要重新載入圖示
-    val oldApp = _pwaApps.value.find { it.uniqueId == uniqueId }
-    if (oldApp?.shortcutId != newUrl) {
+    // 如果 URL 改變，需要重新載入圖示 (Favicon 可能已變)
+    if (urlChanged) {
         viewModelScope.launch(Dispatchers.IO) {
             val updatedApp = _pwaApps.value.find { it.uniqueId == uniqueId }
             if (updatedApp != null) loadPwaIcon(updatedApp)

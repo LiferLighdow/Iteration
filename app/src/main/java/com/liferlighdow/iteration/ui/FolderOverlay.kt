@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.geometry.Offset
 import com.kyant.backdrop.Backdrop
+import com.liferlighdow.iteration.utils.ActionMode
 import com.liferlighdow.iteration.utils.IconShape
 import com.liferlighdow.iteration.viewmodel.MainViewModel
 import com.liferlighdow.iteration.R
@@ -244,7 +245,11 @@ fun FolderOverlay(
                                                     isEditMode = isEditMode,
                                                     getIcon = { pkg -> viewModel.getIcon(pkg) },
                                                     onDeleteClick = {
-                                                        viewModel.removeAppFromFolder(currentFolder.uniqueId, app.uniqueId)
+                                                        if (app.isPWA) {
+                                                            viewModel.deletePWA(app)
+                                                        } else {
+                                                            viewModel.removeAppFromFolder(currentFolder.uniqueId, app.uniqueId)
+                                                        }
                                                     },
                                                     modifier = Modifier
                                                         .graphicsLayer {
@@ -264,11 +269,49 @@ fun FolderOverlay(
                                                         }
                                                 )
                                                 val menuOptions by viewModel.homeMenuOptions.collectAsState()
+                                                val shortcuts = remember(showItemMenu) {
+                                                    if (showItemMenu && menuOptions.contains("shortcuts") && !app.isFolder && !app.isShortcut && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N_MR1) {
+                                                        viewModel.getAppShortcuts(app.packageName, app.userId)
+                                                    } else emptyList()
+                                                }
 
                                                 DropdownMenu(
                                                     expanded = showItemMenu,
                                                     onDismissRequest = { showItemMenu = false }
                                                 ) {
+                                                    val actionMode by viewModel.actionMode.collectAsState()
+                                                    if (!app.isFolder && menuOptions.contains("freeze") && (actionMode == ActionMode.SHIZUKU || actionMode == ActionMode.ROOT)) {
+                                                        DropdownMenuItem(
+                                                            text = { Text(stringResource(if (app.isFrozen) R.string.unfreeze else R.string.freeze)) },
+                                                            leadingIcon = { Icon(Icons.Default.AcUnit, null) },
+                                                            onClick = { viewModel.toggleFreezeApp(app, mContext); showItemMenu = false }
+                                                        )
+                                                        HorizontalDivider()
+                                                    }
+
+                                                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N_MR1 && shortcuts.isNotEmpty()) {
+                                                        shortcuts.forEach { shortcut ->
+                                                            DropdownMenuItem(
+                                                                text = { 
+                                                                    @Suppress("NewApi")
+                                                                    Text(shortcut.shortLabel?.toString() ?: shortcut.longLabel?.toString() ?: "") 
+                                                                },
+                                                                leadingIcon = {
+                                                                    val icon = viewModel.getShortcutIcon(shortcut)
+                                                                    if (icon != null) {
+                                                                        Image(bitmap = icon, contentDescription = null, modifier = Modifier.size(24.dp))
+                                                                    }
+                                                                },
+                                                                onClick = {
+                                                                    @Suppress("NewApi")
+                                                                    viewModel.launchShortcut(app.packageName, shortcut.id, app.userId)
+                                                                    showItemMenu = false
+                                                                }
+                                                            )
+                                                        }
+                                                        HorizontalDivider()
+                                                    }
+
                                                     if (menuOptions.contains("delete_home")) {
                                                         DropdownMenuItem(
                                                             text = { Text(stringResource(R.string.menu_delete_home)) },
@@ -294,6 +337,11 @@ fun FolderOverlay(
                                                             text = { Text(stringResource(R.string.menu_uninstall)) },
                                                             leadingIcon = { Icon(Icons.Default.DeleteForever, null) },
                                                             onClick = {
+                                                                if (app.isPWA) {
+                                                                    viewModel.deletePWA(app)
+                                                                    showItemMenu = false
+                                                                    return@DropdownMenuItem
+                                                                }
                                                                 try {
                                                                     val intent = Intent(Intent.ACTION_DELETE).apply {
                                                                         data = Uri.fromParts("package", app.packageName, null)

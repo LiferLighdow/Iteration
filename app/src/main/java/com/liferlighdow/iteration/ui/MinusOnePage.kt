@@ -8,6 +8,7 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -128,6 +129,9 @@ fun MinusOnePage(
     val isMinusOneSearchGlassEnabled by viewModel.isLiquidGlassMinusOneSearchEnabled.collectAsState()
     val isMinusOneButtonGlassEnabled by viewModel.isLiquidGlassMinusOneButtonEnabled.collectAsState()
 
+    val searchGlassActive = isLiquidGlassEnabled && isMinusOneSearchGlassEnabled
+    val buttonGlassActive = isLiquidGlassEnabled && isMinusOneButtonGlassEnabled
+
     val blurRadius by viewModel.liquidGlassBlur.collectAsState()
     val refractionHeight by viewModel.liquidGlassRefractionHeight.collectAsState()
     val refractionAmount by viewModel.liquidGlassRefractionAmount.collectAsState()
@@ -171,7 +175,7 @@ fun MinusOnePage(
                             shape = RoundedCornerShape(12.dp),
                             colors = IconButtonDefaults.filledTonalIconButtonColors(
                                 containerColor = Color.Transparent,
-                                contentColor = contentColor
+                                contentColor = if (buttonGlassActive) Color.White else contentColor
                             )
                         ) {
                             Icon(
@@ -198,12 +202,12 @@ fun MinusOnePage(
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color.Transparent,
-                            contentColor = contentColor
+                            contentColor = if (buttonGlassActive) Color.White else contentColor
                         )
                     ) {
                         Text(
                             stringResource(R.string.done),
-                            style = MaterialTheme.typography.labelLarge,
+                            style = MaterialTheme.typography.labelLarge.withGlassShadow(buttonGlassActive),
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -233,14 +237,15 @@ fun MinusOnePage(
                     placeholder = { 
                         Text(
                             stringResource(R.string.search_hint), 
-                            color = contentColor.copy(alpha = 0.6f)
+                            style = MaterialTheme.typography.bodyLarge.withGlassShadow(searchGlassActive),
+                            color = (if (searchGlassActive) Color.White else contentColor).copy(alpha = 0.6f)
                         ) 
                     },
                     leadingIcon = { 
                         Icon(
                             Icons.Default.Search, 
                             contentDescription = null, 
-                            tint = contentColor.copy(alpha = 0.7f) 
+                            tint = (if (searchGlassActive) Color.White else contentColor).copy(alpha = 0.7f) 
                         ) 
                     },
                     trailingIcon = {
@@ -250,19 +255,20 @@ fun MinusOnePage(
                                 searchQuery = ""
                                 focusManager.clearFocus()
                             }) {
-                                Icon(Icons.Default.Close, contentDescription = null, tint = contentColor)
+                                Icon(Icons.Default.Close, contentDescription = null, tint = if (searchGlassActive) Color.White else contentColor)
                             }
                         }
                     },
                     shape = RoundedCornerShape(30.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = contentColor,
-                        unfocusedTextColor = contentColor,
+                        focusedTextColor = if (searchGlassActive) Color.White else contentColor,
+                        unfocusedTextColor = if (searchGlassActive) Color.White else contentColor,
                         focusedContainerColor = Color.Transparent,
                         unfocusedContainerColor = Color.Transparent,
-                        focusedBorderColor = contentColor.copy(alpha = 0.1f),
+                        focusedBorderColor = (if (searchGlassActive) Color.White else contentColor).copy(alpha = 0.1f),
                         unfocusedBorderColor = Color.Transparent
                     ),
+                    textStyle = LocalTextStyle.current.withGlassShadow(searchGlassActive),
                     singleLine = true
                 )
             }
@@ -561,7 +567,18 @@ fun MinusOnePage(
                                         leadingContent = {
                                             if (appIcon != null) {
                                                 val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(48.dp * 0.238f)
-                                                Image(bitmap = appIcon, contentDescription = null, modifier = Modifier.size(48.dp).clip(shape).background(Color.White))
+                                                Image(
+                                                    bitmap = appIcon,
+                                                    contentDescription = null,
+                                                    modifier = Modifier
+                                                        .size(48.dp)
+                                                        .clip(shape)
+                                                        .border(
+                                                            width = 0.5.dp,
+                                                            color = Color.White.copy(alpha = 0.3f),
+                                                            shape = shape
+                                                        )
+                                                )
                                             } else {
                                                 Box(modifier = Modifier.size(48.dp).background(contentColor.copy(alpha = 0.1f), CircleShape))
                                             }

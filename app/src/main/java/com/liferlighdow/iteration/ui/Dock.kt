@@ -208,7 +208,8 @@ fun Dock(
                         onDismissRequest = { showContextMenu = false }
                     ) {
                         val actionMode by viewModel.actionMode.collectAsState()
-                        if (actionMode == ActionMode.SHIZUKU || actionMode == ActionMode.ROOT) {
+                        val menuOptions by viewModel.homeMenuOptions.collectAsState()
+                        if (menuOptions.contains("freeze") && (actionMode == ActionMode.SHIZUKU || actionMode == ActionMode.ROOT)) {
                             DropdownMenuItem(
                                 text = { Text(stringResource(if (app.isFrozen) R.string.unfreeze else R.string.freeze)) },
                                 leadingIcon = { Icon(Icons.Default.AcUnit, null) },

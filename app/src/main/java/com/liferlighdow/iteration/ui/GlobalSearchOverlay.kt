@@ -15,6 +15,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -111,6 +112,7 @@ fun GlobalSearchOverlay(
     val files by viewModel.files.collectAsState()
     val exchangeRates by viewModel.exchangeRates.collectAsState()
     val iconScaleFactor by viewModel.iconScale.collectAsState()
+    val menuOptions by viewModel.homeMenuOptions.collectAsState()
 
     var showFrozenManager by remember { mutableStateOf(false) }
     var showPrivateManager by remember { mutableStateOf(false) }
@@ -271,7 +273,6 @@ fun GlobalSearchOverlay(
                 OutlinedTextField(
                     value = query, onValueChange = { 
                         query = it 
-                        viewModel.setSearchQuery(it)
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -516,7 +517,18 @@ fun GlobalSearchOverlay(
                                             leadingContent = {
                                                 viewModel.getIcon(app.uniqueId)?.let { appIcon ->
                                                     val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(48.dp * 0.238f)
-                                                    Image(bitmap = appIcon, contentDescription = null, modifier = Modifier.size(48.dp).clip(shape).background(Color.White))
+                                                    Image(
+                                                        bitmap = appIcon,
+                                                        contentDescription = null,
+                                                        modifier = Modifier
+                                                            .size(48.dp)
+                                                            .clip(shape)
+                                                            .border(
+                                                                width = 0.5.dp,
+                                                                color = Color.White.copy(alpha = 0.3f),
+                                                                shape = shape
+                                                            )
+                                                    )
                                                 }
                                             },
                                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
@@ -824,7 +836,18 @@ fun GlobalSearchOverlay(
                                                 leadingContent = {
                                                     viewModel.getIcon(app.uniqueId)?.let { appIcon ->
                                                         val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(48.dp * 0.238f)
-                                                        Image(bitmap = appIcon, contentDescription = null, modifier = Modifier.size(48.dp).clip(shape).background(Color.White))
+                                                        Image(
+                                                            bitmap = appIcon,
+                                                            contentDescription = null,
+                                                            modifier = Modifier
+                                                                .size(48.dp)
+                                                                .clip(shape)
+                                                                .border(
+                                                                    width = 0.5.dp,
+                                                                    color = Color.White.copy(alpha = 0.3f),
+                                                                    shape = shape
+                                                                )
+                                                        )
                                                     }
                                                 },
                                                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
@@ -1119,7 +1142,14 @@ fun FrozenAppsManagerDialog(
                                         bitmap = icon, 
                                         contentDescription = null, 
                                         colorFilter = colorFilter,
-                                        modifier = Modifier.size(40.dp).clip(shape).background(Color.White)
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .clip(shape)
+                                            .border(
+                                                width = 0.5.dp,
+                                                color = Color.White.copy(alpha = 0.3f),
+                                                shape = shape
+                                            )
                                     )
                                 }
                             },
@@ -1206,7 +1236,14 @@ fun PrivateSpaceManagerDialog(
                                             Image(
                                                 bitmap = icon, 
                                                 contentDescription = null, 
-                                                modifier = Modifier.size(40.dp).clip(shape).background(Color.White)
+                                                modifier = Modifier
+                                                    .size(40.dp)
+                                                    .clip(shape)
+                                                    .border(
+                                                        width = 0.5.dp,
+                                                        color = Color.White.copy(alpha = 0.3f),
+                                                        shape = shape
+                                                    )
                                             )
                                         }
                                     },
@@ -1236,6 +1273,11 @@ fun PrivateSpaceManagerDialog(
                                             text = { Text(stringResource(R.string.menu_uninstall)) },
                                             leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
                                             onClick = {
+                                                if (app.isPWA) {
+                                                    viewModel.deletePWA(app)
+                                                    showMenu = false
+                                                    return@DropdownMenuItem
+                                                }
                                                 try {
                                                     val intent = Intent(Intent.ACTION_DELETE).apply {
                                                         data = Uri.fromParts("package", app.packageName, null)

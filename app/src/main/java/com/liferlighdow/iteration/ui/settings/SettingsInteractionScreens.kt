@@ -3,6 +3,7 @@ package com.liferlighdow.iteration.ui.settings
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -240,13 +242,30 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
 
             item {
                 var expanded by remember { mutableStateOf(false) }
-                val options = listOf(
-                    0 to stringResource(R.string.auto_adaptive), 
-                    5 to stringResource(R.string.layout_4x5), 
-                    6 to stringResource(R.string.layout_4x6), 
-                    7 to stringResource(R.string.layout_4x7),
-                    -1 to stringResource(R.string.layout_4x6_balanced)
-                )
+                val configuration = LocalConfiguration.current
+                val isLongScreen = configuration.screenHeightDp.toFloat() / configuration.screenWidthDp.toFloat() >= 2.0f
+
+                val options = remember(isLongScreen) {
+                    val list = mutableListOf(
+                        0 to 0, // placeholder for string resource
+                        5 to 5,
+                        6 to 6
+                    )
+                    if (isLongScreen) {
+                        list.add(7 to 7)
+                        list.add(-1 to -1)
+                    }
+                    list
+                }.map { (value, _) ->
+                    value to when(value) {
+                        0 -> stringResource(R.string.auto_adaptive)
+                        5 -> stringResource(R.string.layout_4x5)
+                        6 -> stringResource(R.string.layout_4x6)
+                        7 -> stringResource(R.string.layout_4x7)
+                        else -> stringResource(R.string.layout_4x6_balanced)
+                    }
+                }
+
                 val currentLabel = options.find { it.first == desktopRows }?.second ?: stringResource(R.string.auto_adaptive)
 
                 ListItem(
@@ -354,6 +373,8 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
                     "delete_home" to R.string.menu_delete_home,
                     "edit" to R.string.menu_edit,
                     "uninstall" to R.string.menu_uninstall,
+                    "shortcuts" to R.string.menu_shortcuts,
+                    "freeze" to R.string.menu_freeze,
                     "hide" to R.string.menu_hide,
                     "favorite" to R.string.menu_add_favorite,
                     "app_info" to R.string.menu_app_info
@@ -406,7 +427,14 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
                                 Image(
                                     bitmap = appIcon,
                                     contentDescription = null,
-                                    modifier = Modifier.size(40.dp).clip(shape).background(Color.White)
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(shape)
+                                        .border(
+                                            width = 0.5.dp,
+                                            color = Color.Black.copy(alpha = 0.1f),
+                                            shape = shape
+                                        )
                                 )
                             } else {
                                 Box(

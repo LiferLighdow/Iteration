@@ -3,6 +3,7 @@ package com.liferlighdow.iteration.ui.dialogs
 import android.content.pm.ShortcutInfo
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -95,10 +96,18 @@ fun ShortcutPickerDialog(
                                 leadingContent = {
                                     val icon = viewModel.getIcon(app.uniqueId)
                                     if (icon != null) {
+                                        val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp)
                                         Image(
                                             bitmap = icon,
                                             contentDescription = null,
-                                            modifier = Modifier.size(40.dp).clip(if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp)).background(Color.White)
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .clip(shape)
+                                                .border(
+                                                    width = 0.5.dp,
+                                                    color = Color.Black.copy(alpha = 0.1f),
+                                                    shape = shape
+                                                )
                                         )
                                     }
                                 },

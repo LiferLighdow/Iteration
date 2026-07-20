@@ -238,8 +238,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val liquidGlassChromaticAberration = _liquidGlassChromaticAberration.asStateFlow()
 
     internal val _homeMenuOptions = MutableStateFlow(
-        prefs.getStringSet("home_menu_options", setOf("delete_home", "uninstall"))
-            ?: setOf("delete_home", "uninstall")
+        prefs.getStringSet("home_menu_options", setOf("delete_home", "uninstall", "shortcuts", "freeze"))
+            ?: setOf("delete_home", "uninstall", "shortcuts", "freeze")
     )
     val homeMenuOptions = _homeMenuOptions.asStateFlow()
 

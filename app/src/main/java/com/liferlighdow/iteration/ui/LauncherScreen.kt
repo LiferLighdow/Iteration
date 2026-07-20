@@ -320,19 +320,22 @@ fun LauncherScreen(
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val density = LocalDensity.current
+        val screenRatio = maxHeight / maxWidth
         
         val userRows by viewModel.desktopRows.collectAsState()
         val isBalanced = userRows == -1
-        val rows = if (isBalanced) 6 else if (userRows > 0) userRows else (if (maxHeight / maxWidth < 2.0f) 5 else 6)
+        val rows = if (isBalanced) 6 else if (userRows > 0) userRows else (if (screenRatio < 2.0f) 5 else 6)
+        
+        val showWidgetLabel = if (rows >= 7) screenRatio >= 2.22f else true
 
         // 畫質調整不會影響這個顯示尺寸
-        val baseIconSize = if (isBalanced) 60.dp else 62.dp
+        val baseIconSize = if (isBalanced) 61.5.dp else 62.dp
         val iconSize = baseIconSize * iconScaleFactor
-        val labelFontSize = if (isBalanced) 11.sp else 12.sp
+        val labelFontSize = if (isBalanced) 11.8.sp else 12.sp
         val iconSizePx = with(density) { iconSize.toPx() }
         val columns = 4
         
-        val horizontalPadding = if (isBalanced) 28.dp else 16.dp
+        val horizontalPadding = if (isBalanced) 18.dp else 16.dp
 
         LaunchedEffect(columns, rows) { viewModel.setPageSize(columns * rows) }
 
@@ -453,8 +456,8 @@ fun LauncherScreen(
                         .fillMaxSize()
                         .statusBarsPadding()
                         .padding(
-                            top = if (isDesktop && isBalanced) 42.dp else 0.dp,
-                            bottom = if (isLibrary || isMinusOne) 0.dp else (if (isBalanced) 178.dp else 158.dp)
+                            top = if (isDesktop && isBalanced) 22.dp else 0.dp,
+                            bottom = if (isLibrary || isMinusOne) 0.dp else (if (isBalanced) 168.dp else 158.dp)
                         )
                 ) {
                     when {
@@ -642,7 +645,8 @@ fun LauncherScreen(
                                         searchDragOffset = 0f
                                     }
                                 },
-                                onEditApp = { appToEdit = it }
+                                onEditApp = { appToEdit = it },
+                                showWidgetLabel = showWidgetLabel
                             )
                         }
                         else -> {
@@ -657,9 +661,9 @@ fun LauncherScreen(
                                 refractionHeight = refractionHeight,
                                 refractionAmount = refractionAmount,
                                 chromaticAberration = chromaticAberration,
-                                horizontalPadding = horizontalPadding,
+                                horizontalPadding = if (isBalanced) 28.dp else horizontalPadding,
                                 iconSize = (if (isBalanced) 70.dp else 72.dp) * iconScaleFactor,
-                                labelFontSize = labelFontSize,
+                                labelFontSize = if (isBalanced) 11.sp else labelFontSize,
                                 onAppClick = { app ->
                                     if (app.isFolder) {
                                         folderToOpenId = app.uniqueId

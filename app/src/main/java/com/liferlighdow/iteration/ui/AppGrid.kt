@@ -125,7 +125,8 @@ fun AppGrid(
     onBackgroundTwoFingerSwipeDown: () -> Unit = {},
     onBackgroundDragY: (Float) -> Unit = {},
     onBackgroundDragEnd: (Float) -> Unit = {},
-    onEditApp: (AppModel) -> Unit = {}
+    onEditApp: (AppModel) -> Unit = {},
+    showWidgetLabel: Boolean = true
 ) {
     val notificationCounts by NotificationService.notifications.collectAsState()
     val mediaInfo by NotificationService.currentMedia.collectAsState()
@@ -456,6 +457,7 @@ fun AppGrid(
                             backdrop = backdrop,
                             viewModel = viewModel,
                             labelFontSize = labelFontSize,
+                            showLabel = showWidgetLabel,
                             showContextMenu = showContextMenu,
                             onContextMenuDismiss = { showContextMenu = false },
                             onUpdateStackToEdit = { stackToEdit = it },
@@ -589,6 +591,7 @@ private fun WidgetGridItem(
     backdrop: Backdrop?,
     viewModel: MainViewModel,
     labelFontSize: androidx.compose.ui.unit.TextUnit = 12.sp,
+    showLabel: Boolean = true,
     showContextMenu: Boolean,
     onContextMenuDismiss: () -> Unit,
     onUpdateStackToEdit: (WidgetModel) -> Unit,
@@ -630,7 +633,7 @@ private fun WidgetGridItem(
             )
             .graphicsLayer { alpha = if (app.uniqueId == draggingUniqueId) 0f else 1f }
     ) {
-        Box(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.85f)) {
+        Box(modifier = Modifier.fillMaxWidth().fillMaxHeight(if (showLabel) 0.85f else 1f)) {
             val widget = app.widget
             if (widget != null) {
                 when (val type = widget.type) {
@@ -735,21 +738,23 @@ private fun WidgetGridItem(
         }
 
         // 標籤現在不參與 weight 計算，調整它的 padding 只會移動文字，不會縮放組件矩形
-        Text(
-            text = app.label,
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontSize = labelFontSize,
-                shadow = Shadow(
-                    color = Color.Black.copy(alpha = 0.5f),
-                    offset = Offset(0f, 2f),
-                    blurRadius = 4f
-                )
-            ),
-            color = Color.White,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = if (isWide) 8.dp else 10.dp)
-        )
+        if (showLabel) {
+            Text(
+                text = app.label,
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontSize = labelFontSize,
+                    shadow = Shadow(
+                        color = Color.Black.copy(alpha = 0.5f),
+                        offset = Offset(0f, 2f),
+                        blurRadius = 4f
+                    )
+                ),
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = if (isWide) 8.dp else 10.dp)
+            )
+        }
 
         DropdownMenu(expanded = showContextMenu, onDismissRequest = onContextMenuDismiss) {
             val widget = app.widget
@@ -917,7 +922,11 @@ private fun AppGridItem(
             labelFontSize = labelFontSize,
             getIcon = { pkg -> viewModel.getIcon(pkg) },
             onDeleteClick = {
-                viewModel.removeAppFromHome(app.uniqueId)
+                if (app.isPWA) {
+                    viewModel.deletePWA(app)
+                } else {
+                    viewModel.removeAppFromHome(app.uniqueId)
+                }
             },
             notificationCountProvider = notificationCountProvider,
             modifier = Modifier.graphicsLayer {
@@ -930,7 +939,7 @@ private fun AppGridItem(
         val isDesktopLocked by viewModel.isDesktopLocked.collectAsState()
         
         val shortcuts = remember(showContextMenu) {
-            if (showContextMenu && !app.isFolder && !app.isShortcut && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N_MR1) {
+            if (showContextMenu && menuOptions.contains("shortcuts") && !app.isFolder && !app.isShortcut && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N_MR1) {
                 viewModel.getAppShortcuts(app.packageName, app.userId)
             } else emptyList()
         }
@@ -941,7 +950,7 @@ private fun AppGridItem(
             modifier = Modifier.background(MaterialTheme.colorScheme.surface)
         ) {
             val actionMode by viewModel.actionMode.collectAsState()
-            if (!app.isFolder && (actionMode == ActionMode.SHIZUKU || actionMode == ActionMode.ROOT)) {
+            if (!app.isFolder && menuOptions.contains("freeze") && (actionMode == ActionMode.SHIZUKU || actionMode == ActionMode.ROOT)) {
                 DropdownMenuItem(
                     text = { Text(stringResource(if (app.isFrozen) R.string.unfreeze else R.string.freeze)) },
                     leadingIcon = { Icon(Icons.Default.AcUnit, null) },
@@ -999,6 +1008,11 @@ private fun AppGridItem(
                         text = { Text(stringResource(R.string.menu_uninstall)) },
                         leadingIcon = { Icon(Icons.Default.DeleteForever, null) },
                         onClick = {
+                            if (app.isPWA) {
+                                viewModel.deletePWA(app)
+                                onContextMenuDismiss()
+                                return@DropdownMenuItem
+                            }
                             try {
                                 val intent = Intent(Intent.ACTION_DELETE).apply {
                                     data = Uri.fromParts("package", app.packageName, null)

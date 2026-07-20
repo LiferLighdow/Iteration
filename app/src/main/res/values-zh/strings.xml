@@ -45,6 +45,8 @@
     <string name="menu_add_favorite">新增至最愛</string>
     <string name="menu_remove_favorite">從最愛移除</string>
     <string name="menu_manage_apps">管理應用</string>
+    <string name="menu_shortcuts">應用捷徑</string>
+    <string name="menu_freeze">凍結/解凍</string>
     <string name="menu_edit">編輯</string>
     <string name="folder_default_name">資料夾</string>
     <string name="folder_create_title">新增資料夾</string>

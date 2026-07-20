@@ -9,6 +9,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
@@ -709,7 +710,14 @@ fun ChangeIconScreen(onBack: () -> Unit) {
                                 Image(
                                     bitmap = appIcon,
                                     contentDescription = null,
-                                    modifier = Modifier.size(40.dp).clip(shape).background(Color.White)
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(shape)
+                                        .border(
+                                            width = 0.5.dp,
+                                            color = Color.Black.copy(alpha = 0.1f),
+                                            shape = shape
+                                        )
                                 )
                             }
                         },
