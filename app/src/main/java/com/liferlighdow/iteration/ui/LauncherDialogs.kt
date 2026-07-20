@@ -360,7 +360,7 @@ fun QuickEditDialog(
         },
         confirmButton = {
             Button(onClick = {
-                viewModel.setCustomLabel(app.packageName, newLabel)
+                viewModel.setCustomLabel(if (app.isPWA) app.uniqueId else app.packageName, newLabel)
                 onDismiss()
             }) { Text(stringResource(R.string.save)) }
         },

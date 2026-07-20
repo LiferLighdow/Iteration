@@ -69,6 +69,11 @@
     <string name="search_store">在應用商店內搜尋</string>
     <string name="search_maps">在地圖內搜尋</string>
     <string name="hidden_apps_title">已被隱藏的應用們</string>
+    <string name="private_space_title">私密空間</string>
+    <string name="private_space_locked">私密空間已鎖定</string>
+    <string name="unlock_private_space">解鎖私密空間</string>
+    <string name="lock_private_space">鎖定私密空間</string>
+    <string name="private_space_locked_desc">私密空間目前已鎖定。請點擊鎖頭圖示進行解鎖。</string>
     <string name="password_hint">請輸入密碼</string>
     <string name="settings_hide_apps">隱藏應用程式</string>
     <string name="settings_hide_apps_desc">管理已隱藏的應用程式</string>
@@ -122,11 +127,7 @@
     <string name="cat_maps">地圖不迷路</string>
     <string name="cat_productivity">提升生產力</string>
     <string name="cat_other">其他晾一邊</string>
-    <string name="desc_check">檢查一下</string>
-    <string name="desc_back">退回去</string>
-    <string name="desc_delete">刪刪掉</string>
     <string name="desc_add">新增分類</string>
-    <string name="launcher_placeholder">iOS風格啟動器【噓】</string>
     <string name="btn_settings">設定</string>
     <string name="settings_general">一般</string>
     <string name="settings_custom_layout">自訂佈局</string>
@@ -321,7 +322,7 @@
     <string name="precision_basic">基本功能</string>
     <string name="precision_high_desc">使用系統原生顏色進行自適應圖層過濾。</string>
     <string name="precision_good_desc">自適應圖層濾波結合手動顏色分析。</string>
-    <string name="precision_basic_desc">傳統全圖示著色。</string>
+    <string name="precision_basic_desc">傳統全圖示着色。</string>
     <string name="iteration_presets_note">別擔心，我們的預設樣式（黑色、白色、玻璃、自訂）在所有支援的版本裡都能乖乖地使用喔～呦呼，人家最希望主人能安心享受漂亮的圖示，不用擔心版本差異呢～</string>
     <string name="select_icon_pack">選擇圖標包</string>
     <string name="reset">重置一切</string>
@@ -365,6 +366,7 @@
     <string name="choose_picture">選擇圖片</string>
     <string name="adjust_position">調整圖片位置</string>
     <string name="edit_note">更改記事本</string>
+    <string name="edit_todo">編輯待辦清單</string>
     <string name="choose_location">選擇地區</string>
     <string name="note_placeholder">在這裡輸入您的大膽想法&#8230;</string>
     <string name="ip_location_auto">使用 IP 自動定位</string>
@@ -387,6 +389,10 @@
     <string name="widget_weather_forecast">天氣預報</string>
     <string name="widget_rss">RSS 訂閱源</string>
     <string name="desc_rss">隨時掌握您最喜愛的 RSS 訂閱動態</string>
+    <string name="widget_info_hub">資訊中心</string>
+    <string name="desc_info_hub">超級蝦趴的手機狀態資訊大合集</string>
+    <string name="widget_info_hub2">資訊中心 2</string>
+    <string name="desc_info_hub2">進階系統儀表板，包含網路與顯示資訊。</string>
     <string name="edit_rss">編輯 RSS 網址</string>
     <string name="rss_url_hint">RSS 訂閱源網址 (例如 https://example.com/rss)</string>
     <string name="network_disabled">網路被Ban了</string>
@@ -534,4 +540,21 @@
     <string name="pwa_created">PWA 已建立並新增至桌面</string>
     <string name="pwa_invalid_input">請輸入有效的名稱與網址</string>
     <string name="background_color">背景顏色</string>
+
+    <!-- 小工具製作工具 -->
+    <string name="widget_maker_title">小工具製作工具</string>
+    <string name="widget_maker_desc">設計並建立您自己的自訂小工具。</string>
+    <string name="widget_maker_list_title">我的小工具</string>
+    <string name="widget_maker_new">新建小工具</string>
+    <string name="widget_maker_select_size">選擇小工具大小</string>
+    <string name="widget_size_2x2">小 (2x2)</string>
+    <string name="widget_size_4x2">中 (4x2)</string>
+    <string name="widget_maker_no_widgets">目前尚無自訂小工具。點擊 + 建立。</string>
+    <string name="widget_workshop_title">工作坊</string>
+    <string name="workshop_tab_items">項目</string>
+    <string name="workshop_tab_background">背景</string>
+    <string name="workshop_tab_layer">圖層</string>
+    <string name="workshop_tab_touch">觸控</string>
+    <string name="workshop_add_component">新增組件</string>
+    <string name="workshop_preview">預覽</string>
 </resources>

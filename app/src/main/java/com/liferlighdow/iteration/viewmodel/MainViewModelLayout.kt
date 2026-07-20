@@ -4,6 +4,9 @@ import android.app.Application
 import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.data.AppModel
 import com.liferlighdow.iteration.data.WidgetType
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * MainViewModel 的擴充檔案，專門處理桌面佈局、拖放與資料夾邏輯
@@ -328,6 +331,24 @@ fun MainViewModel.removeAppFromHome(uniqueId: String) {
     }
     if (removed) {
         reorganizeAllPages(currentPages)
+    }
+}
+
+fun MainViewModel.removeAppFromHomeWithAnimation(uniqueId: String) {
+    viewModelScope.launch {
+        _removingItemIds.value += uniqueId
+        delay(500)
+        removeAppFromHome(uniqueId)
+        _removingItemIds.value -= uniqueId
+    }
+}
+
+fun MainViewModel.removeAppFromFolderWithAnimation(folderId: String, appUniqueId: String) {
+    viewModelScope.launch {
+        _removingItemIds.value += appUniqueId
+        delay(500)
+        removeAppFromFolder(folderId, appUniqueId)
+        _removingItemIds.value -= appUniqueId
     }
 }
 

@@ -40,6 +40,7 @@ import com.liferlighdow.iteration.utils.ActionMode
 import com.liferlighdow.iteration.utils.IconShape
 import com.liferlighdow.iteration.viewmodel.*
 import com.liferlighdow.iteration.ui.widgets.*
+import com.liferlighdow.iteration.ui.showNativeUninstallDialog
 import rikka.shizuku.Shizuku
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -900,6 +901,7 @@ fun PwaMakerScreen(onBack: () -> Unit) {
 @Composable
 fun PwaManageScreen(onBack: () -> Unit, onNavigateToPwaMaker: () -> Unit) {
     val viewModel: MainViewModel = viewModel()
+    val context = LocalContext.current
     val pwaApps by viewModel.pwaApps.collectAsState()
     var editingApp by remember { mutableStateOf<AppModel?>(null) }
 
@@ -984,7 +986,9 @@ fun PwaManageScreen(onBack: () -> Unit, onNavigateToPwaMaker: () -> Unit) {
                 editingApp = null
             },
             onDelete = {
-                viewModel.deletePWA(editingApp!!)
+                showNativeUninstallDialog(context, editingApp!!.label) {
+                    viewModel.deletePWA(editingApp!!)
+                }
                 editingApp = null
             }
         )

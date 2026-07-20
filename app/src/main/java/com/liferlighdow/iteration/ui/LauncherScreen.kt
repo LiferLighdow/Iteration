@@ -754,7 +754,9 @@ fun LauncherScreen(
                         onLongClick = { showDockPicker = it },
                         onDeleteClick = { app ->
                             if (app.isPWA) {
-                                viewModel.deletePWA(app)
+                                showNativeUninstallDialog(mContext, app.label) {
+                                    viewModel.deletePWA(app)
+                                }
                                 return@LauncherBottomBar
                             }
                             try {

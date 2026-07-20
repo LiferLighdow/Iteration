@@ -78,7 +78,7 @@ import com.liferlighdow.iteration.data.WidgetDisplayMode
 import com.liferlighdow.iteration.data.WidgetModel
 import com.liferlighdow.iteration.data.WidgetType
 import com.liferlighdow.iteration.data.CustomComponent
-import com.liferlighdow.iteration.viewmodel.removeAppFromHome
+import com.liferlighdow.iteration.viewmodel.removeAppFromHomeWithAnimation
 import androidx.compose.foundation.shape.RoundedCornerShape
 import kotlin.math.abs
 
@@ -729,7 +729,7 @@ private fun WidgetGridItem(
                         .offset(x = (-8).dp, y = (-8).dp)
                         .size(24.dp)
                         .background(Color.Gray.copy(alpha = 0.9f), CircleShape)
-                        .clickable { viewModel.removeAppFromHome(app.uniqueId) },
+                        .clickable { viewModel.removeAppFromHomeWithAnimation(app.uniqueId) },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.Default.Close, "Remove", tint = Color.White, modifier = Modifier.size(16.dp))
@@ -873,7 +873,7 @@ private fun WidgetGridItem(
                     text = { Text(stringResource(R.string.menu_delete_home)) },
                     leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
                     onClick = {
-                        viewModel.removeAppFromHome(app.uniqueId)
+                        viewModel.removeAppFromHomeWithAnimation(app.uniqueId)
                         onContextMenuDismiss()
                     }
                 )
@@ -923,9 +923,11 @@ private fun AppGridItem(
             getIcon = { pkg -> viewModel.getIcon(pkg) },
             onDeleteClick = {
                 if (app.isPWA) {
-                    viewModel.deletePWA(app)
+                    showNativeUninstallDialog(mContext, app.label) {
+                        viewModel.deletePWA(app)
+                    }
                 } else {
-                    viewModel.removeAppFromHome(app.uniqueId)
+                    viewModel.removeAppFromHomeWithAnimation(app.uniqueId)
                 }
             },
             notificationCountProvider = notificationCountProvider,
@@ -987,7 +989,7 @@ private fun AppGridItem(
                     text = { Text(stringResource(R.string.menu_delete_home)) },
                     leadingIcon = { Icon(Icons.Default.Delete, null) },
                     onClick = {
-                        viewModel.removeAppFromHome(app.uniqueId)
+                        viewModel.removeAppFromHomeWithAnimation(app.uniqueId)
                         onContextMenuDismiss()
                     }
                 )
@@ -1009,7 +1011,9 @@ private fun AppGridItem(
                         leadingIcon = { Icon(Icons.Default.DeleteForever, null) },
                         onClick = {
                             if (app.isPWA) {
-                                viewModel.deletePWA(app)
+                                showNativeUninstallDialog(mContext, app.label) {
+                                    viewModel.deletePWA(app)
+                                }
                                 onContextMenuDismiss()
                                 return@DropdownMenuItem
                             }

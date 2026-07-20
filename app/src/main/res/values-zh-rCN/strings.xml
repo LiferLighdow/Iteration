@@ -44,6 +44,8 @@
     <string name="action_failed_check_permission">操作失败，请检查 Shizuku/ROOT 权限</string>
     <string name="unfreeze_dialog_title">解冻应用</string>
     <string name="unfreeze_dialog_msg">此应用目前处于冻结状态，是否要解冻？</string>
+    <string name="frozen_apps_title">冻结应用管理</string>
+    <string name="no_frozen_apps">未发现被冻结的应用</string>
     <string name="menu_add_favorite">添加至收藏</string>
     <string name="menu_remove_favorite">从收藏移除</string>
     <string name="menu_manage_apps">管理应用</string>
@@ -78,6 +80,11 @@
     <string name="search_store">商店搜索</string>
     <string name="search_maps">地图搜索</string>
     <string name="hidden_apps_title">隐藏的应用</string>
+    <string name="private_space_title">私密空间</string>
+    <string name="private_space_locked">私密空间已锁定</string>
+    <string name="unlock_private_space">解锁私密空间</string>
+    <string name="lock_private_space">锁定私密空间</string>
+    <string name="private_space_locked_desc">私密空间目前已锁定。点击锁形图标解锁。</string>
     <string name="password_hint">输入密码</string>
 
     <!-- 设置主页 -->
@@ -136,12 +143,8 @@
     <string name="cat_other">其他</string>
 
     <!-- 内容描述 -->
-    <string name="desc_check">检查</string>
-    <string name="desc_back">返回</string>
-    <string name="desc_delete">删除</string>
     <string name="desc_add">添加类别</string>
 
-    <string name="launcher_placeholder">iOS 风格启动器</string>
     <string name="btn_settings">设置</string>
     <string name="settings_general">一般</string>
     <string name="settings_custom_layout">自定义布局</string>
@@ -207,6 +210,13 @@
     <string name="permission_contacts_desc">允许在全局搜索中搜索联系人</string>
     <string name="permission_calendar">日历访问</string>
     <string name="permission_calendar_desc">允许访问日历以在小部件中显示活动</string>
+    <string name="permission_files">存储空间与文件</string>
+    <string name="permission_files_desc">在您的设备中搜索文件与文件夹。</string>
+    <string name="permission_files_manage">管理所有文件</string>
+    <string name="permission_files_manage_desc">在 Android 11+ 上进行全设备文件搜索所需。</string>
+    <string name="calendar">日历</string>
+    <string name="files">文件</string>
+    <string name="view_all">查看全部</string>
     <string name="permission_notifications">通知访问</string>
     <string name="permission_notifications_desc">显示通知点与标记所需</string>
     <string name="permission_accessibility">无障碍服务</string>
@@ -369,7 +379,7 @@
     <string name="dock_style_platform">平台 (3D 玻璃)</string>
     <string name="dock_style_lite">极简（无背景）</string>
     <string name="style_exclusions">风格排除</string>
-    <string name="style_exclusions_desc">选定的应用将始终使用其原始彩色图标。</string>
+    <string name="style_exclusions_desc">选定的应用将始终使用其 original 彩色图标。</string>
     <string name="your_device">您的设备</string>
     <string name="network_connected">已连接 / 已获得访问权限</string>
     <string name="network_restricted">无网络或访问受限</string>
@@ -395,7 +405,7 @@
     <string name="choose_location">选择地点</string>
     <string name="note_placeholder">在此输入您的笔记&#8230;</string>
     <string name="ip_location_auto">使用 IP 定位（自动）</string>
-    <string name="search_city_hint">搜索城市&#8230;</string>
+    <string name="search_city_hint">搜索 city&#8230;</string>
     <string name="search_apps_hint">搜索应用&#8230;</string>
     <string name="location_admin_country">%1$s, %2$s</string>
     <string name="replace_app">替换应用</string>
@@ -414,6 +424,10 @@
     <string name="widget_weather_forecast">天气预报</string>
     <string name="widget_rss">RSS 订阅源</string>
     <string name="desc_rss">随时掌握您最喜爱的 RSS 订阅动态</string>
+    <string name="widget_info_hub">信息中心</string>
+    <string name="desc_info_hub">全面的手机状态仪表盘。</string>
+    <string name="widget_info_hub2">信息中心 2</string>
+    <string name="desc_info_hub2">包含网络和显示信息的高级系统仪表盘。</string>
     <string name="edit_rss">编辑 RSS 网址</string>
     <string name="rss_url_hint">RSS 订阅源网址 (例如 https://example.com/rss)</string>
     <string name="network_disabled">网络已禁用</string>
@@ -444,10 +458,10 @@
     <string name="language_system_default_desc">使用设备设置。如果翻译不可用，则回退到英文。</string>
 
     <string name="settings_icon_theme">图标主题</string>
-    <string name="settings_icon_theme_desc">样式、形状与图标包</string>
+    <string name="settings_icon_theme_desc">样式、形状與图标包</string>
     <string name="settings_liquid_glass_desc">实时玻璃拟态效果</string>
     <string name="settings_home_screen">桌面设置</string>
-    <string name="settings_home_screen_desc">网格、Dock 与菜单选项</string>
+    <string name="settings_home_screen_desc">网格、Dock 與菜单选项</string>
     <string name="no_results_found">找不到“%1$s”的相关结果</string>
     <string name="export_failed">导出失败：%1$s</string>
     <string name="import_failed_msg">导入失败：%1$s</string>
@@ -525,20 +539,30 @@
     <string name="icon_scale_desc">微调桌面图标的显示大小 (90% 到 110%)。</string>
     <string name="icon_scale_current">当前比例：%1$d%%</string>
 
+    <string name="settings_update_check_interval">更新检查间隔</string>
+    <string name="settings_update_check_interval_desc">自动检查更新的时间间隔（0 到 36 小時，0 为禁用）。</string>
+    <string name="settings_update_check_hours">%1$d 小时</string>
     <string name="settings_offline_translation">离线翻译 (ML Kit)</string>
     <string name="settings_offline_translation_desc">使用设备本地模型进行翻译。需要下载语言数据 (约 30MB)。</string>
     <string name="settings_translate">翻译设置</string>
-    <string name="settings_translate_desc">管理离线模型与翻译功能</string>
+    <string name="settings_translate_desc">管理离线模型與翻译功能</string>
     <string name="language_not_downloaded">未下载</string>
     <string name="language_downloading">正在下载&#8230;</string>
     <string name="language_downloaded">已下载</string>
     <string name="available_languages">可用语言</string>
-    <string name="download_model">下载模型</string>
-    <string name="delete_model">删除模型</string>
+    <string name="download_model">下载 model</string>
+    <string name="delete_model">删除 model</string>
+    <string name="update_dialog_title">发现新版本</string>
+    <string name="update_dialog_message">Iteration Launcher 有新版本可用 (%1$s)。您想要现在下载吗？</string>
+    <string name="update_dialog_download">下载</string>
+    <string name="update_dialog_cancel">取消</string>
+    <string name="update_download_title">Iteration 更新 %1$s</string>
+    <string name="update_download_description">正在下载最新版本&#8230;</string>
+    <string name="update_download_started">更新下载已开始</string>
 
     <!-- 壁纸应用 -->
     <string name="applying_wallpaper">正在应用壁纸</string>
-    <string name="applying_wallpaper_desc">正在优化颜色并生成效果。</string>
+    <string name="applying_wallpaper_desc">正在优化颜色並生成效果。</string>
     <string name="select_wallpaper_type_desc">您要使用相册中的照片，还是创建纯色壁纸？</string>
     <string name="emoji_label">表情符号</string>
     <string name="emoji_hint">输入一个或多个表情符号</string>
@@ -548,5 +572,37 @@
     <string name="wallpaper_mode_lite">精简（性能优先）</string>
     <string name="wallpaper_mode_lite_desc">系统仅使用 1x1 纯色。表情符号仅由启动器渲染。最省电。</string>
     <string name="wallpaper_mode_balance">平衡（混合模式）</string>
-    <string name="wallpaper_mode_balance_desc">锁定屏幕显示完整表情符号。主屏幕使用精简渲染。兼顾两者优点。</string>
+    <string name="wallpaper_mode_balance_desc">锁定屏幕显示完整表情符号. 主屏幕使用精简渲染. 兼顾两者优点。</string>
+
+    <!-- PWA & Widget Maker -->
+    <string name="pwa_manage_title">PWA 管理</string>
+    <string name="pwa_manage_desc">管理並创建渐进式网页应用 (PWA)。</string>
+    <string name="pwa_maker_title">PWA 制作工具</string>
+    <string name="pwa_maker_desc">在主屏幕上创建轻量级网页应用快捷方式。</string>
+    <string name="pwa_list_empty">尚未创建 PWA 应用。</string>
+    <string name="edit_pwa">编辑 PWA</string>
+    <string name="save_changes">保存更改</string>
+    <string name="pwa_label_hint">应用名称</string>
+    <string name="pwa_url_hint">网址 (URL)</string>
+    <string name="pwa_created">PWA 已创建並添加至主屏幕</string>
+    <string name="pwa_invalid_input">请输入有效的名称和网址</string>
+    <string name="pwa_uninstall_title">%1$s</string>
+    <string name="pwa_uninstall_message">您要卸载此应用吗？</string>
+    <string name="pwa_uninstall_ok">确定</string>
+    <string name="background_color">背景颜色</string>
+    <string name="widget_maker_title">小部件制作工具</string>
+    <string name="widget_maker_desc">设计並创建您自己的自定义小部件。</string>
+    <string name="widget_maker_list_title">我的小部件</string>
+    <string name="widget_maker_new">新建小部件</string>
+    <string name="widget_maker_select_size">选择小部件尺寸</string>
+    <string name="widget_size_2x2">小 (2x2)</string>
+    <string name="widget_size_4x2">中 (4x2)</string>
+    <string name="widget_maker_no_widgets">目前尚无自定义小部件。点击 + 创建。</string>
+    <string name="widget_workshop_title">工作坊</string>
+    <string name="workshop_tab_items">项目</string>
+    <string name="workshop_tab_background">背景</string>
+    <string name="workshop_tab_layer">图层</string>
+    <string name="workshop_tab_touch">触控</string>
+    <string name="workshop_add_component">添加组件</string>
+    <string name="workshop_preview">预览</string>
 </resources>

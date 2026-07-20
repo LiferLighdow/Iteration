@@ -22,11 +22,13 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -46,6 +48,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import kotlinx.coroutines.launch
 import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -211,6 +214,31 @@ fun AppLibraryPage(
         ) { targetIsLibraryView ->
             if (targetIsLibraryView) {
                 val appsToShow = if ((selectedCategory == "Hidden Apps" && !isHiddenUnlocked) || (selectedCategory == "Private" && isPrivateSpaceLocked)) emptyList() else filteredApps
+                
+                val listState = rememberLazyListState()
+                val coroutineScope = rememberCoroutineScope()
+                val haptic = LocalHapticFeedback.current
+
+                val groupedApps = remember(appsToShow) {
+                    appsToShow.groupBy {
+                        val firstChar = it.label.firstOrNull()?.uppercaseChar() ?: '#'
+                        if (firstChar in 'A'..'Z') firstChar.toString() else "#"
+                    }.toSortedMap { a, b ->
+                        if (a == "#") 1 else if (b == "#") -1 else a.compareTo(b)
+                    }
+                }
+
+                val alphabetMapping = remember(groupedApps) {
+                    var currentIndex = 0
+                    groupedApps.keys.associateWith { key ->
+                        val pos = currentIndex
+                        currentIndex += (groupedApps[key]?.size ?: 0) + 1
+                        pos
+                    }
+                }
+
+                val alphabet = remember { ('A'..'Z').map { it.toString() } + "#" }
+
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -228,7 +256,6 @@ fun AppLibraryPage(
                                 imageVector = Icons.Default.Lock,
                                 contentDescription = null,
                                 modifier = Modifier.size(64.dp).clickable {
-                                    // 找到任意一個私密應用的 userId 來解鎖
                                     val privateUser = allApps.find { it.isPrivate }?.userId
                                     if (privateUser != null) viewModel.unlockPrivateSpace(privateUser)
                                 },
@@ -239,106 +266,187 @@ fun AppLibraryPage(
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(stringResource(R.string.private_space_locked_desc), color = Color.White.copy(alpha = 0.6f), textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 32.dp))
                         }
-                    }
-
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
-                        items(appsToShow, key = { it.uniqueId }) { app ->
-                            var showMenu by remember { mutableStateOf(false) }
-                            Box(modifier = Modifier.fillMaxWidth()) {
-                                ListItem(
-                                    headlineContent = { Text(app.label, color = Color.White) },
-                                    leadingContent = {
-                                        val appIcon = viewModel.getIcon(app.uniqueId)
-                                        if (appIcon != null) {
-                                            val listIconSize = 40.dp
-                                            val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(listIconSize * 0.238f)
-                                            val colorFilter = remember(app.isFrozen) {
-                                                if (app.isFrozen) {
-                                                    androidx.compose.ui.graphics.ColorFilter.colorMatrix(androidx.compose.ui.graphics.ColorMatrix().apply { setToSaturation(0f) })
-                                                } else null
-                                            }
-                                            Image(
-                                                bitmap = appIcon,
-                                                contentDescription = null,
-                                                colorFilter = colorFilter,
-                                                modifier = Modifier
-                                                    .size(listIconSize)
-                                                    .clip(shape)
-                                                    .border(
-                                                        width = 0.5.dp,
-                                                        color = Color.White.copy(alpha = 0.3f),
-                                                        shape = shape
-                                                    )
-                                            )
-                                        }
-                                    },
-                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                    modifier = Modifier.combinedClickable(
-                                        onClick = { 
-                                            if (app.isFrozen) appToUnfreeze = app
-                                            else onAppClick(app) 
-                                        },
-                                        onLongClick = { showMenu = true }
-                                    )
-                                )
-                                DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                                    val actionMode by viewModel.actionMode.collectAsState()
-                                    if (menuOptions.contains("freeze") && (actionMode == ActionMode.SHIZUKU || actionMode == ActionMode.ROOT)) {
-                                        DropdownMenuItem(
-                                            text = { Text(stringResource(if (app.isFrozen) R.string.unfreeze else R.string.freeze)) },
-                                            leadingIcon = { Icon(Icons.Default.AcUnit, null, tint = MaterialTheme.colorScheme.primary) },
-                                            onClick = { viewModel.toggleFreezeApp(app, mContext); showMenu = false }
-                                        )
-                                        HorizontalDivider()
-                                    }
-                                    if (!app.isPrivate) {
-                                        DropdownMenuItem(text = { Text(stringResource(R.string.menu_add_to_home)) }, leadingIcon = { Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.primary) }, onClick = { viewModel.addAppToHome(app.uniqueId); showMenu = false })
-                                    }
-                                    DropdownMenuItem(text = { Text(stringResource(R.string.rename)) }, leadingIcon = { Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary) }, onClick = { appToRename = app; newLabelText = app.label; showMenu = false })
-                                    DropdownMenuItem(text = { Text(stringResource(if (app.isHidden) R.string.unhide else R.string.hide)) }, leadingIcon = { Icon(if (app.isHidden) Icons.Default.Visibility else Icons.Default.VisibilityOff, null, tint = MaterialTheme.colorScheme.primary) }, onClick = { viewModel.toggleHiddenApp(app.uniqueId); showMenu = false })
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.menu_app_info)) },
-                                        leadingIcon = { Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary) },
-                                        onClick = {
-                                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                                data = Uri.parse("package:${app.packageName}")
-                                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                            }
-                                            mContext.startActivity(intent)
-                                            showMenu = false
-                                        }
-                                    )
-                                    if (!app.isSystem) {
-                                        HorizontalDivider()
-                                        DropdownMenuItem(
-                                            text = { Text(stringResource(R.string.menu_uninstall)) },
-                                            leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
-                                            onClick = {
-                                                if (app.isPWA) {
-                                                    viewModel.deletePWA(app)
-                                                    showMenu = false
-                                                    return@DropdownMenuItem
-                                                }
-                                                try {
-                                                    val intent = Intent(Intent.ACTION_DELETE).apply {
-                                                        data = Uri.fromParts("package", app.packageName, null)
-                                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                                    }
-                                                    mContext.startActivity(intent)
-                                                } catch (e: Exception) {
-                                                    Log.e("Iteration", "Uninstall failed", e)
-                                                }
-                                                showMenu = false
-                                            }
+                    } else {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize().padding(end = 24.dp)
+                        ) {
+                            groupedApps.forEach { (initial, apps) ->
+                                stickyHeader {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(Color.Transparent)
+                                            .padding(vertical = 4.dp, horizontal = 16.dp)
+                                    ) {
+                                        Text(
+                                            text = initial,
+                                            style = MaterialTheme.typography.titleSmall,
+                                            color = Color.White.copy(alpha = 0.7f)
                                         )
                                     }
                                 }
-                                HorizontalDivider(modifier = Modifier.padding(start = 64.dp).align(Alignment.BottomCenter), thickness = 0.5.dp, color = Color.White.copy(alpha = 0.2f))
+
+                                items(apps, key = { it.uniqueId }) { app ->
+                                    var showMenu by remember { mutableStateOf(false) }
+                                    Box(modifier = Modifier.fillMaxWidth()) {
+                                        ListItem(
+                                            headlineContent = { Text(app.label, color = Color.White) },
+                                            leadingContent = {
+                                                val appIcon = viewModel.getIcon(app.uniqueId)
+                                                if (appIcon != null) {
+                                                    val listIconSize = 40.dp
+                                                    val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(listIconSize * 0.238f)
+                                                    val colorFilter = remember(app.isFrozen) {
+                                                        if (app.isFrozen) {
+                                                            androidx.compose.ui.graphics.ColorFilter.colorMatrix(androidx.compose.ui.graphics.ColorMatrix().apply { setToSaturation(0f) })
+                                                        } else null
+                                                    }
+                                                    Image(
+                                                        bitmap = appIcon,
+                                                        contentDescription = null,
+                                                        colorFilter = colorFilter,
+                                                        modifier = Modifier
+                                                            .size(listIconSize)
+                                                            .clip(shape)
+                                                            .border(
+                                                                width = 0.5.dp,
+                                                                color = Color.White.copy(alpha = 0.3f),
+                                                                shape = shape
+                                                            )
+                                                    )
+                                                }
+                                            },
+                                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                            modifier = Modifier.combinedClickable(
+                                                onClick = { 
+                                                    if (app.isFrozen) appToUnfreeze = app
+                                                    else onAppClick(app) 
+                                                },
+                                                onLongClick = { showMenu = true }
+                                            )
+                                        )
+                                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                                            val actionMode by viewModel.actionMode.collectAsState()
+                                            if (menuOptions.contains("freeze") && (actionMode == ActionMode.SHIZUKU || actionMode == ActionMode.ROOT)) {
+                                                DropdownMenuItem(
+                                                    text = { Text(stringResource(if (app.isFrozen) R.string.unfreeze else R.string.freeze)) },
+                                                    leadingIcon = { Icon(Icons.Default.AcUnit, null, tint = MaterialTheme.colorScheme.primary) },
+                                                    onClick = { viewModel.toggleFreezeApp(app, mContext); showMenu = false }
+                                                )
+                                                HorizontalDivider()
+                                            }
+                                            if (!app.isPrivate) {
+                                                DropdownMenuItem(text = { Text(stringResource(R.string.menu_add_to_home)) }, leadingIcon = { Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.primary) }, onClick = { viewModel.addAppToHome(app.uniqueId); showMenu = false })
+                                            }
+                                            DropdownMenuItem(text = { Text(stringResource(R.string.rename)) }, leadingIcon = { Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary) }, onClick = { appToRename = app; newLabelText = app.label; showMenu = false })
+                                            DropdownMenuItem(text = { Text(stringResource(if (app.isHidden) R.string.unhide else R.string.hide)) }, leadingIcon = { Icon(if (app.isHidden) Icons.Default.Visibility else Icons.Default.VisibilityOff, null, tint = MaterialTheme.colorScheme.primary) }, onClick = { viewModel.toggleHiddenApp(app.uniqueId); showMenu = false })
+                                            DropdownMenuItem(
+                                                text = { Text(stringResource(R.string.menu_app_info)) },
+                                                leadingIcon = { Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary) },
+                                                onClick = {
+                                                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                                        data = Uri.parse("package:${app.packageName}")
+                                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                                    }
+                                                    mContext.startActivity(intent)
+                                                    showMenu = false
+                                                }
+                                            )
+                                            if (!app.isSystem) {
+                                                HorizontalDivider()
+                                                DropdownMenuItem(
+                                                    text = { Text(stringResource(R.string.menu_uninstall)) },
+                                                    leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
+                                                    onClick = {
+                                                        if (app.isPWA) {
+                                                            showNativeUninstallDialog(mContext, app.label) {
+                                                                viewModel.deletePWA(app)
+                                                            }
+                                                            showMenu = false
+                                                            return@DropdownMenuItem
+                                                        }
+                                                        try {
+                                                            val intent = Intent(Intent.ACTION_DELETE).apply {
+                                                                data = Uri.fromParts("package", app.packageName, null)
+                                                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                                            }
+                                                            mContext.startActivity(intent)
+                                                        } catch (e: Exception) {
+                                                            Log.e("Iteration", "Uninstall failed", e)
+                                                        }
+                                                        showMenu = false
+                                                    }
+                                                )
+                                            }
+                                        }
+                                        HorizontalDivider(modifier = Modifier.padding(start = 64.dp).align(Alignment.BottomCenter), thickness = 0.5.dp, color = Color.White.copy(alpha = 0.2f))
+                                    }
+                                }
+                            }
+                        }
+
+                        // Alphabet Index
+                        var lastHapticLetter by remember { mutableStateOf("") }
+                        Column(
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .fillMaxHeight()
+                                .padding(vertical = 40.dp)
+                                .pointerInput(Unit) {
+                                    detectVerticalDragGestures(
+                                        onDragStart = { offset ->
+                                            val index = (offset.y / size.height * alphabet.size).toInt().coerceIn(0, alphabet.size - 1)
+                                            val letter = alphabet[index]
+                                            alphabetMapping[letter]?.let { target ->
+                                                coroutineScope.launch { listState.scrollToItem(target) }
+                                                if (lastHapticLetter != letter) {
+                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                    lastHapticLetter = letter
+                                                }
+                                            }
+                                        },
+                                        onVerticalDrag = { change, _ ->
+                                            val index = (change.position.y / size.height * alphabet.size).toInt().coerceIn(0, alphabet.size - 1)
+                                            val letter = alphabet[index]
+                                            alphabetMapping[letter]?.let { target ->
+                                                coroutineScope.launch { listState.scrollToItem(target) }
+                                                if (lastHapticLetter != letter) {
+                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                    lastHapticLetter = letter
+                                                }
+                                            }
+                                        }
+                                    )
+                                }
+                                .pointerInput(Unit) {
+                                    detectTapGestures { offset ->
+                                        val index = (offset.y / size.height * alphabet.size).toInt().coerceIn(0, alphabet.size - 1)
+                                        val letter = alphabet[index]
+                                        alphabetMapping[letter]?.let { target ->
+                                            coroutineScope.launch { listState.scrollToItem(target) }
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        }
+                                    }
+                                },
+                            verticalArrangement = Arrangement.SpaceEvenly,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            alphabet.forEach { letter ->
+                                val isAvailable = alphabetMapping.containsKey(letter)
+                                Text(
+                                    text = letter,
+                                    fontSize = 10.sp,
+                                    color = if (isAvailable) Color.White else Color.White.copy(alpha = 0.3f),
+                                    fontWeight = if (isAvailable) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal,
+                                    modifier = Modifier.padding(horizontal = 4.dp)
+                                )
                             }
                         }
                     }
                 }
-            } else {
+            }
+else {
                 val haptic = LocalHapticFeedback.current
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
@@ -698,7 +806,9 @@ fun LibraryItemWithMenu(
                     leadingIcon = { Icon(Icons.Default.Delete, null) },
                     onClick = {
                         if (app.isPWA) {
-                            viewModel.deletePWA(app)
+                            showNativeUninstallDialog(mContext, app.label) {
+                                viewModel.deletePWA(app)
+                            }
                             showMenu = false
                             return@DropdownMenuItem
                         }
@@ -734,7 +844,7 @@ fun LibraryItemWithMenu(
             },
             confirmButton = {
                 Button(onClick = {
-                    viewModel.setCustomLabel(app.packageName, renameText)
+                    viewModel.setCustomLabel(if (app.isPWA) app.uniqueId else app.packageName, renameText)
                     showRenameDialog = false
                 }) { Text(stringResource(R.string.save)) }
             },

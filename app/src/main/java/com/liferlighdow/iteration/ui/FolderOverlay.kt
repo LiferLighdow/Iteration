@@ -39,7 +39,7 @@ import com.liferlighdow.iteration.utils.IconShape
 import com.liferlighdow.iteration.viewmodel.MainViewModel
 import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.data.AppModel
-import com.liferlighdow.iteration.viewmodel.removeAppFromFolder
+import com.liferlighdow.iteration.viewmodel.removeAppFromFolderWithAnimation
 import com.liferlighdow.iteration.viewmodel.updateFolderApps
 import com.liferlighdow.iteration.viewmodel.updateFolderName
 
@@ -246,9 +246,11 @@ fun FolderOverlay(
                                                     getIcon = { pkg -> viewModel.getIcon(pkg) },
                                                     onDeleteClick = {
                                                         if (app.isPWA) {
-                                                            viewModel.deletePWA(app)
+                                                            showNativeUninstallDialog(mContext, app.label) {
+                                                                viewModel.deletePWA(app)
+                                                            }
                                                         } else {
-                                                            viewModel.removeAppFromFolder(currentFolder.uniqueId, app.uniqueId)
+                                                            viewModel.removeAppFromFolderWithAnimation(currentFolder.uniqueId, app.uniqueId)
                                                         }
                                                     },
                                                     modifier = Modifier
@@ -317,7 +319,7 @@ fun FolderOverlay(
                                                             text = { Text(stringResource(R.string.menu_delete_home)) },
                                                             leadingIcon = { Icon(Icons.Default.Delete, null) },
                                                             onClick = {
-                                                                viewModel.removeAppFromFolder(currentFolder.uniqueId, app.uniqueId)
+                                                                viewModel.removeAppFromFolderWithAnimation(currentFolder.uniqueId, app.uniqueId)
                                                                 showItemMenu = false
                                                             }
                                                         )
@@ -338,7 +340,9 @@ fun FolderOverlay(
                                                             leadingIcon = { Icon(Icons.Default.DeleteForever, null) },
                                                             onClick = {
                                                                 if (app.isPWA) {
-                                                                    viewModel.deletePWA(app)
+                                                                    showNativeUninstallDialog(mContext, app.label) {
+                                                                        viewModel.deletePWA(app)
+                                                                    }
                                                                     showItemMenu = false
                                                                     return@DropdownMenuItem
                                                                 }

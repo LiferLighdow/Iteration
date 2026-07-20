@@ -3,7 +3,6 @@ package com.liferlighdow.iteration
 import android.annotation.SuppressLint
 import android.app.ActivityManager
 import android.content.pm.ActivityInfo
-import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build

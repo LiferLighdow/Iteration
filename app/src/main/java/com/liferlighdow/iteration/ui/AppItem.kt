@@ -1,5 +1,8 @@
 package com.liferlighdow.iteration.ui
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -43,6 +46,7 @@ import com.liferlighdow.iteration.service.NotificationService
 import com.liferlighdow.iteration.data.AppModel
 import com.liferlighdow.iteration.R
 
+import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
@@ -96,9 +100,40 @@ fun AppItem(
         } else null
     }
 
+    val removingItemIds by viewModel.removingItemIds.collectAsState()
+    val isRemoving = remember(removingItemIds, app.uniqueId) { removingItemIds.contains(app.uniqueId) }
+
+    val animatedScale by animateFloatAsState(
+        targetValue = if (isRemoving) 0f else 1f,
+        animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing),
+        label = "RemovingScale"
+    )
+
+    val animatedAlpha by animateFloatAsState(
+        targetValue = if (isRemoving) 0f else 1f,
+        animationSpec = tween(durationMillis = 400),
+        label = "RemovingAlpha"
+    )
+
     Column(
         modifier = modifier
             .padding(vertical = if (showLabel) 4.dp else 0.dp)
+            .graphicsLayer {
+                scaleX = animatedScale
+                scaleY = animatedScale
+                alpha = animatedAlpha
+                if (isRemoving) {
+                    rotationZ = (1f - animatedScale) * 30f // 增加旋轉動感
+                    // Android 12+ 模糊效果 (質感提升)
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                        renderEffect = android.graphics.RenderEffect.createBlurEffect(
+                            (1f - animatedScale) * 30f,
+                            (1f - animatedScale) * 30f,
+                            android.graphics.Shader.TileMode.CLAMP
+                        ).asComposeRenderEffect()
+                    }
+                }
+            }
             .then(
                 if (onAppClick != null) {
                     Modifier.clickable { onAppClick() }

@@ -7,7 +7,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.LauncherApps
-import android.graphics.BitmapFactory
 import android.os.Build
 import android.os.UserHandle
 import android.os.UserManager
@@ -190,13 +189,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     internal val _isDesktopLocked = MutableStateFlow(prefs.getBoolean("is_desktop_locked", false))
     val isDesktopLocked = _isDesktopLocked.asStateFlow()
 
-    internal val _isPrivateSpaceVisible = MutableStateFlow(false)
-    val isPrivateSpaceVisible = _isPrivateSpaceVisible.asStateFlow()
-
     internal val _isPrivateSpaceLocked = _allApps.map { apps ->
         apps.any { it.isPrivate && it.isLocked }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, true)
     val isPrivateSpaceLocked = _isPrivateSpaceLocked
+
+    internal val _removingItemIds = MutableStateFlow<Set<String>>(emptySet())
+    val removingItemIds = _removingItemIds.asStateFlow()
 
     init {
         // Initial setup for update check if interval is set
@@ -590,7 +589,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
         override fun onPackageRemoved(packageName: String, user: UserHandle) {
             clearAppIconCache(packageName)
-            refreshApps()
+            val idsToAnimate = _pages.value.flatten().filter { it.packageName == packageName }.map { it.uniqueId }
+            if (idsToAnimate.isNotEmpty()) {
+                viewModelScope.launch {
+                    _removingItemIds.value += idsToAnimate
+                    delay(500)
+                    refreshApps()
+                    _removingItemIds.value -= idsToAnimate
+                }
+            } else {
+                refreshApps()
+            }
         }
         override fun onPackageChanged(packageName: String, user: UserHandle) {
             clearAppIconCache(packageName)

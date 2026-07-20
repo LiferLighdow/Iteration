@@ -37,6 +37,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -160,7 +161,10 @@ fun MainViewModel.loadCustomLabels() {
     if (saved != null) {
         val json = JSONObject(saved)
         json.keys().forEach { key: String ->
-            customLabels[key] = json.getString(key)
+            // 修復：移除通用的 PWA 標籤鍵值，避免全域覆蓋
+            if (key != "com.iteration.pwa") {
+                customLabels[key] = json.getString(key)
+            }
         }
     }
 }
@@ -227,7 +231,7 @@ fun MainViewModel.toggleHiddenApp(packageName: String) {
         hiddenPackages.remove(packageName)
     } else {
         hiddenPackages.add(packageName)
-        removeAppFromHomeByPackage(packageName)
+        removeAppFromHomeByPackageWithAnimation(packageName)
     }
     prefs.edit().putStringSet("hidden_apps", hiddenPackages).apply()
     clearAppIconCache(packageName)
@@ -272,7 +276,7 @@ fun MainViewModel.toggleFreezeApp(app: AppModel, context: Context) {
                 frozenPackages.remove(pkg)
             } else {
                 frozenPackages.add(pkg)
-                removeAppFromHomeByPackage(pkg)
+                removeAppFromHomeByPackageWithAnimation(pkg)
             }
             prefs.edit().putStringSet("frozen_apps", frozenPackages).apply()
             withContext(Dispatchers.Main) {
@@ -320,6 +324,24 @@ fun MainViewModel.removeAppFromHomeByPackage(packageName: String) {
 
     _pages.value = currentPages
     saveLayout()
+}
+
+fun MainViewModel.removeAppFromHomeByPackageWithAnimation(packageName: String) {
+    val idsToAnimate = _pages.value.flatten().flatMap { 
+        if (it.isFolder) it.folderItems.filter { f -> f.packageName == packageName }.map { f -> f.uniqueId }
+        else if (it.packageName == packageName) listOf(it.uniqueId)
+        else emptyList()
+    }
+    if (idsToAnimate.isNotEmpty()) {
+        viewModelScope.launch {
+            _removingItemIds.value += idsToAnimate
+            delay(500)
+            removeAppFromHomeByPackage(packageName)
+            _removingItemIds.value -= idsToAnimate
+        }
+    } else {
+        removeAppFromHomeByPackage(packageName)
+    }
 }
 
 fun MainViewModel.clearAppIconCache(packageName: String) {
@@ -789,8 +811,17 @@ fun MainViewModel.loadApps() {
                             }
 
                             val displayCategory = categoryRenames[rawCategory] ?: rawCategory
+                            
+                            // 標籤選取邏輯優化：確保桌面上的項目能對應到正確的自定義標籤
+                            val baseId = if (app.uniqueId.contains("@")) app.uniqueId.substringBeforeLast("@") else app.uniqueId
+                            
+                            val finalLabel = when {
+                                app.isPWA -> customLabels[baseId] ?: app.label
+                                else -> customLabels[baseId] ?: customLabels[app.packageName] ?: app.label
+                            }
+
                             app.copy(
-                                label = customLabels[app.uniqueId] ?: customLabels[app.packageName] ?: app.label,
+                                label = finalLabel,
                                 isHidden = hiddenPackages.contains(app.packageName) || hiddenPackages.contains(app.uniqueId),
                                 displayCategory = when {
                                     app.isPrivate -> "Private"
@@ -1073,23 +1104,29 @@ fun MainViewModel.savePwaApps() {
 }
 
 fun MainViewModel.deletePWA(app: AppModel) {
-    val current = _pwaApps.value.toMutableList()
-    current.removeAll { it.uniqueId == app.uniqueId }
-    _pwaApps.value = current
-    savePwaApps()
+    viewModelScope.launch {
+        _removingItemIds.value += app.uniqueId
+        delay(500)
+        
+        val current = _pwaApps.value.toMutableList()
+        current.removeAll { it.uniqueId == app.uniqueId }
+        _pwaApps.value = current
+        savePwaApps()
 
-    // 從主畫面移除
-    val currentPages = _pages.value.map { page ->
-        page.filter { it.uniqueId != app.uniqueId }
-    }.filter { it.isNotEmpty() }
-    _pages.value = currentPages
-    saveLayout()
-    
-    // 清除圖示快取
-    val fileSafeId = app.uniqueId.replace("/", "_").replace(":", "_").replace("@", "_")
-    processedIconCacheDir.listFiles { _, name -> name.startsWith(fileSafeId) }?.forEach { it.delete() }
-    
-    loadApps()
+        // 從主畫面移除
+        val currentPages = _pages.value.map { page ->
+            page.filter { it.uniqueId != app.uniqueId }
+        }.filter { it.isNotEmpty() }
+        _pages.value = currentPages
+        saveLayout()
+        
+        // 清除圖示快取
+        val fileSafeId = app.uniqueId.replace("/", "_").replace(":", "_").replace("@", "_")
+        processedIconCacheDir.listFiles { _, name -> name.startsWith(fileSafeId) }?.forEach { it.delete() }
+        
+        loadApps()
+        _removingItemIds.value -= app.uniqueId
+    }
 }
 
 fun MainViewModel.createPWA(label: String, url: String, bgColor: Int) {

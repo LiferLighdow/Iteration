@@ -370,7 +370,7 @@ fun RenameAppsScreen(onBack: () -> Unit) {
                         },
                         trailingContent = {
                             Row {
-                                IconButton(onClick = { viewModel.setCustomLabel(app.packageName, "") }) {
+                                IconButton(onClick = { viewModel.setCustomLabel(if (app.isPWA) app.uniqueId else app.packageName, "") }) {
                                     Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.restore_default), tint = MaterialTheme.colorScheme.primary)
                                 }
                                 IconButton(onClick = { editingApp = app; newLabel = app.label }) {
@@ -389,7 +389,7 @@ fun RenameAppsScreen(onBack: () -> Unit) {
                 text = { OutlinedTextField(value = newLabel, onValueChange = { newLabel = it }, label = { Text(stringResource(R.string.new_label_hint)) }, singleLine = true) },
                 confirmButton = {
                     TextButton(onClick = {
-                        editingApp?.let { viewModel.setCustomLabel(it.packageName, newLabel) }
+                        editingApp?.let { viewModel.setCustomLabel(if (it.isPWA) it.uniqueId else it.packageName, newLabel) }
                         editingApp = null
                     }) { Text(stringResource(R.string.save)) }
                 },

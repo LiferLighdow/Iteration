@@ -1274,7 +1274,9 @@ fun PrivateSpaceManagerDialog(
                                             leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
                                             onClick = {
                                                 if (app.isPWA) {
-                                                    viewModel.deletePWA(app)
+                                                    showNativeUninstallDialog(mContext, app.label) {
+                                                        viewModel.deletePWA(app)
+                                                    }
                                                     showMenu = false
                                                     return@DropdownMenuItem
                                                 }
