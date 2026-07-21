@@ -41,9 +41,6 @@ import com.liferlighdow.iteration.viewmodel.*
 @Composable
 fun DesktopSettingsScreen(onBack: () -> Unit) {
     val viewModel: MainViewModel = viewModel()
-    val allApps by viewModel.allApps.collectAsState()
-    val dockPkgNames by viewModel.dockPackageNames.collectAsState()
-    val iconShape by viewModel.iconShape.collectAsState()
     val desktopRows by viewModel.desktopRows.collectAsState()
     val dockStyle by viewModel.dockStyle.collectAsState()
     val dockCornerRadius by viewModel.dockCornerRadius.collectAsState()
@@ -77,10 +74,6 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
             }
         }
     }
-
-    val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp)
-
-    var showAppPickerForSlot by remember { mutableStateOf<Int?>(null) }
 
     Scaffold(
         topBar = {
@@ -395,80 +388,6 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
                     }
                 }
             }
-
-            item { HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp)) }
-
-            item {
-                Text(
-                    stringResource(R.string.dock_apps),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-            }
-
-            items(4) { index ->
-                val pkgName = dockPkgNames.getOrNull(index) ?: ""
-                val app = allApps.find { it.packageName == pkgName }
-
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp)
-                        .clickable { showAppPickerForSlot = index },
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    ListItem(
-                        headlineContent = { Text(app?.label ?: stringResource(R.string.empty_slot, index + 1)) },
-                        supportingContent = { Text(if (pkgName.isEmpty()) stringResource(R.string.tap_to_select_app) else pkgName) },
-                        leadingContent = {
-                            val appIcon = if (app != null) viewModel.getIcon(app.uniqueId) else null
-                            if (appIcon != null) {
-                                Image(
-                                    bitmap = appIcon,
-                                    contentDescription = null,
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .clip(shape)
-                                        .border(
-                                            width = 0.5.dp,
-                                            color = Color.Black.copy(alpha = 0.1f),
-                                            shape = shape
-                                        )
-                                )
-                            } else {
-                                Box(
-                                    modifier = Modifier.size(40.dp).background(MaterialTheme.colorScheme.surfaceVariant, shape),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                                }
-                            }
-                        },
-                        trailingContent = {
-                            if (pkgName.isNotEmpty()) {
-                                IconButton(onClick = { viewModel.updateDockApp(index, "") }) {
-                                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.remove), tint = MaterialTheme.colorScheme.error)
-                                }
-                            }
-                        }
-                    )
-                }
-            }
-        }
-
-        if (showAppPickerForSlot != null) {
-            val visibleApps = allApps.filter { !it.isHidden }
-            AppPickerDialog(
-                allApps = visibleApps,
-                iconShape = iconShape,
-                viewModel = viewModel,
-                onDismiss = { showAppPickerForSlot = null },
-                onAppSelected = { pkg ->
-                    viewModel.updateDockApp(showAppPickerForSlot!!, pkg)
-                    showAppPickerForSlot = null
-                }
-            )
         }
     }
 }
@@ -668,7 +587,7 @@ fun GesturesSettingsScreen(onBack: () -> Unit) {
             iconShape,
             viewModel,
             onDismiss = { showAppPickerForDoubleTap = false },
-            onAppSelected = { viewModel.setDoubleTapApp(it); showAppPickerForDoubleTap = false })
+            onAppSelected = { viewModel.setDoubleTapApp(it.packageName); showAppPickerForDoubleTap = false })
     }
     if (showAppPickerForSwipeUp) {
         AppPickerDialog(
@@ -676,7 +595,7 @@ fun GesturesSettingsScreen(onBack: () -> Unit) {
             iconShape,
             viewModel,
             onDismiss = { showAppPickerForSwipeUp = false },
-            onAppSelected = { viewModel.setSwipeUpApp(it); showAppPickerForSwipeUp = false })
+            onAppSelected = { viewModel.setSwipeUpApp(it.packageName); showAppPickerForSwipeUp = false })
     }
     if (showAppPickerForSwipeDown) {
         AppPickerDialog(
@@ -684,7 +603,7 @@ fun GesturesSettingsScreen(onBack: () -> Unit) {
             iconShape,
             viewModel,
             onDismiss = { showAppPickerForSwipeDown = false },
-            onAppSelected = { viewModel.setSwipeDownApp(it); showAppPickerForSwipeDown = false })
+            onAppSelected = { viewModel.setSwipeDownApp(it.packageName); showAppPickerForSwipeDown = false })
     }
     if (showAppPickerForLongPress) {
         AppPickerDialog(
@@ -692,7 +611,7 @@ fun GesturesSettingsScreen(onBack: () -> Unit) {
             iconShape,
             viewModel,
             onDismiss = { showAppPickerForLongPress = false },
-            onAppSelected = { viewModel.setLongPressApp(it); showAppPickerForLongPress = false })
+            onAppSelected = { viewModel.setLongPressApp(it.packageName); showAppPickerForLongPress = false })
     }
     if (showAppPickerForTwoFingerSwipeUp) {
         AppPickerDialog(
@@ -701,7 +620,7 @@ fun GesturesSettingsScreen(onBack: () -> Unit) {
             viewModel,
             onDismiss = { showAppPickerForTwoFingerSwipeUp = false },
             onAppSelected = {
-                viewModel.setTwoFingerSwipeUpApp(it); showAppPickerForTwoFingerSwipeUp = false
+                viewModel.setTwoFingerSwipeUpApp(it.packageName); showAppPickerForTwoFingerSwipeUp = false
             })
     }
     if (showAppPickerForTwoFingerSwipeDown) {
@@ -711,7 +630,7 @@ fun GesturesSettingsScreen(onBack: () -> Unit) {
             viewModel,
             onDismiss = { showAppPickerForTwoFingerSwipeDown = false },
             onAppSelected = {
-                viewModel.setTwoFingerSwipeDownApp(it); showAppPickerForTwoFingerSwipeDown = false
+                viewModel.setTwoFingerSwipeDownApp(it.packageName); showAppPickerForTwoFingerSwipeDown = false
             })
     }
 }

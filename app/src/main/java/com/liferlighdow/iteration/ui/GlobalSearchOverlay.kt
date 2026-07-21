@@ -120,7 +120,7 @@ fun GlobalSearchOverlay(
 
     val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
     val dateFormat = remember { SimpleDateFormat("MM/dd", Locale.getDefault()) }
-    
+
     // 當關閉時清空搜尋詞並強制清除焦點
     LaunchedEffect(isVisible) {
         if (!isVisible) {
@@ -421,7 +421,7 @@ fun GlobalSearchOverlay(
                 }
 
                 val isFrozenSearch = remember(query) { query.trim().lowercase() == "#frozen" }
-                val isPrivateSearch = remember(query) { query.trim().lowercase() == "#private" }
+                val isPrivateSearch = remember(query) { query.trim().lowercase() == "#private" && android.os.Build.VERSION.SDK_INT >= 35 }
                 val isPrivateLocked by viewModel.isPrivateSpaceLocked.collectAsState()
 
                 val hashtagCategoryApps = remember(query, allApps) {

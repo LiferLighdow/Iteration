@@ -374,6 +374,9 @@
     <string name="search_apps_hint">搜尋應用&#8230;</string>
     <string name="location_admin_country">%1$s, %2$s</string>
     <string name="replace_app">取代應用</string>
+    <string name="change_to_app">更換為應用</string>
+    <string name="change_to_folder">轉換為資料夾</string>
+    <string name="delete_home">從主畫面移除</string>
     <string name="delete_page_warning_msg">這個頁面裡還有內容呢～您真的確定要刪除嗎？一旦刪除了，所有的圖標和組件都會乖乖地被移除掉喔～嗚嗚，人家最怕主人會後悔呢…</string>
     <string name="charging">充電中</string>
     <string name="discharging">未在充電</string>

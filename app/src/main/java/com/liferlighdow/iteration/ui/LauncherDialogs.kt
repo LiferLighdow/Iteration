@@ -53,6 +53,9 @@ fun LauncherOverlays(
     onDismissWidgetPicker: () -> Unit,
     showDockPicker: Int?,
     onDismissDockPicker: () -> Unit,
+    showDockAddTypePicker: Int?,
+    onDismissDockAddTypePicker: () -> Unit,
+    onSelectDockApp: (Int) -> Unit,
     appToEdit: AppModel?,
     onDismissAppEdit: () -> Unit,
     folderToOpenId: String?,
@@ -79,8 +82,10 @@ fun LauncherOverlays(
     onAppClick: (AppModel) -> Unit
 ) {
     val mContext = LocalContext.current
-    val openFolder = remember(folderToOpenId, pages) {
+    val dockApps by viewModel.dockItems.collectAsState()
+    val openFolder = remember(folderToOpenId, pages, dockApps) {
         pages.flatten().find { it.uniqueId == folderToOpenId }
+            ?: dockApps.find { it.uniqueId == folderToOpenId }
     }
 
     LauncherMenu(
@@ -195,15 +200,40 @@ fun LauncherOverlays(
         )
     }
 
-    // 4. Dock App 選擇器
+    // 4. Dock 新增類型選擇
+    if (showDockAddTypePicker != null) {
+        AlertDialog(
+            onDismissRequest = onDismissDockAddTypePicker,
+            title = { Text(stringResource(R.string.dock_add_title)) },
+            text = { Text(stringResource(R.string.dock_add_desc)) },
+            confirmButton = {
+                Button(onClick = {
+                    onSelectDockApp(showDockAddTypePicker)
+                    onDismissDockAddTypePicker()
+                }) {
+                    Text(stringResource(R.string.apps))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    viewModel.convertDockAppToFolder(showDockAddTypePicker)
+                    onDismissDockAddTypePicker()
+                }) {
+                    Text(stringResource(R.string.folder_default_name))
+                }
+            }
+        )
+    }
+
+    // 5. Dock App 選擇器
     if (showDockPicker != null) {
         AppPickerDialog(
             allApps = allAppsFlat.filter { !it.isHidden },
             iconShape = iconShape,
             viewModel = viewModel,
             onDismiss = onDismissDockPicker,
-            onAppSelected = { pkg: String -> 
-                viewModel.updateDockApp(showDockPicker, pkg)
+            onAppSelected = { app: AppModel -> 
+                viewModel.replaceDockApp(showDockPicker, app)
                 onDismissDockPicker()
             }
         )
@@ -261,7 +291,7 @@ fun AppPickerDialog(
     iconShape: IconShape = IconShape.DEFAULT,
     viewModel: MainViewModel,
     onDismiss: () -> Unit,
-    onAppSelected: (String) -> Unit
+    onAppSelected: (AppModel) -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -304,7 +334,7 @@ fun AppPickerDialog(
                                     Image(bitmap = appIcon, contentDescription = null, modifier = Modifier.size(40.dp).clip(shape))
                                 }
                             },
-                            modifier = Modifier.clickable { onAppSelected(app.packageName) }
+                            modifier = Modifier.clickable { onAppSelected(app) }
                         )
                     }
                 }

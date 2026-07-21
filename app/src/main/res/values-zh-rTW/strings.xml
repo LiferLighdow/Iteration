@@ -147,6 +147,17 @@
     <!-- 內容描述 -->
     <string name="desc_add">新增類別</string>
 
+    <string name="vnavi_use_vnavi_headline">使用 vNavi 瀏覽器（推薦）</string>
+    <string name="vnavi_use_vnavi_supporting">開啟進程隔離與進階功能。關閉時將使用內置 WebView。</string>
+    <string name="vnavi_pwa_engine">PWA 渲染引擎</string>
+    <string name="vnavi_use_internal">內置 WebView</string>
+    <string name="vnavi_use_vnavi">vNavi 瀏覽器（推薦）</string>
+    <string name="vnavi_install_title">安裝 vNavi？</string>
+    <string name="vnavi_install_msg">建議配合 vNavi 瀏覽器使用以獲得最佳 PWA 體驗與系統穩定性。是否現在前往下載？</string>
+    <string name="vnavi_install_ok">前往下載</string>
+    <string name="vnavi_install_no">稍後再說</string>
+    <string name="vnavi_install_url">https://github.com/LiferLighdow/vNavi/releases</string>
+
     <string name="btn_settings">設定</string>
     <string name="settings_general">一般</string>
     <string name="settings_custom_layout">自訂佈局</string>
@@ -313,6 +324,8 @@
     <string name="amoled_black_desc">在深色模式下強制使用純黑背景</string>
     <string name="layout_rows">佈局行數</string>
     <string name="layout_rows_current">目前：%1$s</string>
+    <string name="dock_add_title">新增至 Dock</string>
+    <string name="dock_add_desc">您想要在此位置新增單個應用程式還是資料夾？</string>
     <string name="dock_style">Dock 風格</string>
     <string name="dock_style_current">目前：%1$s</string>
     <string name="dock_radius_label">Dock 圓角半徑：%1$d</string>
@@ -411,6 +424,9 @@
     <string name="search_apps_hint">搜尋應用程式&#8230;</string>
     <string name="location_admin_country">%1$s, %2$s</string>
     <string name="replace_app">替換應用程式</string>
+    <string name="change_to_app">更換為應用程式</string>
+    <string name="change_to_folder">轉換為資料夾</string>
+    <string name="delete_home">從主畫面移除</string>
     <string name="delete_page_warning_msg">此頁面仍含有內容。您確定要刪除嗎？這將移除頁面上的所有圖示與組件。</string>
     <string name="charging">充電中</string>
     <string name="discharging">未在充電</string>

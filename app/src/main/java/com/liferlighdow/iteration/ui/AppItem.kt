@@ -18,9 +18,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,6 +31,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.liferlighdow.iteration.viewmodel.*
 import androidx.compose.runtime.remember
+import kotlinx.coroutines.delay
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -79,6 +78,11 @@ fun AppItem(
     val viewModel: MainViewModel = viewModel()
     val isDesktopLocked by viewModel.isDesktopLocked.collectAsState()
     val iconSignal by viewModel.iconUpdateSignal.collectAsState()
+
+    // 針對資料夾內部的圖標，我們也需要監聽 iconSignal 確保重組
+    val safeGetIcon: @Composable (String) -> ImageBitmap? = { id ->
+        remember(id, iconSignal) { viewModel.getIcon(id) } ?: getIcon(id)
+    }
     
     val appIcon = remember(app.uniqueId, iconSignal) {
         if (!app.isFolder) {
@@ -102,6 +106,15 @@ fun AppItem(
 
     val removingItemIds by viewModel.removingItemIds.collectAsState()
     val isRemoving = remember(removingItemIds, app.uniqueId) { removingItemIds.contains(app.uniqueId) }
+
+    // 解決資料夾進場太早的問題：增加一個微小的準備狀態
+    var isFolderReady by remember(app.uniqueId) { mutableStateOf(false) }
+    if (app.isFolder) {
+        LaunchedEffect(app.uniqueId) {
+            delay(300) // 增加到 300ms 以更好地對齊啟動時的延遲
+            isFolderReady = true
+        }
+    }
 
     val animatedScale by animateFloatAsState(
         targetValue = if (isRemoving) 0f else 1f,
@@ -145,39 +158,77 @@ fun AppItem(
     ) {
         Box(contentAlignment = Alignment.Center) {
             // Reflection
-            if (showReflection && !app.isFolder && displayIcon != null) {
-                Image(
-                    bitmap = displayIcon,
-                    contentDescription = null,
-                    colorFilter = colorFilter,
-                    modifier = Modifier
-                        .offset(y = iconSize * 0.7f)
-                        .size(iconSize)
-                        .graphicsLayer {
-                            rotationX = 180f
-                            alpha = 0.3f
-                        }
-                        .clip(currentShape)
-                        .drawBehind {
-                            drawRect(
-                                Brush.verticalGradient(
-                                    colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.5f)),
-                                    startY = 0f,
-                                    endY = size.height
+            if (showReflection) {
+                if (!app.isFolder && displayIcon != null) {
+                    Image(
+                        bitmap = displayIcon,
+                        contentDescription = null,
+                        colorFilter = colorFilter,
+                        modifier = Modifier
+                            .offset(y = iconSize * 0.7f)
+                            .size(iconSize)
+                            .graphicsLayer {
+                                rotationX = 180f
+                                alpha = 0.3f
+                            }
+                            .clip(currentShape)
+                            .drawBehind {
+                                drawRect(
+                                    Brush.verticalGradient(
+                                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.5f)),
+                                        startY = 0f,
+                                        endY = size.height
+                                    )
                                 )
-                            )
-                        },
-                    contentScale = ContentScale.FillBounds
-                )
+                            },
+                        contentScale = ContentScale.FillBounds
+                    )
+                } else if (app.isFolder && isFolderReady) {
+                    FolderIconContent(
+                        app = app,
+                        iconSize = iconSize,
+                        isLiquidGlass = isLiquidGlass,
+                        backdrop = backdrop,
+                        iconShape = iconShape,
+                        libraryShape = libraryShape,
+                        blurRadius = blurRadius,
+                        refractionHeight = refractionHeight,
+                        refractionAmount = refractionAmount,
+                        chromaticAberration = chromaticAberration,
+                        getIcon = safeGetIcon,
+                        modifier = Modifier
+                            .offset(y = iconSize * 0.7f)
+                            .graphicsLayer {
+                                rotationX = 180f
+                                alpha = 0.3f
+                            }
+                            .drawBehind {
+                                drawRect(
+                                    Brush.verticalGradient(
+                                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.5f)),
+                                        startY = 0f,
+                                        endY = size.height
+                                    )
+                                )
+                            }
+                    )
+                }
             }
 
             Box(contentAlignment = Alignment.TopEnd) {
                 // 使用 Crossfade 處理圖示切換，解決載入一半或殘影問題
+                // 優化：將資料夾納入動畫目標，確保其出現時也有淡入效果
+                val animationTarget = when {
+                    app.isFolder -> if (isFolderReady) "folder" else null
+                    app.packageName.isEmpty() -> "empty"
+                    else -> displayIcon
+                }
+                
                 Crossfade(
-                    targetState = displayIcon,
-                    animationSpec = tween(300),
+                    targetState = animationTarget,
+                    animationSpec = tween(250, easing = androidx.compose.animation.core.LinearOutSlowInEasing),
                     label = "IconFade"
-                ) { targetBitmap ->
+                ) { targetState ->
                     if (app.packageName.isEmpty() && !app.isFolder) {
                         Box(
                             modifier = Modifier
@@ -188,36 +239,23 @@ fun AppItem(
                         ) {
                             Icon(Icons.Default.Add, contentDescription = null, tint = Color.White.copy(alpha = 0.7f))
                         }
-                    } else if (app.isFolder) {
-                        Box(
-                            modifier = Modifier
-                                .size(iconSize)
-                                .liquidGlass(
-                                    enabled = isLiquidGlass,
-                                    backdrop = backdrop,
-                                    cornerRadius = if (libraryShape == IconShape.CIRCLE) iconSize / 2f else iconSize * 0.238f,
-                                    blurRadius = blurRadius,
-                                    refractionHeight = refractionHeight,
-                                    refractionAmount = refractionAmount,
-                                    chromaticAberration = chromaticAberration
-                                )
-                                .padding(4.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { 
-                                    FolderPreviewIcon(app.folderItems.getOrNull(0), iconSize / 2.5f, iconShape, getIcon)
-                                    FolderPreviewIcon(app.folderItems.getOrNull(1), iconSize / 2.5f, iconShape, getIcon) 
-                                }
-                                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { 
-                                    FolderPreviewIcon(app.folderItems.getOrNull(2), iconSize / 2.5f, iconShape, getIcon)
-                                    FolderPreviewIcon(app.folderItems.getOrNull(3), iconSize / 2.5f, iconShape, getIcon) 
-                                }
-                            }
-                        }
-                    } else if (targetBitmap != null) {
+                    } else if (targetState == "folder") {
+                        FolderIconContent(
+                            app = app,
+                            iconSize = iconSize,
+                            isLiquidGlass = isLiquidGlass,
+                            backdrop = backdrop,
+                            iconShape = iconShape,
+                            libraryShape = libraryShape,
+                            blurRadius = blurRadius,
+                            refractionHeight = refractionHeight,
+                            refractionAmount = refractionAmount,
+                            chromaticAberration = chromaticAberration,
+                            getIcon = safeGetIcon
+                        )
+                    } else if (targetState is ImageBitmap) {
                         Image(
-                            bitmap = targetBitmap,
+                            bitmap = targetState,
                             contentDescription = null,
                             colorFilter = colorFilter,
                             modifier = Modifier
@@ -296,14 +334,62 @@ fun AppItem(
 }
 
 @Composable
+fun FolderIconContent(
+    app: AppModel,
+    iconSize: Dp,
+    isLiquidGlass: Boolean,
+    backdrop: Backdrop?,
+    iconShape: IconShape,
+    libraryShape: IconShape,
+    blurRadius: Float,
+    refractionHeight: Float,
+    refractionAmount: Float,
+    chromaticAberration: Boolean,
+    getIcon: @Composable (String) -> ImageBitmap?,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .size(iconSize)
+            .liquidGlass(
+                enabled = isLiquidGlass,
+                backdrop = backdrop,
+                cornerRadius = if (libraryShape == IconShape.CIRCLE) iconSize / 2f else iconSize * 0.238f,
+                blurRadius = blurRadius,
+                refractionHeight = refractionHeight,
+                refractionAmount = refractionAmount,
+                chromaticAberration = chromaticAberration
+            )
+            .padding(4.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                FolderPreviewIcon(app.folderItems.getOrNull(0), iconSize / 2.5f, iconShape, getIcon)
+                FolderPreviewIcon(app.folderItems.getOrNull(1), iconSize / 2.5f, iconShape, getIcon)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                FolderPreviewIcon(app.folderItems.getOrNull(2), iconSize / 2.5f, iconShape, getIcon)
+                FolderPreviewIcon(app.folderItems.getOrNull(3), iconSize / 2.5f, iconShape, getIcon)
+            }
+        }
+    }
+}
+
+@Composable
 fun FolderPreviewIcon(
     app: AppModel?,
     size: Dp,
     iconShape: IconShape = IconShape.DEFAULT,
     getIcon: @Composable (String) -> ImageBitmap?
 ) {
+    val viewModel: MainViewModel = viewModel()
+    val iconSignal by viewModel.iconUpdateSignal.collectAsState()
+    
     val currentShape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(size * 0.238f)
-    val appIcon = app?.let { if (!it.isFolder) getIcon(it.uniqueId) else null }
+    val appIcon = app?.let { if (!it.isFolder) {
+        remember(it.uniqueId, iconSignal) { viewModel.getIcon(it.uniqueId) } ?: getIcon(it.uniqueId)
+    } else null }
     val colorFilter = remember(app?.isFrozen) {
         if (app?.isFrozen == true) {
             ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })

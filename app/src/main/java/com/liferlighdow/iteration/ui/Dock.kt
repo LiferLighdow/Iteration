@@ -10,6 +10,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.CreateNewFolder
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -56,6 +58,7 @@ fun Dock(
     notificationCounts: Map<String, Int> = emptyMap(),
     onAppClick: (AppModel) -> Unit,
     onLongClick: (Int) -> Unit,
+    onReplaceClick: (Int) -> Unit,
     onDeleteClick: ((AppModel) -> Unit)? = null
 ) {
     val navPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -149,7 +152,7 @@ fun Dock(
             }
         ) {
             val contentBottomPadding = if (dockStyle == DockStyle.PLATFORM) 20.dp else 0.dp
-            
+
             apps.forEachIndexed { index, app ->
                 Box(
                     modifier = Modifier
@@ -187,12 +190,12 @@ fun Dock(
                             if (isEditMode) rotationZ = rotation
                         }.combinedClickable(
                             onClick = {
-                                if (app.packageName.isNotEmpty()) onAppClick(app) else {
+                                if (app.isFolder || app.packageName.isNotEmpty()) onAppClick(app) else {
                                     if (!isDesktopLocked) onLongClick(index)
                                 }
                             },
                             onLongClick = {
-                                if (app.packageName.isNotEmpty()) {
+                                if (app.isFolder || app.packageName.isNotEmpty()) {
                                     if (!isEditMode && !isDesktopLocked) showContextMenu = true
                                 } else {
                                     if (!isDesktopLocked) onLongClick(index)
@@ -209,19 +212,68 @@ fun Dock(
                     ) {
                         val actionMode by viewModel.actionMode.collectAsState()
                         val menuOptions by viewModel.homeMenuOptions.collectAsState()
-                        if (menuOptions.contains("freeze") && (actionMode == ActionMode.SHIZUKU || actionMode == ActionMode.ROOT)) {
+
+                        // 1. 凍結/解凍
+                        if (menuOptions.contains("freeze") && (actionMode == ActionMode.SHIZUKU || actionMode == ActionMode.ROOT) && !app.isFolder) {
                             DropdownMenuItem(
                                 text = { Text(stringResource(if (app.isFrozen) R.string.unfreeze else R.string.freeze)) },
                                 leadingIcon = { Icon(Icons.Default.AcUnit, null) },
                                 onClick = { viewModel.toggleFreezeApp(app, context); showContextMenu = false }
                             )
-                            HorizontalDivider()
                         }
+
+                        // 2. 替換/更改 (Replace App / Change to App)
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.replace_app)) },
-                            leadingIcon = { Icon(Icons.Default.Settings, null) },
-                            onClick = { onLongClick(index); showContextMenu = false }
+                            text = { Text(stringResource(if (app.isFolder) R.string.change_to_app else R.string.replace_app)) },
+                            leadingIcon = { Icon(Icons.Default.SwapHoriz, null) },
+                            onClick = { onReplaceClick(index); showContextMenu = false }
                         )
+
+                        // 3. 轉為資料夾 (Change to Folder) - 僅在非資料夾且有 App 時出現
+                        if (!app.isFolder && app.packageName.isNotEmpty()) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.change_to_folder)) },
+                                leadingIcon = { Icon(Icons.Default.CreateNewFolder, null) },
+                                onClick = { viewModel.convertDockAppToFolder(index); showContextMenu = false }
+                            )
+                        }
+
+                        // 4. 移除 (Delete from Home)
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.delete_home)) },
+                            leadingIcon = { Icon(Icons.Default.Delete, null) },
+                            onClick = { 
+                                viewModel.removeAppFromDock(index)
+                                showContextMenu = false 
+                            }
+                        )
+
+                        // 5. 卸載 (Uninstall) - 僅非系統 App 且非資料夾
+                        if (!app.isFolder && !app.isSystem && app.packageName.isNotEmpty()) {
+                            HorizontalDivider()
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.menu_uninstall)) },
+                                leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
+                                onClick = {
+                                    showNativeUninstallDialog(context, app.label) {
+                                        if (app.isPWA) {
+                                            viewModel.deletePWA(app)
+                                        } else {
+                                            try {
+                                                val intent = Intent(Intent.ACTION_DELETE).apply {
+                                                    data = Uri.fromParts("package", app.packageName, null)
+                                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                                }
+                                                context.startActivity(intent)
+                                            } catch (e: Exception) {
+                                                Log.e("Iteration", "Uninstall failed", e)
+                                            }
+                                        }
+                                    }
+                                    showContextMenu = false
+                                }
+                            )
+                        }
                     }
                 }
             }

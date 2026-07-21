@@ -83,7 +83,6 @@ fun LauncherScreen(
     }
     val pages by viewModel.pages.collectAsState()
     val allAppsFlat by viewModel.allApps.collectAsState()
-    val dockPkgNames by viewModel.dockPackageNames.collectAsState()
     val isEditMode by viewModel.isEditMode.collectAsState()
     val minusOneWidgets by viewModel.minusOneWidgets.collectAsState()
     val isLiquidGlassEnabled by viewModel.isLiquidGlassEnabled.collectAsState()
@@ -195,9 +194,11 @@ fun LauncherScreen(
     var draggingApp by remember { mutableStateOf<AppModel?>(null) }
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
     var touchPosition by remember { mutableStateOf(Offset.Zero) }
+    val dockApps by viewModel.dockItems.collectAsState()
     var folderToOpenId by remember { mutableStateOf<String?>(null) }
-    val openFolder = remember(folderToOpenId, pages) {
-        pages.flatten().find { it.uniqueId == folderToOpenId }
+    val openFolder = remember(folderToOpenId, pages, dockApps) {
+        pages.flatten().find { it.uniqueId == folderToOpenId } 
+            ?: dockApps.find { it.uniqueId == folderToOpenId }
     }
     var folderIconPosition by remember { mutableStateOf(Offset.Zero) }
 
@@ -224,13 +225,7 @@ fun LauncherScreen(
     }
 
     var showDockPicker by remember { mutableStateOf<Int?>(null) }
-    val dockApps = remember(dockPkgNames, allAppsFlat) {
-        List(4) { index ->
-            val pkg = dockPkgNames.getOrNull(index) ?: ""
-            allAppsFlat.find { it.packageName == pkg && !it.isHidden && !it.isFrozen }
-                ?: AppModel(label = "", packageName = "", uniqueId = "empty_dock_$index")
-        }
-    }
+    var showDockAddTypePicker by remember { mutableStateOf<Int?>(null) }
 
     // iOS 感的主畫面聯動動畫
     val launcherScale by animateFloatAsState(
@@ -747,11 +742,15 @@ fun LauncherScreen(
                         notificationCounts = notificationCounts,
                         onSearchClick = { showGlobalSearch = true },
                         onAppClick = { app ->
-                            if (app.isFrozen) appToUnfreeze = app
-                            else onAppClick(app)
+                            if (app.isFolder) {
+                                folderToOpenId = app.uniqueId
+                            } else if (app.isFrozen) {
+                                appToUnfreeze = app
+                            } else onAppClick(app)
                         },
                         onSettingsClick = onSettingsClick,
-                        onLongClick = { showDockPicker = it },
+                        onLongClick = { showDockAddTypePicker = it },
+                        onReplaceClick = { showDockPicker = it },
                         onDeleteClick = { app ->
                             if (app.isPWA) {
                                 showNativeUninstallDialog(mContext, app.label) {
@@ -865,6 +864,9 @@ fun LauncherScreen(
         onDismissShortcutPicker = { showShortcutPicker = false },
         showDockPicker = showDockPicker,
         onDismissDockPicker = { showDockPicker = null },
+        showDockAddTypePicker = showDockAddTypePicker,
+        onDismissDockAddTypePicker = { showDockAddTypePicker = null },
+        onSelectDockApp = { showDockPicker = it },
         appToEdit = appToEdit,
         onDismissAppEdit = { appToEdit = null },
         folderToOpenId = folderToOpenId,
@@ -1094,6 +1096,37 @@ fun LauncherScreen(
                 }
             }
         }
+    }
+
+    val showVNaviInstallDialog by viewModel.showVNaviInstallDialog.collectAsState()
+    val vNaviInstallUrl = stringResource(R.string.vnavi_install_url)
+
+    if (showVNaviInstallDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissVNaviInstallDialog() },
+            title = { Text(stringResource(R.string.vnavi_install_title)) },
+            text = { Text(stringResource(R.string.vnavi_install_msg)) },
+            confirmButton = {
+                Button(onClick = {
+                    viewModel.dismissVNaviInstallDialog()
+                    try {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(vNaviInstallUrl)).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        mContext.startActivity(intent)
+                    } catch (e: Exception) {
+                        Log.e("Iteration", "Failed to open vNavi download URL", e)
+                    }
+                }) {
+                    Text(stringResource(R.string.vnavi_install_ok))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissVNaviInstallDialog() }) {
+                    Text(stringResource(R.string.vnavi_install_no))
+                }
+            }
+        )
     }
 
     if (appToUnfreeze != null) {

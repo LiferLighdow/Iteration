@@ -258,7 +258,14 @@ fun MainViewModel.updateFolderName(folderId: String, newName: String) {
         }
     }
     _pages.value = currentPages
+    
+    val currentDock = _dockItems.value.map { item ->
+        if (item.uniqueId == folderId) item.copy(label = newName) else item
+    }
+    _dockItems.value = currentDock
+    
     saveLayout()
+    saveDock()
 }
 
 fun MainViewModel.createFolder(pageIndex: Int, folderName: String) {
@@ -282,6 +289,7 @@ fun MainViewModel.createFolder(pageIndex: Int, folderName: String) {
 
 fun MainViewModel.deleteFolder(folderId: String, keepIcons: Boolean = true) {
     val currentPages = _pages.value.map { it.toMutableList() }.toMutableList()
+    var foundInPages = false
     outer@for (page in currentPages) {
         val idx = page.indexOfFirst { it.uniqueId == folderId }
         if (idx != -1) {
@@ -289,22 +297,35 @@ fun MainViewModel.deleteFolder(folderId: String, keepIcons: Boolean = true) {
             if (keepIcons) {
                 page.addAll(idx, folder.folderItems)
             }
+            foundInPages = true
             break@outer
         }
     }
-    reorganizeAllPages(currentPages)
+    if (foundInPages) {
+        reorganizeAllPages(currentPages)
+    }
+
+    val currentDock = _dockItems.value.toMutableList()
+    val dockIdx = currentDock.indexOfFirst { it.uniqueId == folderId }
+    if (dockIdx != -1) {
+        val folder = currentDock[dockIdx]
+        if (keepIcons && folder.folderItems.isNotEmpty()) {
+            currentDock[dockIdx] = folder.folderItems[0] // Dock 只能放一個，如果有多個也沒辦法，取第一個
+        } else {
+            currentDock[dockIdx] = AppModel(label = "", packageName = "", uniqueId = "empty_dock_${System.currentTimeMillis()}")
+        }
+        _dockItems.value = currentDock
+        saveDock()
+    }
 }
 
 fun MainViewModel.updateFolderApps(folderId: String, ids: List<String>) {
+    val allAppsMap = _allApps.value.associateBy { it.uniqueId }
+    
     val currentPages = _pages.value.map { page ->
         page.map { item ->
             if (item.uniqueId == folderId) {
-                // 1. 建立當前所有可用 App 的對照表
-                val allAppsMap = _allApps.value.associateBy { it.uniqueId }
-                // 建立目前資料夾內現有應用的對照表
                 val existingMap = item.folderItems.associateBy { it.uniqueId }
-                
-                // 2. 根據傳入的 ID 列表構建新的內容
                 val newFolderItems = ids.mapNotNull { id ->
                     existingMap[id] ?: allAppsMap[id]?.copy(
                         uniqueId = "${id}@${System.currentTimeMillis()}"
@@ -315,7 +336,22 @@ fun MainViewModel.updateFolderApps(folderId: String, ids: List<String>) {
         }
     }
     _pages.value = currentPages.map { it.toMutableList() }
+
+    val currentDock = _dockItems.value.map { item ->
+        if (item.uniqueId == folderId) {
+            val existingMap = item.folderItems.associateBy { it.uniqueId }
+            val newFolderItems = ids.mapNotNull { id ->
+                existingMap[id] ?: allAppsMap[id]?.copy(
+                    uniqueId = "${id}@${System.currentTimeMillis()}"
+                )
+            }.sortedBy { it.label.lowercase() }
+            item.copy(folderItems = newFolderItems)
+        } else item
+    }
+    _dockItems.value = currentDock
+
     saveLayout()
+    saveDock()
 }
 
 fun MainViewModel.removeAppFromHome(uniqueId: String) {
@@ -354,6 +390,7 @@ fun MainViewModel.removeAppFromFolderWithAnimation(folderId: String, appUniqueId
 
 fun MainViewModel.removeAppFromFolder(folderId: String, appUniqueId: String) {
     val currentPages = _pages.value.map { it.toMutableList() }.toMutableList()
+    var foundInPages = false
     outer@for (page in currentPages) {
         for (i in page.indices) {
             val item = page[i]
@@ -369,10 +406,33 @@ fun MainViewModel.removeAppFromFolder(folderId: String, appUniqueId: String) {
                     } else {
                         page[i] = item.copy(folderItems = updatedItems)
                     }
+                    foundInPages = true
                     break@outer
                 }
             }
         }
     }
-    reorganizeAllPages(currentPages)
+    if (foundInPages) reorganizeAllPages(currentPages)
+
+    val currentDock = _dockItems.value.toMutableList()
+    for (i in currentDock.indices) {
+        val item = currentDock[i]
+        if (item.isFolder && item.uniqueId == folderId) {
+            val updatedItems = item.folderItems.toMutableList()
+            val removedIdx = updatedItems.indexOfFirst { it.uniqueId == appUniqueId }
+            if (removedIdx != -1) {
+                updatedItems.removeAt(removedIdx)
+                if (updatedItems.isEmpty()) {
+                    currentDock[i] = AppModel(label = "", packageName = "", uniqueId = "empty_dock_${System.currentTimeMillis()}")
+                } else if (updatedItems.size == 1) {
+                    currentDock[i] = updatedItems[0]
+                } else {
+                    currentDock[i] = item.copy(folderItems = updatedItems)
+                }
+                _dockItems.value = currentDock
+                saveDock()
+                break
+            }
+        }
+    }
 }

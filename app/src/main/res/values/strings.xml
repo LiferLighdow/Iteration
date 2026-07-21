@@ -88,7 +88,16 @@
     <string name="private_space_locked_desc">Private Space is currently locked. Tap the lock icon to unlock.</string>
     <string name="password_hint">Enter Password</string>
 
-    <!-- Settings Main -->
+    <string name="vnavi_use_vnavi_headline">Use vNavi Browser (Recommended)</string>
+    <string name="vnavi_use_vnavi_supporting">Enable process isolation and advanced features. When disabled, internal WebView will be used.</string>
+    <string name="vnavi_pwa_engine">PWA Rendering Engine</string>
+    <string name="vnavi_use_internal">Internal WebView</string>
+    <string name="vnavi_use_vnavi">vNavi Browser (Recommended)</string>
+    <string name="vnavi_install_title">Install vNavi?</string>
+    <string name="vnavi_install_msg">It is recommended to use vNavi Browser for a better PWA experience and system stability. Would you like to download it now?</string>
+    <string name="vnavi_install_ok">Download</string>
+    <string name="vnavi_install_no">Later</string>
+    <string name="vnavi_install_url">https://github.com/LiferLighdow/vNavi/releases</string>
     <string name="settings_hide_apps">Hide Apps</string>
     <string name="settings_hide_apps_desc">Manage hidden applications and security</string>
     <string name="settings_rename_apps">Rename Apps</string>
@@ -312,6 +321,8 @@
     <string name="amoled_black_desc">Force pure black background in dark mode</string>
     <string name="layout_rows">Layout Rows</string>
     <string name="layout_rows_current">Current: %1$s</string>
+    <string name="dock_add_title">Add to Dock</string>
+    <string name="dock_add_desc">Would you like to add a single application or a folder to this slot?</string>
     <string name="dock_style">Dock Style</string>
     <string name="dock_style_current">Current: %1$s</string>
     <string name="dock_radius_label">Dock Corner Radius: %1$d</string>
@@ -410,6 +421,9 @@
     <string name="search_apps_hint">Search apps&#8230;</string>
     <string name="location_admin_country">%1$s, %2$s</string>
     <string name="replace_app">Replace App</string>
+    <string name="change_to_app">Change to App</string>
+    <string name="change_to_folder">Change to Folder</string>
+    <string name="delete_home">Delete from Home</string>
     <string name="delete_page_warning_msg">This page still contains content. Are you sure you want to delete it? This will remove all icons and components from the page.</string>
     <string name="charging">Charging</string>
     <string name="discharging">Discharging</string>

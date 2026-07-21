@@ -873,6 +873,31 @@ fun PwaMakerScreen(onBack: () -> Unit) {
                     onColorChanged = { bgColor = it }
                 )
             }
+
+            item {
+                val useVNavi by viewModel.useVNaviForPwa.collectAsState()
+                SettingsItem(
+                    headline = stringResource(R.string.vnavi_use_vnavi_headline),
+                    supporting = stringResource(R.string.vnavi_use_vnavi_supporting),
+                    icon = Icons.Default.Web,
+                    iconColor = MaterialTheme.colorScheme.primary,
+                    onClick = {
+                        val next = !useVNavi
+                        viewModel.setUseVNaviForPwa(next)
+                        if (next) {
+                            val vNaviPackage = "com.liferlighdow.vnavi"
+                            try {
+                                context.packageManager.getPackageInfo(vNaviPackage, 0)
+                            } catch (e: Exception) {
+                                viewModel._showVNaviInstallDialog.value = true
+                            }
+                        }
+                    },
+                    trailing = {
+                        Switch(checked = useVNavi, onCheckedChange = null)
+                    }
+                )
+            }
             
             item {
                 Button(
@@ -921,6 +946,41 @@ fun PwaManageScreen(onBack: () -> Unit, onNavigateToPwaMaker: () -> Unit) {
             modifier = Modifier.padding(innerPadding).fillMaxSize(),
             contentPadding = PaddingValues(bottom = 32.dp)
         ) {
+            item {
+                Text(
+                    stringResource(R.string.vnavi_pwa_engine),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 32.dp, top = 16.dp, bottom = 8.dp)
+                )
+            }
+            item {
+                val useVNavi by viewModel.useVNaviForPwa.collectAsState()
+                SettingsGroup {
+                    SettingsItem(
+                        headline = stringResource(R.string.vnavi_use_vnavi_headline),
+                        supporting = stringResource(R.string.vnavi_use_vnavi_supporting),
+                        icon = Icons.Default.Web,
+                        iconColor = MaterialTheme.colorScheme.primary,
+                        onClick = {
+                            val next = !useVNavi
+                            viewModel.setUseVNaviForPwa(next)
+                            if (next) {
+                                val vNaviPackage = "com.liferlighdow.vnavi"
+                                try {
+                                    context.packageManager.getPackageInfo(vNaviPackage, 0)
+                                } catch (e: Exception) {
+                                    viewModel._showVNaviInstallDialog.value = true
+                                }
+                            }
+                        },
+                        trailing = {
+                            Switch(checked = useVNavi, onCheckedChange = null)
+                        }
+                    )
+                }
+            }
+
             item {
                 Text(
                     stringResource(R.string.pwa_maker_title),

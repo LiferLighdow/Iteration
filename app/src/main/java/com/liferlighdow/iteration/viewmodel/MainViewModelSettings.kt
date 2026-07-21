@@ -18,15 +18,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
 
-fun MainViewModel.updateDockApp(slotIndex: Int, packageName: String) {
-    val current = _dockPackageNames.value.toMutableList()
-    while (current.size <= slotIndex) {
-        current.add("")
-    }
-    current[slotIndex] = packageName
-    _dockPackageNames.value = current
-    prefs.edit().putString("dock_packages", current.joinToString(",")).apply()
-}
 
 fun MainViewModel.setEditMode(enabled: Boolean) {
     _isEditMode.value = enabled
@@ -449,6 +440,15 @@ fun MainViewModel.setAppLanguage(languageCode: String) {
         LocaleListCompat.forLanguageTags(languageCode)
     }
     AppCompatDelegate.setApplicationLocales(appLocale)
+}
+
+fun MainViewModel.dismissVNaviInstallDialog() {
+    _showVNaviInstallDialog.value = false
+}
+
+fun MainViewModel.setUseVNaviForPwa(enabled: Boolean) {
+    _useVNaviForPwa.value = enabled
+    prefs.edit().putBoolean("use_vnavi_for_pwa", enabled).apply()
 }
 
 fun MainViewModel.resetLiquidGlassParams() {

@@ -77,6 +77,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     internal val _allApps = MutableStateFlow<List<AppModel>>(emptyList())
     val allApps: StateFlow<List<AppModel>> = _allApps
 
+    internal val _dockItems = MutableStateFlow<List<AppModel>>(emptyList())
+    val dockItems = _dockItems.asStateFlow()
+
     internal val _dockPackageNames = MutableStateFlow(listOf<String>())
     val dockPackageNames = _dockPackageNames.asStateFlow()
 
@@ -196,6 +199,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     internal val _removingItemIds = MutableStateFlow<Set<String>>(emptySet())
     val removingItemIds = _removingItemIds.asStateFlow()
+
+    internal val _showVNaviInstallDialog = MutableStateFlow(false)
+    val showVNaviInstallDialog = _showVNaviInstallDialog.asStateFlow()
+
+    internal val _useVNaviForPwa = MutableStateFlow(prefs.getBoolean("use_vnavi_for_pwa", true))
+    val useVNaviForPwa = _useVNaviForPwa.asStateFlow()
 
     init {
         // Initial setup for update check if interval is set
@@ -862,11 +871,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         }
                     } catch (e: Exception) {
                         try {
-                            val intent = Intent(android.provider.Settings.ACTION_SETTINGS)
+                            // 跳轉至「安全性與隱私權」設定頁面 (Android 13+ 統一入口)
+                            val intent = Intent("android.settings.PRIVACY_SETTINGS")
                             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             getApplication<Application>().startActivity(intent)
                         } catch (e3: Exception) {
-                            android.widget.Toast.makeText(getApplication(), "Unlock in Settings", android.widget.Toast.LENGTH_LONG).show()
+                            // 如果連隱私設定都打不開，再退回總設定
+                            try {
+                                val intent = Intent(android.provider.Settings.ACTION_SETTINGS)
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                getApplication<Application>().startActivity(intent)
+                            } catch (e4: Exception) {
+                                android.widget.Toast.makeText(getApplication(), "請至系統設定進行解鎖", android.widget.Toast.LENGTH_LONG).show()
+                            }
                         }
                     }
                 }

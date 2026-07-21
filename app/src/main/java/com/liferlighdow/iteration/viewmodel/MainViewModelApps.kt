@@ -646,15 +646,87 @@ fun MainViewModel.loadSettings() {
 }
 
 fun MainViewModel.loadDock() {
-    val saved = prefs.getString("dock_packages", null)
-    val list = if (saved != null) {
-        val decoded = saved.split(",").toMutableList()
+    val saved = prefs.getString("dock_items_v2", null)
+    if (saved != null) {
+        try {
+            val array = JSONArray(saved)
+            val list = mutableListOf<AppModel>()
+            for (i in 0 until array.length()) {
+                ConfigSerializer.deserializeAppModel(array.getString(i))?.let { list.add(it) }
+            }
+            while (list.size < 4) list.add(AppModel(label = "", packageName = "", uniqueId = "empty_dock_${list.size}"))
+            _dockItems.value = list.take(4)
+            _dockPackageNames.value = list.take(4).map { it.packageName }
+            return
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    // 舊版相容邏輯
+    val savedOld = prefs.getString("dock_packages", null)
+    val list = if (savedOld != null) {
+        val decoded = savedOld.split(",").toMutableList()
         while (decoded.size < 4) decoded.add("")
         decoded.take(4)
     } else {
         List(4) { "" }
     }
     _dockPackageNames.value = list
+}
+
+fun MainViewModel.saveDock() {
+    val array = JSONArray()
+    _dockItems.value.forEach { array.put(ConfigSerializer.serializeAppModel(it)) }
+    val pkgNames = _dockItems.value.map { it.packageName }
+    prefs.edit()
+        .putString("dock_items_v2", array.toString())
+        .putString("dock_packages", pkgNames.joinToString(","))
+        .apply()
+    _dockPackageNames.value = pkgNames
+}
+
+fun MainViewModel.replaceDockApp(index: Int, app: AppModel) {
+    val current = _dockItems.value.toMutableList()
+    if (index in current.indices) {
+        current[index] = app
+        _dockItems.value = current
+        saveDock()
+    }
+}
+
+fun MainViewModel.removeAppFromDock(index: Int) {
+    val current = _dockItems.value.toMutableList()
+    if (index in current.indices) {
+        current[index] = AppModel(label = "", packageName = "", uniqueId = "empty_dock_$index")
+        _dockItems.value = current
+        saveDock()
+    }
+}
+
+fun MainViewModel.convertDockAppToFolder(index: Int) {
+    val current = _dockItems.value.toMutableList()
+    if (index in current.indices) {
+        val app = current[index]
+        if (!app.isFolder && app.packageName.isNotEmpty()) {
+            val newFolder = AppModel(
+                label = getApplication<Application>().getString(R.string.folder_default_name),
+                isFolder = true,
+                folderItems = listOf(app),
+                uniqueId = "folder_${System.currentTimeMillis()}"
+            )
+            current[index] = newFolder
+        } else if (app.packageName.isEmpty()) {
+            // 如果是空的，建立一個空的資料夾
+            current[index] = AppModel(
+                label = getApplication<Application>().getString(R.string.folder_default_name),
+                isFolder = true,
+                uniqueId = "folder_${System.currentTimeMillis()}"
+            )
+        }
+        _dockItems.value = current
+        saveDock()
+    }
 }
 
 @android.annotation.SuppressLint("MissingPermission")
@@ -824,7 +896,6 @@ fun MainViewModel.loadApps() {
                                 label = finalLabel,
                                 isHidden = hiddenPackages.contains(app.packageName) || hiddenPackages.contains(app.uniqueId),
                                 displayCategory = when {
-                                    app.isPrivate -> "Private"
                                     app.isPWA -> "PWA Apps"
                                     else -> displayCategory
                                 }
@@ -918,10 +989,32 @@ fun MainViewModel.loadApps() {
             prefs.edit().putStringSet("seen_apps", seenApps).apply()
             saveLayout()
         }
-        if (_dockPackageNames.value.all { it.isEmpty() } && processedApps.isNotEmpty()) {
-            val defaultDock = processedApps.take(4).map { it.packageName }
-            _dockPackageNames.value = defaultDock
-            prefs.edit().putString("dock_packages", defaultDock.joinToString(",")).apply()
+        if (_dockItems.value.isEmpty() || _dockItems.value.all { it.packageName.isEmpty() && !it.isFolder }) {
+            if (_dockPackageNames.value.all { it.isEmpty() } && processedApps.isNotEmpty()) {
+                val defaultDock = processedApps.take(4)
+                _dockItems.value = defaultDock
+                _dockPackageNames.value = defaultDock.map { it.packageName }
+                saveDock()
+            } else {
+                // 從舊版 package names 構建
+                val list = _dockPackageNames.value.map { pkg ->
+                    processedApps.find { it.packageName == pkg } ?: AppModel(label = "", packageName = "", uniqueId = "empty_dock_${System.currentTimeMillis()}")
+                }
+                _dockItems.value = list
+                saveDock()
+            }
+        } else {
+            // 同步最新的 App 資訊 (Label 等)
+            val updatedDock = _dockItems.value.map { dockApp ->
+                if (dockApp.isFolder || dockApp.isPWA || dockApp.isShortcut) {
+                    dockApp
+                } else if (dockApp.packageName.isNotEmpty()) {
+                    processedApps.find { it.packageName == dockApp.packageName && it.userId == dockApp.userId } ?: dockApp
+                } else {
+                    dockApp
+                }
+            }
+            _dockItems.value = updatedDock
         }
     }
 }
@@ -954,16 +1047,44 @@ fun MainViewModel.launchApp(app: AppModel) {
             }
             
             try {
-                val intent = Intent(getApplication(), PwaActivity::class.java).apply {
-                    putExtra("url", rawUrl)
-                    putExtra("label", app.label)
-                    putExtra("uniqueId", app.uniqueId)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                // 檢查是否選擇使用 vNavi 且是否安裝
+                val vNaviPackage = "com.liferlighdow.vnavi"
+                val pm = getApplication<Application>().packageManager
+                val isVNaviInstalled = try {
+                    pm.getPackageInfo(vNaviPackage, 0)
+                    true
+                } catch (e: Exception) {
+                    false
                 }
-                getApplication<Application>().startActivity(intent)
+
+                if (_useVNaviForPwa.value) {
+                    if (isVNaviInstalled) {
+                        val intent = Intent("com.liferlighdow.vnavi.action.RUN_PWA").apply {
+                            setPackage(vNaviPackage)
+                            putExtra("url", rawUrl)
+                            putExtra("label", app.label)
+                            putExtra("uniqueId", app.uniqueId)
+                            putExtra("theme_color", app.pwaBgColor)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        getApplication<Application>().startActivity(intent)
+                    } else {
+                        // 雖然選擇了但沒裝，提示安裝，且不再自動降級使用內建，以符合使用者設定
+                        _showVNaviInstallDialog.value = true
+                    }
+                } else {
+                    // 用戶明確選擇使用內置
+                    val intent = Intent(getApplication(), PwaActivity::class.java).apply {
+                        putExtra("url", rawUrl)
+                        putExtra("label", app.label)
+                        putExtra("uniqueId", app.uniqueId)
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    getApplication<Application>().startActivity(intent)
+                }
                 logAppLaunch(app.packageName)
             } catch (e: Exception) {
-                android.util.Log.e("Iteration", "Failed to launch PwaActivity", e)
+                android.util.Log.e("Iteration", "Failed to launch PWA", e)
                 android.widget.Toast.makeText(getApplication(), "PWA Error: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
             }
             return

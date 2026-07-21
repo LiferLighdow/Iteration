@@ -43,6 +43,7 @@ fun LauncherBottomBar(
     onAppClick: (AppModel) -> Unit,
     onSettingsClick: () -> Unit,
     onLongClick: (Int) -> Unit,
+    onReplaceClick: (Int) -> Unit,
     onDeleteClick: (AppModel) -> Unit
 ) {
 
@@ -108,6 +109,7 @@ fun LauncherBottomBar(
                         if (app.packageName == myPackageName) onSettingsClick() else onAppClick(app)
                     },
                     onLongClick = onLongClick,
+                    onReplaceClick = onReplaceClick,
                     onDeleteClick = onDeleteClick
                 )
 
