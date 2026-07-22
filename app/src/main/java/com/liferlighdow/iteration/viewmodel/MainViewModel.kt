@@ -192,6 +192,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     internal val _isDesktopLocked = MutableStateFlow(prefs.getBoolean("is_desktop_locked", false))
     val isDesktopLocked = _isDesktopLocked.asStateFlow()
 
+    internal val _isDynamicCalendarEnabled = MutableStateFlow(prefs.getBoolean("dynamic_calendar_enabled", false))
+    val isDynamicCalendarEnabled = _isDynamicCalendarEnabled.asStateFlow()
+
+    val calendarPackages = setOf(
+        "com.google.android.calendar", "com.android.calendar", "com.samsung.android.calendar",
+        "com.miui.calendar", "com.huawei.calendar", "com.oppo.calendar", "com.bbk.calendar",
+        "com.sonymobile.calendar", "com.htc.calendar", "com.google.android.calendar.AllInOneActivity"
+    )
+
+    fun isCalendarApp(packageName: String): Boolean {
+        return calendarPackages.contains(packageName) || packageName.lowercase().contains("calendar")
+    }
+
     internal val _isPrivateSpaceLocked = _allApps.map { apps ->
         apps.any { it.isPrivate && it.isLocked }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, true)
@@ -676,6 +689,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _isDesktopLocked.value = locked
                 if (locked) _isEditMode.value = false
             }
+            "dynamic_calendar_enabled" -> {
+                val enabled = sharedPreferences.getBoolean(key, false)
+                _isDynamicCalendarEnabled.value = enabled
+                // 強制清空快取並立即觸發圖示更新訊號
+                iconCache.evictAll()
+                viewModelScope.launch {
+                    loadApps()
+                    delay(500)
+                    _iconUpdateSignal.value = System.currentTimeMillis()
+                }
+            }
             "liquid_glass_enabled" -> _isLiquidGlassEnabled.value = sharedPreferences.getBoolean(key, false)
             "liquid_glass_dock" -> _isLiquidGlassDockEnabled.value = sharedPreferences.getBoolean(key, false)
             "liquid_glass_home_folder" -> _isLiquidGlassHomeFolderEnabled.value = sharedPreferences.getBoolean(key, false)
@@ -755,6 +779,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             addAction(Intent.ACTION_MANAGED_PROFILE_UNLOCKED)
             addAction(Intent.ACTION_MANAGED_PROFILE_AVAILABLE)
             addAction(Intent.ACTION_MANAGED_PROFILE_UNAVAILABLE)
+            addAction(Intent.ACTION_DATE_CHANGED)
+            addAction(Intent.ACTION_TIME_CHANGED)
             if (Build.VERSION.SDK_INT >= 35) {
                 // Android 15 私密空間專用廣播
                 addAction("android.intent.action.PROFILE_ACCESSIBLE")

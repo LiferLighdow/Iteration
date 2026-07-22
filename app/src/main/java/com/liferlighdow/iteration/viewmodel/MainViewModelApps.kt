@@ -61,9 +61,11 @@ fun MainViewModel.getIcon(uniqueId: String): ImageBitmap? {
     val styleSuffix = currentStyleSuffix
     if (styleSuffix == "default") return null
 
+    // 獲取目前日期 (用於日曆 App 匹配)
+    val currentDay = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_MONTH).toString()
+
     // 1. 處理 Shortcut 類型的 ID
     if (uniqueId.startsWith("shortcut_")) {
-        val styleSuffix = currentStyleSuffix
         val cacheKey = "${uniqueId}_$styleSuffix"
         iconCache[cacheKey]?.let { return it }
 
@@ -93,7 +95,10 @@ fun MainViewModel.getIcon(uniqueId: String): ImageBitmap? {
         uniqueId
     }
     
-    val cacheKey = "${baseId}_$styleSuffix"
+    val pkgName = baseId.substringBefore("/")
+    val isDynamicCalendar = _isDynamicCalendarEnabled.value && isCalendarApp(pkgName)
+    
+    val cacheKey = if (isDynamicCalendar) "${baseId}_${styleSuffix}_D$currentDay" else "${baseId}_$styleSuffix"
 
     // 2. 檢查 LruCache
     iconCache[cacheKey]?.let { return it }
@@ -110,13 +115,27 @@ fun MainViewModel.getIcon(uniqueId: String): ImageBitmap? {
     }
 
     // 4. 檢查磁碟快取
-    val diskCacheFile = File(processedIconCacheDir, "${fileSafeId}_$styleSuffix.png")
+    val diskCacheFile = if (isDynamicCalendar)
+        File(processedIconCacheDir, "${fileSafeId}_${styleSuffix}_D$currentDay.png")
+    else 
+        File(processedIconCacheDir, "${fileSafeId}_$styleSuffix.png")
+
     if (diskCacheFile.exists()) {
         return try {
             BitmapFactory.decodeFile(diskCacheFile.absolutePath)?.asImageBitmap()?.also {
                 iconCache.put(cacheKey, it)
             }
         } catch (e: Exception) { null }
+    }
+
+    // 修復：如果動態日曆開啟但找不到日期快取，嘗試尋找無日期的快取作為備案
+    if (isDynamicCalendar) {
+        val fallbackFile = File(processedIconCacheDir, "${fileSafeId}_$styleSuffix.png")
+        if (fallbackFile.exists()) {
+            return try {
+                BitmapFactory.decodeFile(fallbackFile.absolutePath)?.asImageBitmap()
+            } catch (e: Exception) { null }
+        }
     }
 
     return null
@@ -470,7 +489,8 @@ fun MainViewModel.processNewIcon(
     customFg: Int,
     customOriginal: Boolean,
     customOriginalBg: Boolean,
-    activityInfoCache: Map<UserHandle, List<LauncherActivityInfo>>
+    activityInfoCache: Map<UserHandle, List<LauncherActivityInfo>>,
+    calendarDay: String? = null
 ): ImageBitmap {
     val userManager = getApplication<Application>().getSystemService(Context.USER_SERVICE) as UserManager
     val userHandle = userManager.userProfiles.find { 
@@ -495,18 +515,18 @@ fun MainViewModel.processNewIcon(
     } catch (e: Exception) { null }
 
     if (isExcluded) {
-        return iconProcessor.processIcon(finalRawIcon, false, null, IconStyle.STANDARD, currentShape, sizePx, customBgColor = 0, customFgColor = 0, customUseOriginal = true, customUseOriginalBg = true, userId = app.userId)
+        return iconProcessor.processIcon(finalRawIcon, false, null, IconStyle.STANDARD, currentShape, sizePx, customBgColor = 0, customFgColor = 0, customUseOriginal = true, customUseOriginalBg = true, userId = app.userId, calendarDay = calendarDay)
     }
 
     return if (currentIconPack.isNotEmpty()) {
         val ipIcon = iconPackManager.getIcon(app.packageName, app.uniqueId)
         if (ipIcon != null) {
-            iconProcessor.processIcon(ipIcon, false, null, IconStyle.STANDARD, currentShape, sizePx, isIconPack = true, userId = app.userId, isPrivate = app.isPrivate)
+            iconProcessor.processIcon(ipIcon, false, null, IconStyle.STANDARD, currentShape, sizePx, isIconPack = true, userId = app.userId, isPrivate = app.isPrivate, calendarDay = calendarDay)
         } else {
-            iconProcessor.processIcon(finalRawIcon, false, null, IconStyle.CUSTOM, currentShape, sizePx, customBgColor = 0, customFgColor = 0, customUseOriginal = true, customUseOriginalBg = true, userId = app.userId, isPrivate = app.isPrivate)
+            iconProcessor.processIcon(finalRawIcon, false, null, IconStyle.CUSTOM, currentShape, sizePx, customBgColor = 0, customFgColor = 0, customUseOriginal = true, customUseOriginalBg = true, userId = app.userId, isPrivate = app.isPrivate, calendarDay = calendarDay)
         }
     } else {
-        iconProcessor.processIcon(finalRawIcon, isThemed, themeColors, currentStyle, currentShape, sizePx, customBgColor = customBg, customFgColor = customFg, customUseOriginal = customOriginal, customUseOriginalBg = customOriginalBg, userId = app.userId, isPrivate = app.isPrivate)
+        iconProcessor.processIcon(finalRawIcon, isThemed, themeColors, currentStyle, currentShape, sizePx, customBgColor = customBg, customFgColor = customFg, customUseOriginal = customOriginal, customUseOriginalBg = customOriginalBg, userId = app.userId, isPrivate = app.isPrivate, calendarDay = calendarDay)
     }
 }
 
@@ -744,6 +764,9 @@ fun MainViewModel.loadApps() {
         val currentStyle = _iconStyle.value
         val currentShape = _iconShape.value
         val currentIconPack = _iconPackPackage.value
+        
+        // 獲取目前日期
+        val currentDay = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_MONTH).toString()
 
         if (currentStyle == IconStyle.CUSTOM) {
             delay(200)
@@ -843,28 +866,34 @@ fun MainViewModel.loadApps() {
                             val diskCacheFile = File(processedIconCacheDir, "${fileSafeId}_$styleSuffix.png")
                             val cacheKey = "${app.uniqueId}_$styleSuffix"
                             val isExcluded = excludedThemedPackages.value.contains(app.packageName)
+                            val isDynamicCalendar = _isDynamicCalendarEnabled.value && isCalendarApp(app.packageName)
+                            val calendarDayToPass = if (isDynamicCalendar) currentDay else null
+                            
+                            // 針對日曆 App，快取 Key 必須包含日期
+                            val finalCacheKey = if (isDynamicCalendar) "${cacheKey}_D$currentDay" else cacheKey
+                            val finalDiskFile = if (isDynamicCalendar) File(processedIconCacheDir, "${fileSafeId}_${styleSuffix}_D$currentDay.png") else diskCacheFile
 
-                            if (iconCache[cacheKey] == null) {
+                            if (iconCache[finalCacheKey] == null) {
                                 val customToLoad = if (customIconFile.exists()) customIconFile else if (legacyCustomIconFile.exists()) legacyCustomIconFile else null
                                 if (customToLoad != null) {
                                     BitmapFactory.decodeFile(customToLoad.absolutePath)?.asImageBitmap()?.let {
-                                        iconCache.put(cacheKey, it)
+                                        iconCache.put(finalCacheKey, it)
                                     }
-                                } else if (diskCacheFile.exists()) {
-                                    BitmapFactory.decodeFile(diskCacheFile.absolutePath)?.let {
-                                        iconCache.put(cacheKey, it.asImageBitmap())
+                                } else if (finalDiskFile.exists()) {
+                                    BitmapFactory.decodeFile(finalDiskFile.absolutePath)?.let {
+                                        iconCache.put(finalCacheKey, it.asImageBitmap())
                                     }
                                 } else {
                                     // 關鍵修改：區分 PWA 與一般 App 的生成邏輯
                                     val processed = if (app.isPWA) {
                                         generatePwaIcon(app, renderingSizePx)?.asImageBitmap()
                                     } else {
-                                        processNewIcon(app, currentIconPack, isThemed, isExcluded, themeColors, currentStyle, currentShape, renderingSizePx, customBg, customFg, customOriginal, customOriginalBg, activityInfoCache)
+                                        processNewIcon(app, currentIconPack, isThemed, isExcluded, themeColors, currentStyle, currentShape, renderingSizePx, customBg, customFg, customOriginal, customOriginalBg, activityInfoCache, calendarDayToPass)
                                     }
                                     
                                     processed?.let {
-                                        saveIconToDisk(it, diskCacheFile)
-                                        iconCache.put(cacheKey, it)
+                                        saveIconToDisk(it, finalDiskFile)
+                                        iconCache.put(finalCacheKey, it)
                                     }
                                 }
                             }

@@ -48,6 +48,7 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
     val showAppLibrary by viewModel.showAppLibrary.collectAsState()
     val isDesktopLocked by viewModel.isDesktopLocked.collectAsState()
     val autoAddAppsToHome by viewModel.autoAddAppsToHome.collectAsState()
+    val isDynamicCalendarEnabled by viewModel.isDynamicCalendarEnabled.collectAsState()
     val showStatusBar by viewModel.showStatusBar.collectAsState()
     val showNavigationBar by viewModel.showNavigationBar.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
@@ -137,6 +138,20 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
                         )
                     },
                     modifier = Modifier.clickable { viewModel.setDesktopLocked(!isDesktopLocked) }
+                )
+            }
+
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.dynamic_calendar)) },
+                    supportingContent = { Text(stringResource(R.string.dynamic_calendar_desc)) },
+                    trailingContent = {
+                        Switch(
+                            checked = isDynamicCalendarEnabled,
+                            onCheckedChange = { viewModel.setDynamicCalendarEnabled(it) }
+                        )
+                    },
+                    modifier = Modifier.clickable { viewModel.setDynamicCalendarEnabled(!isDynamicCalendarEnabled) }
                 )
             }
 

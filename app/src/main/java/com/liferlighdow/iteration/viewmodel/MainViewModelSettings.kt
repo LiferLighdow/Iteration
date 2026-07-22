@@ -298,6 +298,11 @@ fun MainViewModel.setDesktopLocked(locked: Boolean) {
     prefs.edit().putBoolean("is_desktop_locked", locked).apply()
 }
 
+fun MainViewModel.setDynamicCalendarEnabled(enabled: Boolean) {
+    _isDynamicCalendarEnabled.value = enabled
+    prefs.edit().putBoolean("dynamic_calendar_enabled", enabled).apply()
+}
+
 fun MainViewModel.setLiquidGlassBlur(value: Float) {
     _liquidGlassBlur.value = value
     prefs.edit().putFloat("liquid_glass_blur", value).apply()

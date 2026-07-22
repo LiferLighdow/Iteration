@@ -63,9 +63,15 @@
         <activity
             android:name=".SettingsActivity"
             android:label="@string/settings_title"
+            android:exported="true"
             android:screenOrientation="portrait"
             android:taskAffinity="com.liferlighdow.iteration.settings"
-            android:parentActivityName=".MainActivity" />
+            android:parentActivityName=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.APPLICATION_PREFERENCES" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
 
         <activity
             android:name=".PwaActivity"

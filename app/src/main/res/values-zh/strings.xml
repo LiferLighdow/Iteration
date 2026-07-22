@@ -98,6 +98,8 @@
     <string name="lock_hidden_apps">快把應用藏起來</string>
     <string name="lock_desktop">把桌面鎖起來</string>
     <string name="lock_desktop_desc">防止主螢幕佈局被更改，不想動它了</string>
+    <string name="dynamic_calendar">動態日曆圖標</string>
+    <string name="dynamic_calendar_desc">在日曆應用程式圖標上顯示當前日期</string>
     <string name="security_section">安全性</string>
     <string name="password_label">隱藏APP用的密碼</string>
     <string name="hide_apps_instruction">選擇你欲隱藏應用</string>

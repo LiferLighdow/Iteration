@@ -23,6 +23,9 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.ColorUtils
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 
 class IconProcessor(private val context: Context) {
@@ -70,7 +73,8 @@ class IconProcessor(private val context: Context) {
         customUseOriginal: Boolean = false,
         customUseOriginalBg: Boolean = false,
         userId: Long = 0,
-        isPrivate: Boolean = false
+        isPrivate: Boolean = false,
+        calendarDay: String? = null
     ): ImageBitmap {
         if (icon == null) {
             return Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888).asImageBitmap()
@@ -91,7 +95,10 @@ class IconProcessor(private val context: Context) {
         val bgColor = determineBgColor(style, isThemed, m3Colors?.first, customBgColor, customUseOriginalBg)
         val fgColor = determineFgColor(style, isThemed, m3Colors, customFgColor, customUseOriginal)
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && icon is AdaptiveIconDrawable) {
+        if (calendarDay != null) {
+            // 繪製自定義動態日曆設計
+            drawCalendarDate(canvas, sizePx, calendarDay)
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && icon is AdaptiveIconDrawable) {
             val scale = 1.45f
             val scaledSize = (sizePx * scale).toInt()
             val offset = (sizePx - scaledSize) / 2
@@ -159,6 +166,47 @@ class IconProcessor(private val context: Context) {
         }
 
         return output.asImageBitmap()
+    }
+
+    private fun drawCalendarDate(canvas: Canvas, sizePx: Int, day: String) {
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+        
+        // 1. 繪製純白背景 (填滿整個區域，之後會被 Mask 裁切成圓角或圓形)
+        paint.color = Color.WHITE
+        canvas.drawRect(0f, 0f, sizePx.toFloat(), sizePx.toFloat(), paint)
+        
+        // 2. 繪製紅色頂部區塊 (佔約 28%)
+        val headerHeight = sizePx * 0.28f
+        paint.color = Color.parseColor("#E53935") // 經典日曆紅
+        canvas.drawRect(0f, 0f, sizePx.toFloat(), headerHeight, paint)
+        
+        // 3. 繪製星期 (英文縮寫，如 MON, TUE)
+        val calendar = Calendar.getInstance()
+        val sdf = SimpleDateFormat("EEE", Locale.ENGLISH)
+        val weekDay = sdf.format(calendar.time).uppercase()
+        
+        paint.color = Color.WHITE
+        paint.textSize = headerHeight * 0.55f
+        paint.isFakeBoldText = true
+        paint.textAlign = Paint.Align.CENTER
+        
+        val weekX = sizePx / 2f
+        val weekFontMetrics = paint.fontMetrics
+        // 垂直居中在紅色區塊內
+        val weekY = (headerHeight - weekFontMetrics.ascent - weekFontMetrics.descent) / 2f
+        canvas.drawText(weekDay, weekX, weekY, paint)
+        
+        // 4. 繪製日期數字 (黑色)
+        paint.color = Color.BLACK
+        paint.textSize = sizePx * 0.42f
+        paint.isFakeBoldText = true
+        
+        val dayX = sizePx / 2f
+        val dayFontMetrics = paint.fontMetrics
+        val remainingHeight = sizePx - headerHeight
+        // 垂直居中在剩餘的白色區塊內
+        val dayY = headerHeight + (remainingHeight - dayFontMetrics.ascent - dayFontMetrics.descent) / 2f
+        canvas.drawText(day, dayX, dayY, paint)
     }
 
     private fun drawPrivateBadge(canvas: Canvas, sizePx: Int) {

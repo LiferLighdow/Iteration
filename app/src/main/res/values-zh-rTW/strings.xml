@@ -113,6 +113,8 @@
     <string name="lock_hidden_apps">鎖定隱藏應用程式</string>
     <string name="lock_desktop">鎖定桌面</string>
     <string name="lock_desktop_desc">防止主畫面佈局被更改</string>
+    <string name="dynamic_calendar">動態日曆圖標</string>
+    <string name="dynamic_calendar_desc">在日曆應用程式圖標上顯示當前日期</string>
 
     <!-- 設定子頁面 -->
     <string name="security_section">安全性</string>

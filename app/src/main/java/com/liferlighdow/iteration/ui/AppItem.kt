@@ -111,7 +111,7 @@ fun AppItem(
     var isFolderReady by remember(app.uniqueId) { mutableStateOf(false) }
     if (app.isFolder) {
         LaunchedEffect(app.uniqueId) {
-            delay(300) // 增加到 300ms 以更好地對齊啟動時的延遲
+            delay(60)
             isFolderReady = true
         }
     }
