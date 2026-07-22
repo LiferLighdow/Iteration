@@ -61,8 +61,11 @@ fun MainViewModel.getIcon(uniqueId: String): ImageBitmap? {
     val styleSuffix = currentStyleSuffix
     if (styleSuffix == "default") return null
 
-    // 獲取目前日期 (用於日曆 App 匹配)
-    val currentDay = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_MONTH).toString()
+    // 獲取目前日期與時間 (用於動態圖標匹配)
+    val cal = java.util.Calendar.getInstance()
+    val currentDay = cal.get(java.util.Calendar.DAY_OF_MONTH).toString()
+    val currentHour = cal.get(java.util.Calendar.HOUR_OF_DAY)
+    val currentMinute = cal.get(java.util.Calendar.MINUTE)
 
     // 1. 處理 Shortcut 類型的 ID
     if (uniqueId.startsWith("shortcut_")) {
@@ -97,8 +100,13 @@ fun MainViewModel.getIcon(uniqueId: String): ImageBitmap? {
     
     val pkgName = baseId.substringBefore("/")
     val isDynamicCalendar = _isDynamicCalendarEnabled.value && isCalendarApp(pkgName)
+    val isDynamicClock = _isDynamicClockEnabled.value && isClockApp(pkgName)
     
-    val cacheKey = if (isDynamicCalendar) "${baseId}_${styleSuffix}_D$currentDay" else "${baseId}_$styleSuffix"
+    val cacheKey = when {
+        isDynamicCalendar -> "${baseId}_${styleSuffix}_D$currentDay"
+        isDynamicClock -> "${baseId}_${styleSuffix}_H${currentHour}M${currentMinute}"
+        else -> "${baseId}_$styleSuffix"
+    }
 
     // 2. 檢查 LruCache
     iconCache[cacheKey]?.let { return it }
@@ -115,10 +123,11 @@ fun MainViewModel.getIcon(uniqueId: String): ImageBitmap? {
     }
 
     // 4. 檢查磁碟快取
-    val diskCacheFile = if (isDynamicCalendar)
-        File(processedIconCacheDir, "${fileSafeId}_${styleSuffix}_D$currentDay.png")
-    else 
-        File(processedIconCacheDir, "${fileSafeId}_$styleSuffix.png")
+    val diskCacheFile = when {
+        isDynamicCalendar -> File(processedIconCacheDir, "${fileSafeId}_${styleSuffix}_D$currentDay.png")
+        isDynamicClock -> File(processedIconCacheDir, "${fileSafeId}_${styleSuffix}_H${currentHour}M${currentMinute}.png")
+        else -> File(processedIconCacheDir, "${fileSafeId}_$styleSuffix.png")
+    }
 
     if (diskCacheFile.exists()) {
         return try {
@@ -128,8 +137,8 @@ fun MainViewModel.getIcon(uniqueId: String): ImageBitmap? {
         } catch (e: Exception) { null }
     }
 
-    // 修復：如果動態日曆開啟但找不到日期快取，嘗試尋找無日期的快取作為備案
-    if (isDynamicCalendar) {
+    // 修復：如果動態圖標開啟但找不到特定時間快取，嘗試尋找原始快取
+    if (isDynamicCalendar || isDynamicClock) {
         val fallbackFile = File(processedIconCacheDir, "${fileSafeId}_$styleSuffix.png")
         if (fallbackFile.exists()) {
             return try {
@@ -490,7 +499,8 @@ fun MainViewModel.processNewIcon(
     customOriginal: Boolean,
     customOriginalBg: Boolean,
     activityInfoCache: Map<UserHandle, List<LauncherActivityInfo>>,
-    calendarDay: String? = null
+    calendarDay: String? = null,
+    clockTime: Pair<Int, Int>? = null
 ): ImageBitmap {
     val userManager = getApplication<Application>().getSystemService(Context.USER_SERVICE) as UserManager
     val userHandle = userManager.userProfiles.find { 
@@ -515,18 +525,18 @@ fun MainViewModel.processNewIcon(
     } catch (e: Exception) { null }
 
     if (isExcluded) {
-        return iconProcessor.processIcon(finalRawIcon, false, null, IconStyle.STANDARD, currentShape, sizePx, customBgColor = 0, customFgColor = 0, customUseOriginal = true, customUseOriginalBg = true, userId = app.userId, calendarDay = calendarDay)
+        return iconProcessor.processIcon(finalRawIcon, false, null, IconStyle.STANDARD, currentShape, sizePx, customBgColor = 0, customFgColor = 0, customUseOriginal = true, customUseOriginalBg = true, userId = app.userId, calendarDay = calendarDay, clockTime = clockTime)
     }
 
     return if (currentIconPack.isNotEmpty()) {
         val ipIcon = iconPackManager.getIcon(app.packageName, app.uniqueId)
         if (ipIcon != null) {
-            iconProcessor.processIcon(ipIcon, false, null, IconStyle.STANDARD, currentShape, sizePx, isIconPack = true, userId = app.userId, isPrivate = app.isPrivate, calendarDay = calendarDay)
+            iconProcessor.processIcon(ipIcon, false, null, IconStyle.STANDARD, currentShape, sizePx, isIconPack = true, userId = app.userId, isPrivate = app.isPrivate, calendarDay = calendarDay, clockTime = clockTime)
         } else {
-            iconProcessor.processIcon(finalRawIcon, false, null, IconStyle.CUSTOM, currentShape, sizePx, customBgColor = 0, customFgColor = 0, customUseOriginal = true, customUseOriginalBg = true, userId = app.userId, isPrivate = app.isPrivate, calendarDay = calendarDay)
+            iconProcessor.processIcon(finalRawIcon, false, null, IconStyle.CUSTOM, currentShape, sizePx, customBgColor = 0, customFgColor = 0, customUseOriginal = true, customUseOriginalBg = true, userId = app.userId, isPrivate = app.isPrivate, calendarDay = calendarDay, clockTime = clockTime)
         }
     } else {
-        iconProcessor.processIcon(finalRawIcon, isThemed, themeColors, currentStyle, currentShape, sizePx, customBgColor = customBg, customFgColor = customFg, customUseOriginal = customOriginal, customUseOriginalBg = customOriginalBg, userId = app.userId, isPrivate = app.isPrivate, calendarDay = calendarDay)
+        iconProcessor.processIcon(finalRawIcon, isThemed, themeColors, currentStyle, currentShape, sizePx, customBgColor = customBg, customFgColor = customFg, customUseOriginal = customOriginal, customUseOriginalBg = customOriginalBg, userId = app.userId, isPrivate = app.isPrivate, calendarDay = calendarDay, clockTime = clockTime)
     }
 }
 
@@ -765,8 +775,11 @@ fun MainViewModel.loadApps() {
         val currentShape = _iconShape.value
         val currentIconPack = _iconPackPackage.value
         
-        // 獲取目前日期
-        val currentDay = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_MONTH).toString()
+        // 獲取目前日期與時間
+        val cal = java.util.Calendar.getInstance()
+        val currentDay = cal.get(java.util.Calendar.DAY_OF_MONTH).toString()
+        val currentHour = cal.get(java.util.Calendar.HOUR_OF_DAY)
+        val currentMinute = cal.get(java.util.Calendar.MINUTE)
 
         if (currentStyle == IconStyle.CUSTOM) {
             delay(200)
@@ -867,11 +880,22 @@ fun MainViewModel.loadApps() {
                             val cacheKey = "${app.uniqueId}_$styleSuffix"
                             val isExcluded = excludedThemedPackages.value.contains(app.packageName)
                             val isDynamicCalendar = _isDynamicCalendarEnabled.value && isCalendarApp(app.packageName)
-                            val calendarDayToPass = if (isDynamicCalendar) currentDay else null
+                            val isDynamicClock = _isDynamicClockEnabled.value && isClockApp(app.packageName)
                             
-                            // 針對日曆 App，快取 Key 必須包含日期
-                            val finalCacheKey = if (isDynamicCalendar) "${cacheKey}_D$currentDay" else cacheKey
-                            val finalDiskFile = if (isDynamicCalendar) File(processedIconCacheDir, "${fileSafeId}_${styleSuffix}_D$currentDay.png") else diskCacheFile
+                            val calendarDayToPass = if (isDynamicCalendar) currentDay else null
+                            val clockTimeToPass = if (isDynamicClock) Pair(currentHour, currentMinute) else null
+                            
+                            // 針對動態 App，快取 Key 必須包含時間標籤
+                            val finalCacheKey = when {
+                                isDynamicCalendar -> "${cacheKey}_D$currentDay"
+                                isDynamicClock -> "${cacheKey}_H${currentHour}M$currentMinute"
+                                else -> cacheKey
+                            }
+                            val finalDiskFile = when {
+                                isDynamicCalendar -> File(processedIconCacheDir, "${fileSafeId}_${styleSuffix}_D$currentDay.png")
+                                isDynamicClock -> File(processedIconCacheDir, "${fileSafeId}_${styleSuffix}_H${currentHour}M$currentMinute.png")
+                                else -> diskCacheFile
+                            }
 
                             if (iconCache[finalCacheKey] == null) {
                                 val customToLoad = if (customIconFile.exists()) customIconFile else if (legacyCustomIconFile.exists()) legacyCustomIconFile else null
@@ -888,7 +912,7 @@ fun MainViewModel.loadApps() {
                                     val processed = if (app.isPWA) {
                                         generatePwaIcon(app, renderingSizePx)?.asImageBitmap()
                                     } else {
-                                        processNewIcon(app, currentIconPack, isThemed, isExcluded, themeColors, currentStyle, currentShape, renderingSizePx, customBg, customFg, customOriginal, customOriginalBg, activityInfoCache, calendarDayToPass)
+                                        processNewIcon(app, currentIconPack, isThemed, isExcluded, themeColors, currentStyle, currentShape, renderingSizePx, customBg, customFg, customOriginal, customOriginalBg, activityInfoCache, calendarDayToPass, clockTimeToPass)
                                     }
                                     
                                     processed?.let {

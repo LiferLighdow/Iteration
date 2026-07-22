@@ -195,14 +195,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     internal val _isDynamicCalendarEnabled = MutableStateFlow(prefs.getBoolean("dynamic_calendar_enabled", false))
     val isDynamicCalendarEnabled = _isDynamicCalendarEnabled.asStateFlow()
 
+    internal val _isDynamicClockEnabled = MutableStateFlow(prefs.getBoolean("dynamic_clock_enabled", false))
+    val isDynamicClockEnabled = _isDynamicClockEnabled.asStateFlow()
+
     val calendarPackages = setOf(
         "com.google.android.calendar", "com.android.calendar", "com.samsung.android.calendar",
         "com.miui.calendar", "com.huawei.calendar", "com.oppo.calendar", "com.bbk.calendar",
         "com.sonymobile.calendar", "com.htc.calendar", "com.google.android.calendar.AllInOneActivity"
     )
 
+    val clockPackages = setOf(
+        "com.google.android.deskclock", "com.android.deskclock", "com.sec.android.app.clockpackage",
+        "com.miui.clock", "com.huawei.deskclock", "com.coloros.alarmclock", "com.oppo.alarmclock",
+        "com.sonyericsson.organizer", "com.sonymobile.email.SETTING", "com.htc.android.worldclock"
+    )
+
     fun isCalendarApp(packageName: String): Boolean {
         return calendarPackages.contains(packageName) || packageName.lowercase().contains("calendar")
+    }
+
+    fun isClockApp(packageName: String): Boolean {
+        return clockPackages.contains(packageName) || packageName.lowercase().contains("clock")
     }
 
     internal val _isPrivateSpaceLocked = _allApps.map { apps ->
@@ -658,6 +671,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 Intent.ACTION_MANAGED_PROFILE_UNAVAILABLE,
                 "android.intent.action.PROFILE_ACCESSIBLE",
                 "android.intent.action.PROFILE_INACCESSIBLE" -> refreshApps()
+                Intent.ACTION_TIME_TICK -> {
+                    if (_isDynamicClockEnabled.value) {
+                        loadApps() // 每分鐘重整
+                    }
+                }
                 "com.liferlighdow.iteration.ACTION_PIN_SHORTCUT" -> {
                     val pkg = intent.getStringExtra("package_name") ?: return
                     val id = intent.getStringExtra("shortcut_id") ?: return
@@ -693,6 +711,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val enabled = sharedPreferences.getBoolean(key, false)
                 _isDynamicCalendarEnabled.value = enabled
                 // 強制清空快取並立即觸發圖示更新訊號
+                iconCache.evictAll()
+                viewModelScope.launch {
+                    loadApps()
+                    delay(500)
+                    _iconUpdateSignal.value = System.currentTimeMillis()
+                }
+            }
+            "dynamic_clock_enabled" -> {
+                val enabled = sharedPreferences.getBoolean(key, false)
+                _isDynamicClockEnabled.value = enabled
                 iconCache.evictAll()
                 viewModelScope.launch {
                     loadApps()
@@ -781,6 +809,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             addAction(Intent.ACTION_MANAGED_PROFILE_UNAVAILABLE)
             addAction(Intent.ACTION_DATE_CHANGED)
             addAction(Intent.ACTION_TIME_CHANGED)
+            addAction(Intent.ACTION_TIME_TICK)
             if (Build.VERSION.SDK_INT >= 35) {
                 // Android 15 私密空間專用廣播
                 addAction("android.intent.action.PROFILE_ACCESSIBLE")

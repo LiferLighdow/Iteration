@@ -303,6 +303,11 @@ fun MainViewModel.setDynamicCalendarEnabled(enabled: Boolean) {
     prefs.edit().putBoolean("dynamic_calendar_enabled", enabled).apply()
 }
 
+fun MainViewModel.setDynamicClockEnabled(enabled: Boolean) {
+    _isDynamicClockEnabled.value = enabled
+    prefs.edit().putBoolean("dynamic_clock_enabled", enabled).apply()
+}
+
 fun MainViewModel.setLiquidGlassBlur(value: Float) {
     _liquidGlassBlur.value = value
     prefs.edit().putFloat("liquid_glass_blur", value).apply()

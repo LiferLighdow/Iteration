@@ -74,7 +74,8 @@ class IconProcessor(private val context: Context) {
         customUseOriginalBg: Boolean = false,
         userId: Long = 0,
         isPrivate: Boolean = false,
-        calendarDay: String? = null
+        calendarDay: String? = null,
+        clockTime: Pair<Int, Int>? = null
     ): ImageBitmap {
         if (icon == null) {
             return Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888).asImageBitmap()
@@ -98,6 +99,9 @@ class IconProcessor(private val context: Context) {
         if (calendarDay != null) {
             // 繪製自定義動態日曆設計
             drawCalendarDate(canvas, sizePx, calendarDay)
+        } else if (clockTime != null) {
+            // 繪製自定義動態時鐘設計
+            drawClockIcon(canvas, sizePx, clockTime.first, clockTime.second)
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && icon is AdaptiveIconDrawable) {
             val scale = 1.45f
             val scaledSize = (sizePx * scale).toInt()
@@ -207,6 +211,56 @@ class IconProcessor(private val context: Context) {
         // 垂直居中在剩餘的白色區塊內
         val dayY = headerHeight + (remainingHeight - dayFontMetrics.ascent - dayFontMetrics.descent) / 2f
         canvas.drawText(day, dayX, dayY, paint)
+    }
+
+    private fun drawClockIcon(canvas: Canvas, sizePx: Int, hour: Int, minute: Int) {
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+        val centerX = sizePx / 2f
+        val centerY = sizePx / 2f
+
+        // 1. 繪製黑色背景
+        paint.color = Color.BLACK
+        canvas.drawRect(0f, 0f, sizePx.toFloat(), sizePx.toFloat(), paint)
+
+        // 2. 繪製白色圓盤
+        paint.color = Color.WHITE
+        val radius = sizePx * 0.42f
+        canvas.drawCircle(centerX, centerY, radius, paint)
+
+        // 3. 繪製 12 個刻度線 (黑色)
+        paint.color = Color.BLACK
+        paint.strokeWidth = sizePx * 0.015f
+        for (i in 0 until 12) {
+            val angle = i * 30.0
+            val startR = radius * 0.82f
+            val endR = radius * 0.92f
+            val startX = centerX + startR * Math.sin(Math.toRadians(angle)).toFloat()
+            val startY = centerY - startR * Math.cos(Math.toRadians(angle)).toFloat()
+            val endX = centerX + endR * Math.sin(Math.toRadians(angle)).toFloat()
+            val endY = centerY - endR * Math.cos(Math.toRadians(angle)).toFloat()
+            canvas.drawLine(startX, startY, endX, endY, paint)
+        }
+
+        // 4. 繪製時針 (黑色)
+        paint.strokeCap = Paint.Cap.ROUND
+        paint.strokeWidth = sizePx * 0.04f
+        val hourAngle = (hour % 12 + minute / 60f) * 30.0
+        val hourLen = radius * 0.5f
+        val hX = centerX + hourLen * Math.sin(Math.toRadians(hourAngle)).toFloat()
+        val hY = centerY - hourLen * Math.cos(Math.toRadians(hourAngle)).toFloat()
+        canvas.drawLine(centerX, centerY, hX, hY, paint)
+
+        // 5. 繪製分針 (黑色)
+        paint.strokeWidth = sizePx * 0.025f
+        val minAngle = minute * 6.0
+        val minLen = radius * 0.75f
+        val mX = centerX + minLen * Math.sin(Math.toRadians(minAngle)).toFloat()
+        val mY = centerY - minLen * Math.cos(Math.toRadians(minAngle)).toFloat()
+        canvas.drawLine(centerX, centerY, mX, mY, paint)
+        
+        // 6. 繪製中心小黑點
+        paint.color = Color.BLACK
+        canvas.drawCircle(centerX, centerY, sizePx * 0.03f, paint)
     }
 
     private fun drawPrivateBadge(canvas: Canvas, sizePx: Int) {

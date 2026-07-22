@@ -123,6 +123,8 @@
     <string name="lock_desktop_desc">Prevent changes to the home screen layout</string>
     <string name="dynamic_calendar">Dynamic Calendar Icon</string>
     <string name="dynamic_calendar_desc">Show current date on calendar app icons</string>
+    <string name="dynamic_clock">Dynamic Clock Icon</string>
+    <string name="dynamic_clock_desc">Show real-time clock on clock app icons (updated every minute)</string>
 
     <!-- Settings Sub-pages -->
     <string name="security_section">Security</string>
