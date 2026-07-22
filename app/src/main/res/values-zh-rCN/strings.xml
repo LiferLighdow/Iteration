@@ -70,6 +70,7 @@
 
     <!-- 搜索与库 -->
     <string name="search_hint">搜索应用&#8230;</string>
+    <string name="search_settings_hint">搜索设置&#8230;</string>
     <string name="search_hint_short">搜索</string>
     <string name="library_hint">资源库</string>
     <string name="app_suggestions">应用建议</string>

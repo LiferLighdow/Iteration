@@ -78,15 +78,6 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
         )
     }
 
-    var hasStoragePermission by remember {
-        mutableStateOf(
-            androidx.core.content.ContextCompat.checkSelfPermission(
-                context,
-                android.Manifest.permission.READ_EXTERNAL_STORAGE
-            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-        )
-    }
-
     var hasAllFilesPermission by remember {
         mutableStateOf(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -122,12 +113,6 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
         hasCalendarPermission = isGranted
     }
 
-    val storageLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        hasStoragePermission = isGranted
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -140,244 +125,289 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
             )
         }
     ) { innerPadding ->
-        LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+                .padding(horizontal = 16.dp)
+        ) {
+            item { Spacer(modifier = Modifier.height(16.dp)) }
+
+            // --- 網路權限 ---
             item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.network_access_usage)) },
-                    supportingContent = { 
-                        Text(if (isSystemNetworkEnabled) stringResource(R.string.network_connected) else stringResource(R.string.network_restricted))
-                    },
-                    trailingContent = {
-                        Icon(Icons.Default.ChevronRight, contentDescription = null)
-                    },
-                    modifier = Modifier.clickable {
-                        try {
-                            // 嘗試直接進入 App 的數據用量頁面 (部分系統支持)
-                            val intent = Intent("android.settings.APP_DATA_USAGE")
-                            intent.putExtra("package", context.packageName)
-                            intent.putExtra("uid", context.applicationInfo.uid)
-                            context.startActivity(intent)
-                        } catch (e: Exception) {
-                            // 備選：進入 App Info 頁面，用戶可從中進入數據用量
-                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                data = Uri.fromParts("package", context.packageName, null)
-                            }
-                            context.startActivity(intent)
-                        }
-                    }
+                Text(
+                    stringResource(R.string.network_access_usage),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
                 )
-            }
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.internal_network_toggle)) },
-                    supportingContent = { Text(stringResource(R.string.internal_network_desc)) },
-                    trailingContent = {
-                        Switch(
-                            checked = isNetworkEnabled,
-                            onCheckedChange = { viewModel.setNetworkAccessEnabled(it) }
-                        )
-                    },
-                    modifier = Modifier.clickable { viewModel.setNetworkAccessEnabled(!isNetworkEnabled) }
-                )
-            }
-            item { HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp)) }
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.permission_contacts)) },
-                    supportingContent = { Text(stringResource(R.string.permission_contacts_desc)) },
-                    trailingContent = {
-                        Switch(
-                            checked = hasContactsPermission,
-                            onCheckedChange = {
-                                if (!hasContactsPermission) {
-                                    launcher.launch(android.Manifest.permission.READ_CONTACTS)
-                                }
-                            }
-                        )
-                    },
-                    modifier = Modifier.clickable {
-                        if (!hasContactsPermission) {
-                            launcher.launch(android.Manifest.permission.READ_CONTACTS)
-                        }
-                    }
-                )
-            }
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.permission_calendar)) },
-                    supportingContent = { Text(stringResource(R.string.permission_calendar_desc)) },
-                    trailingContent = {
-                        Switch(
-                            checked = hasCalendarPermission,
-                            onCheckedChange = {
-                                if (!hasCalendarPermission) {
-                                    calendarLauncher.launch(android.Manifest.permission.READ_CALENDAR)
-                                }
-                            }
-                        )
-                    },
-                    modifier = Modifier.clickable {
-                        if (!hasCalendarPermission) {
-                            calendarLauncher.launch(android.Manifest.permission.READ_CALENDAR)
-                        }
-                    }
-                )
-            }
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.permission_files)) },
-                    supportingContent = { Text(stringResource(R.string.permission_files_desc)) },
-                    trailingContent = {
-                        Switch(
-                            checked = hasStoragePermission,
-                            onCheckedChange = {
-                                if (!hasStoragePermission) {
-                                    storageLauncher.launch(android.Manifest.permission.READ_EXTERNAL_STORAGE)
-                                }
-                            }
-                        )
-                    },
-                    modifier = Modifier.clickable {
-                        if (!hasStoragePermission) {
-                            storageLauncher.launch(android.Manifest.permission.READ_EXTERNAL_STORAGE)
-                        }
-                    }
-                )
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                item {
+                SettingsGroup {
                     ListItem(
-                        headlineContent = { Text(stringResource(R.string.permission_files_manage)) },
-                        supportingContent = { Text(stringResource(R.string.permission_files_manage_desc)) },
+                        headlineContent = { Text(stringResource(R.string.network_access_usage)) },
+                        supportingContent = {
+                            Text(if (isSystemNetworkEnabled) stringResource(R.string.network_connected) else stringResource(R.string.network_restricted))
+                        },
+                        leadingContent = { Icon(Icons.Default.Language, null, tint = MaterialTheme.colorScheme.primary) },
+                        trailingContent = { Icon(Icons.Default.ChevronRight, null) },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier.clickable {
+                            try {
+                                val intent = Intent("android.settings.APP_DATA_USAGE")
+                                intent.putExtra("package", context.packageName)
+                                intent.putExtra("uid", context.applicationInfo.uid)
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                    data = Uri.fromParts("package", context.packageName, null)
+                                }
+                                context.startActivity(intent)
+                            }
+                        }
+                    )
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.internal_network_toggle)) },
+                        supportingContent = { Text(stringResource(R.string.internal_network_desc)) },
+                        leadingContent = { Icon(Icons.Default.Security, null, tint = MaterialTheme.colorScheme.primary) },
                         trailingContent = {
                             Switch(
-                                checked = hasAllFilesPermission,
+                                checked = isNetworkEnabled,
+                                onCheckedChange = { viewModel.setNetworkAccessEnabled(it) }
+                            )
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier.clickable { viewModel.setNetworkAccessEnabled(!isNetworkEnabled) }
+                    )
+                }
+            }
+
+            // --- 基礎權限 ---
+            item {
+                Text(
+                    "基礎權限",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
+                )
+                SettingsGroup {
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.permission_contacts)) },
+                        supportingContent = { Text(stringResource(R.string.permission_contacts_desc)) },
+                        leadingContent = { Icon(Icons.Default.Contacts, null, tint = MaterialTheme.colorScheme.primary) },
+                        trailingContent = {
+                            Switch(
+                                checked = hasContactsPermission,
                                 onCheckedChange = {
-                                    val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
-                                        data = Uri.fromParts("package", context.packageName, null)
+                                    if (!hasContactsPermission) {
+                                        launcher.launch(android.Manifest.permission.READ_CONTACTS)
                                     }
-                                    context.startActivity(intent)
                                 }
                             )
                         },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                         modifier = Modifier.clickable {
-                            val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
-                                data = Uri.fromParts("package", context.packageName, null)
+                            if (!hasContactsPermission) {
+                                launcher.launch(android.Manifest.permission.READ_CONTACTS)
                             }
-                            context.startActivity(intent)
+                        }
+                    )
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.permission_calendar)) },
+                        supportingContent = { Text(stringResource(R.string.permission_calendar_desc)) },
+                        leadingContent = { Icon(Icons.Default.Event, null, tint = MaterialTheme.colorScheme.primary) },
+                        trailingContent = {
+                            Switch(
+                                checked = hasCalendarPermission,
+                                onCheckedChange = {
+                                    if (!hasCalendarPermission) {
+                                        calendarLauncher.launch(android.Manifest.permission.READ_CALENDAR)
+                                    }
+                                }
+                            )
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier.clickable {
+                            if (!hasCalendarPermission) {
+                                calendarLauncher.launch(android.Manifest.permission.READ_CALENDAR)
+                            }
                         }
                     )
                 }
             }
+
+            // --- 進階權限 ---
             item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.permission_notifications)) },
-                    supportingContent = { Text(stringResource(R.string.permission_notifications_desc)) },
-                    trailingContent = {
-                        Switch(
-                            checked = isNotificationEnabled,
-                            onCheckedChange = {
-                                context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                Text(
+                    "進階權限",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
+                )
+                SettingsGroup {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        ListItem(
+                            headlineContent = { Text(stringResource(R.string.permission_files_manage)) },
+                            supportingContent = { Text(stringResource(R.string.permission_files_manage_desc)) },
+                            leadingContent = { Icon(Icons.Default.Folder, null, tint = MaterialTheme.colorScheme.primary) },
+                            trailingContent = {
+                                Switch(
+                                    checked = hasAllFilesPermission,
+                                    onCheckedChange = {
+                                        val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                                            data = Uri.fromParts("package", context.packageName, null)
+                                        }
+                                        context.startActivity(intent)
+                                    }
+                                )
+                            },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            modifier = Modifier.clickable {
+                                val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                                    data = Uri.fromParts("package", context.packageName, null)
+                                }
+                                context.startActivity(intent)
                             }
                         )
-                    },
-                    modifier = Modifier.clickable {
-                        context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
                     }
-                )
-            }
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.permission_accessibility)) },
-                    supportingContent = { Text(stringResource(R.string.permission_accessibility_desc)) },
-                    trailingContent = {
-                        Switch(
-                            checked = isServiceActive,
-                            onCheckedChange = {
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.permission_notifications)) },
+                        supportingContent = { Text(stringResource(R.string.permission_notifications_desc)) },
+                        leadingContent = { Icon(Icons.Default.Notifications, null, tint = MaterialTheme.colorScheme.primary) },
+                        trailingContent = {
+                            Switch(
+                                checked = isNotificationEnabled,
+                                onCheckedChange = {
+                                    context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                                }
+                            )
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier.clickable {
+                            context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                        }
+                    )
+                    if (actionMode == ActionMode.ACCESSIBILITY) {
+                        ListItem(
+                            headlineContent = { Text(stringResource(R.string.permission_accessibility)) },
+                            supportingContent = { Text(stringResource(R.string.permission_accessibility_desc)) },
+                            leadingContent = { Icon(Icons.Default.Accessibility, null, tint = MaterialTheme.colorScheme.primary) },
+                            trailingContent = {
+                                Switch(
+                                    checked = isServiceActive,
+                                    onCheckedChange = {
+                                        context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                                    }
+                                )
+                            },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            modifier = Modifier.clickable {
                                 context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                             }
                         )
-                    },
-                    modifier = Modifier.clickable {
-                        context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                     }
-                )
-            }
-            item {
-                var expanded by remember { mutableStateOf(false) }
-                val options = listOf(
-                    ActionMode.ACCESSIBILITY to stringResource(R.string.action_mode_accessibility),
-                    ActionMode.SHIZUKU to stringResource(R.string.action_mode_shizuku),
-                    ActionMode.ROOT to stringResource(R.string.action_mode_root)
-                )
-                val currentLabel = options.find { it.first == actionMode }?.second ?: stringResource(R.string.action_mode_accessibility)
+                    
+                    var expanded by remember { mutableStateOf(false) }
+                    val options = listOf(
+                        ActionMode.ACCESSIBILITY to stringResource(R.string.action_mode_accessibility),
+                        ActionMode.SHIZUKU to stringResource(R.string.action_mode_shizuku),
+                        ActionMode.ROOT to stringResource(R.string.action_mode_root)
+                    )
+                    val currentLabel = options.find { it.first == actionMode }?.second ?: stringResource(R.string.action_mode_accessibility)
 
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.settings_action_mode)) },
-                    supportingContent = { Text(stringResource(R.string.action_mode_desc)) },
-                    trailingContent = {
-                        Box {
-                            TextButton(onClick = { expanded = true }) {
-                                Text(currentLabel)
-                                Icon(Icons.Default.ArrowDropDown, null)
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.settings_action_mode)) },
+                        supportingContent = { 
+                            Column {
+                                Text(stringResource(R.string.action_mode_desc))
+                                Text(
+                                    "目前模式: $currentLabel",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
                             }
-                            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                                options.forEach { (mode, label) ->
-                                    DropdownMenuItem(
-                                        text = { Text(label) },
-                                        onClick = {
-                                            when (mode) {
-                                                ActionMode.ROOT -> {
-                                                    viewModel.requestRootAccess { success ->
-                                                        if (success) {
-                                                            viewModel.setActionMode(mode)
-                                                            Toast.makeText(context, context.getString(R.string.root_permission_granted), Toast.LENGTH_SHORT).show()
-                                                        } else {
-                                                            Toast.makeText(context, context.getString(R.string.root_permission_failed), Toast.LENGTH_LONG).show()
+                        },
+                        leadingContent = { Icon(Icons.Default.Build, null, tint = MaterialTheme.colorScheme.primary) },
+                        trailingContent = {
+                            Box {
+                                TextButton(onClick = { expanded = true }) {
+                                    Text("切換")
+                                    Icon(Icons.Default.ArrowDropDown, null)
+                                }
+                                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                                    options.forEach { (mode, label) ->
+                                        DropdownMenuItem(
+                                            text = {
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    RadioButton(selected = (mode == actionMode), onClick = null)
+                                                    Spacer(Modifier.width(8.dp))
+                                                    Text(label)
+                                                }
+                                            },
+                                            onClick = {
+                                                when (mode) {
+                                                    ActionMode.ROOT -> {
+                                                        viewModel.requestRootAccess { success ->
+                                                            if (success) {
+                                                                viewModel.setActionMode(mode)
+                                                                Toast.makeText(context, context.getString(R.string.root_permission_granted), Toast.LENGTH_SHORT).show()
+                                                            } else {
+                                                                Toast.makeText(context, context.getString(R.string.root_permission_failed), Toast.LENGTH_LONG).show()
+                                                            }
                                                         }
                                                     }
-                                                }
-                                                ActionMode.SHIZUKU -> {
-                                                    if (Shizuku.pingBinder()) {
-                                                        if (viewModel.checkShizukuPermission()) {
-                                                            viewModel.setActionMode(mode)
+                                                    ActionMode.SHIZUKU -> {
+                                                        if (Shizuku.pingBinder()) {
+                                                            if (viewModel.checkShizukuPermission()) {
+                                                                viewModel.setActionMode(mode)
+                                                            } else {
+                                                                Toast.makeText(context, context.getString(R.string.shizuku_permission_request), Toast.LENGTH_SHORT).show()
+                                                                Shizuku.requestPermission(0)
+                                                            }
                                                         } else {
-                                                            Toast.makeText(context, context.getString(R.string.shizuku_permission_request), Toast.LENGTH_SHORT).show()
-                                                            Shizuku.requestPermission(0)
+                                                            Toast.makeText(context, context.getString(R.string.shizuku_not_running), Toast.LENGTH_LONG).show()
                                                         }
-                                                    } else {
-                                                        Toast.makeText(context, context.getString(R.string.shizuku_not_running), Toast.LENGTH_LONG).show()
+                                                    }
+                                                    else -> {
+                                                        viewModel.setActionMode(mode)
                                                     }
                                                 }
-                                                else -> {
-                                                    viewModel.setActionMode(mode)
-                                                }
+                                                expanded = false
                                             }
-                                            expanded = false
-                                        }
-                                    )
+                                        )
+                                    }
                                 }
                             }
-                        }
-                    },
-                    modifier = Modifier.clickable { expanded = true }
-                )
-            }
-            item {
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                PaddingRemaining(16.dp) {
-                    Text(
-                        stringResource(R.string.privacy_note),
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        stringResource(R.string.privacy_note_desc),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier.clickable { expanded = true }
                     )
                 }
             }
+
+            // --- 隱私說明 ---
+            item {
+                Text(
+                    stringResource(R.string.privacy_note),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
+                )
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            stringResource(R.string.privacy_note_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            
+            item { Spacer(modifier = Modifier.height(32.dp)) }
         }
     }
 
@@ -401,6 +431,12 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
                 hasContactsPermission = androidx.core.content.ContextCompat.checkSelfPermission(
                     context, android.Manifest.permission.READ_CONTACTS
                 ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                hasCalendarPermission = androidx.core.content.ContextCompat.checkSelfPermission(
+                    context, android.Manifest.permission.READ_CALENDAR
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                hasAllFilesPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    android.os.Environment.isExternalStorageManager()
+                } else true
                 isNotificationEnabled = NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)
                 isServiceActive = isAccessibilityEnabled()
                 viewModel.checkSystemNetworkStatus()
@@ -426,23 +462,39 @@ fun SearchSettingsScreen(onBack: () -> Unit) {
     val currentSearchEngineUrl by viewModel.searchEngineUrl.collectAsState()
     var customUrl by remember { mutableStateOf(currentSearchEngineUrl) }
 
-    val searchEngines = listOf(
-        "Google" to "https://www.google.com/search?q=",
-        "Microsoft Bing" to "https://www.bing.com/search?q=",
-        "Baidu" to "https://www.baidu.com/s?wd=",
-        "Yahoo!" to "https://search.yahoo.com/search?p=",
-        "DuckDuckGo" to "https://duckduckgo.com/?q=",
-        "Yandex" to "https://yandex.com/search/?text=",
-        "WolframAlpha" to "https://www.wolframalpha.com/input/?i=",
-        "Brave Search" to "https://search.brave.com/search?q=",
-        "Ecosia" to "https://www.ecosia.org/search?q=",
-        "Startpage" to "https://www.startpage.com/do/search?q=",
-        "Swisscows" to "https://swisscows.com/web?query=",
-        "Perplexity" to "https://www.perplexity.ai/search?q=",
-        "You.com" to "https://you.com/search?q=",
-        "Naver" to "https://search.naver.com/search.naver?query=",
-        "Qwant" to "https://www.qwant.com/?q=",
-        "Seznam" to "https://search.seznam.cz/?q="
+    val categories = listOf(
+        "熱門主流" to listOf(
+            "Google" to "https://www.google.com/search?q=",
+            "Microsoft Bing" to "https://www.bing.com/search?q=",
+            "Yahoo!" to "https://search.yahoo.com/search?p="
+        ),
+        "隱私優先" to listOf(
+            "DuckDuckGo" to "https://duckduckgo.com/?q=",
+            "Brave Search" to "https://search.brave.com/search?q=",
+            "Startpage" to "https://www.startpage.com/do/search?q=",
+            "Murena Search" to "https://murena.io/search?q=",
+            "Swisscows" to "https://swisscows.com/web?query=",
+            "Qwant" to "https://www.qwant.com/?q="
+        ),
+        "AI 助手" to listOf(
+            "Google Gemini" to "https://gemini.google.com/app?q=",
+            "ChatGPT" to "https://chatgpt.com/?q=",
+            "Microsoft Copilot" to "https://copilot.microsoft.com/?q=",
+            "Perplexity" to "https://www.perplexity.ai/search?q=",
+            "Felo" to "https://felo.ai/search?q=",
+            "Phind" to "https://www.phind.com/search?q=",
+            "You.com" to "https://you.com/search?q=",
+            "Genspark" to "https://www.genspark.ai/search?q=",
+            "Andi" to "https://andisearch.com/?q="
+        ),
+        "地區與特色" to listOf(
+            "Baidu" to "https://www.baidu.com/s?wd=",
+            "Yandex" to "https://yandex.com/search/?text=",
+            "Naver" to "https://search.naver.com/search.naver?query=",
+            "Seznam" to "https://search.seznam.cz/?q=",
+            "WolframAlpha" to "https://www.wolframalpha.com/input/?i=",
+            "Ecosia" to "https://www.ecosia.org/search?q="
+        )
     )
 
     Scaffold(
@@ -457,56 +509,85 @@ fun SearchSettingsScreen(onBack: () -> Unit) {
             )
         }
     ) { innerPadding ->
-        LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+                .padding(horizontal = 16.dp)
+        ) {
+            item { Spacer(modifier = Modifier.height(16.dp)) }
+            
             item {
-                PaddingRemaining(16.dp) {
-                    Text(
-                        stringResource(R.string.search_engine),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        stringResource(R.string.search_engine_desc),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            items(searchEngines) { (name, url) ->
-                val isSelected = currentSearchEngineUrl == url
-                ListItem(
-                    headlineContent = { Text(name) },
-                    supportingContent = { Text(url, maxLines = 1) },
-                    leadingContent = {
-                        RadioButton(selected = isSelected, onClick = { viewModel.setSearchEngineUrl(url) })
-                    },
-                    modifier = Modifier.clickable { viewModel.setSearchEngineUrl(url) }
+                Text(
+                    stringResource(R.string.search_engine),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 16.dp, bottom = 4.dp)
+                )
+                Text(
+                    stringResource(R.string.search_engine_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 16.dp, bottom = 16.dp)
                 )
             }
 
-            item {
-                HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(stringResource(R.string.custom_search_url), style = MaterialTheme.typography.titleMedium)
-                    Text(stringResource(R.string.custom_search_url_desc), style = MaterialTheme.typography.bodySmall)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = customUrl,
-                        onValueChange = { customUrl = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text(stringResource(R.string.search_url_placeholder)) },
-                        singleLine = true,
-                        trailingIcon = {
-                            if (customUrl != currentSearchEngineUrl) {
-                                IconButton(onClick = { viewModel.setSearchEngineUrl(customUrl) }) {
-                                    Icon(Icons.Default.Save, contentDescription = stringResource(R.string.save), tint = MaterialTheme.colorScheme.primary)
-                                }
-                            }
-                        }
+            categories.forEach { (categoryName, engines) ->
+                item {
+                    Text(
+                        categoryName,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp)
                     )
+                    SettingsGroup {
+                        engines.forEach { (name, url) ->
+                            val isSelected = currentSearchEngineUrl == url
+                            ListItem(
+                                headlineContent = { Text(name) },
+                                supportingContent = { Text(url, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                leadingContent = {
+                                    RadioButton(selected = isSelected, onClick = { viewModel.setSearchEngineUrl(url) })
+                                },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                modifier = Modifier.clickable { viewModel.setSearchEngineUrl(url) }
+                            )
+                        }
+                    }
                 }
             }
+
+            item {
+                Text(
+                    stringResource(R.string.custom_search_url),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 8.dp)
+                )
+                SettingsGroup {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(stringResource(R.string.custom_search_url_desc), style = MaterialTheme.typography.bodySmall)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = customUrl,
+                            onValueChange = { customUrl = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = { Text(stringResource(R.string.search_url_placeholder)) },
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
+                            trailingIcon = {
+                                if (customUrl != currentSearchEngineUrl) {
+                                    IconButton(onClick = { viewModel.setSearchEngineUrl(customUrl) }) {
+                                        Icon(Icons.Default.Save, contentDescription = stringResource(R.string.save), tint = MaterialTheme.colorScheme.primary)
+                                    }
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+            
+            item { Spacer(modifier = Modifier.height(32.dp)) }
         }
     }
 }
@@ -631,7 +712,6 @@ fun AdvancedSettingsScreen(onBack: () -> Unit) {
                                 viewModel.setIconSizePx(snapped) 
                             },
                             valueRange = 32f..256f,
-                            steps = 13, // (256-32)/16 - 1 = 13 steps
                             modifier = Modifier.weight(1f)
                         )
 
@@ -708,7 +788,6 @@ fun AdvancedSettingsScreen(onBack: () -> Unit) {
                             value = iconScale,
                             onValueChange = { viewModel.setIconScale(it) },
                             valueRange = 0.9f..1.1f,
-                            steps = 99, // 100等分
                             modifier = Modifier.weight(1f)
                         )
 
@@ -797,7 +876,6 @@ fun AdvancedSettingsScreen(onBack: () -> Unit) {
                             value = updateInterval.toFloat(),
                             onValueChange = { viewModel.setUpdateCheckInterval(it.roundToInt()) },
                             valueRange = 0f..36f,
-                            steps = 35,
                             modifier = Modifier.weight(1f)
                         )
 

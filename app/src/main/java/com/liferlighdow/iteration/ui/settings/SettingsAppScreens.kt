@@ -406,6 +406,8 @@ enum class AppFilter { ALL, HIDDEN, VISIBLE }
 fun HideAppsScreen(onBack: () -> Unit) {
     val viewModel: MainViewModel = viewModel()
     val allApps by viewModel.allApps.collectAsState()
+    val iconShape by viewModel.iconShape.collectAsState()
+    val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(12.dp)
     var searchQuery by remember { mutableStateOf("") }
     var appFilter by remember { mutableStateOf(AppFilter.ALL) }
 
@@ -433,43 +435,60 @@ fun HideAppsScreen(onBack: () -> Unit) {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
-                },
-                actions = {}
+                }
             )
         }
     ) { innerPadding ->
         LazyColumn(
-            modifier = Modifier.padding(innerPadding).fillMaxSize().padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+                .padding(horizontal = 16.dp)
         ) {
+            item { Spacer(modifier = Modifier.height(16.dp)) }
+
+            // --- Security Section ---
             item {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(text = stringResource(R.string.security_section), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-            }
-            item {
-                OutlinedTextField(
-                    value = currentPassword ?: "",
-                    onValueChange = {
-                        currentPassword = it
-                        viewModel.setPassword(it)
-                    },
-                    label = { Text(stringResource(R.string.password_label)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    trailingIcon = {
-                        val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
-                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(imageVector = image, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        }
+                SettingsSection(title = stringResource(R.string.security_section)) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        OutlinedTextField(
+                            value = currentPassword ?: "",
+                            onValueChange = {
+                                currentPassword = it
+                                viewModel.setPassword(it)
+                            },
+                            label = { Text(stringResource(R.string.password_label)) },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
+                            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            trailingIcon = {
+                                val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                    Icon(imageVector = image, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                }
+                            }
+                        )
+                        Text(
+                            text = "設定密碼以保護隱藏的應用程式",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 8.dp, start = 4.dp)
+                        )
                     }
+                }
+            }
+
+            // --- App Selection Section ---
+            item {
+                Text(
+                    stringResource(R.string.hide_apps_instruction),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
                 )
             }
-            item {
-                HorizontalDivider()
-                Text(text = stringResource(R.string.hide_apps_instruction), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(vertical = 8.dp))
-            }
-            
+
             item {
                 Column {
                     SearchBar(searchQuery) { searchQuery = it }
@@ -477,7 +496,7 @@ fun HideAppsScreen(onBack: () -> Unit) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                            .padding(vertical = 8.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         FilterChip(
@@ -491,7 +510,7 @@ fun HideAppsScreen(onBack: () -> Unit) {
                             label = { Text(stringResource(R.string.hidden_label)) },
                             leadingIcon = {
                                 if (appFilter == AppFilter.HIDDEN) {
-                                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp))
                                 }
                             }
                         )
@@ -501,7 +520,7 @@ fun HideAppsScreen(onBack: () -> Unit) {
                             label = { Text(stringResource(R.string.visible_label)) },
                             leadingIcon = {
                                 if (appFilter == AppFilter.VISIBLE) {
-                                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp))
                                 }
                             }
                         )
@@ -509,35 +528,54 @@ fun HideAppsScreen(onBack: () -> Unit) {
                 }
             }
 
-            items(filteredApps, key = { it.uniqueId }) { app ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable { viewModel.toggleHiddenApp(app.packageName) }
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val appIcon = viewModel.getIcon(app.packageName)
-                    if (appIcon != null) {
-                        val shape8 = RoundedCornerShape(8.dp)
-                        Image(
-                            bitmap = appIcon,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(shape8)
-                                .border(
-                                    width = 0.5.dp,
-                                    color = Color.Black.copy(alpha = 0.1f),
-                                    shape = shape8
+            item {
+                SettingsGroup {
+                    if (filteredApps.isEmpty()) {
+                        Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                            Text("找不到相符的應用程式", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    } else {
+                        filteredApps.forEachIndexed { index, app ->
+                            ListItem(
+                                headlineContent = { Text(app.label) },
+                                supportingContent = { Text(app.packageName, maxLines = 1, style = MaterialTheme.typography.labelSmall) },
+                                leadingContent = {
+                                    val appIcon = viewModel.getIcon(app.uniqueId)
+                                    if (appIcon != null) {
+                                        Image(
+                                            bitmap = appIcon,
+                                            contentDescription = null,
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .clip(shape)
+                                                .background(Color.White.copy(alpha = 0.1f))
+                                        )
+                                    } else {
+                                        Box(Modifier.size(40.dp).background(MaterialTheme.colorScheme.surfaceVariant, shape))
+                                    }
+                                },
+                                trailingContent = {
+                                    Checkbox(
+                                        checked = app.isHidden,
+                                        onCheckedChange = { viewModel.toggleHiddenApp(app.packageName) }
+                                    )
+                                },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                modifier = Modifier.clickable { viewModel.toggleHiddenApp(app.packageName) }
+                            )
+                            if (index < filteredApps.size - 1) {
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                    thickness = 0.5.dp,
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                                 )
-                        )
+                            }
+                        }
                     }
-                    Text(text = app.label, modifier = Modifier.weight(1f).padding(horizontal = 12.dp))
-                    Checkbox(checked = app.isHidden, onCheckedChange = { viewModel.toggleHiddenApp(app.packageName) })
                 }
             }
+            
+            item { Spacer(modifier = Modifier.height(32.dp)) }
         }
     }
 }

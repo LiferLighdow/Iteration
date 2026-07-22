@@ -7,8 +7,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -40,7 +42,11 @@ enum class SettingsPage {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
+fun SearchBar(
+    query: String,
+    placeholder: String = stringResource(R.string.search_hint),
+    onQueryChange: (String) -> Unit
+) {
     TextField(
         value = query,
         onValueChange = onQueryChange,
@@ -48,7 +54,7 @@ fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .height(56.dp),
-        placeholder = { Text(stringResource(R.string.search_hint), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)) },
+        placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)) },
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
         trailingIcon = {
             if (query.isNotEmpty()) {
@@ -94,6 +100,49 @@ fun SettingsItem(
         trailingContent = trailing,
         modifier = Modifier.clickable { onClick() },
         colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+    )
+}
+
+@Composable
+fun SettingsSection(title: String, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+    Column(modifier = modifier.padding(vertical = 8.dp)) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
+        )
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+            modifier = Modifier.fillMaxWidth(),
+            border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        ) {
+            Column(content = content)
+        }
+    }
+}
+
+@Composable
+fun SettingSwitchItem(
+    icon: ImageVector,
+    title: String,
+    supportingText: String? = null,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    ListItem(
+        headlineContent = { Text(title) },
+        supportingContent = supportingText?.let { { Text(it) } },
+        leadingContent = { Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+        trailingContent = {
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange
+            )
+        },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        modifier = Modifier.clickable { onCheckedChange(!checked) }
     )
 }
 
@@ -165,15 +214,47 @@ fun ColorPicker(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(stringResource(R.string.hue, h.toInt()), style = MaterialTheme.typography.labelSmall)
-        Slider(value = h, onValueChange = { h = it; onColorChanged(android.graphics.Color.HSVToColor((a * 255).toInt(), floatArrayOf(h, s, v))) }, valueRange = 0f..360f)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = { h = (h - 1f).coerceAtLeast(0f); onColorChanged(android.graphics.Color.HSVToColor((a * 255).toInt(), floatArrayOf(h, s, v))) }) {
+                Icon(Icons.Default.Remove, null, tint = MaterialTheme.colorScheme.primary)
+            }
+            Slider(value = h, onValueChange = { h = it; onColorChanged(android.graphics.Color.HSVToColor((a * 255).toInt(), floatArrayOf(h, s, v))) }, valueRange = 0f..360f, modifier = Modifier.weight(1f))
+            IconButton(onClick = { h = (h + 1f).coerceAtMost(360f); onColorChanged(android.graphics.Color.HSVToColor((a * 255).toInt(), floatArrayOf(h, s, v))) }) {
+                Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.primary)
+            }
+        }
         
         Text(stringResource(R.string.saturation, (s * 100).toInt()), style = MaterialTheme.typography.labelSmall)
-        Slider(value = s, onValueChange = { s = it; onColorChanged(android.graphics.Color.HSVToColor((a * 255).toInt(), floatArrayOf(h, s, v))) }, valueRange = 0f..1f)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = { s = (s - 0.01f).coerceAtLeast(0f); onColorChanged(android.graphics.Color.HSVToColor((a * 255).toInt(), floatArrayOf(h, s, v))) }) {
+                Icon(Icons.Default.Remove, null, tint = MaterialTheme.colorScheme.primary)
+            }
+            Slider(value = s, onValueChange = { s = it; onColorChanged(android.graphics.Color.HSVToColor((a * 255).toInt(), floatArrayOf(h, s, v))) }, valueRange = 0f..1f, modifier = Modifier.weight(1f))
+            IconButton(onClick = { s = (s + 0.01f).coerceAtMost(1f); onColorChanged(android.graphics.Color.HSVToColor((a * 255).toInt(), floatArrayOf(h, s, v))) }) {
+                Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.primary)
+            }
+        }
         
         Text(stringResource(R.string.brightness, (v * 100).toInt()), style = MaterialTheme.typography.labelSmall)
-        Slider(value = v, onValueChange = { v = it; onColorChanged(android.graphics.Color.HSVToColor((a * 255).toInt(), floatArrayOf(h, s, v))) }, valueRange = 0f..1f)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = { v = (v - 0.01f).coerceAtLeast(0f); onColorChanged(android.graphics.Color.HSVToColor((a * 255).toInt(), floatArrayOf(h, s, v))) }) {
+                Icon(Icons.Default.Remove, null, tint = MaterialTheme.colorScheme.primary)
+            }
+            Slider(value = v, onValueChange = { v = it; onColorChanged(android.graphics.Color.HSVToColor((a * 255).toInt(), floatArrayOf(h, s, v))) }, valueRange = 0f..1f, modifier = Modifier.weight(1f))
+            IconButton(onClick = { v = (v + 0.01f).coerceAtMost(1f); onColorChanged(android.graphics.Color.HSVToColor((a * 255).toInt(), floatArrayOf(h, s, v))) }) {
+                Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.primary)
+            }
+        }
         
         Text(stringResource(R.string.alpha, (a * 100).toInt()), style = MaterialTheme.typography.labelSmall)
-        Slider(value = a, onValueChange = { a = it; onColorChanged(android.graphics.Color.HSVToColor((a * 255).toInt(), floatArrayOf(h, s, v))) }, valueRange = 0f..1f)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = { a = (a - 0.01f).coerceAtLeast(0f); onColorChanged(android.graphics.Color.HSVToColor((a * 255).toInt(), floatArrayOf(h, s, v))) }) {
+                Icon(Icons.Default.Remove, null, tint = MaterialTheme.colorScheme.primary)
+            }
+            Slider(value = a, onValueChange = { a = it; onColorChanged(android.graphics.Color.HSVToColor((a * 255).toInt(), floatArrayOf(h, s, v))) }, valueRange = 0f..1f, modifier = Modifier.weight(1f))
+            IconButton(onClick = { a = (a + 0.01f).coerceAtMost(1f); onColorChanged(android.graphics.Color.HSVToColor((a * 255).toInt(), floatArrayOf(h, s, v))) }) {
+                Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.primary)
+            }
+        }
     }
 }

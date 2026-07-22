@@ -59,6 +59,7 @@
     <string name="folder_delete_discard">放棄圖示</string>
     <string name="folder_menu_desc">資料夾選單</string>
     <string name="search_hint">選擇應用&#8230;</string>
+    <string name="search_settings_hint">搜尋設定&#8230;</string>
     <string name="search_hint_short">搜尋</string>
     <string name="library_hint">應用程式庫</string>
     <string name="app_suggestions">推薦應用</string>

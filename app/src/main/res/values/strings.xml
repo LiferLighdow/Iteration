@@ -71,6 +71,7 @@
 
     <!-- Search & Library -->
     <string name="search_hint">Search Apps&#8230;</string>
+    <string name="search_settings_hint">Search Settings&#8230;</string>
     <string name="search_hint_short">Search</string>
     <string name="library_hint">App Library</string>
     <string name="app_suggestions">App Suggestions</string>

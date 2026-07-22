@@ -72,6 +72,7 @@
 
     <!-- 搜尋與庫 -->
     <string name="search_hint">搜尋應用程式&#8230;</string>
+    <string name="search_settings_hint">搜尋設定&#8230;</string>
     <string name="search_hint_short">搜尋</string>
     <string name="library_hint">應用程式庫</string>
     <string name="app_suggestions">應用程式建議</string>

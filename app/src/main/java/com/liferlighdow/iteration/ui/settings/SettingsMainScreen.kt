@@ -146,7 +146,7 @@ fun SettingsMainScreen(
                         modifier = Modifier.padding(start = 8.dp)
                     )
                 }
-                SearchBar(searchQuery) { searchQuery = it }
+                SearchBar(searchQuery, stringResource(R.string.search_settings_hint)) { searchQuery = it }
             }
         }
     ) { innerPadding ->
@@ -218,6 +218,14 @@ fun SettingsMainScreen(
                             icon = Icons.Default.Palette,
                             iconColor = Color(0xFF4285F4),
                             onClick = onNavigateToIconTheme
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        SettingsItem(
+                            headline = stringResource(R.string.settings_rename_apps),
+                            supporting = stringResource(R.string.settings_rename_apps_desc),
+                            icon = Icons.Default.Edit,
+                            iconColor = Color(0xFF673AB7),
+                            onClick = onNavigateToRenameApps
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                         SettingsItem(
@@ -306,14 +314,6 @@ fun SettingsMainScreen(
                             onClick = onNavigateToSearch
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                        SettingsItem(
-                            headline = stringResource(R.string.settings_permissions),
-                            supporting = stringResource(R.string.settings_permissions_desc),
-                            icon = Icons.Default.Security,
-                            iconColor = Color(0xFF607D8B),
-                            onClick = onNavigateToPermissions
-                        )
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                         
                         val appLanguage by viewModel.appLanguage.collectAsState()
                         val langOptions = listOf(
@@ -365,11 +365,11 @@ fun SettingsMainScreen(
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                         SettingsItem(
-                            headline = stringResource(R.string.settings_rename_apps),
-                            supporting = stringResource(R.string.settings_rename_apps_desc),
-                            icon = Icons.Default.Edit,
-                            iconColor = Color(0xFF673AB7),
-                            onClick = onNavigateToRenameApps
+                            headline = stringResource(R.string.settings_permissions),
+                            supporting = stringResource(R.string.settings_permissions_desc),
+                            icon = Icons.Default.Security,
+                            iconColor = Color(0xFF607D8B),
+                            onClick = onNavigateToPermissions
                         )
                     }
                 }

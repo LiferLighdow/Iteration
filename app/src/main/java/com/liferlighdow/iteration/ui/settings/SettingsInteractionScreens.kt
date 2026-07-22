@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -85,342 +86,264 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
-                },
-                actions = {}
+                }
             )
         }
     ) { innerPadding ->
-        LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize().padding(16.dp)) {
+        LazyColumn(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+                .padding(horizontal = 16.dp)
+        ) {
+            item { Spacer(modifier = Modifier.height(16.dp)) }
+
+            // --- Layout & Behavior ---
             item {
-                Text(
-                    stringResource(R.string.layout_settings),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-            }
-
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.show_minus_one)) },
-                    supportingContent = { Text(stringResource(R.string.show_minus_one_desc)) },
-                    trailingContent = {
-                        Switch(
-                            checked = showMinusOnePage,
-                            onCheckedChange = { viewModel.setShowMinusOnePage(it) }
-                        )
-                    },
-                    modifier = Modifier.clickable { viewModel.setShowMinusOnePage(!showMinusOnePage) }
-                )
-            }
-
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.show_library)) },
-                    supportingContent = { Text(stringResource(R.string.show_library_desc)) },
-                    trailingContent = {
-                        Switch(
-                            checked = showAppLibrary,
-                            onCheckedChange = { viewModel.setShowAppLibrary(it) }
-                        )
-                    },
-                    modifier = Modifier.clickable { viewModel.setShowAppLibrary(!showAppLibrary) }
-                )
-            }
-
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.lock_desktop)) },
-                    supportingContent = { Text(stringResource(R.string.lock_desktop_desc)) },
-                    trailingContent = {
-                        Switch(
-                            checked = isDesktopLocked,
-                            onCheckedChange = { viewModel.setDesktopLocked(it) }
-                        )
-                    },
-                    modifier = Modifier.clickable { viewModel.setDesktopLocked(!isDesktopLocked) }
-                )
-            }
-
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.dynamic_calendar)) },
-                    supportingContent = { Text(stringResource(R.string.dynamic_calendar_desc)) },
-                    trailingContent = {
-                        Switch(
-                            checked = isDynamicCalendarEnabled,
-                            onCheckedChange = { viewModel.setDynamicCalendarEnabled(it) }
-                        )
-                    },
-                    modifier = Modifier.clickable { viewModel.setDynamicCalendarEnabled(!isDynamicCalendarEnabled) }
-                )
-            }
-
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.dynamic_clock)) },
-                    supportingContent = { Text(stringResource(R.string.dynamic_clock_desc)) },
-                    trailingContent = {
-                        Switch(
-                            checked = isDynamicClockEnabled,
-                            onCheckedChange = { viewModel.setDynamicClockEnabled(it) }
-                        )
-                    },
-                    modifier = Modifier.clickable { viewModel.setDynamicClockEnabled(!isDynamicClockEnabled) }
-                )
-            }
-
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.settings_auto_add_apps)) },
-                    supportingContent = { Text(stringResource(R.string.settings_auto_add_apps_desc)) },
-                    trailingContent = {
-                        Switch(
-                            checked = autoAddAppsToHome,
-                            onCheckedChange = { viewModel.setAutoAddAppsToHome(it) }
-                        )
-                    },
-                    modifier = Modifier.clickable { viewModel.setAutoAddAppsToHome(!autoAddAppsToHome) }
-                )
-            }
-
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.show_status_bar)) },
-                    supportingContent = { Text(stringResource(R.string.show_status_bar_desc)) },
-                    trailingContent = {
-                        Switch(
-                            checked = showStatusBar,
-                            onCheckedChange = { viewModel.setShowStatusBar(it) }
-                        )
-                    },
-                    modifier = Modifier.clickable { viewModel.setShowStatusBar(!showStatusBar) }
-                )
-            }
-
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.show_nav_handle)) },
-                    supportingContent = { Text(stringResource(R.string.show_nav_handle_desc)) },
-                    trailingContent = {
-                        Switch(
-                            checked = showNavigationBar,
-                            onCheckedChange = { viewModel.setShowNavigationBar(it) }
-                        )
-                    },
-                    modifier = Modifier.clickable { viewModel.setShowNavigationBar(!showNavigationBar) }
-                )
-            }
-
-            item {
-                var expanded by remember { mutableStateOf(false) }
-                val options = listOf(
-                    ThemeMode.LIGHT to stringResource(R.string.theme_light),
-                    ThemeMode.DARK to stringResource(R.string.theme_dark),
-                    ThemeMode.FOLLOW_SYSTEM to stringResource(R.string.theme_follow_system)
-                )
-                val currentLabel = options.find { it.first == themeMode }?.second ?: stringResource(R.string.theme_follow_system)
-
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.settings_theme_mode)) },
-                    supportingContent = { Text(currentLabel) },
-                    trailingContent = {
-                        Box {
-                            TextButton(onClick = { expanded = true }) {
-                                Text(stringResource(R.string.change))
-                                Icon(Icons.Default.ArrowDropDown, null)
-                            }
-                            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                                options.forEach { (mode, label) ->
-                                    DropdownMenuItem(
-                                        text = { Text(label) },
-                                        onClick = {
-                                            viewModel.setThemeMode(mode)
-                                            expanded = false
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    },
-                    modifier = Modifier.clickable { expanded = true }
-                )
-            }
-
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.amoled_black)) },
-                    supportingContent = { Text(stringResource(R.string.amoled_black_desc)) },
-                    trailingContent = {
-                        Switch(
-                            checked = isAmoledBlack,
-                            onCheckedChange = { viewModel.setAmoledBlack(it) }
-                        )
-                    },
-                    modifier = Modifier.clickable { viewModel.setAmoledBlack(!isAmoledBlack) }
-                )
-            }
-
-            item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
-
-            item {
-                var expanded by remember { mutableStateOf(false) }
-                val configuration = LocalConfiguration.current
-                val isLongScreen = configuration.screenHeightDp.toFloat() / configuration.screenWidthDp.toFloat() >= 2.0f
-
-                val options = remember(isLongScreen) {
-                    val list = mutableListOf(
-                        0 to 0, // placeholder for string resource
-                        5 to 5,
-                        6 to 6
+                SettingsSection(title = stringResource(R.string.layout_settings)) {
+                    SettingSwitchItem(
+                        icon = Icons.Default.AutoAwesomeMotion,
+                        title = stringResource(R.string.show_minus_one),
+                        supportingText = stringResource(R.string.show_minus_one_desc),
+                        checked = showMinusOnePage,
+                        onCheckedChange = { viewModel.setShowMinusOnePage(it) }
                     )
-                    if (isLongScreen) {
-                        list.add(7 to 7)
-                        list.add(-1 to -1)
-                    }
-                    list
-                }.map { (value, _) ->
-                    value to when(value) {
-                        0 -> stringResource(R.string.auto_adaptive)
-                        5 -> stringResource(R.string.layout_4x5)
-                        6 -> stringResource(R.string.layout_4x6)
-                        7 -> stringResource(R.string.layout_4x7)
-                        else -> stringResource(R.string.layout_4x6_balanced)
-                    }
+                    SettingSwitchItem(
+                        icon = Icons.Default.Apps,
+                        title = stringResource(R.string.show_library),
+                        supportingText = stringResource(R.string.show_library_desc),
+                        checked = showAppLibrary,
+                        onCheckedChange = { viewModel.setShowAppLibrary(it) }
+                    )
+                    SettingSwitchItem(
+                        icon = Icons.Default.Lock,
+                        title = stringResource(R.string.lock_desktop),
+                        supportingText = stringResource(R.string.lock_desktop_desc),
+                        checked = isDesktopLocked,
+                        onCheckedChange = { viewModel.setDesktopLocked(it) }
+                    )
+                    SettingSwitchItem(
+                        icon = Icons.Default.AddBox,
+                        title = stringResource(R.string.settings_auto_add_apps),
+                        supportingText = stringResource(R.string.settings_auto_add_apps_desc),
+                        checked = autoAddAppsToHome,
+                        onCheckedChange = { viewModel.setAutoAddAppsToHome(it) }
+                    )
                 }
+            }
 
-                val currentLabel = options.find { it.first == desktopRows }?.second ?: stringResource(R.string.auto_adaptive)
+            // --- Dynamic Icons ---
+            item {
+                SettingsSection(title = stringResource(R.string.dynamic_calendar)) {
+                    SettingSwitchItem(
+                        icon = Icons.Default.CalendarToday,
+                        title = stringResource(R.string.dynamic_calendar),
+                        supportingText = stringResource(R.string.dynamic_calendar_desc),
+                        checked = isDynamicCalendarEnabled,
+                        onCheckedChange = { viewModel.setDynamicCalendarEnabled(it) }
+                    )
+                    SettingSwitchItem(
+                        icon = Icons.Default.Schedule,
+                        title = stringResource(R.string.dynamic_clock),
+                        supportingText = stringResource(R.string.dynamic_clock_desc),
+                        checked = isDynamicClockEnabled,
+                        onCheckedChange = { viewModel.setDynamicClockEnabled(it) }
+                    )
+                }
+            }
 
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.layout_rows)) },
-                    supportingContent = { Text(stringResource(R.string.layout_rows_current, currentLabel)) },
-                    trailingContent = {
-                        Box {
-                            TextButton(onClick = { expanded = true }) {
-                                Text(stringResource(R.string.change))
-                                Icon(Icons.Default.ArrowDropDown, null)
+            // --- System UI ---
+            item {
+                SettingsSection(title = "系統介面") {
+                    SettingSwitchItem(
+                        icon = Icons.Default.Expand,
+                        title = stringResource(R.string.show_status_bar),
+                        supportingText = stringResource(R.string.show_status_bar_desc),
+                        checked = showStatusBar,
+                        onCheckedChange = { viewModel.setShowStatusBar(it) }
+                    )
+                    SettingSwitchItem(
+                        icon = Icons.Default.HorizontalRule,
+                        title = stringResource(R.string.show_nav_handle),
+                        supportingText = stringResource(R.string.show_nav_handle_desc),
+                        checked = showNavigationBar,
+                        onCheckedChange = { viewModel.setShowNavigationBar(it) }
+                    )
+                }
+            }
+
+            // --- Theme ---
+            item {
+                SettingsSection(title = stringResource(R.string.settings_theme_mode)) {
+                    var expanded by remember { mutableStateOf(false) }
+                    val options = listOf(
+                        ThemeMode.LIGHT to stringResource(R.string.theme_light),
+                        ThemeMode.DARK to stringResource(R.string.theme_dark),
+                        ThemeMode.FOLLOW_SYSTEM to stringResource(R.string.theme_follow_system)
+                    )
+                    val currentLabel = options.find { it.first == themeMode }?.second ?: stringResource(R.string.theme_follow_system)
+
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.settings_theme_mode)) },
+                        supportingContent = { Text(currentLabel) },
+                        leadingContent = { Icon(Icons.Default.Palette, null, tint = MaterialTheme.colorScheme.primary) },
+                        trailingContent = {
+                            Box {
+                                IconButton(onClick = { expanded = true }) {
+                                    Icon(Icons.Default.ArrowDropDown, null)
+                                }
+                                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                                    options.forEach { (mode, label) ->
+                                        DropdownMenuItem(
+                                            text = { Text(label) },
+                                            onClick = {
+                                                viewModel.setThemeMode(mode)
+                                                expanded = false
+                                            }
+                                        )
+                                    }
+                                }
                             }
-                            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                                options.forEach { (value, label) ->
-                                    DropdownMenuItem(
-                                        text = { Text(label) },
-                                        onClick = {
-                                            viewModel.setDesktopRows(value)
-                                            expanded = false
-                                        }
-                                    )
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier.clickable { expanded = true }
+                    )
+                    SettingSwitchItem(
+                        icon = Icons.Default.Contrast,
+                        title = stringResource(R.string.amoled_black),
+                        supportingText = stringResource(R.string.amoled_black_desc),
+                        checked = isAmoledBlack,
+                        onCheckedChange = { viewModel.setAmoledBlack(it) }
+                    )
+                }
+            }
+
+            // --- Desktop Grid & Dock ---
+            item {
+                SettingsSection(title = "佈局與底欄") {
+                    var expandedGrid by remember { mutableStateOf(false) }
+                    val configuration = LocalConfiguration.current
+                    val isLongScreen = configuration.screenHeightDp.toFloat() / configuration.screenWidthDp.toFloat() >= 2.0f
+
+                    val gridOptions = remember(isLongScreen) {
+                        val list = mutableListOf(0 to 0, 5 to 5, 6 to 6)
+                        if (isLongScreen) {
+                            list.add(7 to 7)
+                            list.add(-1 to -1)
+                        }
+                        list
+                    }.map { (value, _) ->
+                        value to when(value) {
+                            0 -> stringResource(R.string.auto_adaptive)
+                            5 -> stringResource(R.string.layout_4x5)
+                            6 -> stringResource(R.string.layout_4x6)
+                            7 -> stringResource(R.string.layout_4x7)
+                            else -> stringResource(R.string.layout_4x6_balanced)
+                        }
+                    }
+                    val currentGridLabel = gridOptions.find { it.first == desktopRows }?.second ?: stringResource(R.string.auto_adaptive)
+
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.layout_rows)) },
+                        supportingContent = { Text(stringResource(R.string.layout_rows_current, currentGridLabel)) },
+                        leadingContent = { Icon(Icons.Default.GridOn, null, tint = MaterialTheme.colorScheme.primary) },
+                        trailingContent = { Icon(Icons.Default.ArrowDropDown, null) },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier.clickable { expandedGrid = true }
+                    )
+                    DropdownMenu(expanded = expandedGrid, onDismissRequest = { expandedGrid = false }) {
+                        gridOptions.forEach { (value, label) ->
+                            DropdownMenuItem(text = { Text(label) }, onClick = { viewModel.setDesktopRows(value); expandedGrid = false })
+                        }
+                    }
+
+                    var expandedStyle by remember { mutableStateOf(false) }
+                    val styleOptions = listOf(
+                        DockStyle.MODERN to stringResource(R.string.dock_style_modern),
+                        DockStyle.CLASSIC to stringResource(R.string.dock_style_classic),
+                        DockStyle.PLATFORM to stringResource(R.string.dock_style_platform),
+                        DockStyle.LITE to stringResource(R.string.dock_style_lite)
+                    )
+                    val currentStyleLabel = styleOptions.find { it.first == dockStyle }?.second ?: stringResource(R.string.dock_style_modern)
+
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.dock_style)) },
+                        supportingContent = { Text(stringResource(R.string.dock_style_current, currentStyleLabel)) },
+                        leadingContent = { Icon(Icons.Default.ViewStream, null, tint = MaterialTheme.colorScheme.primary) },
+                        trailingContent = { Icon(Icons.Default.ArrowDropDown, null) },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier.clickable { expandedStyle = true }
+                    )
+                    DropdownMenu(expanded = expandedStyle, onDismissRequest = { expandedStyle = false }) {
+                        styleOptions.forEach { (style, label) ->
+                            DropdownMenuItem(text = { Text(label) }, onClick = { viewModel.setDockStyle(style); expandedStyle = false })
+                        }
+                    }
+
+                    if (dockStyle == DockStyle.MODERN) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.RoundedCorner, null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(stringResource(R.string.dock_radius_label, dockCornerRadius.toInt()), style = MaterialTheme.typography.bodyMedium)
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(onClick = { viewModel.setDockCornerRadius((dockCornerRadius - 1f).coerceAtLeast(0f)) }) {
+                                    Icon(Icons.Default.Remove, contentDescription = null)
+                                }
+                                Slider(
+                                    value = dockCornerRadius,
+                                    onValueChange = { viewModel.setDockCornerRadius(it) },
+                                    valueRange = 0f..100f,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                IconButton(onClick = { viewModel.setDockCornerRadius((dockCornerRadius + 1f).coerceAtMost(100f)) }) {
+                                    Icon(Icons.Default.Add, contentDescription = null)
                                 }
                             }
                         }
                     }
-                )
-            }
-
-            item {
-                var expandedStyle by remember { mutableStateOf(false) }
-                val styleOptions = listOf(
-                    DockStyle.MODERN to stringResource(R.string.dock_style_modern),
-                    DockStyle.CLASSIC to stringResource(R.string.dock_style_classic),
-                    DockStyle.PLATFORM to stringResource(R.string.dock_style_platform),
-                    DockStyle.LITE to stringResource(R.string.dock_style_lite)
-                )
-                val currentStyleLabel = styleOptions.find { it.first == dockStyle }?.second ?: stringResource(R.string.dock_style_modern)
-
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.dock_style)) },
-                    supportingContent = { Text(stringResource(R.string.dock_style_current, currentStyleLabel)) },
-                    trailingContent = {
-                        Box {
-                            TextButton(onClick = { expandedStyle = true }) {
-                                Text(stringResource(R.string.change))
-                                Icon(Icons.Default.ArrowDropDown, null)
-                            }
-                            DropdownMenu(expanded = expandedStyle, onDismissRequest = { expandedStyle = false }) {
-                                styleOptions.forEach { (style, label) ->
-                                    DropdownMenuItem(
-                                        text = { Text(label) },
-                                        onClick = {
-                                            viewModel.setDockStyle(style)
-                                            expandedStyle = false
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                )
-            }
-
-            if (dockStyle == DockStyle.MODERN) {
-                item {
-                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                        Text(stringResource(R.string.dock_radius_label, dockCornerRadius.toInt()))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = { viewModel.setDockCornerRadius((dockCornerRadius - 1f).coerceAtLeast(0f)) }) {
-                                Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.decrease))
-                            }
-                            Slider(
-                                value = dockCornerRadius,
-                                onValueChange = { viewModel.setDockCornerRadius(it) },
-                                valueRange = 0f..100f,
-                                modifier = Modifier.weight(1f)
-                            )
-                            IconButton(onClick = { viewModel.setDockCornerRadius((dockCornerRadius + 1f).coerceAtMost(100f)) }) {
-                                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.increase))
-                            }
-                        }
-                    }
                 }
             }
 
-            item { HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp)) }
-
+            // --- Home Menu Options ---
             item {
-                Text(
-                    stringResource(R.string.home_menu_options),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                Text(
-                    stringResource(R.string.home_menu_desc),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-            }
-
-            item {
-                val menuOptions by viewModel.homeMenuOptions.collectAsState()
-                val availableOptions = listOf(
-                    "delete_home" to R.string.menu_delete_home,
-                    "edit" to R.string.menu_edit,
-                    "uninstall" to R.string.menu_uninstall,
-                    "shortcuts" to R.string.menu_shortcuts,
-                    "freeze" to R.string.menu_freeze,
-                    "hide" to R.string.menu_hide,
-                    "favorite" to R.string.menu_add_favorite,
-                    "app_info" to R.string.menu_app_info
-                )
-
-                Column {
+                SettingsSection(title = stringResource(R.string.home_menu_options)) {
+                    Text(
+                        stringResource(R.string.home_menu_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                    val menuOptions by viewModel.homeMenuOptions.collectAsState()
+                    val availableOptions = listOf(
+                        "delete_home" to R.string.menu_delete_home,
+                        "edit" to R.string.menu_edit,
+                        "uninstall" to R.string.menu_uninstall,
+                        "shortcuts" to R.string.menu_shortcuts,
+                        "freeze" to R.string.menu_freeze,
+                        "hide" to R.string.menu_hide,
+                        "favorite" to R.string.menu_add_favorite,
+                        "app_info" to R.string.menu_app_info
+                    )
                     availableOptions.forEach { (key, resId) ->
+                        val isChecked = menuOptions.contains(key)
                         ListItem(
                             headlineContent = { Text(stringResource(resId)) },
-                            trailingContent = {
-                                Switch(
-                                    checked = menuOptions.contains(key),
-                                    onCheckedChange = { viewModel.setHomeMenuOption(key, it) }
-                                )
-                            },
-                            modifier = Modifier.clickable { viewModel.setHomeMenuOption(key, !menuOptions.contains(key)) }
+                            trailingContent = { Switch(checked = isChecked, onCheckedChange = { viewModel.setHomeMenuOption(key, it) }) },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            modifier = Modifier.clickable { viewModel.setHomeMenuOption(key, !isChecked) }
                         )
                     }
                 }
             }
+
+            item { Spacer(modifier = Modifier.height(32.dp)) }
         }
     }
 }
+
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -475,61 +398,73 @@ fun GesturesSettingsScreen(onBack: () -> Unit) {
             )
         }
     ) { innerPadding ->
-        LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+                .padding(horizontal = 16.dp)
+        ) {
+            item { Spacer(modifier = Modifier.height(16.dp)) }
+
             item {
-                GestureItem(
-                    title = stringResource(R.string.gesture_double_tap),
-                    action = doubleTapAction,
-                    packageName = doubleTapApp,
-                    allApps = allApps,
-                    onClick = { showDoubleTapDialog = true }
-                )
+                SettingsSection(title = stringResource(R.string.settings_gestures)) {
+                    GestureItem(
+                        icon = Icons.Default.TouchApp,
+                        title = stringResource(R.string.gesture_double_tap),
+                        action = doubleTapAction,
+                        packageName = doubleTapApp,
+                        allApps = allApps,
+                        onClick = { showDoubleTapDialog = true }
+                    )
+                    GestureItem(
+                        icon = Icons.Default.VerticalAlignTop,
+                        title = stringResource(R.string.gesture_swipe_up),
+                        action = swipeUpAction,
+                        packageName = swipeUpApp,
+                        allApps = allApps,
+                        onClick = { showSwipeUpDialog = true }
+                    )
+                    GestureItem(
+                        icon = Icons.Default.VerticalAlignBottom,
+                        title = stringResource(R.string.gesture_swipe_down),
+                        action = swipeDownAction,
+                        packageName = swipeDownApp,
+                        allApps = allApps,
+                        onClick = { showSwipeDownDialog = true }
+                    )
+                    GestureItem(
+                        icon = Icons.Default.Fingerprint,
+                        title = stringResource(R.string.gesture_long_press),
+                        action = longPressAction,
+                        packageName = longPressApp,
+                        allApps = allApps,
+                        onClick = { showLongPressDialog = true }
+                    )
+                }
             }
+
             item {
-                GestureItem(
-                    title = stringResource(R.string.gesture_swipe_up),
-                    action = swipeUpAction,
-                    packageName = swipeUpApp,
-                    allApps = allApps,
-                    onClick = { showSwipeUpDialog = true }
-                )
+                SettingsSection(title = stringResource(R.string.gesture_two_finger_swipe_up)) {
+                    GestureItem(
+                        icon = Icons.Default.KeyboardDoubleArrowUp,
+                        title = stringResource(R.string.gesture_two_finger_swipe_up),
+                        action = twoFingerSwipeUpAction,
+                        packageName = twoFingerSwipeUpApp,
+                        allApps = allApps,
+                        onClick = { showTwoFingerSwipeUpDialog = true }
+                    )
+                    GestureItem(
+                        icon = Icons.Default.KeyboardDoubleArrowDown,
+                        title = stringResource(R.string.gesture_two_finger_swipe_down),
+                        action = twoFingerSwipeDownAction,
+                        packageName = twoFingerSwipeDownApp,
+                        allApps = allApps,
+                        onClick = { showTwoFingerSwipeDownDialog = true }
+                    )
+                }
             }
-            item {
-                GestureItem(
-                    title = stringResource(R.string.gesture_swipe_down),
-                    action = swipeDownAction,
-                    packageName = swipeDownApp,
-                    allApps = allApps,
-                    onClick = { showSwipeDownDialog = true }
-                )
-            }
-            item {
-                GestureItem(
-                    title = stringResource(R.string.gesture_long_press),
-                    action = longPressAction,
-                    packageName = longPressApp,
-                    allApps = allApps,
-                    onClick = { showLongPressDialog = true }
-                )
-            }
-            item {
-                GestureItem(
-                    title = stringResource(R.string.gesture_two_finger_swipe_up),
-                    action = twoFingerSwipeUpAction,
-                    packageName = twoFingerSwipeUpApp,
-                    allApps = allApps,
-                    onClick = { showTwoFingerSwipeUpDialog = true }
-                )
-            }
-            item {
-                GestureItem(
-                    title = stringResource(R.string.gesture_two_finger_swipe_down),
-                    action = twoFingerSwipeDownAction,
-                    packageName = twoFingerSwipeDownApp,
-                    allApps = allApps,
-                    onClick = { showTwoFingerSwipeDownDialog = true }
-                )
-            }
+            
+            item { Spacer(modifier = Modifier.height(32.dp)) }
         }
     }
     
@@ -666,7 +601,7 @@ fun GesturesSettingsScreen(onBack: () -> Unit) {
 }
 
 @Composable
-fun GestureItem(title: String, action: GestureAction, packageName: String, allApps: List<AppModel>, onClick: () -> Unit) {
+fun GestureItem(icon: ImageVector, title: String, action: GestureAction, packageName: String, allApps: List<AppModel>, onClick: () -> Unit) {
     ListItem(
         headlineContent = { Text(title) },
         supportingContent = {
@@ -687,6 +622,9 @@ fun GestureItem(title: String, action: GestureAction, packageName: String, allAp
             }
             Text(actionText)
         },
+        leadingContent = { Icon(icon, null, tint = MaterialTheme.colorScheme.primary) },
+        trailingContent = { Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
         modifier = Modifier.clickable { onClick() }
     )
 }
