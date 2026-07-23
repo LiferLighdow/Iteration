@@ -61,26 +61,32 @@
 *   **Deep Content Integration**: Beyond apps, it now searches your **Calendar Events** (displaying upcoming schedules) and **Local Files/Folders** across your device.
 *   **Clean List Management**: Intelligent "View All" mechanism for file search results to maintain a minimalist aesthetic while allowing deep browsing.
 
-### 🌤️ Weather & Location (Privacy-First)
-*   **Adaptive Weather Widget**: A native 4x2 widget providing real-time conditions and a 5-day forecast.
-*   **Privacy-Friendly Geolocation**:
-    *   **IP-Based Discovery**: Automatically determines your general location via IP address—**No GPS permissions required**.
+### 🌤️ Weather & Widgets (Advanced Customization)
+*   **Widget Workshop (Internal KWGT)**: A powerful, built-in visual editor for creating custom widgets.
+    *   **Layer-Based Design**: Add text, icons, and shapes with full control over positioning and dynamic content.
+*   **Premium Built-in Widgets**:
+    *   **Info Hub & Info Hub 2**: Real-time system monitoring including RAM, CPU usage, Network speed, and Storage status.
+    *   **RSS Feed Reader**: Integrated news aggregator for your favorite sources.
+    *   **Productivity Tools**: Native Notes, ToDo lists, and Calendar event viewers.
+    *   **Utility**: Battery monitor, Music player control, Analog/Digital Clocks, and Photo stacks.
+*   **Privacy-Friendly Weather**:
+    *   **IP-Based Discovery**: Automatically determines your location via IP address—**No GPS permissions required**.
     *   **Manual Search**: Integrated **Geocoding API** allows you to search and set any city worldwide.
-*   **Dual Data Sources**: Choose between **MET Norway** (Authority) and **Open-Meteo** (Open Source) directly from the widget menu.
+*   **Dual Data Sources**: Choose between **MET Norway** and **Open-Meteo**.
 *   **Intelligent Caching**: Automatically saves the last known weather data for offline viewing.
-*   **Network Guard**: Fully integrated with system-level network toggles; respects your data and privacy settings.
 
 ### 📚 Knowledge & Support
 *   **In-App User Manual**: A dedicated documentation hub built directly into the settings.
     *   **Discoverable Power**: Step-by-step guides for Global Search, hidden gestures, and advanced tools.
     *   **Modular Design**: Expanding library of "manual books" to help you master every corner of the launcher.
 
-### 🌍 Globalization & Localization (V3.0 Major Update)
+### 🌍 Globalization & Localization (V4.8 Major Update)
 *   **Complete Resource Migration**: 100% of UI strings, Toasts, menus, and descriptions have been migrated from hardcoded code to `strings.xml`.
 *   **Multi-Language Support**:
     *   **English**: Default global language.
     *   **Traditional Chinese (繁體中文)**: Fully translated and native-ready.
-*   **Dedicated Language Settings**: A new, independent configuration page to switch between **System Default**, **English**, and **Traditional Chinese**.
+    *   **Simplified Chinese (简体中文)**: Optimized for mainland users.
+    *   **Special Persona (進化版中文)**: A unique, personified interface language with a "loyal assistant/AI" personality.
 *   **Dynamic Locale Switching**: Real-time interface updates using `AppCompatDelegate` and `LocaleListCompat` without requiring a full device restart.
 
 ### 🎭 Industrial-Grade App & Profile Management
@@ -89,6 +95,8 @@
 *   **Zero-Loss App Updates**: Smart persistent ID mechanism ensures app updates don't trigger "New App" desktop placement logic or lose custom label/visibility metadata.
 *   **Auto-Sorted Folders**: Desktop folders are automatically maintained in alphabetical order (A-Z) for consistent organization.
 *   **Icon Customization (The Ultimate System)**:
+    *   **Real-time Updates**: Changes to styles, shapes, and colors are applied instantly to the home screen without manual restarts.
+    *   **Built-in Icon Picker**: Select high-quality designed icons for Phone, Messages, Browser, etc., directly within the app.
     *   **Iteration Presets**: Instant application of **Standard**, **Black**, **White**, and **Glass** styles.
     *   **Ultimate Custom Style**: High-precision control using a full **HSV + Alpha color picker**.
     *   **Smart Original Hybrid**: Toggle between custom colors and original app icons/backgrounds independently.
@@ -101,7 +109,11 @@
 *   **Optimized App Library**:
     *   **2x2 Suggestions**: Intelligent recommendation grid (max 4 icons) for a cleaner, unified look.
     *   **Fast Categorization**: Zero-lag filtering and background-processed group management.
-*   **Privacy & Security**: **Hide Apps** with a secure **Password Gate**.
+*   **Privacy & Security**: 
+    *   **Hide Apps**: Secure app hiding with a password gate.
+    *   **Android 15 Private Space (Native)**: Full adaptation for Android 15's native Private Space. Automatically detects and hides sensitive apps based on the profile's accessible state.
+*   **Built-in App Freezer (Hail Engine)**:
+    *   **Deep Hibernation**: Freeze/Unfreeze applications using **Shizuku** or **Root** (SU) directly from the context menu to eliminate background battery drain.
 
 ### 🌐 PWA Ecosystem (Integrated Web Apps)
 *   **PWA Maker**: Transform any URL into a high-performance, standalone desktop application with a single tap.
@@ -129,7 +141,8 @@
 *   **Collision-Free Gestures**: Custom-built `awaitPointerEventScope` logic ensuring widgets and the Pager coexist perfectly.
 *   **Enhanced V13 Icon Engine**: High-fidelity caching system (LruCache + Disk) utilizing a `packageName/activity@userId` composite key. Features advanced "timestamp-stripping" to synchronize icons across the App Library and Desktop.
 *   **Intelligent Self-Healing Cache**: Automatically detects app updates and configuration changes to regenerate outdated cache files using latest rendering algorithms.
-*   **Full Configuration Backup**: JSON-based serialization including Desktop Layout, Liquid Glass parameters, Gesture mappings, and search engine choices.
+*   **Full Configuration Backup (100% Coverage)**: JSON-based serialization covering Desktop Layout, Liquid Glass parameters, Gesture mappings, Icon scaling, Dock corner radius, and even maintenance settings.
+*   **Automated Process Management**: One-tap "Clear Icon Cache" that automatically restarts the launcher and returns to the home screen for a seamless maintenance experience.
 
 ---
 
