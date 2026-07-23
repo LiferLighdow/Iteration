@@ -40,6 +40,15 @@ fun MainViewModel.exportConfig(): String {
             amoledBlack = _isAmoledBlack.value,
             iconPackPackage = _iconPackPackage.value,
             password = getPassword() ?: "",
+            iconScale = _iconScale.value,
+            iconSizePx = _iconSizePx.value,
+            desktopRows = _desktopRows.value,
+            dockStyle = _dockStyle.value,
+            dockCornerRadius = _dockCornerRadius.value,
+            iconCacheSize = _iconCacheSize.value,
+            updateCheckInterval = _updateCheckInterval.value,
+            isDesktopLocked = _isDesktopLocked.value,
+            useVNaviForPwa = _useVNaviForPwa.value,
             emojiWallpaperText = _emojiWallpaperText.value,
             customWallpaperColor = _customWallpaperColor.value,
             favoriteWallpaperColors = _favoriteWallpaperColors.value,
@@ -141,6 +150,16 @@ fun MainViewModel.applyConfig(config: LauncherConfig) {
         putBoolean("show_status_bar", settings.showStatusBar)
         putBoolean("show_navigation_bar", settings.showNavigationBar)
         
+        putInt("icon_size_px", settings.iconSizePx)
+        putFloat("icon_scale", settings.iconScale)
+        putInt("desktop_rows", settings.desktopRows)
+        putString("dock_style", settings.dockStyle.name)
+        putFloat("dock_corner_radius", settings.dockCornerRadius)
+        putInt("icon_cache_size", settings.iconCacheSize)
+        putInt("update_check_interval", settings.updateCheckInterval)
+        putBoolean("is_desktop_locked", settings.isDesktopLocked)
+        putBoolean("use_vnavi_for_pwa", settings.useVNaviForPwa)
+
         putString("action_mode", settings.actionMode.name)
         putString("icon_style", settings.iconStyle.name)
         putString("icon_shape", settings.iconShape.name)
@@ -201,6 +220,16 @@ fun MainViewModel.applyConfig(config: LauncherConfig) {
     _isAmoledBlack.value = settings.amoledBlack
     _iconPackPackage.value = settings.iconPackPackage
     
+    _iconSizePx.value = settings.iconSizePx
+    _iconScale.value = settings.iconScale
+    _desktopRows.value = settings.desktopRows
+    _dockStyle.value = settings.dockStyle
+    _dockCornerRadius.value = settings.dockCornerRadius
+    _iconCacheSize.value = settings.iconCacheSize
+    _updateCheckInterval.value = settings.updateCheckInterval
+    _isDesktopLocked.value = settings.isDesktopLocked
+    _useVNaviForPwa.value = settings.useVNaviForPwa
+
     _liquidGlassBlur.value = settings.glassParams.blur
     _liquidGlassRefractionHeight.value = settings.glassParams.refractionHeight
     _liquidGlassRefractionAmount.value = settings.glassParams.refractionAmount

@@ -181,7 +181,7 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
 
                     ListItem(
                         headlineContent = { Text(stringResource(R.string.iteration_style)) },
-                        supportingContent = { Text("自定義圖示產生的視覺效果") },
+                        supportingContent = { Text(stringResource(R.string.iteration_style_summary)) },
                         leadingContent = { Icon(Icons.Default.Style, null, tint = MaterialTheme.colorScheme.primary) },
                         trailingContent = {
                             IconButton(onClick = { showStyleInfoDialog = true }) {
@@ -251,7 +251,7 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
 
             // --- Dynamic Icons ---
             item {
-                SettingsSection(title = "動態圖示") {
+                SettingsSection(title = stringResource(R.string.dynamic_icons)) {
                     SettingSwitchItem(
                         icon = Icons.Default.CalendarToday,
                         title = stringResource(R.string.dynamic_calendar),
@@ -823,14 +823,14 @@ fun ChangeIconScreen(onBack: () -> Unit) {
         if (showSourceDialog && selectedApp != null) {
             AlertDialog(
                 onDismissRequest = { showSourceDialog = false },
-                title = { Text("選擇圖示來源") },
-                text = { Text("您想要使用內建的設計圖示，還是從藝廊選取自己的圖片？") },
+                title = { Text(stringResource(R.string.select_icon_source)) },
+                text = { Text(stringResource(R.string.select_icon_source_desc)) },
                 confirmButton = {
                     Button(onClick = {
                         showSourceDialog = false
                         launcher.launch("image/*")
                     }) {
-                        Text("藝廊選取")
+                        Text(stringResource(R.string.gallery_pick))
                     }
                 },
                 dismissButton = {
@@ -838,7 +838,7 @@ fun ChangeIconScreen(onBack: () -> Unit) {
                         showSourceDialog = false
                         showBuiltinPicker = true
                     }) {
-                        Text("內建圖示")
+                        Text(stringResource(R.string.builtin_icons))
                     }
                 }
             )
@@ -847,17 +847,17 @@ fun ChangeIconScreen(onBack: () -> Unit) {
         // --- 2. 內建圖示挑選器 ---
         if (showBuiltinPicker && selectedApp != null) {
             val builtinIcons = listOf(
-                "ic_builtin_phone" to "電話",
-                "ic_builtin_messages" to "訊息",
-                "ic_builtin_browser" to "瀏覽器",
-                "ic_builtin_contacts" to "聯絡人",
-                "ic_builtin_camera" to "相機",
-                "ic_builtin_settings" to "設定"
+                "ic_builtin_phone" to stringResource(R.string.builtin_phone),
+                "ic_builtin_messages" to stringResource(R.string.builtin_messages),
+                "ic_builtin_browser" to stringResource(R.string.builtin_browser),
+                "ic_builtin_contacts" to stringResource(R.string.builtin_contacts),
+                "ic_builtin_camera" to stringResource(R.string.builtin_camera),
+                "ic_builtin_settings" to stringResource(R.string.builtin_settings)
             )
 
             AlertDialog(
                 onDismissRequest = { showBuiltinPicker = false },
-                title = { Text("挑選內建圖示") },
+                title = { Text(stringResource(R.string.pick_builtin_icon)) },
                 text = {
                     LazyColumn(modifier = Modifier.fillMaxWidth()) {
                         items(builtinIcons) { (resName, label) ->
@@ -916,7 +916,7 @@ fun ChangeIconScreen(onBack: () -> Unit) {
                     }
                 },
                 confirmButton = {
-                    TextButton(onClick = { showBuiltinPicker = false }) { Text("取消") }
+                    TextButton(onClick = { showBuiltinPicker = false }) { Text(stringResource(R.string.cancel)) }
                 }
             )
         }

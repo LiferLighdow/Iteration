@@ -40,8 +40,8 @@
     </aapt:attr>
   </path>
 
-  <!-- 3. 中間人物圖標 (往左上移動) -->
-  <group android:pivotX="256" android:pivotY="256" android:scaleX="1.2" android:scaleY="1.2" android:translateX="-28" android:translateY="-24">
+  <!-- 3. 中間人物圖標 (往左上移動 24px) -->
+  <group android:pivotX="256" android:pivotY="256" android:scaleX="1.2" android:scaleY="1.2" android:translateX="-28" android:translateY="-4">
       <!-- 圓底盤 -->
       <path
           android:pathData="M256,256m-110,0a110,110 0,1 1,220 0a110,110 0,1 1,-220 0"

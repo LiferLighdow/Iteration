@@ -160,14 +160,16 @@ fun MainViewModel.clearIconCache() {
         processedIconCacheDir.listFiles()?.forEach { it.delete() }
         iconProcessor.clearCache()
         
-        withContext(Dispatchers.Main) {
-            cachedRawApps = null
-            loadApps()
-            
-            val intent = Intent("com.liferlighdow.iteration.ACTION_REFRESH_APPS")
-            intent.setPackage(getApplication<Application>().packageName)
-            getApplication<Application>().sendBroadcast(intent)
-        }
+        // 清理完畢後直接重啟 Launcher 並回到主畫面
+        val context = getApplication<android.app.Application>()
+        val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+        val componentName = intent?.component
+        val mainIntent = Intent.makeRestartActivityTask(componentName)
+        mainIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(mainIntent)
+        
+        // 殺掉目前的進程以確保乾淨的重啟
+        android.os.Process.killProcess(android.os.Process.myPid())
     }
 }
 
@@ -243,6 +245,7 @@ fun MainViewModel.setCustomIcon(uniqueId: String, bitmap: Bitmap) {
         bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
     }
     iconCache.remove(uniqueId)
+    prefs.edit().putLong("icon_refresh_trigger", System.currentTimeMillis()).apply()
     loadApps()
 }
 
@@ -251,6 +254,7 @@ fun MainViewModel.resetCustomIcon(uniqueId: String) {
     val file = File(customIconDir, "$fileSafeId.png")
     if (file.exists()) file.delete()
     iconCache.remove(uniqueId)
+    prefs.edit().putLong("icon_refresh_trigger", System.currentTimeMillis()).apply()
     loadApps()
 }
 

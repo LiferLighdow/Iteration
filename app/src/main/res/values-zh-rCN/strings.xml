@@ -275,7 +275,7 @@
     <string name="clear_icon_cache_title">清除图标缓存</string>
     <string name="clear_icon_cache_desc">强制重新生成所有应用图标</string>
     <string name="clear_icon_cache_confirm_title">清除图标缓存？</string>
-    <string name="clear_icon_cache_confirm_msg">这将删除所有已处理的图标预览并重新生成。如果图标模糊或不正确，请使用此功能。</string>
+    <string name="clear_icon_cache_confirm_msg">这将删除所有已处理的图标预览并重启启动器以重新生成。如果图标模糊或不正确，请使用此功能。</string>
     <string name="style_compatibility_title">Iteration 风格兼容性</string>
     <string name="got_it">知道了</string>
     <string name="default_style_desc">默认（系统 + Iteration 风格）</string>
@@ -559,16 +559,6 @@
     <string name="settings_update_check_interval">更新检查间隔</string>
     <string name="settings_update_check_interval_desc">自动检查更新的时间间隔（0 到 36 小時，0 为禁用）。</string>
     <string name="settings_update_check_hours">%1$d 小时</string>
-    <string name="settings_offline_translation">离线翻译 (ML Kit)</string>
-    <string name="settings_offline_translation_desc">使用设备本地模型进行翻译。需要下载语言数据 (约 30MB)。</string>
-    <string name="settings_translate">翻译设置</string>
-    <string name="settings_translate_desc">管理离线模型與翻译功能</string>
-    <string name="language_not_downloaded">未下载</string>
-    <string name="language_downloading">正在下载&#8230;</string>
-    <string name="language_downloaded">已下载</string>
-    <string name="available_languages">可用语言</string>
-    <string name="download_model">下载 model</string>
-    <string name="delete_model">删除 model</string>
     <string name="update_dialog_title">发现新版本</string>
     <string name="update_dialog_message">Iteration Launcher 有新版本可用 (%1$s)。您想要现在下载吗？</string>
     <string name="update_dialog_download">下载</string>
@@ -622,4 +612,18 @@
     <string name="workshop_tab_touch">触控</string>
     <string name="workshop_add_component">添加组件</string>
     <string name="workshop_preview">预览</string>
+
+    <string name="iteration_style_summary">自定义图标产生的视觉效果</string>
+    <string name="dynamic_icons">动态图标</string>
+    <string name="select_icon_source">选择图标来源</string>
+    <string name="select_icon_source_desc">您想要使用内置的设计图标，还是从相册中选取自己的图片？</string>
+    <string name="gallery_pick">相册选取</string>
+    <string name="builtin_icons">内置图标</string>
+    <string name="pick_builtin_icon">挑选内置图标</string>
+    <string name="builtin_phone">电话</string>
+    <string name="builtin_messages">信息</string>
+    <string name="builtin_browser">浏览器</string>
+    <string name="builtin_contacts">联系人</string>
+    <string name="builtin_camera">相机</string>
+    <string name="builtin_settings">设置</string>
 </resources>

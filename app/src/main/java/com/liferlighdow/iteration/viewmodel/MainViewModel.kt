@@ -769,10 +769,75 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     _themeMode.value = ThemeMode.valueOf(sharedPreferences.getString(key, "FOLLOW_SYSTEM") ?: "FOLLOW_SYSTEM")
                 } catch (_: Exception) {}
             }
+            "icon_style" -> {
+                try {
+                    val style = IconStyle.valueOf(sharedPreferences.getString(key, "STANDARD") ?: "STANDARD")
+                    _iconStyle.value = style
+                    iconCache.evictAll()
+                    loadApps()
+                } catch (_: Exception) {}
+            }
             "icon_shape" -> {
                 try {
-                    _iconShape.value = IconShape.valueOf(sharedPreferences.getString(key, "DEFAULT") ?: "DEFAULT")
+                    val shape = IconShape.valueOf(sharedPreferences.getString(key, "DEFAULT") ?: "DEFAULT")
+                    _iconShape.value = shape
+                    iconCache.evictAll()
+                    loadApps()
                 } catch (_: Exception) {}
+            }
+            "icon_pack_package" -> {
+                _iconPackPackage.value = sharedPreferences.getString(key, "") ?: ""
+                iconCache.evictAll()
+                loadApps()
+            }
+            "custom_icon_bg_color" -> {
+                _customIconBgColor.value = sharedPreferences.getInt(key, 0xFF2196F3.toInt())
+                loadApps()
+            }
+            "custom_icon_fg_color" -> {
+                _customIconFgColor.value = sharedPreferences.getInt(key, 0xFFFFFFFF.toInt())
+                loadApps()
+            }
+            "custom_icon_use_original" -> {
+                _customIconUseOriginal.value = sharedPreferences.getBoolean(key, false)
+                loadApps()
+            }
+            "custom_icon_use_original_bg" -> {
+                _customIconUseOriginalBg.value = sharedPreferences.getBoolean(key, false)
+                loadApps()
+            }
+            "custom_icon_use_dominant_color" -> {
+                _customIconUseDominantColor.value = sharedPreferences.getBoolean(key, false)
+                loadApps()
+            }
+            "custom_icon_pack_package" -> {
+                _customIconPackPackage.value = sharedPreferences.getString(key, "") ?: ""
+                iconCache.evictAll()
+                loadApps()
+            }
+            "excluded_themed_packages" -> {
+                _excludedThemedPackages.value = sharedPreferences.getStringSet(key, emptySet()) ?: emptySet()
+                loadApps()
+            }
+            "custom_labels_json" -> {
+                loadCustomLabels()
+                loadApps()
+            }
+            "icon_refresh_trigger" -> {
+                iconCache.evictAll()
+                loadApps()
+            }
+            "desktop_rows" -> {
+                _desktopRows.value = sharedPreferences.getInt(key, 0)
+                loadApps()
+            }
+            "hidden_apps" -> {
+                loadHiddenPackages()
+                loadApps()
+            }
+            "favorite_packages" -> {
+                val current = sharedPreferences.getStringSet(key, emptySet()) ?: emptySet()
+                _favoritePackages.value = current
             }
             "new_version_available" -> _newVersionAvailable.value = sharedPreferences.getString(key, null)
             "new_version_download_url" -> _newVersionDownloadUrl.value = sharedPreferences.getString(key, null)

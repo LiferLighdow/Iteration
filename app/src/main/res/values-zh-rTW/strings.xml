@@ -281,7 +281,7 @@
     <string name="clear_icon_cache_title">清除圖示快取</string>
     <string name="clear_icon_cache_desc">強制重新生成所有應用程式圖示</string>
     <string name="clear_icon_cache_confirm_title">清除圖示快取？</string>
-    <string name="clear_icon_cache_confirm_msg">這將刪除所有已處理的圖示預覽並重新生成。如果圖示模糊或不正確，請使用此功能。</string>
+    <string name="clear_icon_cache_confirm_msg">這將刪除所有已處理的圖示預覽並重啟啟動器以重新生成。如果圖示模糊或不正確，請使用此功能。</string>
     <string name="style_compatibility_title">Iteration 風格相容性</string>
     <string name="got_it">知道了</string>
     <string name="default_style_desc">預設（系統 + Iteration 風格）</string>
@@ -567,16 +567,6 @@
     <string name="settings_update_check_interval">檢查更新頻率</string>
     <string name="settings_update_check_interval_desc">設定自動檢查更新的時間間隔（0 到 36 小時，0 為不檢查）。</string>
     <string name="settings_update_check_hours">%1$d 小時</string>
-    <string name="settings_offline_translation">離線翻譯 (ML Kit)</string>
-    <string name="settings_offline_translation_desc">使用裝置本地模型進行翻譯。需要下載語言數據 (約 30MB)。</string>
-    <string name="settings_translate">翻譯設定</string>
-    <string name="settings_translate_desc">管理離線模型與翻譯功能</string>
-    <string name="language_not_downloaded">未下載</string>
-    <string name="language_downloading">正在下載&#8230;</string>
-    <string name="language_downloaded">已下載</string>
-    <string name="available_languages">可用語言</string>
-    <string name="download_model">下載模型</string>
-    <string name="delete_model">刪除模型</string>
     <string name="update_dialog_title">發現新版本</string>
     <string name="update_dialog_message">Iteration Launcher 有新版本可用 (%1$s)。您想要現在下載嗎？</string>
     <string name="update_dialog_download">下載</string>
@@ -630,4 +620,18 @@
     <string name="workshop_tab_touch">觸控</string>
     <string name="workshop_add_component">新增組件</string>
     <string name="workshop_preview">預覽</string>
+
+    <string name="iteration_style_summary">自定義圖示產生的視覺效果</string>
+    <string name="dynamic_icons">動態圖示</string>
+    <string name="select_icon_source">選擇圖示來源</string>
+    <string name="select_icon_source_desc">您想要使用內建的設計圖示，還是從藝廊選取自己的圖片？</string>
+    <string name="gallery_pick">藝廊選取</string>
+    <string name="builtin_icons">內建圖示</string>
+    <string name="pick_builtin_icon">挑選內建圖示</string>
+    <string name="builtin_phone">電話</string>
+    <string name="builtin_messages">訊息</string>
+    <string name="builtin_browser">瀏覽器</string>
+    <string name="builtin_contacts">聯絡人</string>
+    <string name="builtin_camera">相機</string>
+    <string name="builtin_settings">設定</string>
 </resources>
