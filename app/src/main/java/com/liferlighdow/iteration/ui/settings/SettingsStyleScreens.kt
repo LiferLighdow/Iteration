@@ -742,10 +742,17 @@ fun CompatibilityRow(version: String, level: String, desc: String, isCurrentDevi
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChangeIconScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
     val viewModel: MainViewModel = viewModel()
     val allApps by viewModel.allApps.collectAsState()
     val iconShape by viewModel.iconShape.collectAsState()
-    val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp)
+    
+    // 與 IconProcessor 邏輯保持一致的 UI 形狀
+    val shape = remember(iconShape) {
+        if (iconShape == IconShape.CIRCLE) CircleShape 
+        else RoundedCornerShape(10.dp) // 40dp * 0.238 ≈ 10dp
+    }
+    
     var searchQuery by remember { mutableStateOf("") }
 
     val filteredApps = remember(allApps, searchQuery) {
@@ -756,6 +763,8 @@ fun ChangeIconScreen(onBack: () -> Unit) {
 
     var selectedApp by remember { mutableStateOf<AppModel?>(null) }
     var pickedImageUri by remember { mutableStateOf<Uri?>(null) }
+    var showSourceDialog by remember { mutableStateOf(false) }
+    var showBuiltinPicker by remember { mutableStateOf(false) }
     
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         pickedImageUri = uri
@@ -769,8 +778,7 @@ fun ChangeIconScreen(onBack: () -> Unit) {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
-                },
-                actions = {}
+                }
             )
         }
     ) { innerPadding ->
@@ -789,12 +797,7 @@ fun ChangeIconScreen(onBack: () -> Unit) {
                                     contentDescription = null,
                                     modifier = Modifier
                                         .size(40.dp)
-                                        .clip(shape)
-                                        .border(
-                                            width = 0.5.dp,
-                                            color = Color.Black.copy(alpha = 0.1f),
-                                            shape = shape
-                                        )
+                                        .clip(shape) // 列表中的 App 圖示
                                 )
                             }
                         },
@@ -805,7 +808,7 @@ fun ChangeIconScreen(onBack: () -> Unit) {
                                 }
                                 IconButton(onClick = {
                                     selectedApp = app
-                                    launcher.launch("image/*")
+                                    showSourceDialog = true
                                 }) {
                                     Icon(Icons.Default.Image, contentDescription = stringResource(R.string.change_icon), tint = MaterialTheme.colorScheme.primary)
                                 }
@@ -816,12 +819,126 @@ fun ChangeIconScreen(onBack: () -> Unit) {
             }
         }
 
+        // --- 1. 選擇圖示來源對話框 ---
+        if (showSourceDialog && selectedApp != null) {
+            AlertDialog(
+                onDismissRequest = { showSourceDialog = false },
+                title = { Text("選擇圖示來源") },
+                text = { Text("您想要使用內建的設計圖示，還是從藝廊選取自己的圖片？") },
+                confirmButton = {
+                    Button(onClick = {
+                        showSourceDialog = false
+                        launcher.launch("image/*")
+                    }) {
+                        Text("藝廊選取")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        showSourceDialog = false
+                        showBuiltinPicker = true
+                    }) {
+                        Text("內建圖示")
+                    }
+                }
+            )
+        }
+
+        // --- 2. 內建圖示挑選器 ---
+        if (showBuiltinPicker && selectedApp != null) {
+            val builtinIcons = listOf(
+                "ic_builtin_phone" to "電話",
+                "ic_builtin_messages" to "訊息",
+                "ic_builtin_browser" to "瀏覽器",
+                "ic_builtin_contacts" to "聯絡人",
+                "ic_builtin_camera" to "相機",
+                "ic_builtin_settings" to "設定"
+            )
+
+            AlertDialog(
+                onDismissRequest = { showBuiltinPicker = false },
+                title = { Text("挑選內建圖示") },
+                text = {
+                    LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                        items(builtinIcons) { (resName, label) ->
+                            val resId = context.resources.getIdentifier(resName, "drawable", context.packageName)
+                            if (resId != 0) {
+                                ListItem(
+                                    headlineContent = { Text(label) },
+                                    leadingContent = {
+                                        // 關鍵修改：挑選清單中的圖示也要裁切且放大 (1.15f)
+                                        Surface(
+                                            modifier = Modifier.size(40.dp),
+                                            shape = shape,
+                                            color = Color.Transparent
+                                        ) {
+                                            Image(
+                                                painter = androidx.compose.ui.res.painterResource(resId),
+                                                contentDescription = null,
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .graphicsLayer(scaleX = 1.15f, scaleY = 1.15f),
+                                                contentScale = ContentScale.FillBounds
+                                            )
+                                        }
+                                    },
+                                    modifier = Modifier.clickable {
+                                        val drawable = androidx.core.content.ContextCompat.getDrawable(context, resId)
+                                        drawable?.let {
+                                            // 關鍵修改：模擬 IconProcessor 的放大裁切邏輯
+                                            val size = 512
+                                            val iconScale = 1.15f
+                                            val scaledSize = (size * iconScale).toInt()
+                                            val offset = (size - scaledSize) / 2f
+                                            
+                                            // 1. 取得放大後的原始圖
+                                            val rawBitmap = it.toBitmap(scaledSize, scaledSize)
+                                            val maskedBitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+                                            val canvas = android.graphics.Canvas(maskedBitmap)
+                                            val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+                                            
+                                            // 2. 將放大後的圖置中繪製 (這會造成邊緣溢出，正是我們要的)
+                                            canvas.drawBitmap(rawBitmap, offset, offset, paint)
+                                            
+                                            // 3. 套用遮罩進行裁切
+                                            val mask = viewModel.iconProcessor.getOrCreateMask(iconShape, size)
+                                            paint.xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.DST_IN)
+                                            canvas.drawBitmap(mask, 0f, 0f, paint)
+                                            
+                                            viewModel.setCustomIcon(selectedApp!!.packageName, maskedBitmap)
+                                        }
+                                        showBuiltinPicker = false
+                                        selectedApp = null
+                                    }
+                                )
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showBuiltinPicker = false }) { Text("取消") }
+                }
+            )
+        }
+
         if (pickedImageUri != null && selectedApp != null) {
             IconCropperDialog(
                 uri = pickedImageUri!!,
                 onDismiss = { pickedImageUri = null },
                 onConfirm = { croppedBitmap ->
-                    viewModel.setCustomIcon(selectedApp!!.packageName, croppedBitmap)
+                    // 關鍵修改：將從藝廊選取的圖片也進行形狀裁切
+                    val size = croppedBitmap.width
+                    val maskedBitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+                    val canvas = android.graphics.Canvas(maskedBitmap)
+                    val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+                    
+                    canvas.drawBitmap(croppedBitmap, 0f, 0f, paint)
+                    
+                    val mask = viewModel.iconProcessor.getOrCreateMask(iconShape, size)
+                    paint.xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.DST_IN)
+                    canvas.drawBitmap(mask, 0f, 0f, paint)
+
+                    viewModel.setCustomIcon(selectedApp!!.packageName, maskedBitmap)
                     pickedImageUri = null
                     selectedApp = null
                 }

@@ -11,7 +11,11 @@
 -keep class com.liferlighdow.iteration.data.WidgetType { *; }
 -keep class com.liferlighdow.iteration.data.WidgetDisplayMode { *; }
 -keep class com.liferlighdow.iteration.utils.IconStyle { *; }
+-keep class com.liferlighdow.iteration.utils.IconPackInfo { *; }
 -keep class com.liferlighdow.iteration.data.CalendarEvent { *; }
+
+# 2.1 保持 IconPackManager 相關邏輯
+-keep class com.liferlighdow.iteration.utils.IconPackManager { *; }
 
 # 3. 保持 Enum 的必要方法 (valueOf/values)，因為程式碼中有用到 valueOf
 -keepclassmembers enum com.liferlighdow.iteration.** {
