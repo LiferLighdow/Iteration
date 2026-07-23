@@ -49,8 +49,6 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
     val showAppLibrary by viewModel.showAppLibrary.collectAsState()
     val isDesktopLocked by viewModel.isDesktopLocked.collectAsState()
     val autoAddAppsToHome by viewModel.autoAddAppsToHome.collectAsState()
-    val isDynamicCalendarEnabled by viewModel.isDynamicCalendarEnabled.collectAsState()
-    val isDynamicClockEnabled by viewModel.isDynamicClockEnabled.collectAsState()
     val showStatusBar by viewModel.showStatusBar.collectAsState()
     val showNavigationBar by viewModel.showNavigationBar.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
@@ -128,26 +126,6 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
                         supportingText = stringResource(R.string.settings_auto_add_apps_desc),
                         checked = autoAddAppsToHome,
                         onCheckedChange = { viewModel.setAutoAddAppsToHome(it) }
-                    )
-                }
-            }
-
-            // --- Dynamic Icons ---
-            item {
-                SettingsSection(title = stringResource(R.string.dynamic_calendar)) {
-                    SettingSwitchItem(
-                        icon = Icons.Default.CalendarToday,
-                        title = stringResource(R.string.dynamic_calendar),
-                        supportingText = stringResource(R.string.dynamic_calendar_desc),
-                        checked = isDynamicCalendarEnabled,
-                        onCheckedChange = { viewModel.setDynamicCalendarEnabled(it) }
-                    )
-                    SettingSwitchItem(
-                        icon = Icons.Default.Schedule,
-                        title = stringResource(R.string.dynamic_clock),
-                        supportingText = stringResource(R.string.dynamic_clock_desc),
-                        checked = isDynamicClockEnabled,
-                        onCheckedChange = { viewModel.setDynamicClockEnabled(it) }
                     )
                 }
             }

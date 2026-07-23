@@ -497,6 +497,13 @@
     <string name="clock_3">3</string>
     <string name="clock_6">6</string>
     <string name="clock_9">9</string>
+    <string name="use_icon_pack_foreground">Use Icon Pack Foreground</string>
+    <string name="default_symbol">Default (Original)</string>
+    <string name="custom_icon_pack_select">Select Icon Pack for Style</string>
+    <string name="use_dominant_bg_color">Use Original Background Color</string>
+    <string name="dominant_bg_note">Automatically extracts the dominant color from the original icon background.</string>
+    <string name="icon_pack_lines_only_desc">Only showing line/outline-style icon packs</string>
+    <string name="no_compatible_icon_packs">No compatible line-style icon packs found</string>
 
     <string name="calculator">Calculator</string>
     <string name="unit_converter">Unit Converter</string>

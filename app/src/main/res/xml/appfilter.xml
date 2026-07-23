@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Generic Android / AOSP Dialer (最重要的) -->
+    <item component="com.android.dialer" drawable="ic_builtin_phone" />
+    <item component="com.android.dialer/com.android.dialer.DialtactsActivity" drawable="ic_builtin_phone" />
+    <item component="com.android.dialer/com.android.dialer.main.impl.MainActivity" drawable="ic_builtin_phone" />
+    <item component="com.android.dialer/.DialtactsActivity" drawable="ic_builtin_phone" />
+
+    <!-- Google Dialer -->
+    <item component="com.google.android.dialer" drawable="ic_builtin_phone" />
+    <item component="com.google.android.dialer/com.google.android.dialer.extensions.GoogleDialerCustomComponent" drawable="ic_builtin_phone" />
+    <item component="com.google.android.dialer/com.android.dialer.main.impl.MainActivity" drawable="ic_builtin_phone" />
+
+    <!-- Samsung Dialer -->
+    <item component="com.samsung.android.dialer" drawable="ic_builtin_phone" />
+    <item component="com.samsung.android.incallui" drawable="ic_builtin_phone" />
+    <item component="com.samsung.android.contacts" drawable="ic_builtin_phone" />
+
+    <!-- Xiaomi / MIUI / POCO -->
+    <item component="com.android.contacts" drawable="ic_builtin_contacts" />
+    <item component="com.miui.voip" drawable="ic_builtin_phone" />
+
+    <!-- OnePlus -->
+    <item component="com.oneplus.dialer" drawable="ic_builtin_phone" />
+
+    <!-- Vivo / Oppo -->
+    <item component="com.android.contacts/com.android.contacts.activities.DialtactsActivity" drawable="ic_builtin_phone" />
+    <item component="com.coloros.safecenter" drawable="ic_builtin_phone" />
+
+    <!-- 通用關鍵字匹配 -->
+    <item component="phone" drawable="ic_builtin_phone" />
+    <item component="dialer" drawable="ic_builtin_phone" />
+
+    <!-- Google Messages -->
+    <item component="com.google.android.apps.messaging" drawable="ic_builtin_messages" />
+    <item component="com.google.android.apps.messaging/com.google.android.apps.messaging.ui.ConversationListActivity" drawable="ic_builtin_messages" />
+
+    <!-- Samsung Messages -->
+    <item component="com.samsung.android.messaging" drawable="ic_builtin_messages" />
+    <item component="com.samsung.android.messaging/com.samsung.android.messaging.ui.view.MessagesMainActivity" drawable="ic_builtin_messages" />
+
+    <!-- Generic SMS/MMS -->
+    <item component="com.android.mms" drawable="ic_builtin_messages" />
+    <item component="com.android.messaging" drawable="ic_builtin_messages" />
+
+    <!-- Camera -->
+    <item component="com.android.camera" drawable="ic_builtin_camera" />
+    <item component="com.google.android.GoogleCamera" drawable="ic_builtin_camera" />
+
+    <item component="com.android.settings" drawable="ic_builtin_settings" />"
+</resources>

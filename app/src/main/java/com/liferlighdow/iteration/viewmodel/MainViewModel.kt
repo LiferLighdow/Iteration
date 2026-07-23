@@ -45,10 +45,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     internal val repository = AppRepository(application)
     internal val weatherRepository = WeatherRepository(application)
     internal val currencyRepository = CurrencyRepository(application)
-    internal val prefs = application.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
-    internal val iconProcessor = IconProcessor(application)
-    internal val iconPackManager = IconPackManager(application)
-    internal val wallpaperProcessor = WallpaperProcessor(application)
+    val prefs = application.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
+    val iconProcessor = IconProcessor(application)
+    val iconPackManager = IconPackManager(application)
+    val wallpaperProcessor = WallpaperProcessor(application)
     internal val updateManager = UpdateManager(application)
     internal val wallpaperFile = File(application.filesDir, "launcher_wallpaper.png")
 
@@ -406,6 +406,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     internal val _customIconUseOriginalBg =
         MutableStateFlow(prefs.getBoolean("custom_icon_use_original_bg", false))
     val customIconUseOriginalBg = _customIconUseOriginalBg.asStateFlow()
+
+    internal val _customIconUseDominantColor =
+        MutableStateFlow(prefs.getBoolean("custom_icon_use_dominant_color", false))
+    val customIconUseDominantColor = _customIconUseDominantColor.asStateFlow()
+
+    internal val _customIconPackPackage =
+        MutableStateFlow(prefs.getString("custom_icon_pack_package", "") ?: "")
+    val customIconPackPackage = _customIconPackPackage.asStateFlow()
 
     internal val _iconShape = MutableStateFlow(
         try {

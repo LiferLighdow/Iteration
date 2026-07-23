@@ -23,6 +23,8 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.ColorUtils
+import androidx.core.graphics.drawable.toBitmap
+import com.liferlighdow.iteration.ui.DynamicColorGenerator
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -72,6 +74,8 @@ class IconProcessor(private val context: Context) {
         customFgColor: Int = 0,
         customUseOriginal: Boolean = false,
         customUseOriginalBg: Boolean = false,
+        customUseDominantColor: Boolean = false,
+        originalIcon: Drawable? = null,
         userId: Long = 0,
         isPrivate: Boolean = false,
         calendarDay: String? = null,
@@ -93,15 +97,20 @@ class IconProcessor(private val context: Context) {
             m3 to m3On
         } else null
 
-        val bgColor = determineBgColor(style, isThemed, m3Colors?.first, customBgColor, customUseOriginalBg)
+        val finalCustomBg = if (style == IconStyle.CUSTOM && customUseDominantColor) {
+            val colorSource = originalIcon ?: icon
+            colorSource?.let { extractDominantColor(it) } ?: customBgColor
+        } else customBgColor
+
+        val bgColor = determineBgColor(style, isThemed, m3Colors?.first, finalCustomBg, customUseOriginalBg)
         val fgColor = determineFgColor(style, isThemed, m3Colors, customFgColor, customUseOriginal)
 
         if (calendarDay != null) {
-            // 繪製自定義動態日曆設計
-            drawCalendarDate(canvas, sizePx, calendarDay)
+            // 繪製自定義動態日曆設計 (帶入主題顏色)
+            drawCalendarDate(canvas, sizePx, calendarDay, bgColor, fgColor)
         } else if (clockTime != null) {
-            // 繪製自定義動態時鐘設計
-            drawClockIcon(canvas, sizePx, clockTime.first, clockTime.second)
+            // 繪製自定義動態時鐘設計 (帶入主題顏色)
+            drawClockIcon(canvas, sizePx, clockTime.first, clockTime.second, bgColor, fgColor)
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && icon is AdaptiveIconDrawable) {
             val scale = 1.45f
             val scaledSize = (sizePx * scale).toInt()
@@ -172,63 +181,103 @@ class IconProcessor(private val context: Context) {
         return output.asImageBitmap()
     }
 
-    private fun drawCalendarDate(canvas: Canvas, sizePx: Int, day: String) {
+    private fun extractDominantColor(drawable: Drawable): Int? {
+        return try {
+            // 強制複製並解除共用狀態
+            val mutated = drawable.mutate()
+            
+            // 優先處理 AdaptiveIcon 的背景層，這通常是應用的主色調
+            val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && mutated is AdaptiveIconDrawable) {
+                mutated.background.toBitmap(64, 64)
+            } else {
+                mutated.toBitmap(64, 64)
+            }
+            
+            // 使用 MCU 提取顏色
+            DynamicColorGenerator.extractSeedColorFromBitmap(bitmap) ?: run {
+                // 如果 MCU 沒提取到（可能透明度太高或顏色太淡），嘗試取中心點或角落
+                val pixels = IntArray(16)
+                bitmap.getPixels(pixels, 0, 4, bitmap.width / 4, bitmap.height / 4, 4, 4)
+                var r = 0; var g = 0; var b = 0
+                pixels.forEach { p ->
+                    if (Color.alpha(p) > 128) { // 僅取不透明度足夠的像素
+                        r += Color.red(p)
+                        g += Color.green(p)
+                        b += Color.blue(p)
+                    }
+                }
+                if (r + g + b > 0) Color.rgb(r/16, g/16, b/16) else null
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun drawCalendarDate(canvas: Canvas, sizePx: Int, day: String, bgColor: Int?, fgColor: Int?) {
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
         
-        // 1. 繪製純白背景 (填滿整個區域，之後會被 Mask 裁切成圓角或圓形)
-        paint.color = Color.WHITE
+        // 取得解析後的顏色，若無主題則使用原始設計色
+        val finalBg = bgColor ?: Color.WHITE
+        val finalFg = fgColor ?: Color.BLACK
+        val headerColor = if (fgColor != null) fgColor else Color.parseColor("#FF0000") // 沒開主題用純紅
+        val weekTextColor = finalBg // 星期文字與背景同色
+        
+        // 1. 繪製背景底色
+        paint.color = finalBg
         canvas.drawRect(0f, 0f, sizePx.toFloat(), sizePx.toFloat(), paint)
         
-        // 2. 繪製紅色頂部區塊 (佔約 28%)
+        // 2. 繪製頂部區塊 (前景屬性)
         val headerHeight = sizePx * 0.28f
-        paint.color = Color.parseColor("#E53935") // 經典日曆紅
+        paint.color = headerColor
         canvas.drawRect(0f, 0f, sizePx.toFloat(), headerHeight, paint)
         
-        // 3. 繪製星期 (英文縮寫，如 MON, TUE)
+        // 3. 繪製星期文字 (背景屬性)
         val calendar = Calendar.getInstance()
         val sdf = SimpleDateFormat("EEE", Locale.ENGLISH)
         val weekDay = sdf.format(calendar.time).uppercase()
         
-        paint.color = Color.WHITE
+        paint.color = weekTextColor
         paint.textSize = headerHeight * 0.55f
         paint.isFakeBoldText = true
         paint.textAlign = Paint.Align.CENTER
         
         val weekX = sizePx / 2f
         val weekFontMetrics = paint.fontMetrics
-        // 垂直居中在紅色區塊內
         val weekY = (headerHeight - weekFontMetrics.ascent - weekFontMetrics.descent) / 2f
         canvas.drawText(weekDay, weekX, weekY, paint)
         
-        // 4. 繪製日期數字 (黑色)
-        paint.color = Color.BLACK
+        // 4. 繪製日期數字 (前景屬性)
+        paint.color = finalFg
         paint.textSize = sizePx * 0.42f
         paint.isFakeBoldText = true
         
         val dayX = sizePx / 2f
         val dayFontMetrics = paint.fontMetrics
         val remainingHeight = sizePx - headerHeight
-        // 垂直居中在剩餘的白色區塊內
         val dayY = headerHeight + (remainingHeight - dayFontMetrics.ascent - dayFontMetrics.descent) / 2f
         canvas.drawText(day, dayX, dayY, paint)
     }
 
-    private fun drawClockIcon(canvas: Canvas, sizePx: Int, hour: Int, minute: Int) {
+    private fun drawClockIcon(canvas: Canvas, sizePx: Int, hour: Int, minute: Int, bgColor: Int?, fgColor: Int?) {
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
         val centerX = sizePx / 2f
         val centerY = sizePx / 2f
 
-        // 1. 繪製黑色背景
-        paint.color = Color.BLACK
+        // 取得解析後的顏色
+        val finalBg = bgColor ?: Color.parseColor("#003153") // 普魯士藍
+        val finalFg = fgColor ?: Color.WHITE
+
+        // 1. 繪製底層背景 (背景屬性)
+        paint.color = finalBg
         canvas.drawRect(0f, 0f, sizePx.toFloat(), sizePx.toFloat(), paint)
 
-        // 2. 繪製白色圓盤
-        paint.color = Color.WHITE
+        // 2. 繪製大圓盤 (前景屬性)
+        paint.color = finalFg
         val radius = sizePx * 0.42f
         canvas.drawCircle(centerX, centerY, radius, paint)
 
-        // 3. 繪製 12 個刻度線 (黑色)
-        paint.color = Color.BLACK
+        // 3. 繪製 12 個刻度線 (背景屬性)
+        paint.color = finalBg
         paint.strokeWidth = sizePx * 0.015f
         for (i in 0 until 12) {
             val angle = i * 30.0
@@ -241,25 +290,29 @@ class IconProcessor(private val context: Context) {
             canvas.drawLine(startX, startY, endX, endY, paint)
         }
 
-        // 4. 繪製時針 (黑色)
+        // 4. 繪製時針與分針 (背景屬性)
         paint.strokeCap = Paint.Cap.ROUND
+        
+        // 時針 (普通狀況為純紅色，有主題時跟隨背景色)
+        paint.color = if (bgColor != null) finalBg else Color.parseColor("#FF0000")
         paint.strokeWidth = sizePx * 0.04f
         val hourAngle = (hour % 12 + minute / 60f) * 30.0
         val hourLen = radius * 0.5f
-        val hX = centerX + hourLen * Math.sin(Math.toRadians(hourAngle)).toFloat()
-        val hY = centerY - hourLen * Math.cos(Math.toRadians(hourAngle)).toFloat()
-        canvas.drawLine(centerX, centerY, hX, hY, paint)
+        canvas.drawLine(centerX, centerY, 
+            centerX + hourLen * Math.sin(Math.toRadians(hourAngle)).toFloat(),
+            centerY - hourLen * Math.cos(Math.toRadians(hourAngle)).toFloat(), paint)
 
-        // 5. 繪製分針 (黑色)
+        // 分針 (跟隨背景屬性)
+        paint.color = finalBg
         paint.strokeWidth = sizePx * 0.025f
         val minAngle = minute * 6.0
         val minLen = radius * 0.75f
-        val mX = centerX + minLen * Math.sin(Math.toRadians(minAngle)).toFloat()
-        val mY = centerY - minLen * Math.cos(Math.toRadians(minAngle)).toFloat()
-        canvas.drawLine(centerX, centerY, mX, mY, paint)
+        canvas.drawLine(centerX, centerY,
+            centerX + minLen * Math.sin(Math.toRadians(minAngle)).toFloat(),
+            centerY - minLen * Math.cos(Math.toRadians(minAngle)).toFloat(), paint)
         
-        // 6. 繪製中心小黑點
-        paint.color = Color.BLACK
+        // 6. 中心點 (跟隨背景屬性)
+        paint.color = finalBg
         canvas.drawCircle(centerX, centerY, sizePx * 0.03f, paint)
     }
 

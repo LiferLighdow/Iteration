@@ -68,7 +68,9 @@ fun MainViewModel.exportConfig(): String {
                 bgColor = _customIconBgColor.value,
                 fgColor = _customIconFgColor.value,
                 useOriginal = _customIconUseOriginal.value,
-                useOriginalBg = _customIconUseOriginalBg.value
+                useOriginalBg = _customIconUseOriginalBg.value,
+                useDominantColor = _customIconUseDominantColor.value,
+                iconPackPackage = _customIconPackPackage.value
             )
         ),
         layout = _pages.value,
@@ -175,6 +177,8 @@ fun MainViewModel.applyConfig(config: LauncherConfig) {
         putInt("custom_icon_fg_color", settings.customIconSettings.fgColor)
         putBoolean("custom_icon_use_original", settings.customIconSettings.useOriginal)
         putBoolean("custom_icon_use_original_bg", settings.customIconSettings.useOriginalBg)
+        putBoolean("custom_icon_use_dominant_color", settings.customIconSettings.useDominantColor)
+        putString("custom_icon_pack_package", settings.customIconSettings.iconPackPackage)
         
         putString("emoji_wallpaper_text", settings.emojiWallpaperText)
         putInt("custom_wallpaper_color", settings.customWallpaperColor)
@@ -220,6 +224,8 @@ fun MainViewModel.applyConfig(config: LauncherConfig) {
     _customIconFgColor.value = settings.customIconSettings.fgColor
     _customIconUseOriginal.value = settings.customIconSettings.useOriginal
     _customIconUseOriginalBg.value = settings.customIconSettings.useOriginalBg
+    _customIconUseDominantColor.value = settings.customIconSettings.useDominantColor
+    _customIconPackPackage.value = settings.customIconSettings.iconPackPackage
 
     _emojiWallpaperText.value = settings.emojiWallpaperText
     _customWallpaperColor.value = settings.customWallpaperColor

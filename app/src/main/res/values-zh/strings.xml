@@ -464,6 +464,13 @@
     <string name="clock_3">3</string>
     <string name="clock_6">6</string>
     <string name="clock_9">9</string>
+    <string name="use_icon_pack_foreground">使用圖標包前景</string>
+    <string name="default_symbol">預設 (原始圖示)</string>
+    <string name="custom_icon_pack_select">選擇樣式專用圖標包</string>
+    <string name="use_dominant_bg_color">使用原色色彩</string>
+    <string name="dominant_bg_note">自動從原始圖示背景中提取主導色彩。</string>
+    <string name="icon_pack_lines_only_desc">僅顯示線條/無背景類型的圖標包</string>
+    <string name="no_compatible_icon_packs">未找到相容的線條類圖標包</string>
     <string name="calculator">計算機</string>
     <string name="unit_converter">單位換算</string>
     <string name="currency_converter">匯率換算</string>

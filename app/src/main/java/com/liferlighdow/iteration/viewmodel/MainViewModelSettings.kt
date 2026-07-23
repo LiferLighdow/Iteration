@@ -166,6 +166,19 @@ fun MainViewModel.setCustomIconUseOriginalBg(useOriginalBg: Boolean) {
     loadApps()
 }
 
+fun MainViewModel.setCustomIconUseDominantColor(enabled: Boolean) {
+    _customIconUseDominantColor.value = enabled
+    prefs.edit().putBoolean("custom_icon_use_dominant_color", enabled).apply()
+    loadApps()
+}
+
+fun MainViewModel.setCustomIconPackPackage(packageName: String) {
+    _customIconPackPackage.value = packageName
+    prefs.edit().putString("custom_icon_pack_package", packageName).apply()
+    iconCache.evictAll()
+    loadApps()
+}
+
 fun MainViewModel.setIconShape(shape: IconShape) {
     _iconShape.value = shape
     prefs.edit().putString("icon_shape", shape.name).apply()

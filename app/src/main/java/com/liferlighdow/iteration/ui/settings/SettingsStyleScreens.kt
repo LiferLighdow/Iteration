@@ -56,6 +56,8 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
     val currentStyle by viewModel.iconStyle.collectAsState()
     val currentShape by viewModel.iconShape.collectAsState()
     val currentIconPack by viewModel.iconPackPackage.collectAsState()
+    val isDynamicCalendarEnabled by viewModel.isDynamicCalendarEnabled.collectAsState()
+    val isDynamicClockEnabled by viewModel.isDynamicClockEnabled.collectAsState()
     
     var showIconPackPicker by remember { mutableStateOf(false) }
     var showStyleInfoDialog by remember { mutableStateOf(false) }
@@ -77,218 +79,211 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
-                },
-                actions = {}
+                }
             )
         }
     ) { innerPadding ->
-        LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-            item {
-                Text(
-                    text = stringResource(R.string.customization),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
-            }
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.settings_change_icon)) },
-                    supportingContent = { Text(stringResource(R.string.settings_change_icon_desc)) },
-                    trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
-                    modifier = Modifier.clickable { onNavigateToChangeIcon() }
-                )
-            }
+        LazyColumn(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+                .padding(horizontal = 16.dp)
+        ) {
+            item { Spacer(modifier = Modifier.height(16.dp)) }
 
+            // --- Customization ---
             item {
-                var expanded by remember { mutableStateOf(false) }
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.change_icon_shape)) },
-                    supportingContent = { Text(if (currentShape == IconShape.CIRCLE) stringResource(R.string.shape_circle) else stringResource(R.string.shape_default)) },
-                    trailingContent = {
-                        Box {
-                            IconButton(onClick = { expanded = true }) {
-                                Icon(Icons.Default.MoreVert, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                            }
-                            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.shape_default)) },
-                                    onClick = { viewModel.setIconShape(IconShape.DEFAULT); expanded = false }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.shape_circle)) },
-                                    onClick = { viewModel.setIconShape(IconShape.CIRCLE); expanded = false }
-                                )
-                            }
-                        }
-                    },
-                    modifier = Modifier.clickable { expanded = true }
-                )
-            }
-
-            item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
-
-            item {
-                Text(
-                    text = stringResource(R.string.icon_pack),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
-            }
-            item {
-                // 優化點：將 PackageManager 的查詢移至 IO 線程，避免阻塞 UI
-                val iconPacks by produceState<List<IconPackInfo>>(initialValue = emptyList()) {
-                    value = withContext(Dispatchers.IO) {
-                        viewModel.getInstalledIconPacks()
-                    }
-                }
-
-                val currentPackName = remember(currentIconPack, iconPacks) {
-                    if (currentIconPack.isEmpty()) context.getString(R.string.shape_default)
-                    else iconPacks.find { it.packageName == currentIconPack }?.label ?: context.getString(R.string.unknown)
-                }
-
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.current_pack)) },
-                    supportingContent = { Text(currentPackName) },
-                    trailingContent = { Icon(Icons.Default.ChevronRight, null) },
-                    modifier = Modifier.clickable { showIconPackPicker = true }
-                )
-            }
-
-            item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
-
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.themed_icons_m3_title)) },
-                    supportingContent = { Text(stringResource(R.string.themed_icons_m3_desc)) },
-                    trailingContent = {
-                        Switch(
-                            enabled = currentIconPack.isEmpty(),
-                            checked = isThemedIconsEnabled,
-                            onCheckedChange = { viewModel.setThemedIconsEnabled(it) }
-                        )
-                    },
-                    modifier = Modifier.clickable(enabled = currentIconPack.isEmpty()) { 
-                        viewModel.setThemedIconsEnabled(!isThemedIconsEnabled) 
-                    }
-                )
-            }
-            
-            item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
-            
-            item {
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = stringResource(R.string.iteration_style),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.weight(1f)
+                SettingsSection(title = stringResource(R.string.customization)) {
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.settings_change_icon)) },
+                        supportingContent = { Text(stringResource(R.string.settings_change_icon_desc)) },
+                        leadingContent = { Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary) },
+                        trailingContent = { Icon(Icons.Default.ChevronRight, null) },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier.clickable { onNavigateToChangeIcon() }
                     )
-                    IconButton(
-                        onClick = { showStyleInfoDialog = true },
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Info, 
-                            contentDescription = stringResource(R.string.compatibility_info),
-                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-            }
-
-            item {
-                var showExclusionPicker by remember { mutableStateOf(false) }
-                val excludedApps by viewModel.excludedThemedPackages.collectAsState()
-                
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.custom_exclusions)) },
-                    supportingContent = { Text(stringResource(R.string.custom_exclusions_desc, excludedApps.size)) },
-                    trailingContent = { Icon(Icons.Default.Settings, null, tint = MaterialTheme.colorScheme.primary) },
-                    modifier = Modifier.clickable { showExclusionPicker = true }
-                )
-                
-                if (showExclusionPicker) {
-                    val allApps by viewModel.allApps.collectAsState()
-                    MultiAppExclusionPickerDialog(
-                        allApps = allApps,
-                        excludedPackages = excludedApps,
-                        viewModel = viewModel,
-                        onDismiss = { showExclusionPicker = false },
-                        onToggle = { viewModel.toggleExcludedThemedApp(it) }
-                    )
-                }
-            }
-
-            items(styles) { (style, label) ->
-                var showCustomPicker by remember { mutableStateOf(false) }
-                
-                ListItem(
-                    headlineContent = { Text(label) },
-                    trailingContent = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (style == IconStyle.CUSTOM && currentStyle == IconStyle.CUSTOM && currentIconPack.isEmpty()) {
-                                IconButton(onClick = { showCustomPicker = true }) {
-                                    Icon(Icons.Default.ColorLens, null, tint = MaterialTheme.colorScheme.primary)
+                    
+                    var expandedShape by remember { mutableStateOf(false) }
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.change_icon_shape)) },
+                        supportingContent = { Text(if (currentShape == IconShape.CIRCLE) stringResource(R.string.shape_circle) else stringResource(R.string.shape_default)) },
+                        leadingContent = { Icon(Icons.Default.Category, null, tint = MaterialTheme.colorScheme.primary) },
+                        trailingContent = {
+                            Box {
+                                IconButton(onClick = { expandedShape = true }) {
+                                    Icon(Icons.Default.ArrowDropDown, null)
+                                }
+                                DropdownMenu(expanded = expandedShape, onDismissRequest = { expandedShape = false }) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.shape_default)) },
+                                        onClick = { viewModel.setIconShape(IconShape.DEFAULT); expandedShape = false }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.shape_circle)) },
+                                        onClick = { viewModel.setIconShape(IconShape.CIRCLE); expandedShape = false }
+                                    )
                                 }
                             }
-                            RadioButton(
-                                enabled = currentIconPack.isEmpty(),
-                                selected = currentStyle == style && currentIconPack.isEmpty(),
-                                onClick = { viewModel.setIconStyle(style) }
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier.clickable { expandedShape = true }
+                    )
+                }
+            }
+
+            // --- Icon Pack ---
+            item {
+                SettingsSection(title = stringResource(R.string.icon_pack)) {
+                    val iconPacks by produceState<List<IconPackInfo>>(initialValue = emptyList()) {
+                        value = withContext(Dispatchers.IO) {
+                            viewModel.getInstalledIconPacks()
+                        }
+                    }
+
+                    val currentPackName = remember(currentIconPack, iconPacks) {
+                        if (currentIconPack.isEmpty()) context.getString(R.string.shape_default)
+                        else iconPacks.find { it.packageName == currentIconPack }?.label ?: context.getString(R.string.unknown)
+                    }
+
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.current_pack)) },
+                        supportingContent = { Text(currentPackName) },
+                        leadingContent = { Icon(Icons.Default.Apps, null, tint = MaterialTheme.colorScheme.primary) },
+                        trailingContent = { Icon(Icons.Default.ChevronRight, null) },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier.clickable { showIconPackPicker = true }
+                    )
+
+                    SettingSwitchItem(
+                        icon = Icons.Default.Palette,
+                        title = stringResource(R.string.themed_icons_m3_title),
+                        supportingText = stringResource(R.string.themed_icons_m3_desc),
+                        checked = isThemedIconsEnabled,
+                        onCheckedChange = { if (currentIconPack.isEmpty()) viewModel.setThemedIconsEnabled(it) }
+                    )
+                    
+                    if (currentIconPack.isNotEmpty()) {
+                        Text(
+                            text = stringResource(R.string.icon_pack_disabled_note),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                }
+            }
+
+            // --- Iteration Style ---
+            item {
+                SettingsSection(title = stringResource(R.string.iteration_style)) {
+                    val excludedApps by viewModel.excludedThemedPackages.collectAsState()
+                    var showExclusionPicker by remember { mutableStateOf(false) }
+
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.iteration_style)) },
+                        supportingContent = { Text("自定義圖示產生的視覺效果") },
+                        leadingContent = { Icon(Icons.Default.Style, null, tint = MaterialTheme.colorScheme.primary) },
+                        trailingContent = {
+                            IconButton(onClick = { showStyleInfoDialog = true }) {
+                                Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
+                            }
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
+
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.custom_exclusions)) },
+                        supportingContent = { Text(stringResource(R.string.custom_exclusions_desc, excludedApps.size)) },
+                        leadingContent = { Icon(Icons.Default.Settings, null, tint = MaterialTheme.colorScheme.primary) },
+                        trailingContent = { Icon(Icons.Default.ChevronRight, null) },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier.clickable { showExclusionPicker = true }
+                    )
+                    
+                    if (showExclusionPicker) {
+                        val allApps by viewModel.allApps.collectAsState()
+                        MultiAppExclusionPickerDialog(
+                            allApps = allApps,
+                            excludedPackages = excludedApps,
+                            viewModel = viewModel,
+                            onDismiss = { showExclusionPicker = false },
+                            onToggle = { viewModel.toggleExcludedThemedApp(it) }
+                        )
+                    }
+
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                    styles.forEach { (style, label) ->
+                        var showCustomPicker by remember { mutableStateOf(false) }
+                        
+                        ListItem(
+                            headlineContent = { Text(label) },
+                            trailingContent = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (style == IconStyle.CUSTOM && currentStyle == IconStyle.CUSTOM && currentIconPack.isEmpty()) {
+                                        IconButton(onClick = { showCustomPicker = true }) {
+                                            Icon(Icons.Default.ColorLens, null, tint = MaterialTheme.colorScheme.primary)
+                                        }
+                                    }
+                                    RadioButton(
+                                        enabled = currentIconPack.isEmpty(),
+                                        selected = currentStyle == style && currentIconPack.isEmpty(),
+                                        onClick = { viewModel.setIconStyle(style) }
+                                    )
+                                }
+                            },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            modifier = Modifier.clickable(enabled = currentIconPack.isEmpty()) { 
+                                viewModel.setIconStyle(style) 
+                                if (style == IconStyle.CUSTOM) showCustomPicker = true
+                            }
+                        )
+
+                        if (showCustomPicker) {
+                            CustomIconStylePickerDialog(
+                                viewModel = viewModel,
+                                onDismiss = { showCustomPicker = false }
                             )
                         }
-                    },
-                    modifier = Modifier.clickable(enabled = currentIconPack.isEmpty()) { 
-                        viewModel.setIconStyle(style) 
-                        if (style == IconStyle.CUSTOM) showCustomPicker = true
                     }
-                )
+                }
+            }
 
-                if (showCustomPicker) {
-                    CustomIconStylePickerDialog(
-                        viewModel = viewModel,
-                        onDismiss = { showCustomPicker = false }
+            // --- Dynamic Icons ---
+            item {
+                SettingsSection(title = "動態圖示") {
+                    SettingSwitchItem(
+                        icon = Icons.Default.CalendarToday,
+                        title = stringResource(R.string.dynamic_calendar),
+                        supportingText = stringResource(R.string.dynamic_calendar_desc),
+                        checked = isDynamicCalendarEnabled,
+                        onCheckedChange = { viewModel.setDynamicCalendarEnabled(it) }
+                    )
+                    SettingSwitchItem(
+                        icon = Icons.Default.Schedule,
+                        title = stringResource(R.string.dynamic_clock),
+                        supportingText = stringResource(R.string.dynamic_clock_desc),
+                        checked = isDynamicClockEnabled,
+                        onCheckedChange = { viewModel.setDynamicClockEnabled(it) }
                     )
                 }
             }
 
-            if (currentIconPack.isNotEmpty()) {
-                item {
-                    Text(
-                        text = stringResource(R.string.icon_pack_disabled_note),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(16.dp)
+            // --- Maintenance ---
+            item {
+                SettingsSection(title = stringResource(R.string.maintenance)) {
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.clear_icon_cache_title)) },
+                        supportingContent = { Text(stringResource(R.string.clear_icon_cache_desc)) },
+                        leadingContent = { Icon(Icons.Default.Refresh, null, tint = MaterialTheme.colorScheme.primary) },
+                        trailingContent = { Icon(Icons.Default.ChevronRight, null) },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier.clickable { showClearCacheDialog = true }
                     )
                 }
             }
 
-            item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
-
-            item {
-                Text(
-                    text = stringResource(R.string.maintenance),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
-            }
-
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.clear_icon_cache_title)) },
-                    supportingContent = { Text(stringResource(R.string.clear_icon_cache_desc)) },
-                    trailingContent = { Icon(Icons.Default.Refresh, null, tint = MaterialTheme.colorScheme.primary) },
-                    modifier = Modifier.clickable { showClearCacheDialog = true }
-                )
-            }
+            item { Spacer(modifier = Modifier.height(32.dp)) }
         }
     }
 
@@ -354,12 +349,26 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
 }
 
 @Composable
-fun IconPackPickerDialog(onDismiss: () -> Unit, onPackSelected: (String) -> Unit) {
+fun IconPackPickerDialog(
+    onDismiss: () -> Unit, 
+    onPackSelected: (String) -> Unit,
+    onlyLines: Boolean = false
+) {
     val viewModel: MainViewModel = viewModel()
-    // 優化點：異步獲取圖標包列表
+    // 優化點：異步獲取圖標包列表，並根據需求過濾「線條類」圖標包
     val iconPacks by produceState<List<IconPackInfo>>(initialValue = emptyList()) {
-        value = withContext(Dispatchers.IO) {
+        val all = withContext(Dispatchers.IO) {
             viewModel.getInstalledIconPacks()
+        }
+        value = if (onlyLines) {
+            val keywords = listOf("line", "outline", "wire", "arcticon", "lawnicon", "snow", "mono", "glyph", "stencil", "white", "black", "thin", "border")
+            all.filter { pack ->
+                val lowerPkg = pack.packageName.lowercase()
+                val lowerLabel = pack.label.lowercase()
+                keywords.any { lowerPkg.contains(it) || lowerLabel.contains(it) }
+            }
+        } else {
+            all
         }
     }
     val currentShape by viewModel.iconShape.collectAsState()
@@ -371,14 +380,32 @@ fun IconPackPickerDialog(onDismiss: () -> Unit, onPackSelected: (String) -> Unit
             shape = RoundedCornerShape(16.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text(stringResource(R.string.select_icon_pack), style = MaterialTheme.typography.headlineSmall)
-                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = if (onlyLines) stringResource(R.string.custom_icon_pack_select) else stringResource(R.string.select_icon_pack),
+                    style = MaterialTheme.typography.headlineSmall
+                )
+                if (onlyLines) {
+                    Text(
+                        text = stringResource(R.string.icon_pack_lines_only_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
                 LazyColumn {
                     item {
                         ListItem(
-                            headlineContent = { Text(stringResource(R.string.default_style_desc)) },
+                            headlineContent = { Text(if (onlyLines) stringResource(R.string.default_symbol) else stringResource(R.string.default_style_desc)) },
                             modifier = Modifier.clickable { onPackSelected("") }
                         )
+                    }
+                    if (onlyLines && iconPacks.isEmpty()) {
+                        item {
+                            Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                                Text(stringResource(R.string.no_compatible_icon_packs), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
+                            }
+                        }
                     }
                     items(iconPacks) { pack ->
                         ListItem(
@@ -524,6 +551,8 @@ fun CustomIconStylePickerDialog(
     val fgColor by viewModel.customIconFgColor.collectAsState()
     val useOriginal by viewModel.customIconUseOriginal.collectAsState()
     val useOriginalBg by viewModel.customIconUseOriginalBg.collectAsState()
+    val useDominantColor by viewModel.customIconUseDominantColor.collectAsState()
+    val customIconPack by viewModel.customIconPackPackage.collectAsState()
     val iconShape by viewModel.iconShape.collectAsState()
     
     // 預覽用的虛擬 AppModel
@@ -533,22 +562,31 @@ fun CustomIconStylePickerDialog(
     // 優化點：將耗時的圖標處理移至後台線程，避免阻塞 UI 滑動
     val previewBitmap by produceState<androidx.compose.ui.graphics.ImageBitmap?>(
         initialValue = null, 
-        bgColor, fgColor, useOriginal, useOriginalBg, iconShape
+        bgColor, fgColor, useOriginal, useOriginalBg, useDominantColor, iconShape, customIconPack
     ) {
         value = withContext(Dispatchers.Default) {
             val processor = IconProcessor(context)
             val density = context.resources.displayMetrics.density
+            
+            val sourceIcon = if (customIconPack.isNotEmpty()) {
+                viewModel.iconPackManager.loadIconPack(customIconPack)
+                viewModel.iconPackManager.getIcon(context.packageName, "") ?: previewIcon
+            } else previewIcon
+
             processor.processIcon(
-                icon = previewIcon,
+                icon = sourceIcon,
                 isThemed = false,
                 themeColors = null,
                 style = IconStyle.CUSTOM,
                 shape = iconShape,
                 sizePx = (64 * density).toInt(),
+                isIconPack = customIconPack.isNotEmpty() && sourceIcon != previewIcon,
                 customBgColor = bgColor,
                 customFgColor = fgColor,
                 customUseOriginal = useOriginal,
-                customUseOriginalBg = useOriginalBg
+                customUseOriginalBg = useOriginalBg,
+                customUseDominantColor = useDominantColor,
+                originalIcon = previewIcon
             )
         }
     }
@@ -578,10 +616,18 @@ fun CustomIconStylePickerDialog(
                         Switch(checked = useOriginalBg, onCheckedChange = { viewModel.setCustomIconUseOriginalBg(it) })
                     }
                     if (!useOriginalBg) {
-                        ColorPicker(
-                            initialColor = bgColor,
-                            onColorChanged = { viewModel.setCustomIconBgColor(it) }
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(stringResource(R.string.use_dominant_bg_color), modifier = Modifier.weight(1f))
+                            Switch(checked = useDominantColor, onCheckedChange = { viewModel.setCustomIconUseDominantColor(it) })
+                        }
+                        if (!useDominantColor) {
+                            ColorPicker(
+                                initialColor = bgColor,
+                                onColorChanged = { viewModel.setCustomIconBgColor(it) }
+                            )
+                        } else {
+                            Text(stringResource(R.string.dominant_bg_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(vertical = 8.dp))
+                        }
                     } else {
                         Text(stringResource(R.string.bg_disabled_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(vertical = 8.dp))
                     }
@@ -594,6 +640,37 @@ fun CustomIconStylePickerDialog(
                         Switch(checked = useOriginal, onCheckedChange = { viewModel.setCustomIconUseOriginal(it) })
                     }
                     if (!useOriginal) {
+                        var showCustomIconPackPicker by remember { mutableStateOf(false) }
+                        val iconPacks by produceState<List<IconPackInfo>>(initialValue = emptyList()) {
+                            value = withContext(Dispatchers.IO) {
+                                viewModel.getInstalledIconPacks()
+                            }
+                        }
+                        val customPackLabel = remember(customIconPack, iconPacks) {
+                            if (customIconPack.isEmpty()) context.getString(R.string.default_symbol)
+                            else iconPacks.find { it.packageName == customIconPack }?.label ?: customIconPack
+                        }
+
+                        ListItem(
+                            headlineContent = { Text(stringResource(R.string.icon_pack)) },
+                            supportingContent = { Text(customPackLabel) },
+                            leadingContent = { Icon(Icons.Default.Apps, null, tint = MaterialTheme.colorScheme.primary) },
+                            trailingContent = { Icon(Icons.Default.ChevronRight, null) },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            modifier = Modifier.clickable { showCustomIconPackPicker = true }
+                        )
+
+                        if (showCustomIconPackPicker) {
+                            IconPackPickerDialog(
+                                onlyLines = true,
+                                onDismiss = { showCustomIconPackPicker = false },
+                                onPackSelected = { pkg ->
+                                    viewModel.setCustomIconPackPackage(pkg)
+                                    showCustomIconPackPicker = false
+                                }
+                            )
+                        }
+
                         ColorPicker(
                             initialColor = fgColor,
                             onColorChanged = { viewModel.setCustomIconFgColor(it) }

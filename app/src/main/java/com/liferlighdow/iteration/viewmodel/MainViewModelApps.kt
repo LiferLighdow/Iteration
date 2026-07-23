@@ -498,6 +498,8 @@ fun MainViewModel.processNewIcon(
     customFg: Int,
     customOriginal: Boolean,
     customOriginalBg: Boolean,
+    customUseDominantColor: Boolean,
+    customIconPack: String,
     activityInfoCache: Map<UserHandle, List<LauncherActivityInfo>>,
     calendarDay: String? = null,
     clockTime: Pair<Int, Int>? = null
@@ -525,18 +527,22 @@ fun MainViewModel.processNewIcon(
     } catch (e: Exception) { null }
 
     if (isExcluded) {
-        return iconProcessor.processIcon(finalRawIcon, false, null, IconStyle.STANDARD, currentShape, sizePx, customBgColor = 0, customFgColor = 0, customUseOriginal = true, customUseOriginalBg = true, userId = app.userId, calendarDay = calendarDay, clockTime = clockTime)
+        return iconProcessor.processIcon(finalRawIcon, false, null, IconStyle.STANDARD, currentShape, sizePx, customBgColor = 0, customFgColor = 0, customUseOriginal = true, customUseOriginalBg = true, customUseDominantColor = false, originalIcon = null, userId = app.userId, calendarDay = calendarDay, clockTime = clockTime)
     }
 
+    // 優先順序：全域圖標包 > 自定義樣式圖標包 > 原始圖標
+    val sourceIcon = when {
+        currentIconPack.isNotEmpty() -> iconPackManager.getIcon(app.packageName, app.uniqueId) ?: finalRawIcon
+        customIconPack.isNotEmpty() -> iconPackManager.getIcon(app.packageName, app.uniqueId) ?: finalRawIcon
+        else -> finalRawIcon
+    }
+
+    val isFromIconPack = (currentIconPack.isNotEmpty() || customIconPack.isNotEmpty()) && sourceIcon != finalRawIcon
+
     return if (currentIconPack.isNotEmpty()) {
-        val ipIcon = iconPackManager.getIcon(app.packageName, app.uniqueId)
-        if (ipIcon != null) {
-            iconProcessor.processIcon(ipIcon, false, null, IconStyle.STANDARD, currentShape, sizePx, isIconPack = true, userId = app.userId, isPrivate = app.isPrivate, calendarDay = calendarDay, clockTime = clockTime)
-        } else {
-            iconProcessor.processIcon(finalRawIcon, false, null, IconStyle.CUSTOM, currentShape, sizePx, customBgColor = 0, customFgColor = 0, customUseOriginal = true, customUseOriginalBg = true, userId = app.userId, isPrivate = app.isPrivate, calendarDay = calendarDay, clockTime = clockTime)
-        }
+        iconProcessor.processIcon(sourceIcon, false, null, IconStyle.STANDARD, currentShape, sizePx, isIconPack = isFromIconPack, originalIcon = finalRawIcon, userId = app.userId, isPrivate = app.isPrivate, calendarDay = calendarDay, clockTime = clockTime)
     } else {
-        iconProcessor.processIcon(finalRawIcon, isThemed, themeColors, currentStyle, currentShape, sizePx, customBgColor = customBg, customFgColor = customFg, customUseOriginal = customOriginal, customUseOriginalBg = customOriginalBg, userId = app.userId, isPrivate = app.isPrivate, calendarDay = calendarDay, clockTime = clockTime)
+        iconProcessor.processIcon(sourceIcon, isThemed, themeColors, currentStyle, currentShape, sizePx, isIconPack = isFromIconPack, customBgColor = customBg, customFgColor = customFg, customUseOriginal = customOriginal, customUseOriginalBg = customOriginalBg, customUseDominantColor = customUseDominantColor, originalIcon = finalRawIcon, userId = app.userId, isPrivate = app.isPrivate, calendarDay = calendarDay, clockTime = clockTime)
     }
 }
 
@@ -774,6 +780,7 @@ fun MainViewModel.loadApps() {
         val currentStyle = _iconStyle.value
         val currentShape = _iconShape.value
         val currentIconPack = _iconPackPackage.value
+        val customIconPack = _customIconPackPackage.value
         
         // 獲取目前日期與時間
         val cal = java.util.Calendar.getInstance()
@@ -784,9 +791,10 @@ fun MainViewModel.loadApps() {
         if (currentStyle == IconStyle.CUSTOM) {
             delay(200)
         }
-        if (currentIconPack.isNotEmpty()) {
+        val iconPackToLoad = if (currentIconPack.isNotEmpty()) currentIconPack else customIconPack
+        if (iconPackToLoad.isNotEmpty()) {
             withContext(Dispatchers.IO) {
-                iconPackManager.loadIconPack(currentIconPack)
+                iconPackManager.loadIconPack(iconPackToLoad)
             }
         }
 
@@ -830,8 +838,9 @@ fun MainViewModel.loadApps() {
         val customFg = _customIconFgColor.value
         val customOriginal = _customIconUseOriginal.value
         val customOriginalBg = _customIconUseOriginalBg.value
+        val customUseDominantColor = _customIconUseDominantColor.value
         val customKey = if (currentStyle == IconStyle.CUSTOM) {
-            "C_${customBg.toString(16)}_${customFg.toString(16)}_${if (customOriginal) "O" else "M"}_${if (customOriginalBg) "OB" else "CB"}"
+            "C_${customBg.toString(16)}_${customFg.toString(16)}_${if (customOriginal) "O" else "M"}_${if (customOriginalBg) "OB" else "CB"}_${if (customUseDominantColor) "D" else "S"}_${customIconPack.hashCode()}"
         } else "N"
 
         // 根據拉條設定決定渲染解析度 (畫質)
@@ -912,7 +921,7 @@ fun MainViewModel.loadApps() {
                                     val processed = if (app.isPWA) {
                                         generatePwaIcon(app, renderingSizePx)?.asImageBitmap()
                                     } else {
-                                        processNewIcon(app, currentIconPack, isThemed, isExcluded, themeColors, currentStyle, currentShape, renderingSizePx, customBg, customFg, customOriginal, customOriginalBg, activityInfoCache, calendarDayToPass, clockTimeToPass)
+                                        processNewIcon(app, currentIconPack, isThemed, isExcluded, themeColors, currentStyle, currentShape, renderingSizePx, customBg, customFg, customOriginal, customOriginalBg, customUseDominantColor, customIconPack, activityInfoCache, calendarDayToPass, clockTimeToPass)
                                     }
                                     
                                     processed?.let {
