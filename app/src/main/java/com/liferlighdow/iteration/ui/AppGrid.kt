@@ -3,10 +3,13 @@ package com.liferlighdow.iteration.ui
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
@@ -621,6 +624,18 @@ private fun WidgetGridItem(
 
     val isDesktopLocked by viewModel.isDesktopLocked.collectAsState()
 
+    val isBeingDragged = app.uniqueId == draggingUniqueId
+    val alphaAnim by animateFloatAsState(
+        targetValue = if (isBeingDragged) 0f else 1f,
+        animationSpec = if (isBeingDragged) snap() else spring(stiffness = Spring.StiffnessLow),
+        label = "widgetAlpha"
+    )
+    val scaleAnim by animateFloatAsState(
+        targetValue = if (isBeingDragged) 0.8f else 1.0f,
+        animationSpec = if (isBeingDragged) snap() else spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessLow),
+        label = "widgetScale"
+    )
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
@@ -631,7 +646,11 @@ private fun WidgetGridItem(
                 start = 8.dp,
                 end = 8.dp
             )
-            .graphicsLayer { alpha = if (app.uniqueId == draggingUniqueId) 0f else 1f }
+            .graphicsLayer { 
+                alpha = alphaAnim
+                scaleX = scaleAnim
+                scaleY = scaleAnim
+            }
     ) {
         Box(modifier = Modifier.fillMaxWidth().fillMaxHeight(if (showLabel) 0.85f else 1f)) {
             val widget = app.widget
@@ -907,6 +926,18 @@ private fun AppGridItem(
     viewModel: MainViewModel
 ) {
     val mContext = LocalContext.current
+    val isBeingDragged = app.uniqueId == draggingUniqueId
+    val alphaAnim by animateFloatAsState(
+        targetValue = if (isBeingDragged) 0f else 1f,
+        animationSpec = if (isBeingDragged) snap() else spring(stiffness = Spring.StiffnessLow),
+        label = "itemAlpha"
+    )
+    val scaleAnim by animateFloatAsState(
+        targetValue = if (isBeingDragged) 0.9f else 1.0f,
+        animationSpec = if (isBeingDragged) snap() else spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessLow),
+        label = "itemScale"
+    )
+
     Box {
         AppItem(
             app = app,
@@ -932,9 +963,10 @@ private fun AppGridItem(
             },
             notificationCountProvider = notificationCountProvider,
             modifier = Modifier.graphicsLayer {
-                alpha = if (app.uniqueId == draggingUniqueId) 0f else 1f
-                scaleX = scale; scaleY = scale
-                if (isEditMode && app.uniqueId != draggingUniqueId) rotationZ = rotation
+                alpha = alphaAnim
+                scaleX = scale * scaleAnim
+                scaleY = scale * scaleAnim
+                if (isEditMode && !isBeingDragged) rotationZ = rotation
             }
         )
         val menuOptions by viewModel.homeMenuOptions.collectAsState()

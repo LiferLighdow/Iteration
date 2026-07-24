@@ -192,6 +192,17 @@ fun LauncherScreen(
     }
 
     var draggingApp by remember { mutableStateOf<AppModel?>(null) }
+    var lastDraggingApp by remember { mutableStateOf<AppModel?>(null) }
+    val draggingAlpha by animateFloatAsState(
+        targetValue = if (draggingApp != null) 1f else 0f,
+        animationSpec = if (draggingApp != null) snap() else tween(250),
+        label = "draggingAlpha"
+    )
+
+    LaunchedEffect(draggingApp) {
+        if (draggingApp != null) lastDraggingApp = draggingApp
+    }
+
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
     var touchPosition by remember { mutableStateOf(Offset.Zero) }
     val dockApps by viewModel.dockItems.collectAsState()
@@ -219,7 +230,11 @@ fun LauncherScreen(
     var confirmedIntent by remember { mutableStateOf(MainViewModel.DropType.REORDER) }
 
     LaunchedEffect(rawHoveredKey) {
-        if (rawHoveredKey == null) { confirmedHoveredKey = null; return@LaunchedEffect }
+        if (rawHoveredKey == null) {
+            delay(200) // 增加 200ms 緩衝，讓 ViewModel 有時間更新數據，防止佈局跳變
+            confirmedHoveredKey = null
+            return@LaunchedEffect
+        }
         delay(500)
         confirmedHoveredKey = rawHoveredKey
     }
@@ -565,11 +580,12 @@ fun LauncherScreen(
                                             val dropType =
                                                 if (!isEditMode && maxOverlap > 0.50f && targetApp != null) MainViewModel.DropType.FOLDER else MainViewModel.DropType.REORDER
                                             viewModel.handleAppDrop(
-                                                draggingApp!!.uniqueId,
-                                                targetApp?.uniqueId,
-                                                tPageIdx - desktopStartIndex,
-                                                false,
-                                                dropType
+                                                fromId = draggingApp!!.uniqueId,
+                                                targetId = targetApp?.uniqueId,
+                                                targetPageIndex = tPageIdx - desktopStartIndex,
+                                                targetSlotIndex = tSlotIdx,
+                                                isFromLibrary = false,
+                                                dropType = dropType
                                             )
                                         } else {
                                             val currentPage = pagerState.currentPage
@@ -582,11 +598,12 @@ fun LauncherScreen(
                                                         desktopPageCount - 1
                                                     )
                                                 viewModel.handleAppDrop(
-                                                    draggingApp!!.uniqueId,
-                                                    null,
-                                                    targetIdx,
-                                                    false,
-                                                    MainViewModel.DropType.REORDER
+                                                    fromId = draggingApp!!.uniqueId,
+                                                    targetId = null,
+                                                    targetPageIndex = targetIdx,
+                                                    targetSlotIndex = null,
+                                                    isFromLibrary = false,
+                                                    dropType = MainViewModel.DropType.REORDER
                                                 )
                                             }
                                         }
@@ -678,11 +695,12 @@ fun LauncherScreen(
                                 onDrag = { delta -> dragOffset += delta },
                                 onDragEnd = {
                                     if (draggingApp != null) viewModel.handleAppDrop(
-                                        draggingApp!!.uniqueId,
-                                        null,
-                                        (pagerState.currentPage - desktopStartIndex).coerceIn(0, desktopPageCount - 1),
-                                        true,
-                                        MainViewModel.DropType.REORDER
+                                        fromId = draggingApp!!.uniqueId,
+                                        targetId = null,
+                                        targetPageIndex = (pagerState.currentPage - desktopStartIndex).coerceIn(0, desktopPageCount - 1),
+                                        targetSlotIndex = null,
+                                        isFromLibrary = true,
+                                        dropType = MainViewModel.DropType.REORDER
                                     )
                                     draggingApp = null; rawHoveredKey = null; confirmedHoveredKey =
                                     null
@@ -772,22 +790,31 @@ fun LauncherScreen(
                 }
             }
 
-        draggingApp?.let { app ->
-            Box(
-                modifier = Modifier
-                    .size(iconSize)
-                    .graphicsLayer {
-                        translationX = touchPosition.x + dragOffset.x - iconSizePx / 2
-                        translationY = touchPosition.y + dragOffset.y - iconSizePx / 2
-                        alpha = 0.8f
-                        scaleX = 1.15f
-                        scaleY = 1.15f
-                    }
-            ) {
-                AppItem(
-                    app = app,
-                    iconSize = iconSize,
-                    getIcon = { pkg -> viewModel.getIcon(pkg) })
+        lastDraggingApp?.let { app ->
+            if (draggingAlpha > 0f) {
+                Box(
+                    modifier = Modifier
+                        .graphicsLayer {
+                            translationX = touchPosition.x + dragOffset.x - iconSizePx / 2
+                            translationY = touchPosition.y + dragOffset.y - iconSizePx / 2
+                            alpha = 0.8f * draggingAlpha
+                            scaleX = 1.2f
+                            scaleY = 1.2f
+                        }
+                ) {
+                    AppItem(
+                        app = app,
+                        iconSize = iconSize,
+                        showLabel = false,
+                        iconShape = iconShape,
+                        isLiquidGlass = isLiquidGlassEnabled,
+                        backdrop = backdrop,
+                        blurRadius = blurRadius,
+                        refractionHeight = refractionHeight,
+                        refractionAmount = refractionAmount,
+                        chromaticAberration = chromaticAberration,
+                        getIcon = { pkg -> viewModel.getIcon(pkg) })
+                }
             }
         }
 

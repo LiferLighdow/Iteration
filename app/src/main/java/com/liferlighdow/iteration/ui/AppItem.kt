@@ -181,7 +181,7 @@ fun AppItem(
                                     )
                                 )
                             },
-                        contentScale = ContentScale.FillBounds
+                        contentScale = ContentScale.Fit
                     )
                 } else if (app.isFolder && isFolderReady) {
                     FolderIconContent(
@@ -266,7 +266,7 @@ fun AppItem(
                                     color = Color.White.copy(alpha = 0.3f),
                                     shape = currentShape
                                 ),
-                            contentScale = ContentScale.FillBounds
+                            contentScale = ContentScale.Fit
                         )
                     } else {
                         // 佔位符，防止圖示區域塌陷

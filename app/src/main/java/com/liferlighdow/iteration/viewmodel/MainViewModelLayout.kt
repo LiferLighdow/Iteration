@@ -20,6 +20,7 @@ fun MainViewModel.handleAppDrop(
     fromId: String,
     targetId: String?,
     targetPageIndex: Int,
+    targetSlotIndex: Int? = null,
     isFromLibrary: Boolean,
     dropType: MainViewModel.DropType
 ) {
@@ -99,8 +100,17 @@ fun MainViewModel.handleAppDrop(
             }
         }
         MainViewModel.DropType.REORDER -> {
-            if (targetId != null) {
-                var success = false
+            var success = false
+            
+            // 優先嘗試使用目標插槽索引進行插入，這比 ID 查找更精確 (尤其是回到原位時)
+            if (targetSlotIndex != null && targetPageIndex in currentPages.indices) {
+                val page = currentPages[targetPageIndex]
+                page.add(targetSlotIndex.coerceIn(0, page.size), item)
+                success = true
+            } 
+            
+            // 如果插槽插入失敗，則嘗試按 ID 查找 (作為保險)
+            if (!success && targetId != null) {
                 for (page in currentPages) {
                     val tIdx = page.indexOfFirst { it.uniqueId == targetId }
                     if (tIdx != -1) {
@@ -109,10 +119,9 @@ fun MainViewModel.handleAppDrop(
                         break
                     }
                 }
-                if (!success) insertAtPage(currentPages, targetPageIndex, item)
-            } else {
-                insertAtPage(currentPages, targetPageIndex, item)
             }
+            
+            if (!success) insertAtPage(currentPages, targetPageIndex, item)
         }
     }
 
