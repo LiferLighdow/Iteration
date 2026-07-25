@@ -99,7 +99,7 @@ fun WidgetStackPickerDialog(
                     
                     // 循環滾動開關
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { cyclicMode = !cyclicMode }) {
-                        Text("循環", style = MaterialTheme.typography.labelMedium, color = if (cyclicMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.widget_stacker_cyclic), style = MaterialTheme.typography.labelMedium, color = if (cyclicMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
                         Checkbox(checked = cyclicMode, onCheckedChange = { cyclicMode = it })
                     }
                 }
