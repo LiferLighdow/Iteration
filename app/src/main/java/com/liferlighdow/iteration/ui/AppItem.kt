@@ -140,12 +140,20 @@ fun AppItem(
                     rotationZ = (1f - animatedScale) * 30f // 增加旋轉動感
                     // Android 12+ 模糊效果 (質感提升)
                     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                        renderEffect = android.graphics.RenderEffect.createBlurEffect(
-                            (1f - animatedScale) * 30f,
-                            (1f - animatedScale) * 30f,
-                            android.graphics.Shader.TileMode.CLAMP
-                        ).asComposeRenderEffect()
+                        val blurAmount = (1f - animatedScale) * 30f
+                        if (blurAmount > 0.01f) {
+                            renderEffect = android.graphics.RenderEffect.createBlurEffect(
+                                blurAmount,
+                                blurAmount,
+                                android.graphics.Shader.TileMode.CLAMP
+                            ).asComposeRenderEffect()
+                        } else {
+                            renderEffect = null
+                        }
                     }
+                } else {
+                    rotationZ = 0f
+                    renderEffect = null
                 }
             }
             .then(
