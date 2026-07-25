@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Resources
 import android.graphics.drawable.Drawable
+import android.os.Build
 import android.util.Log
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
@@ -168,6 +169,29 @@ class IconPackManager(private val context: Context) {
         }
     }
 
+    private fun isDefaultDialer(packageName: String): Boolean {
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val telecomManager = context.getSystemService(Context.TELECOM_SERVICE) as? android.telecom.TelecomManager
+                telecomManager?.defaultDialerPackage == packageName
+            } else {
+                val intent = Intent(Intent.ACTION_DIAL)
+                val info = pm.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
+                info?.activityInfo?.packageName == packageName
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private fun isDefaultSmsApp(packageName: String): Boolean {
+        return try {
+            android.provider.Telephony.Sms.getDefaultSmsPackage(context) == packageName
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     fun getIcon(packageName: String, uniqueId: String? = null): Drawable? {
         val res = iconPackResources ?: return null
         val iconPkg = iconPackPackageName ?: return null
@@ -193,14 +217,19 @@ class IconPackManager(private val context: Context) {
             drawableName = iconMapping[pkgFromId] ?: iconMapping[packageName]
         }
 
-        // 4. 針對內建圖示包的關鍵字模糊匹配 (最後防線)
+        // 4. 針對內建圖示包的動態判定與關鍵字模糊匹配 (最後防線)
         if (drawableName == null && iconPkg == BUILTIN_PACKAGE_NAME) {
             val lowerPkg = packageName.lowercase()
-            if (lowerPkg.contains("messaging") || lowerPkg.contains("message") || lowerPkg.contains("sms") || lowerPkg.contains("mms") || lowerPkg.contains("chat")) {
+            if (isDefaultDialer(packageName)) {
+                drawableName = "ic_builtin_phone"
+            } else if (isDefaultSmsApp(packageName)) {
                 drawableName = "ic_builtin_messages"
             } else if (isDefaultBrowser(packageName)) {
-                // 僅針對預設瀏覽器套用內建圖標
                 drawableName = "ic_builtin_browser"
+            } else if (lowerPkg.contains("filemanager") || lowerPkg.contains("explorer") || 
+                lowerPkg.contains("documentsui") || lowerPkg.contains("myfiles") || 
+                lowerPkg.endsWith(".files") || lowerPkg.contains("com.google.android.apps.nbu.files")) {
+                drawableName = "ic_builtin_files"
             } else if (lowerPkg.contains("camera") || lowerPkg.contains("gallery") || lowerPkg.contains("photo")) {
                 drawableName = "ic_builtin_camera"
             }

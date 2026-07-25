@@ -636,7 +636,9 @@
     <string name="builtin_contacts">聯絡人</string>
     <string name="builtin_camera">相機</string>
     <string name="builtin_settings">設定</string>
+    <string name="builtin_files">檔案</string>
     <string name="experimental_features">實驗性功能</string>
     <string name="material_you_title">使用 Material You (測試中)</string>
     <string name="material_you_desc">從您目前的桌布擷取主要顏色，並套用到 UI 文字與元素上。</string>
+    <string name="widget_stacker_cyclic">循環轉動</string>
 </resources>

@@ -855,6 +855,7 @@ fun ChangeIconScreen(onBack: () -> Unit) {
                 "ic_builtin_browser" to stringResource(R.string.builtin_browser),
                 "ic_builtin_contacts" to stringResource(R.string.builtin_contacts),
                 "ic_builtin_camera" to stringResource(R.string.builtin_camera),
+                "ic_builtin_files" to stringResource(R.string.builtin_files),
                 "ic_builtin_settings" to stringResource(R.string.builtin_settings)
             )
 

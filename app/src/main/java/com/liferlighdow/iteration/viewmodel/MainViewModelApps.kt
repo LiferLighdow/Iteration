@@ -1026,7 +1026,28 @@ fun MainViewModel.loadApps() {
                     }
                     restoredPages.add(pageItems)
                 }
-                val newApps = processedApps.filter { app -> !seenApps.contains(app.uniqueId) && !seenApps.contains(app.packageName) && !app.isHidden && !app.isFrozen && !app.isPrivate }
+                fun getAllPackageNames(items: List<AppModel>): Set<String> {
+                    val pkgs = mutableSetOf<String>()
+                    items.forEach { item ->
+                        if (item.isFolder) {
+                            pkgs.addAll(getAllPackageNames(item.folderItems))
+                        } else if (item.packageName.isNotEmpty()) {
+                            pkgs.add(item.packageName)
+                        }
+                    }
+                    return pkgs
+                }
+
+                val allRestoredPkgs = getAllPackageNames(restoredPages.flatten())
+                val dockPkgs = _dockPackageNames.value.toSet()
+
+                val newApps = processedApps.filter { app -> 
+                    !seenApps.contains(app.uniqueId) && 
+                    !seenApps.contains(app.packageName) && 
+                    !allRestoredPkgs.contains(app.packageName) &&
+                    !dockPkgs.contains(app.packageName) &&
+                    !app.isHidden && !app.isFrozen && !app.isPrivate 
+                }
                 if (newApps.isNotEmpty()) {
                     if (_autoAddAppsToHome.value) {
                         val isMassiveMigration = newApps.size > 20
