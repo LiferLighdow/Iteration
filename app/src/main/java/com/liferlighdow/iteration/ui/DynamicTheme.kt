@@ -21,18 +21,42 @@ object DynamicColorGenerator {
     
     @SuppressLint("RestrictedApi")
     fun extractSeedColorFromBitmap(bitmap: Bitmap): Int? {
-        // 縮小圖片以提高效能
-        val scaledBitmap = Bitmap.createScaledBitmap(bitmap, 128, 128, false)
-        val pixels = IntArray(scaledBitmap.width * scaledBitmap.height)
-        scaledBitmap.getPixels(pixels, 0, scaledBitmap.width, 0, 0, scaledBitmap.width, scaledBitmap.height)
-        
-        // 使用 QuantizerCelebi 提取主要顏色
-        val result = QuantizerCelebi.quantize(pixels, 128)
-        
-        // 使用 Score 演算法評分並選出最適合的種子顏色
-        val rankedColors = Score.score(result)
-        
-        return if (rankedColors.isNotEmpty()) rankedColors[0] else null
+        return try {
+            // 縮小圖片以提高效能
+            val scaledBitmap = Bitmap.createScaledBitmap(bitmap, 128, 128, false)
+            val pixels = IntArray(scaledBitmap.width * scaledBitmap.height)
+            scaledBitmap.getPixels(pixels, 0, scaledBitmap.width, 0, 0, scaledBitmap.width, scaledBitmap.height)
+            
+            // 使用 QuantizerCelebi 提取主要顏色
+            // 注意：某些版本的 library 回傳的是 QuantizerResult，需取其 colorToCount
+            val quantizerResult = QuantizerCelebi.quantize(pixels, 128)
+            
+            // 判斷回傳類型並取得顏色分佈表
+            val colorToCount = if (quantizerResult is Map<*, *>) {
+                @Suppress("UNCHECKED_CAST")
+                quantizerResult as Map<Int, Int>
+            } else {
+                // 嘗試反射或假設它是 QuantizerResult 物件
+                try {
+                    val field = quantizerResult.javaClass.getDeclaredField("colorToCount")
+                    field.isAccessible = true
+                    @Suppress("UNCHECKED_CAST")
+                    field.get(quantizerResult) as Map<Int, Int>
+                } catch (e: Exception) {
+                    null
+                }
+            }
+
+            if (colorToCount == null || colorToCount.isEmpty()) return null
+            
+            // 使用 Score 演算法評分並選出最適合的種子顏色
+            val rankedColors = Score.score(colorToCount)
+            
+            if (rankedColors.isNotEmpty()) rankedColors[0] else null
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
     }
 
     @SuppressLint("RestrictedApi")
@@ -95,10 +119,36 @@ object DynamicColorGenerator {
     }
 }
 
+// 定義 Iteration 啟動器的經典藍色品牌色 (Light)
+private val IterationLightColors = lightColorScheme(
+    primary = Color(0xFF0061A4),
+    onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFFD1E4FF),
+    onPrimaryContainer = Color(0xFF001D36),
+    secondary = Color(0xFF535F70),
+    onSecondary = Color(0xFFFFFFFF),
+    surfaceVariant = Color(0xFFDFE2EB),
+    onSurfaceVariant = Color(0xFF43474E)
+)
+
+// 定義 Iteration 啟動器的經典藍色品牌色 (Dark)
+private val IterationDarkColors = darkColorScheme(
+    primary = Color(0xFF9ECAFF),
+    onPrimary = Color(0xFF003258),
+    primaryContainer = Color(0xFF00497D),
+    onPrimaryContainer = Color(0xFFD1E4FF),
+    secondary = Color(0xFFBBC7DB),
+    onSecondary = Color(0xFF253140),
+    surfaceVariant = Color(0xFF43474E),
+    onSurfaceVariant = Color(0xFFC3C7CF)
+)
+
 @Composable
 fun IterationTheme(
     themeMode: ThemeMode = ThemeMode.FOLLOW_SYSTEM,
     isAmoledBlack: Boolean = false,
+    isMaterialYouEnabled: Boolean = false,
+    seedColor: Int? = null,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
@@ -108,19 +158,28 @@ fun IterationTheme(
         ThemeMode.FOLLOW_SYSTEM -> isSystemInDarkTheme()
     }
     
-    // 優先使用 Android 12+ 的官方動態色彩
-    var colorScheme = when {
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        else -> {
-            // Android 12 以下的回退邏輯 (手動提取或預設)
-            if (darkTheme) darkColorScheme() else lightColorScheme()
+    // 使用 remember 計算配色，當開關、暗色模式或種子顏色變化時重新生成
+    val colorScheme = remember(isMaterialYouEnabled, darkTheme, seedColor) {
+        if (isMaterialYouEnabled) {
+            if (seedColor != null) {
+                // 如果有提取到種子顏色，則不論 Android 版本皆可產生動態色彩
+                DynamicColorGenerator.generateColorSchemeFromSeed(seedColor, darkTheme)
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                // 如果沒有種子顏色但 Android 版本足夠，則使用系統內建的動態色彩作為後備
+                if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            } else {
+                // 低版本且無種子顏色時的回退
+                if (darkTheme) IterationDarkColors else IterationLightColors
+            }
+        } else {
+            // 如果關閉 Material You，強制使用 Iteration 經典藍色
+            if (darkTheme) IterationDarkColors else IterationLightColors
         }
     }
 
+    var finalColorScheme = colorScheme
     if (darkTheme && isAmoledBlack) {
-        colorScheme = colorScheme.copy(
+        finalColorScheme = colorScheme.copy(
             background = Color.Black,
             surface = Color.Black,
             surfaceVariant = Color(0xFF111111), // 稍微留一點層次感給卡片
@@ -131,7 +190,7 @@ fun IterationTheme(
     }
 
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = finalColorScheme,
         content = content
     )
 }

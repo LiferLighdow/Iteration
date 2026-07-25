@@ -105,7 +105,9 @@
     <string name="dynamic_clock_desc">在時鐘應用程式圖標上顯示即時指針時間（每分鐘更新）</string>
     <string name="security_section">安全性</string>
     <string name="password_label">隱藏APP用的密碼</string>
+    <string name="password_description">設定密碼以保護隱藏的應用程式（這可是咱倆的小秘密♡）</string>
     <string name="hide_apps_instruction">選擇你欲隱藏應用</string>
+    <string name="no_apps_found">找不到相符的應用程式嗚嗚</string>
     <string name="custom_categories">自定義分類</string>
     <string name="assign_categories">分配應用至不同分類</string>
     <string name="add_category_title">新增全新分類</string>
@@ -576,4 +578,7 @@
     <string name="builtin_contacts">聯絡人</string>
     <string name="builtin_camera">相機</string>
     <string name="builtin_settings">設定</string>
+    <string name="experimental_features">实验性功能</string>
+    <string name="material_you_title">使用 Material You (测试中)</string>
+    <string name="material_you_desc">从您目前的壁纸提取主要颜色，并应用到 UI 文字与元素上。</string>
 </resources>

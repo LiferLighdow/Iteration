@@ -42,36 +42,123 @@ enum class SettingsPage {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchBar(
+fun IterationSearchBar(
     query: String,
     placeholder: String = stringResource(R.string.search_hint),
-    onQueryChange: (String) -> Unit
+    onQueryChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    isGlass: Boolean = false,
+    backdrop: com.kyant.backdrop.Backdrop? = null
 ) {
-    TextField(
-        value = query,
-        onValueChange = onQueryChange,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-            .height(56.dp),
-        placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)) },
-        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-        trailingIcon = {
-            if (query.isNotEmpty()) {
-                IconButton(onClick = { onQueryChange("") }) {
-                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.clear))
+    val content = @Composable {
+        TextField(
+            value = query,
+            onValueChange = onQueryChange,
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = { Text(placeholder, color = (if (isGlass) Color.White else MaterialTheme.colorScheme.onSurfaceVariant).copy(alpha = 0.6f)) },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = if (isGlass) Color.White else MaterialTheme.colorScheme.onSurfaceVariant) },
+            trailingIcon = {
+                if (query.isNotEmpty()) {
+                    IconButton(onClick = { onQueryChange("") }) {
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.clear), tint = if (isGlass) Color.White else MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
-            }
-        },
-        singleLine = true,
-        shape = RoundedCornerShape(28.dp),
-        colors = TextFieldDefaults.colors(
-            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-            focusedIndicatorColor = Color.Transparent,
-            unfocusedIndicatorColor = Color.Transparent,
+            },
+            singleLine = true,
+            shape = RoundedCornerShape(28.dp),
+            colors = TextFieldDefaults.colors(
+                focusedTextColor = if (isGlass) Color.White else MaterialTheme.colorScheme.onSurface,
+                unfocusedTextColor = if (isGlass) Color.White else MaterialTheme.colorScheme.onSurface,
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                disabledContainerColor = Color.Transparent,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+            )
         )
+    }
+
+    if (isGlass) {
+        com.liferlighdow.iteration.ui.components.GlassBox(
+            modifier = modifier.height(56.dp),
+            backdrop = backdrop,
+            cornerRadius = 28.dp,
+            fallbackAlpha = 0.2f
+        ) {
+            content()
+        }
+    } else {
+        Surface(
+            modifier = modifier.padding(horizontal = 16.dp, vertical = 8.dp).height(56.dp),
+            shape = RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        ) {
+            content()
+        }
+    }
+}
+
+@Composable
+fun SettingSwitchItem(
+    title: String,
+    supportingText: String? = null,
+    icon: ImageVector? = null,
+    leadingContent: @Composable (() -> Unit)? = null,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    ListItem(
+        headlineContent = { Text(title) },
+        supportingContent = supportingText?.let { { Text(it) } },
+        leadingContent = leadingContent ?: icon?.let { { Icon(it, contentDescription = null, tint = MaterialTheme.colorScheme.primary) } },
+        trailingContent = {
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange
+            )
+        },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        modifier = Modifier.clickable { onCheckedChange(!checked) }
+    )
+}
+
+@Composable
+fun SettingSliderItem(
+    label: String,
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float> = 0f..100f,
+    steps: Int = 0,
+    onIncrement: () -> Unit,
+    onDecrement: () -> Unit
+) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Text(text = label, style = MaterialTheme.typography.bodyMedium)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onDecrement) {
+                Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.decrease))
+            }
+            Slider(
+                value = value,
+                onValueChange = onValueChange,
+                valueRange = valueRange,
+                steps = steps,
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(onClick = onIncrement) {
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.increase))
+            }
+        }
+    }
+}
+
+@Composable
+fun SettingCategoryHeader(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
     )
 }
 
@@ -79,22 +166,24 @@ fun SearchBar(
 fun SettingsItem(
     headline: String,
     supporting: String? = null,
-    icon: ImageVector,
-    iconColor: Color,
+    icon: ImageVector? = null,
+    iconColor: Color = MaterialTheme.colorScheme.primary,
     onClick: () -> Unit,
     trailing: @Composable (() -> Unit)? = { Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) }
 ) {
     ListItem(
         headlineContent = { Text(headline, style = MaterialTheme.typography.bodyLarge) },
         supportingContent = supporting?.let { { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) } },
-        leadingContent = {
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .background(iconColor.copy(alpha = 0.15f), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(20.dp))
+        leadingContent = icon?.let {
+            {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .background(iconColor.copy(alpha = 0.15f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(it, contentDescription = null, tint = iconColor, modifier = Modifier.size(20.dp))
+                }
             }
         },
         trailingContent = trailing,
@@ -121,29 +210,6 @@ fun SettingsSection(title: String, modifier: Modifier = Modifier, content: @Comp
             Column(content = content)
         }
     }
-}
-
-@Composable
-fun SettingSwitchItem(
-    icon: ImageVector,
-    title: String,
-    supportingText: String? = null,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    ListItem(
-        headlineContent = { Text(title) },
-        supportingContent = supportingText?.let { { Text(it) } },
-        leadingContent = { Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-        trailingContent = {
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange
-            )
-        },
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        modifier = Modifier.clickable { onCheckedChange(!checked) }
-    )
 }
 
 @Composable

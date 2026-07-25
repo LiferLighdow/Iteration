@@ -480,3 +480,13 @@ fun MainViewModel.resetLiquidGlassParams() {
     setLiquidGlassRefractionAmount(48f)
     setLiquidGlassChromaticAberration(true)
 }
+
+fun MainViewModel.setMaterialYouEnabled(enabled: Boolean) {
+    _isMaterialYouEnabled.value = enabled
+    prefs.edit().putBoolean("material_you_enabled", enabled).apply()
+    
+    // 如果開啟 Material You 且目前沒有種子顏色，主動觸發一次提取
+    if (enabled && _seedColor.value == null) {
+        updateBlurredWallpaper()
+    }
+}

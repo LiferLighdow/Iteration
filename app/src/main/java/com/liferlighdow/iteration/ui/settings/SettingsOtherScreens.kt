@@ -164,18 +164,12 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
                             }
                         }
                     )
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.internal_network_toggle)) },
-                        supportingContent = { Text(stringResource(R.string.internal_network_desc)) },
-                        leadingContent = { Icon(Icons.Default.Security, null, tint = MaterialTheme.colorScheme.primary) },
-                        trailingContent = {
-                            Switch(
-                                checked = isNetworkEnabled,
-                                onCheckedChange = { viewModel.setNetworkAccessEnabled(it) }
-                            )
-                        },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        modifier = Modifier.clickable { viewModel.setNetworkAccessEnabled(!isNetworkEnabled) }
+                    SettingSwitchItem(
+                        icon = Icons.Default.Security,
+                        title = stringResource(R.string.internal_network_toggle),
+                        supportingText = stringResource(R.string.internal_network_desc),
+                        checked = isNetworkEnabled,
+                        onCheckedChange = { viewModel.setNetworkAccessEnabled(it) }
                     )
                 }
             }
@@ -189,43 +183,23 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
                     modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
                 )
                 SettingsGroup {
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.permission_contacts)) },
-                        supportingContent = { Text(stringResource(R.string.permission_contacts_desc)) },
-                        leadingContent = { Icon(Icons.Default.Contacts, null, tint = MaterialTheme.colorScheme.primary) },
-                        trailingContent = {
-                            Switch(
-                                checked = hasContactsPermission,
-                                onCheckedChange = {
-                                    if (!hasContactsPermission) {
-                                        launcher.launch(android.Manifest.permission.READ_CONTACTS)
-                                    }
-                                }
-                            )
-                        },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        modifier = Modifier.clickable {
+                    SettingSwitchItem(
+                        icon = Icons.Default.Contacts,
+                        title = stringResource(R.string.permission_contacts),
+                        supportingText = stringResource(R.string.permission_contacts_desc),
+                        checked = hasContactsPermission,
+                        onCheckedChange = {
                             if (!hasContactsPermission) {
                                 launcher.launch(android.Manifest.permission.READ_CONTACTS)
                             }
                         }
                     )
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.permission_calendar)) },
-                        supportingContent = { Text(stringResource(R.string.permission_calendar_desc)) },
-                        leadingContent = { Icon(Icons.Default.Event, null, tint = MaterialTheme.colorScheme.primary) },
-                        trailingContent = {
-                            Switch(
-                                checked = hasCalendarPermission,
-                                onCheckedChange = {
-                                    if (!hasCalendarPermission) {
-                                        calendarLauncher.launch(android.Manifest.permission.READ_CALENDAR)
-                                    }
-                                }
-                            )
-                        },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        modifier = Modifier.clickable {
+                    SettingSwitchItem(
+                        icon = Icons.Default.Event,
+                        title = stringResource(R.string.permission_calendar),
+                        supportingText = stringResource(R.string.permission_calendar_desc),
+                        checked = hasCalendarPermission,
+                        onCheckedChange = {
                             if (!hasCalendarPermission) {
                                 calendarLauncher.launch(android.Manifest.permission.READ_CALENDAR)
                             }
@@ -244,23 +218,12 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
                 )
                 SettingsGroup {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                        ListItem(
-                            headlineContent = { Text(stringResource(R.string.permission_files_manage)) },
-                            supportingContent = { Text(stringResource(R.string.permission_files_manage_desc)) },
-                            leadingContent = { Icon(Icons.Default.Folder, null, tint = MaterialTheme.colorScheme.primary) },
-                            trailingContent = {
-                                Switch(
-                                    checked = hasAllFilesPermission,
-                                    onCheckedChange = {
-                                        val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
-                                            data = Uri.fromParts("package", context.packageName, null)
-                                        }
-                                        context.startActivity(intent)
-                                    }
-                                )
-                            },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                            modifier = Modifier.clickable {
+                        SettingSwitchItem(
+                            icon = Icons.Default.Folder,
+                            title = stringResource(R.string.permission_files_manage),
+                            supportingText = stringResource(R.string.permission_files_manage_desc),
+                            checked = hasAllFilesPermission,
+                            onCheckedChange = {
                                 val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
                                     data = Uri.fromParts("package", context.packageName, null)
                                 }
@@ -268,38 +231,22 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
                             }
                         )
                     }
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.permission_notifications)) },
-                        supportingContent = { Text(stringResource(R.string.permission_notifications_desc)) },
-                        leadingContent = { Icon(Icons.Default.Notifications, null, tint = MaterialTheme.colorScheme.primary) },
-                        trailingContent = {
-                            Switch(
-                                checked = isNotificationEnabled,
-                                onCheckedChange = {
-                                    context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-                                }
-                            )
-                        },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        modifier = Modifier.clickable {
+                    SettingSwitchItem(
+                        icon = Icons.Default.Notifications,
+                        title = stringResource(R.string.permission_notifications),
+                        supportingText = stringResource(R.string.permission_notifications_desc),
+                        checked = isNotificationEnabled,
+                        onCheckedChange = {
                             context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
                         }
                     )
                     if (actionMode == ActionMode.ACCESSIBILITY) {
-                        ListItem(
-                            headlineContent = { Text(stringResource(R.string.permission_accessibility)) },
-                            supportingContent = { Text(stringResource(R.string.permission_accessibility_desc)) },
-                            leadingContent = { Icon(Icons.Default.Accessibility, null, tint = MaterialTheme.colorScheme.primary) },
-                            trailingContent = {
-                                Switch(
-                                    checked = isServiceActive,
-                                    onCheckedChange = {
-                                        context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                                    }
-                                )
-                            },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                            modifier = Modifier.clickable {
+                        SettingSwitchItem(
+                            icon = Icons.Default.Accessibility,
+                            title = stringResource(R.string.permission_accessibility),
+                            supportingText = stringResource(R.string.permission_accessibility_desc),
+                            checked = isServiceActive,
+                            onCheckedChange = {
                                 context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                             }
                         )
@@ -675,6 +622,19 @@ fun AdvancedSettingsScreen(onBack: () -> Unit) {
     ) { innerPadding ->
         LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
             item {
+                val isMaterialYouEnabled by viewModel.isMaterialYouEnabled.collectAsState()
+                SettingsSection(title = stringResource(R.string.experimental_features)) {
+                    SettingSwitchItem(
+                        icon = Icons.Default.Palette,
+                        title = stringResource(R.string.material_you_title),
+                        supportingText = stringResource(R.string.material_you_desc),
+                        checked = isMaterialYouEnabled,
+                        onCheckedChange = { viewModel.setMaterialYouEnabled(it) }
+                    )
+                }
+            }
+
+            item {
                 PaddingRemaining(16.dp) {
                     Text(
                         stringResource(R.string.icon_size_title),
@@ -954,13 +914,13 @@ fun PwaMakerScreen(onBack: () -> Unit) {
 
             item {
                 val useVNavi by viewModel.useVNaviForPwa.collectAsState()
-                SettingsItem(
-                    headline = stringResource(R.string.vnavi_use_vnavi_headline),
-                    supporting = stringResource(R.string.vnavi_use_vnavi_supporting),
+                SettingSwitchItem(
+                    title = stringResource(R.string.vnavi_use_vnavi_headline),
+                    supportingText = stringResource(R.string.vnavi_use_vnavi_supporting),
                     icon = Icons.Default.Web,
-                    iconColor = MaterialTheme.colorScheme.primary,
-                    onClick = {
-                        val next = !useVNavi
+                    checked = useVNavi,
+                    onCheckedChange = {
+                        val next = it
                         viewModel.setUseVNaviForPwa(next)
                         if (next) {
                             val vNaviPackage = "com.liferlighdow.vnavi"
@@ -970,9 +930,6 @@ fun PwaMakerScreen(onBack: () -> Unit) {
                                 viewModel._showVNaviInstallDialog.value = true
                             }
                         }
-                    },
-                    trailing = {
-                        Switch(checked = useVNavi, onCheckedChange = null)
                     }
                 )
             }
@@ -1035,13 +992,13 @@ fun PwaManageScreen(onBack: () -> Unit, onNavigateToPwaMaker: () -> Unit) {
             item {
                 val useVNavi by viewModel.useVNaviForPwa.collectAsState()
                 SettingsGroup {
-                    SettingsItem(
-                        headline = stringResource(R.string.vnavi_use_vnavi_headline),
-                        supporting = stringResource(R.string.vnavi_use_vnavi_supporting),
+                    SettingSwitchItem(
+                        title = stringResource(R.string.vnavi_use_vnavi_headline),
+                        supportingText = stringResource(R.string.vnavi_use_vnavi_supporting),
                         icon = Icons.Default.Web,
-                        iconColor = MaterialTheme.colorScheme.primary,
-                        onClick = {
-                            val next = !useVNavi
+                        checked = useVNavi,
+                        onCheckedChange = {
+                            val next = it
                             viewModel.setUseVNaviForPwa(next)
                             if (next) {
                                 val vNaviPackage = "com.liferlighdow.vnavi"
@@ -1051,9 +1008,6 @@ fun PwaManageScreen(onBack: () -> Unit, onNavigateToPwaMaker: () -> Unit) {
                                     viewModel._showVNaviInstallDialog.value = true
                                 }
                             }
-                        },
-                        trailing = {
-                            Switch(checked = useVNavi, onCheckedChange = null)
                         }
                     )
                 }
@@ -1903,10 +1857,11 @@ fun WorkshopComponentDetailEditor(
             }
             item {
                 Text("Type", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
-                    Text("Circular Style", modifier = Modifier.weight(1f))
-                    Switch(checked = component.isCircular, onCheckedChange = { onUpdate(component.copy(isCircular = it)) })
-                }
+                SettingSwitchItem(
+                    title = "Circular Style",
+                    checked = component.isCircular,
+                    onCheckedChange = { onUpdate(component.copy(isCircular = it)) }
+                )
             }
             item {
                 Text("Dimensions", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)

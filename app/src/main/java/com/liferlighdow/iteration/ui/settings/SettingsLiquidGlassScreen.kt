@@ -148,84 +148,44 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
                 }
 
                 item {
-                    Text(
-                        text = stringResource(R.string.visual_effects),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    SettingCategoryHeader(stringResource(R.string.visual_effects))
+                }
+
+                item {
+                    SettingSliderItem(
+                        label = stringResource(R.string.blur_radius_label, (blurRadius * 5).toInt()),
+                        value = (blurRadius * 5).coerceIn(0f, 100f),
+                        onValueChange = { viewModel.setLiquidGlassBlur(it / 5f) },
+                        onIncrement = { viewModel.setLiquidGlassBlur(((blurRadius * 5 + 1f).coerceAtMost(100f)) / 5f) },
+                        onDecrement = { viewModel.setLiquidGlassBlur(((blurRadius * 5 - 1f).coerceAtLeast(0f)) / 5f) }
                     )
                 }
 
                 item {
-                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                        Text(stringResource(R.string.blur_radius_label, (blurRadius * 5).toInt()))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = { viewModel.setLiquidGlassBlur(((blurRadius * 5 - 1f).coerceAtLeast(0f)) / 5f) }) {
-                                Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.decrease))
-                            }
-                            Slider(
-                                value = (blurRadius * 5).coerceIn(0f, 100f),
-                                onValueChange = { viewModel.setLiquidGlassBlur(it / 5f) },
-                                valueRange = 0f..100f,
-                                modifier = Modifier.weight(1f)
-                            )
-                            IconButton(onClick = { viewModel.setLiquidGlassBlur(((blurRadius * 5 + 1f).coerceAtMost(100f)) / 5f) }) {
-                                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.increase))
-                            }
-                        }
-                    }
+                    SettingSliderItem(
+                        label = stringResource(R.string.refraction_height_label, refractionHeight.toInt()),
+                        value = refractionHeight,
+                        onValueChange = { viewModel.setLiquidGlassRefractionHeight(it) },
+                        onIncrement = { viewModel.setLiquidGlassRefractionHeight((refractionHeight + 1f).coerceAtMost(100f)) },
+                        onDecrement = { viewModel.setLiquidGlassRefractionHeight((refractionHeight - 1f).coerceAtLeast(0f)) }
+                    )
                 }
 
                 item {
-                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                        Text(stringResource(R.string.refraction_height_label, refractionHeight.toInt()))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = { viewModel.setLiquidGlassRefractionHeight((refractionHeight - 1f).coerceAtLeast(0f)) }) {
-                                Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.decrease))
-                            }
-                            Slider(
-                                value = refractionHeight,
-                                onValueChange = { viewModel.setLiquidGlassRefractionHeight(it) },
-                                valueRange = 0f..100f,
-                                modifier = Modifier.weight(1f)
-                            )
-                            IconButton(onClick = { viewModel.setLiquidGlassRefractionHeight((refractionHeight + 1f).coerceAtMost(100f)) }) {
-                                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.increase))
-                            }
-                        }
-                    }
+                    SettingSliderItem(
+                        label = stringResource(R.string.refraction_amount_label, refractionAmount.toInt()),
+                        value = refractionAmount,
+                        onValueChange = { viewModel.setLiquidGlassRefractionAmount(it) },
+                        onIncrement = { viewModel.setLiquidGlassRefractionAmount((refractionAmount + 1f).coerceAtMost(100f)) },
+                        onDecrement = { viewModel.setLiquidGlassRefractionAmount((refractionAmount - 1f).coerceAtLeast(0f)) }
+                    )
                 }
 
                 item {
-                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                        Text(stringResource(R.string.refraction_amount_label, refractionAmount.toInt()))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = { viewModel.setLiquidGlassRefractionAmount((refractionAmount - 1f).coerceAtLeast(0f)) }) {
-                                Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.decrease))
-                            }
-                            Slider(
-                                value = refractionAmount,
-                                onValueChange = { viewModel.setLiquidGlassRefractionAmount(it) },
-                                valueRange = 0f..100f,
-                                modifier = Modifier.weight(1f)
-                            )
-                            IconButton(onClick = { viewModel.setLiquidGlassRefractionAmount((refractionAmount + 1f).coerceAtMost(100f)) }) {
-                                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.increase))
-                            }
-                        }
-                    }
-                }
-
-                item {
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.chromatic_aberration)) },
-                        trailingContent = {
-                            Switch(
-                                checked = chromaticAberration,
-                                onCheckedChange = { viewModel.setLiquidGlassChromaticAberration(it) }
-                            )
-                        },
-                        modifier = Modifier.clickable { viewModel.setLiquidGlassChromaticAberration(!chromaticAberration) }
+                    SettingSwitchItem(
+                        title = stringResource(R.string.chromatic_aberration),
+                        checked = chromaticAberration,
+                        onCheckedChange = { viewModel.setLiquidGlassChromaticAberration(it) }
                     )
                 }
 
@@ -255,161 +215,96 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
             }
 
             item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.enable_liquid_glass_title)) },
-                    supportingContent = { Text(stringResource(R.string.enable_liquid_glass_desc)) },
-                    trailingContent = {
-                        Switch(
-                            checked = isLiquidGlassEnabled,
-                            onCheckedChange = { viewModel.setLiquidGlassEnabled(it) }
-                        )
-                    },
-                    modifier = Modifier.clickable { viewModel.setLiquidGlassEnabled(!isLiquidGlassEnabled) }
+                SettingSwitchItem(
+                    title = stringResource(R.string.enable_liquid_glass_title),
+                    supportingText = stringResource(R.string.enable_liquid_glass_desc),
+                    checked = isLiquidGlassEnabled,
+                    onCheckedChange = { viewModel.setLiquidGlassEnabled(it) }
                 )
             }
 
             if (isLiquidGlassEnabled) {
                 item {
-                    Text(
-                        text = stringResource(R.string.apply_to),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    SettingCategoryHeader(stringResource(R.string.apply_to))
+                }
+                item {
+                    SettingSwitchItem(
+                        title = stringResource(R.string.glass_dock),
+                        supportingText = stringResource(R.string.glass_dock_desc),
+                        checked = isLiquidGlassDockEnabled,
+                        onCheckedChange = { viewModel.setLiquidGlassDockEnabled(it) }
                     )
                 }
                 item {
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.glass_dock)) },
-                        supportingContent = { Text(stringResource(R.string.glass_dock_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = isLiquidGlassDockEnabled,
-                                onCheckedChange = { viewModel.setLiquidGlassDockEnabled(it) }
-                            )
-                        },
-                        modifier = Modifier.clickable { viewModel.setLiquidGlassDockEnabled(!isLiquidGlassDockEnabled) }
+                    SettingSwitchItem(
+                        title = stringResource(R.string.glass_folders_home),
+                        supportingText = stringResource(R.string.glass_folders_home_desc),
+                        checked = isLiquidGlassHomeFolderEnabled,
+                        onCheckedChange = { viewModel.setLiquidGlassHomeFolderEnabled(it) }
                     )
                 }
                 item {
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.glass_folders_home)) },
-                        supportingContent = { Text(stringResource(R.string.glass_folders_home_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = isLiquidGlassHomeFolderEnabled,
-                                onCheckedChange = { viewModel.setLiquidGlassHomeFolderEnabled(it) }
-                            )
-                        },
-                        modifier = Modifier.clickable { viewModel.setLiquidGlassHomeFolderEnabled(!isLiquidGlassHomeFolderEnabled) }
+                    SettingSwitchItem(
+                        title = stringResource(R.string.glass_search_global),
+                        supportingText = stringResource(R.string.glass_search_global_desc),
+                        checked = isLiquidGlassGlobalSearchEnabled,
+                        onCheckedChange = { viewModel.setLiquidGlassGlobalSearchEnabled(it) }
                     )
                 }
                 item {
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.glass_search_global)) },
-                        supportingContent = { Text(stringResource(R.string.glass_search_global_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = isLiquidGlassGlobalSearchEnabled,
-                                onCheckedChange = { viewModel.setLiquidGlassGlobalSearchEnabled(it) }
-                            )
-                        },
-                        modifier = Modifier.clickable { viewModel.setLiquidGlassGlobalSearchEnabled(!isLiquidGlassGlobalSearchEnabled) }
-                    )
-                }
-                item {
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.glass_widgets)) },
-                        supportingContent = { Text(stringResource(R.string.glass_widgets_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = isLiquidGlassWidgetsEnabled,
-                                onCheckedChange = { viewModel.setLiquidGlassWidgetsEnabled(it) }
-                            )
-                        },
-                        modifier = Modifier.clickable { viewModel.setLiquidGlassWidgetsEnabled(!isLiquidGlassWidgetsEnabled) }
+                    SettingSwitchItem(
+                        title = stringResource(R.string.glass_widgets),
+                        supportingText = stringResource(R.string.glass_widgets_desc),
+                        checked = isLiquidGlassWidgetsEnabled,
+                        onCheckedChange = { viewModel.setLiquidGlassWidgetsEnabled(it) }
                     )
                 }
 
                 item {
-                    Text(
-                        text = stringResource(R.string.minus_one_title),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    SettingCategoryHeader(stringResource(R.string.minus_one_title))
+                }
+                item {
+                    SettingSwitchItem(
+                        title = stringResource(R.string.glass_minus_one_widget),
+                        supportingText = stringResource(R.string.glass_minus_one_widget_desc),
+                        checked = isLiquidGlassMinusOneWidgetEnabled,
+                        onCheckedChange = { viewModel.setLiquidGlassMinusOneWidgetEnabled(it) }
                     )
                 }
                 item {
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.glass_minus_one_widget)) },
-                        supportingContent = { Text(stringResource(R.string.glass_minus_one_widget_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = isLiquidGlassMinusOneWidgetEnabled,
-                                onCheckedChange = { viewModel.setLiquidGlassMinusOneWidgetEnabled(it) }
-                            )
-                        },
-                        modifier = Modifier.clickable { viewModel.setLiquidGlassMinusOneWidgetEnabled(!isLiquidGlassMinusOneWidgetEnabled) }
+                    SettingSwitchItem(
+                        title = stringResource(R.string.glass_minus_one_search),
+                        supportingText = stringResource(R.string.glass_minus_one_search_desc),
+                        checked = isLiquidGlassMinusOneSearchEnabled,
+                        onCheckedChange = { viewModel.setLiquidGlassMinusOneSearchEnabled(it) }
                     )
                 }
                 item {
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.glass_minus_one_search)) },
-                        supportingContent = { Text(stringResource(R.string.glass_minus_one_search_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = isLiquidGlassMinusOneSearchEnabled,
-                                onCheckedChange = { viewModel.setLiquidGlassMinusOneSearchEnabled(it) }
-                            )
-                        },
-                        modifier = Modifier.clickable { viewModel.setLiquidGlassMinusOneSearchEnabled(!isLiquidGlassMinusOneSearchEnabled) }
-                    )
-                }
-                item {
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.glass_minus_one_button)) },
-                        supportingContent = { Text(stringResource(R.string.glass_minus_one_button_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = isLiquidGlassMinusOneButtonEnabled,
-                                onCheckedChange = { viewModel.setLiquidGlassMinusOneButtonEnabled(it) }
-                            )
-                        },
-                        modifier = Modifier.clickable { viewModel.setLiquidGlassMinusOneButtonEnabled(!isLiquidGlassMinusOneButtonEnabled) }
+                    SettingSwitchItem(
+                        title = stringResource(R.string.glass_minus_one_button),
+                        supportingText = stringResource(R.string.glass_minus_one_button_desc),
+                        checked = isLiquidGlassMinusOneButtonEnabled,
+                        onCheckedChange = { viewModel.setLiquidGlassMinusOneButtonEnabled(it) }
                     )
                 }
 
                 item {
-                    Text(
-                        text = stringResource(R.string.app_library),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    SettingCategoryHeader(stringResource(R.string.app_library))
+                }
+                item {
+                    SettingSwitchItem(
+                        title = stringResource(R.string.glass_folders_library),
+                        supportingText = stringResource(R.string.glass_folders_library_desc),
+                        checked = isLiquidGlassAppLibraryFolderEnabled,
+                        onCheckedChange = { viewModel.setLiquidGlassAppLibraryFolderEnabled(it) }
                     )
                 }
                 item {
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.glass_folders_library)) },
-                        supportingContent = { Text(stringResource(R.string.glass_folders_library_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = isLiquidGlassAppLibraryFolderEnabled,
-                                onCheckedChange = { viewModel.setLiquidGlassAppLibraryFolderEnabled(it) }
-                            )
-                        },
-                        modifier = Modifier.clickable { viewModel.setLiquidGlassAppLibraryFolderEnabled(!isLiquidGlassAppLibraryFolderEnabled) }
-                    )
-                }
-                item {
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.glass_search_library)) },
-                        supportingContent = { Text(stringResource(R.string.glass_search_library_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = isLiquidGlassAppLibrarySearchEnabled,
-                                onCheckedChange = { viewModel.setLiquidGlassAppLibrarySearchEnabled(it) }
-                            )
-                        },
-                        modifier = Modifier.clickable { viewModel.setLiquidGlassAppLibrarySearchEnabled(!isLiquidGlassAppLibrarySearchEnabled) }
+                    SettingSwitchItem(
+                        title = stringResource(R.string.glass_search_library),
+                        supportingText = stringResource(R.string.glass_search_library_desc),
+                        checked = isLiquidGlassAppLibrarySearchEnabled,
+                        onCheckedChange = { viewModel.setLiquidGlassAppLibrarySearchEnabled(it) }
                     )
                 }
             }

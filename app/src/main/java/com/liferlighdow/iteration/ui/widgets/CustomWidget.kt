@@ -53,6 +53,7 @@ fun CustomWidget(
     backdrop: Backdrop? = null,
     isMinusOnePage: Boolean = false,
     onLongClick: (() -> Unit)? = null, // 新增：傳遞給子組件
+    drawFrame: Boolean = true,
     workshopComponentModifier: ((CustomComponent) -> Modifier)? = null
 ) {
     val type = widget.type as? WidgetType.Custom ?: return
@@ -68,38 +69,19 @@ fun CustomWidget(
         }
     }
 
-    val isLiquidGlassEnabled by viewModel.isLiquidGlassEnabled.collectAsState()
-    val isLiquidWidgetsEnabled by (if (isMinusOnePage) viewModel.isLiquidGlassMinusOneWidgetEnabled else viewModel.isLiquidGlassWidgetsEnabled).collectAsState()
-    val blurRadius by viewModel.liquidGlassBlur.collectAsState()
-    val refractionHeight by viewModel.liquidGlassRefractionHeight.collectAsState()
-    val refractionAmount by viewModel.liquidGlassRefractionAmount.collectAsState()
-    val chromaticAberration by viewModel.liquidGlassChromaticAberration.collectAsState()
-
     val displayMode = widget.displayMode
-    val useLiquid = displayMode == WidgetDisplayMode.GLASS && isLiquidGlassEnabled && isLiquidWidgetsEnabled && backdrop != null
-
-    val containerColor = when (displayMode) {
-        WidgetDisplayMode.GLASS -> glassFallbackColor(0.2f)
-        WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.surfaceVariant
-    }
+    val containerColor = if (displayMode == WidgetDisplayMode.GLASS) null else MaterialTheme.colorScheme.surfaceVariant
 
     val aspectRatio = if (type.size == "4x2") 2f else 1f
 
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .aspectRatio(aspectRatio)
-            .then(if (useLiquid) Modifier.liquidGlass(
-                enabled = true,
-                backdrop = backdrop,
-                cornerRadius = 24.dp,
-                blurRadius = blurRadius,
-                refractionHeight = refractionHeight,
-                refractionAmount = refractionAmount,
-                chromaticAberration = chromaticAberration
-            ) else Modifier),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = if (useLiquid) Color.Transparent else containerColor)
+    WidgetContainer(
+        displayMode = displayMode,
+        modifier = modifier,
+        aspectRatio = aspectRatio,
+        containerColor = containerColor,
+        backdrop = backdrop,
+        isMinusOnePage = isMinusOnePage,
+        drawFrame = drawFrame
     ) {
         Box(
             modifier = Modifier

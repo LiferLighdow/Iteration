@@ -146,7 +146,11 @@ fun SettingsMainScreen(
                         modifier = Modifier.padding(start = 8.dp)
                     )
                 }
-                SearchBar(searchQuery, stringResource(R.string.search_settings_hint)) { searchQuery = it }
+                IterationSearchBar(
+                query = searchQuery,
+                placeholder = stringResource(R.string.search_settings_hint),
+                onQueryChange = { searchQuery = it }
+            )
             }
         }
     ) { innerPadding ->
@@ -216,7 +220,7 @@ fun SettingsMainScreen(
                             headline = stringResource(R.string.settings_icon_theme),
                             supporting = stringResource(R.string.settings_icon_theme_desc),
                             icon = Icons.Default.Palette,
-                            iconColor = Color(0xFF4285F4),
+                            iconColor = MaterialTheme.colorScheme.primary,
                             onClick = onNavigateToIconTheme
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
@@ -422,7 +426,7 @@ fun SettingsMainScreen(
                             headline = stringResource(R.string.settings_import),
                             supporting = stringResource(R.string.import_from_backup),
                             icon = Icons.Default.Restore,
-                            iconColor = Color(0xFF03A9F4),
+                            iconColor = MaterialTheme.colorScheme.primary,
                             onClick = { importLauncher.launch("application/json") }
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))

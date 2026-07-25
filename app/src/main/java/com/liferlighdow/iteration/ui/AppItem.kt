@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyant.backdrop.Backdrop
+import com.liferlighdow.iteration.ui.components.getAppIconShape
 import com.liferlighdow.iteration.utils.IconShape
 import com.liferlighdow.iteration.viewmodel.MainViewModel
 import com.liferlighdow.iteration.service.NotificationService
@@ -96,7 +97,7 @@ fun AppItem(
     // 改由外部 Provider 傳入具體數字，避免集體重組
     val count = notificationCountProvider?.invoke() ?: 0
 
-    val currentShape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(iconSize * 0.238f)
+    val currentShape = getAppIconShape(iconShape, iconSize)
 
     val colorFilter = remember(app.isFrozen) {
         if (app.isFrozen) {
@@ -386,7 +387,7 @@ fun FolderPreviewIcon(
     val viewModel: MainViewModel = viewModel()
     val iconSignal by viewModel.iconUpdateSignal.collectAsState()
     
-    val currentShape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(size * 0.238f)
+    val currentShape = getAppIconShape(iconShape, size)
     val appIcon = app?.let { if (!it.isFolder) {
         remember(it.uniqueId, iconSignal) { viewModel.getIcon(it.uniqueId) } ?: getIcon(it.uniqueId)
     } else null }

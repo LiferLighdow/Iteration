@@ -55,11 +55,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.kyant.backdrop.Backdrop
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.liferlighdow.iteration.ui.components.GlassBox
 import com.liferlighdow.iteration.utils.IconShape
 import com.liferlighdow.iteration.viewmodel.MainViewModel
 import com.liferlighdow.iteration.viewmodel.*
 import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.SettingsActivity
+import com.liferlighdow.iteration.ui.settings.IterationSearchBar
 import com.liferlighdow.iteration.utils.CommandProcessor
 import com.liferlighdow.iteration.utils.CommandResult
 import org.json.JSONArray
@@ -270,42 +272,15 @@ fun GlobalSearchOverlay(
                 .statusBarsPadding()
         ) {
             Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
-                OutlinedTextField(
-                    value = query, onValueChange = { 
-                        query = it 
-                    },
+                IterationSearchBar(
+                    query = query,
+                    onQueryChange = { query = it },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 20.dp)
-                        .graphicsLayer { translationY = (effectiveProgress - 1f) * 50f }
-                        .liquidGlass(
-                            enabled = isLiquidGlassEnabled && isLiquidGlassGlobalSearchEnabled,
-                            backdrop = backdrop,
-                            cornerRadius = 28.dp,
-                            blurRadius = blurRadius,
-                            refractionHeight = refractionHeight,
-                            refractionAmount = refractionAmount,
-                            chromaticAberration = chromaticAberration
-                        ),
-                    placeholder = { Text(stringResource(R.string.search_hint), color = Color.White.copy(alpha = 0.6f)) },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.White) },
-                    trailingIcon = {
-                        if (query.isNotEmpty()) {
-                            IconButton(onClick = { query = "" }) {
-                                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.clear), tint = Color.White)
-                            }
-                        }
-                    },
-                    shape = RoundedCornerShape(28.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedContainerColor = glassFallbackColor(0.2f),
-                        unfocusedContainerColor = glassFallbackColor(0.2f),
-                        focusedBorderColor = Color.White.copy(alpha = 0.5f),
-                        unfocusedBorderColor = Color.Transparent
-                    ),
-                    singleLine = true
+                        .graphicsLayer { translationY = (effectiveProgress - 1f) * 50f },
+                    isGlass = true,
+                    backdrop = backdrop
                 )
 
                 val filteredResults = remember(query, allApps) {
@@ -694,7 +669,7 @@ fun GlobalSearchOverlay(
                                 border = BorderStroke(1.dp, glassFallbackColor(0.1f))
                             ) {
                                 Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Box(modifier = Modifier.size(48.dp).background(Color(0xFF2196F3).copy(alpha = 0.2f), CircleShape), contentAlignment = Alignment.Center) {
+                                    Box(modifier = Modifier.size(48.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f), CircleShape), contentAlignment = Alignment.Center) {
                                         Icon(Icons.Default.Translate, null, tint = Color.White)
                                     }
                                     Spacer(modifier = Modifier.width(16.dp))

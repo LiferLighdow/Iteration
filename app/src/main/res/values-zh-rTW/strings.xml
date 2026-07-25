@@ -122,7 +122,9 @@
     <!-- 設定子頁面 -->
     <string name="security_section">安全性</string>
     <string name="password_label">隱藏應用程式密碼</string>
+    <string name="password_description">設定密碼以保護隱藏的應用程式</string>
     <string name="hide_apps_instruction">選擇要隱藏的應用程式</string>
+    <string name="no_apps_found">找不到相符的應用程式</string>
     <string name="custom_categories">自訂類別</string>
     <string name="assign_categories">將應用程式分配至類別</string>
     <string name="add_category_title">新增類別</string>
@@ -634,4 +636,7 @@
     <string name="builtin_contacts">聯絡人</string>
     <string name="builtin_camera">相機</string>
     <string name="builtin_settings">設定</string>
+    <string name="experimental_features">實驗性功能</string>
+    <string name="material_you_title">使用 Material You (測試中)</string>
+    <string name="material_you_desc">從您目前的桌布擷取主要顏色，並套用到 UI 文字與元素上。</string>
 </resources>

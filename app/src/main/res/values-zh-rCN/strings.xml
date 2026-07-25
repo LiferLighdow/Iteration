@@ -116,7 +116,9 @@
     <!-- 设置子页面 -->
     <string name="security_section">安全性</string>
     <string name="password_label">隐藏应用密码</string>
+    <string name="password_description">设置密码以保护隐藏的应用</string>
     <string name="hide_apps_instruction">选择要隐藏的应用</string>
+    <string name="no_apps_found">找不到相符的应用</string>
     <string name="custom_categories">自定义类别</string>
     <string name="assign_categories">将应用分配至类别</string>
     <string name="add_category_title">添加类别</string>

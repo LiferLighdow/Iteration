@@ -23,6 +23,9 @@ import com.liferlighdow.iteration.data.WidgetType
 import com.liferlighdow.iteration.ui.glassFallbackColor
 import com.liferlighdow.iteration.viewmodel.MainViewModel
 
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlin.math.absoluteValue
+
 @Composable
 fun StackWidget(
     widget: WidgetModel,
@@ -31,18 +34,31 @@ fun StackWidget(
     backdrop: Backdrop? = null,
     isMinusOnePage: Boolean = false
 ) {
-    val isWide = (widget.type as? WidgetType.Stack)?.isWide ?: false
-    val stackItems = (widget.type as? WidgetType.Stack)?.children ?: emptyList()
-    val pagerState = rememberPagerState { stackItems.size.coerceAtLeast(1) }
+    val stackType = widget.type as? WidgetType.Stack
+    val isWide = stackType?.isWide ?: false
+    val isCyclic = stackType?.isCyclic ?: false
+    val stackItems = stackType?.children ?: emptyList()
+    
+    // 循環滾動邏輯：如果開啟循環，則給予一個極大的初始頁數
+    val initialPage = if (isCyclic && stackItems.size > 1) 500 * stackItems.size else 0
+    val pagerState = rememberPagerState(initialPage = initialPage) { 
+        if (isCyclic && stackItems.size > 1) 1000 * stackItems.size else stackItems.size.coerceAtLeast(1) 
+    }
 
-    Card(
-        modifier = modifier.aspectRatio(if (isWide) 2.0f else 1f),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = glassFallbackColor(0.1f))
+    val stackAspectRatio = if (isWide) 2.0f else 1f
+
+    Box(
+        modifier = modifier.aspectRatio(stackAspectRatio)
     ) {
         if (stackItems.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(stringResource(R.string.empty_stack_hint), color = Color.White.copy(alpha = 0.6f), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelSmall)
+            Card(
+                modifier = Modifier.fillMaxSize(),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = glassFallbackColor(0.1f))
+            ) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(stringResource(R.string.empty_stack_hint), color = Color.White.copy(alpha = 0.6f), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelSmall)
+                }
             }
         } else {
             Box(modifier = Modifier.fillMaxSize()) {
@@ -50,26 +66,47 @@ fun StackWidget(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize()
                 ) { page ->
-                    val item = stackItems[page]
-                    Box(modifier = Modifier.fillMaxSize()) {
+                    // 取得循環後的索引
+                    val actualIndex = if (isCyclic) page % stackItems.size else page
+                    val item = stackItems[actualIndex]
+                    
+                    // 計算縮放動畫
+                    val pageOffset = (
+                        (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
+                    ).absoluteValue
+                    
+                    // 縮小效果：從 1.0 縮小到 0.85
+                    val scale = 1f - (pageOffset * 0.15f).coerceIn(0f, 0.15f)
+                    val alpha = 1f - (pageOffset * 0.5f).coerceIn(0f, 0.5f)
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                scaleX = scale
+                                scaleY = scale
+                                this.alpha = alpha
+                            }
+                    ) {
                         when (val type = item.type) {
-                            is WidgetType.Battery -> BatteryWidget(displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage)
+                            is WidgetType.Battery -> BatteryWidget(displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage, drawFrame = true)
                             is WidgetType.Clock -> {
                                 if (type.isDigital) {
-                                    DigitalClockWidget(displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage)
+                                    DigitalClockWidget(displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage, drawFrame = true)
                                 } else {
-                                    AnalogClockWidget(displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage)
+                                    AnalogClockWidget(displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage, drawFrame = true)
                                 }
                             }
-                            is WidgetType.Calendar -> CalendarWidget(widget = item, displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage)
-                            is WidgetType.Photo -> PhotoWidget(widget = item, viewModel = viewModel, modifier = Modifier.fillMaxSize())
-                            is WidgetType.Music -> MusicWidget(widget = item, displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage)
-                            is WidgetType.Note -> NoteWidget(widget = item, displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage)
-                            is WidgetType.ToDoList -> TodoWidget(widget = item, displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage)
-                            is WidgetType.Weather -> WeatherWidget(displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage)
-                            is WidgetType.RSS -> RSSWidget(widget = item, displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage)
-                            is WidgetType.InfoHub -> InfoHubWidget(displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage)
-                            is WidgetType.InfoHub2 -> InfoHub2Widget(displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage)
+                            is WidgetType.Calendar -> CalendarWidget(widget = item, displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage, drawFrame = true)
+                            is WidgetType.Photo -> PhotoWidget(widget = item, viewModel = viewModel, modifier = Modifier.fillMaxSize(), drawFrame = true)
+                            is WidgetType.Music -> MusicWidget(widget = item, displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage, drawFrame = true)
+                            is WidgetType.Note -> NoteWidget(widget = item, displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage, drawFrame = true)
+                            is WidgetType.ToDoList -> TodoWidget(widget = item, displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage, drawFrame = true)
+                            is WidgetType.Weather -> WeatherWidget(displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage, drawFrame = true)
+                            is WidgetType.RSS -> RSSWidget(widget = item, displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage, drawFrame = true)
+                            is WidgetType.InfoHub -> InfoHubWidget(displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage, drawFrame = true)
+                            is WidgetType.InfoHub2 -> InfoHub2Widget(displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage, drawFrame = true)
+                            is WidgetType.Custom -> CustomWidget(widget = item, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage, drawFrame = true)
                             else -> {}
                         }
                     }
@@ -85,7 +122,7 @@ fun StackWidget(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         repeat(stackItems.size) { iteration ->
-                            val isSelected = pagerState.currentPage == iteration
+                            val isSelected = (pagerState.currentPage % stackItems.size) == iteration
                             val size by animateDpAsState(
                                 targetValue = if (isSelected) 6.dp else 4.dp,
                                 label = "dotSize"

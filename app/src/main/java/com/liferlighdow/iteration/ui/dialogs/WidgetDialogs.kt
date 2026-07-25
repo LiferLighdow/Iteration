@@ -62,15 +62,17 @@ import kotlin.math.roundToInt
 fun WidgetStackPickerDialog(
     currentChildren: List<WidgetModel>,
     isWide: Boolean,
+    isCyclic: Boolean,
     viewModel: MainViewModel,
     onDismiss: () -> Unit,
-    onConfirm: (List<WidgetModel>) -> Unit
+    onConfirm: (List<WidgetModel>, Boolean) -> Unit
 ) {
     var children by remember { mutableStateOf(currentChildren) }
+    var cyclicMode by remember { mutableStateOf(isCyclic) }
     val mContext = LocalContext.current
     val isDesktopLocked by viewModel.isDesktopLocked.collectAsState()
 
-    // 用於處理照片選擇的狀態
+    // ... (rest of launchers)
     var photoTargetId by remember { mutableStateOf<String?>(null) }
     var cropUri by remember { mutableStateOf<Uri?>(null) }
     val photoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
@@ -88,7 +90,19 @@ fun WidgetStackPickerDialog(
             shape = RoundedCornerShape(28.dp)
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
-                Text(stringResource(R.string.menu_choose_widgets), style = MaterialTheme.typography.headlineSmall)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(stringResource(R.string.menu_choose_widgets), style = MaterialTheme.typography.headlineSmall)
+                    
+                    // 循環滾動開關
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { cyclicMode = !cyclicMode }) {
+                        Text("循環", style = MaterialTheme.typography.labelMedium, color = if (cyclicMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                        Checkbox(checked = cyclicMode, onCheckedChange = { cyclicMode = it })
+                    }
+                }
                 Spacer(modifier = Modifier.height(16.dp))
 
                 LazyColumn(modifier = Modifier.weight(1f)) {
@@ -291,7 +305,7 @@ fun WidgetStackPickerDialog(
                 Row(modifier = Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
                     Spacer(modifier = Modifier.width(8.dp))
-                    Button(onClick = { onConfirm(children); onDismiss() }) { Text(stringResource(R.string.done)) }
+                    Button(onClick = { onConfirm(children, cyclicMode); onDismiss() }) { Text(stringResource(R.string.done)) }
                 }
             }
         }

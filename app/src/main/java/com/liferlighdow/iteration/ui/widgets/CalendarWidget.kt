@@ -46,14 +46,15 @@ fun CalendarWidget(
     displayMode: WidgetDisplayMode,
     modifier: Modifier = Modifier,
     backdrop: Backdrop? = null,
-    isMinusOnePage: Boolean = false
+    isMinusOnePage: Boolean = false,
+    drawFrame: Boolean = true
 ) {
     val isWide = (widget.type as? WidgetType.Calendar)?.isWide ?: false
     
     if (isWide) {
-        WideCalendarWidget(displayMode, modifier, backdrop, isMinusOnePage)
+        WideCalendarWidget(displayMode, modifier, backdrop, isMinusOnePage, drawFrame)
     } else {
-        StandardCalendarWidget(displayMode, modifier, backdrop, isMinusOnePage)
+        StandardCalendarWidget(displayMode, modifier, backdrop, isMinusOnePage, drawFrame)
     }
 }
 
@@ -62,18 +63,9 @@ fun StandardCalendarWidget(
     displayMode: WidgetDisplayMode,
     modifier: Modifier = Modifier,
     backdrop: Backdrop? = null,
-    isMinusOnePage: Boolean = false
+    isMinusOnePage: Boolean = false,
+    drawFrame: Boolean = true
 ) {
-    val viewModel: MainViewModel = viewModel()
-    val isLiquidGlassEnabled by viewModel.isLiquidGlassEnabled.collectAsState()
-    val isLiquidWidgetsEnabled by (if (isMinusOnePage) viewModel.isLiquidGlassMinusOneWidgetEnabled else viewModel.isLiquidGlassWidgetsEnabled).collectAsState()
-    val blurRadius by viewModel.liquidGlassBlur.collectAsState()
-    val refractionHeight by viewModel.liquidGlassRefractionHeight.collectAsState()
-    val refractionAmount by viewModel.liquidGlassRefractionAmount.collectAsState()
-    val chromaticAberration by viewModel.liquidGlassChromaticAberration.collectAsState()
-
-    val useLiquid = displayMode == WidgetDisplayMode.GLASS && isLiquidGlassEnabled && isLiquidWidgetsEnabled && backdrop != null
-
     val calendar = Calendar.getInstance()
     val dayOfMonth = calendar.get(Calendar.DAY_OF_MONTH)
     val dayOfWeek = when (calendar.get(Calendar.DAY_OF_WEEK)) {
@@ -103,31 +95,20 @@ fun StandardCalendarWidget(
     }
 
     val isGlass = displayMode == WidgetDisplayMode.GLASS
-    val containerColor = when (displayMode) {
-        WidgetDisplayMode.GLASS -> glassFallbackColor(0.2f)
-        WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.tertiaryContainer
-    }
+    val containerColor = if (isGlass) null else MaterialTheme.colorScheme.tertiaryContainer
     val contentColor = when (displayMode) {
         WidgetDisplayMode.GLASS -> Color.White
         WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.onTertiaryContainer
     }
     val accentColor = if (displayMode == WidgetDisplayMode.COLOR) MaterialTheme.colorScheme.primary else Color.Red
 
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .aspectRatio(1f)
-            .then(if (useLiquid) Modifier.liquidGlass(
-                enabled = true,
-                backdrop = backdrop,
-                cornerRadius = 24.dp,
-                blurRadius = blurRadius,
-                refractionHeight = refractionHeight,
-                refractionAmount = refractionAmount,
-                chromaticAberration = chromaticAberration
-            ) else Modifier),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = if (useLiquid) Color.Transparent else containerColor)
+    WidgetContainer(
+        displayMode = displayMode,
+        modifier = modifier,
+        containerColor = containerColor,
+        backdrop = backdrop,
+        isMinusOnePage = isMinusOnePage,
+        drawFrame = drawFrame
     ) {
         Column(
             modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -160,18 +141,10 @@ fun WideCalendarWidget(
     displayMode: WidgetDisplayMode,
     modifier: Modifier = Modifier,
     backdrop: Backdrop? = null,
-    isMinusOnePage: Boolean = false
+    isMinusOnePage: Boolean = false,
+    drawFrame: Boolean = true
 ) {
     val viewModel: MainViewModel = viewModel()
-    val isLiquidGlassEnabled by viewModel.isLiquidGlassEnabled.collectAsState()
-    val isLiquidWidgetsEnabled by (if (isMinusOnePage) viewModel.isLiquidGlassMinusOneWidgetEnabled else viewModel.isLiquidGlassWidgetsEnabled).collectAsState()
-    val blurRadius by viewModel.liquidGlassBlur.collectAsState()
-    val refractionHeight by viewModel.liquidGlassRefractionHeight.collectAsState()
-    val refractionAmount by viewModel.liquidGlassRefractionAmount.collectAsState()
-    val chromaticAberration by viewModel.liquidGlassChromaticAberration.collectAsState()
-
-    val useLiquid = displayMode == WidgetDisplayMode.GLASS && isLiquidGlassEnabled && isLiquidWidgetsEnabled && backdrop != null
-
     val mContext = LocalContext.current
     val events = remember { mutableStateListOf<CalendarEvent>() }
 
@@ -192,10 +165,7 @@ fun WideCalendarWidget(
     }
 
     val isGlass = displayMode == WidgetDisplayMode.GLASS
-    val containerColor = when (displayMode) {
-        WidgetDisplayMode.GLASS -> glassFallbackColor(0.2f)
-        WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.tertiaryContainer
-    }
+    val containerColor = if (isGlass) null else MaterialTheme.colorScheme.tertiaryContainer
     val contentColor = when (displayMode) {
         WidgetDisplayMode.GLASS -> Color.White
         WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.onTertiaryContainer
@@ -261,21 +231,14 @@ fun WideCalendarWidget(
         }
     }
 
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .aspectRatio(2f)
-            .then(if (useLiquid) Modifier.liquidGlass(
-                enabled = true,
-                backdrop = backdrop,
-                cornerRadius = 24.dp,
-                blurRadius = blurRadius,
-                refractionHeight = refractionHeight,
-                refractionAmount = refractionAmount,
-                chromaticAberration = chromaticAberration
-            ) else Modifier),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = if (useLiquid) Color.Transparent else containerColor)
+    WidgetContainer(
+        displayMode = displayMode,
+        modifier = modifier,
+        aspectRatio = 2f,
+        containerColor = containerColor,
+        backdrop = backdrop,
+        isMinusOnePage = isMinusOnePage,
+        drawFrame = drawFrame
     ) {
         if (!hasPermission) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

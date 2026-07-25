@@ -58,6 +58,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     internal val _rawWallpaper = MutableStateFlow<ImageBitmap?>(null)
     val rawWallpaper = _rawWallpaper.asStateFlow()
 
+    internal val _seedColor = MutableStateFlow<Int?>(null)
+    val seedColor = _seedColor.asStateFlow()
+
     internal val _isLightWallpaper = MutableStateFlow(false)
     val isLightWallpaper = _isLightWallpaper.asStateFlow()
 
@@ -159,6 +162,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     internal val _isAmoledBlack = MutableStateFlow(prefs.getBoolean("amoled_black", false))
     val isAmoledBlack = _isAmoledBlack.asStateFlow()
 
+    internal val _isMaterialYouEnabled = MutableStateFlow(prefs.getBoolean("material_you_enabled", false))
+    val isMaterialYouEnabled = _isMaterialYouEnabled.asStateFlow()
+
     internal val _showStatusBar = MutableStateFlow(prefs.getBoolean("show_status_bar", true))
     val showStatusBar = _showStatusBar.asStateFlow()
 
@@ -233,19 +239,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val useVNaviForPwa = _useVNaviForPwa.asStateFlow()
 
     init {
+        // 初始桌布與顏色提取
+        updateBlurredWallpaper()
+
         // Initial setup for update check if interval is set
         if (_updateCheckInterval.value > 0) {
             setUpdateCheckInterval(_updateCheckInterval.value)
         }
 
-        // Apply saved language on startup
-        val savedLang = _appLanguage.value
-        if (savedLang.isNotEmpty()) {
-            try {
-                val appLocale = LocaleListCompat.forLanguageTags(savedLang)
-                AppCompatDelegate.setApplicationLocales(appLocale)
-            } catch (e: Exception) {
-                e.printStackTrace()
+        // Apply saved language on startup - move to non-blocking scope to avoid IllegalStateException in some contexts
+        viewModelScope.launch(Dispatchers.Main) {
+            val savedLang = _appLanguage.value
+            if (savedLang.isNotEmpty()) {
+                try {
+                    val appLocale = LocaleListCompat.forLanguageTags(savedLang)
+                    AppCompatDelegate.setApplicationLocales(appLocale)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
             }
         }
     }

@@ -2,7 +2,9 @@ package com.liferlighdow.iteration.viewmodel
 
 import android.app.WallpaperManager
 import android.graphics.Bitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.lifecycle.viewModelScope
+import com.liferlighdow.iteration.ui.DynamicColorGenerator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.FileOutputStream
@@ -31,6 +33,25 @@ internal fun MainViewModel.performWallpaperUpdate() {
         _rawWallpaper.value = result.raw
         _blurredWallpaper.value = result.blurred
         _isLightWallpaper.value = result.isLightWallpaper
+        
+        // 異步提取種子顏色
+        viewModelScope.launch(Dispatchers.Default) {
+            try {
+                val bitmap = result.raw.asAndroidBitmap()
+                val seed = DynamicColorGenerator.extractSeedColorFromBitmap(bitmap)
+                
+                // 如果提取到顏色則更新，否則如果目前為 null，則給予一個品牌藍色作為保險
+                if (seed != null) {
+                    _seedColor.value = seed
+                } else if (_seedColor.value == null) {
+                    _seedColor.value = 0xFF0061A4.toInt()
+                }
+            } catch (e: Exception) {
+                if (_seedColor.value == null) {
+                    _seedColor.value = 0xFF0061A4.toInt()
+                }
+            }
+        }
     }
 }
 

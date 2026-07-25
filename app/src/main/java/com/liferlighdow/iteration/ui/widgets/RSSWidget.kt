@@ -40,29 +40,18 @@ fun RSSWidget(
     displayMode: WidgetDisplayMode,
     modifier: Modifier = Modifier,
     backdrop: Backdrop? = null,
-    isMinusOnePage: Boolean = false
+    isMinusOnePage: Boolean = false,
+    drawFrame: Boolean = true
 ) {
-    val rssType = widget.widgetType as? WidgetType.RSS ?: return
+    val rssType = (widget.widgetType ?: widget.type) as? WidgetType.RSS ?: return
     val context = LocalContext.current
     var items by remember { mutableStateOf<List<RssItem>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    val viewModel: MainViewModel = viewModel()
-    val isLiquidGlassEnabled by viewModel.isLiquidGlassEnabled.collectAsState()
-    val isLiquidWidgetsEnabled by (if (isMinusOnePage) viewModel.isLiquidGlassMinusOneWidgetEnabled else viewModel.isLiquidGlassWidgetsEnabled).collectAsState()
-    val blurRadius by viewModel.liquidGlassBlur.collectAsState()
-    val refractionHeight by viewModel.liquidGlassRefractionHeight.collectAsState()
-    val refractionAmount by viewModel.liquidGlassRefractionAmount.collectAsState()
-    val chromaticAberration by viewModel.liquidGlassChromaticAberration.collectAsState()
-
-    val useLiquid = displayMode == WidgetDisplayMode.GLASS && isLiquidGlassEnabled && isLiquidWidgetsEnabled && backdrop != null
     val isGlass = displayMode == WidgetDisplayMode.GLASS
     
-    val containerColor = when (displayMode) {
-        WidgetDisplayMode.GLASS -> glassFallbackColor(0.2f)
-        WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.surfaceVariant
-    }
+    val containerColor = if (isGlass) null else MaterialTheme.colorScheme.surfaceVariant
     val contentColor = when (displayMode) {
         WidgetDisplayMode.GLASS -> Color.White
         WidgetDisplayMode.COLOR -> MaterialTheme.colorScheme.onSurfaceVariant
@@ -87,21 +76,14 @@ fun RSSWidget(
         }
     }
 
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .aspectRatio(if (rssType.isTall) 1f else 2f)
-            .then(if (useLiquid) Modifier.liquidGlass(
-                enabled = true,
-                backdrop = backdrop,
-                cornerRadius = 24.dp,
-                blurRadius = blurRadius,
-                refractionHeight = refractionHeight,
-                refractionAmount = refractionAmount,
-                chromaticAberration = chromaticAberration
-            ) else Modifier),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = if (useLiquid) Color.Transparent else containerColor)
+    WidgetContainer(
+        displayMode = displayMode,
+        modifier = modifier,
+        aspectRatio = if (rssType.isTall) 1f else 2f,
+        containerColor = containerColor,
+        backdrop = backdrop,
+        isMinusOnePage = isMinusOnePage,
+        drawFrame = drawFrame
     ) {
         Box(modifier = Modifier.fillMaxSize().padding(12.dp)) {
             if (rssType.url.isBlank()) {

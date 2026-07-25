@@ -21,7 +21,11 @@ sealed class WidgetType {
     @Serializable @SerialName("Note") data class Note(val text: String = "", val isWide: Boolean = false) : WidgetType()
     @Serializable @SerialName("Weather") data class Weather(val isWide: Boolean = true) : WidgetType()
     @Serializable @SerialName("ToDoList") data class ToDoList(val tasks: List<TodoTask> = emptyList(), val isWide: Boolean = true) : WidgetType()
-    @Serializable @SerialName("Stack") data class Stack(val children: List<WidgetModel> = emptyList(), val isWide: Boolean = false) : WidgetType()
+    @Serializable @SerialName("Stack") data class Stack(
+        val children: List<WidgetModel> = emptyList(), 
+        val isWide: Boolean = false,
+        val isCyclic: Boolean = false
+    ) : WidgetType()
     @Serializable @SerialName("RSS") data class RSS(val url: String = "", val isWide: Boolean = true, val isTall: Boolean = false) : WidgetType()
     @Serializable @SerialName("InfoHub") object InfoHub : WidgetType()
     @Serializable @SerialName("InfoHub2") object InfoHub2 : WidgetType()

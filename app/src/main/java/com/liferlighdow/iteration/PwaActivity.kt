@@ -29,6 +29,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.collectAsState
 import com.liferlighdow.iteration.ui.IterationTheme
 import java.io.File
 
@@ -79,7 +81,18 @@ class PwaActivity : ComponentActivity() {
                 filePathCallback = null
             }
 
-            IterationTheme {
+            val viewModel: com.liferlighdow.iteration.viewmodel.MainViewModel = viewModel()
+            val themeMode by viewModel.themeMode.collectAsState()
+            val isAmoledBlack by viewModel.isAmoledBlack.collectAsState()
+            val isMaterialYouEnabled by viewModel.isMaterialYouEnabled.collectAsState()
+            val seedColor by viewModel.seedColor.collectAsState()
+
+            IterationTheme(
+                themeMode = themeMode,
+                isAmoledBlack = isAmoledBlack,
+                isMaterialYouEnabled = isMaterialYouEnabled,
+                seedColor = seedColor
+            ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

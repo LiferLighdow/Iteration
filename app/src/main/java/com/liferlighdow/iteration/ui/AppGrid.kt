@@ -509,13 +509,15 @@ fun AppGrid(
     }
 
     if (stackToEdit != null) {
+        val stack = stackToEdit!!.type as WidgetType.Stack
         WidgetStackPickerDialog(
-            currentChildren = (stackToEdit!!.type as WidgetType.Stack).children,
-            isWide = (stackToEdit!!.type as WidgetType.Stack).isWide,
+            currentChildren = stack.children,
+            isWide = stack.isWide,
+            isCyclic = stack.isCyclic,
             viewModel = viewModel,
             onDismiss = { stackToEdit = null },
-            onConfirm = { newChildren ->
-                viewModel.updateStackChildren(stackToEdit!!.id, newChildren)
+            onConfirm = { newChildren, isCyclic ->
+                viewModel.updateStackChildren(stackToEdit!!.id, newChildren, isCyclic)
             }
         )
     }

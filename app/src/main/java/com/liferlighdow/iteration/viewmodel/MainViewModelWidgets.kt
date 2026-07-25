@@ -117,12 +117,12 @@ fun MainViewModel.saveWidgets(list: List<WidgetModel>) {
     prefs.edit().putString("minus_one_widgets_v3", array.toString()).apply()
 }
 
-fun MainViewModel.updateStackChildren(stackId: String, children: List<WidgetModel>) {
+fun MainViewModel.updateStackChildren(stackId: String, children: List<WidgetModel>, isCyclic: Boolean = false) {
     fun updateItem(item: AppModel): AppModel {
         val w = item.widget
         if (w?.id == stackId && w.widgetType is WidgetType.Stack) {
             val isWide = w.widgetType.isWide
-            return item.copy(widget = w.copy(widgetType = WidgetType.Stack(children, isWide)))
+            return item.copy(widget = w.copy(widgetType = WidgetType.Stack(children, isWide, isCyclic)))
         }
         if (item.isFolder) {
             return item.copy(folderItems = item.folderItems.map { updateItem(it) })
@@ -138,7 +138,7 @@ fun MainViewModel.updateStackChildren(stackId: String, children: List<WidgetMode
     val newMinusOne = _minusOneWidgets.value.map { widget ->
         if (widget.id == stackId && widget.widgetType is WidgetType.Stack) {
             val isWide = widget.widgetType.isWide
-            widget.copy(widgetType = WidgetType.Stack(children, isWide))
+            widget.copy(widgetType = WidgetType.Stack(children, isWide, isCyclic))
         } else widget
     }
     _minusOneWidgets.value = newMinusOne

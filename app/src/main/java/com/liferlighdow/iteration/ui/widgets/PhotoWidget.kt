@@ -24,37 +24,44 @@ import com.liferlighdow.iteration.viewmodel.MainViewModel
 import com.liferlighdow.iteration.viewmodel.getWidgetPhoto
 
 @Composable
-fun PhotoWidget(widget: WidgetModel, viewModel: MainViewModel, modifier: Modifier = Modifier) {
+fun PhotoWidget(
+    widget: WidgetModel,
+    viewModel: MainViewModel,
+    modifier: Modifier = Modifier,
+    drawFrame: Boolean = true
+) {
     val widgetUpdateSignal by viewModel.widgetUpdateSignal.collectAsState()
     val photo by remember(widget.id, widgetUpdateSignal) { mutableStateOf<Bitmap?>(viewModel.getWidgetPhoto(widget.id)) }
     val isWide = (widget.type as? WidgetType.Photo)?.isWide ?: false
     val aspectRatio = if (isWide) 2.1f else 1f
 
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .aspectRatio(aspectRatio),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = glassFallbackColor(0.1f))
+    WidgetContainer(
+        displayMode = widget.displayMode,
+        modifier = modifier,
+        aspectRatio = aspectRatio,
+        containerColor = glassFallbackColor(0.1f),
+        drawFrame = drawFrame
     ) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            if (photo != null) {
-                Image(
-                    bitmap = photo!!.asImageBitmap(),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
+        if (photo != null) {
+            Image(
+                bitmap = photo!!.asImageBitmap(),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(Icons.Default.AddAPhoto, contentDescription = null, tint = Color.White.copy(alpha = 0.6f))
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    stringResource(R.string.widget_photo), 
+                    color = Color.White.copy(alpha = 0.6f), 
+                    style = MaterialTheme.typography.labelSmall.withGlassShadow()
                 )
-            } else {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.AddAPhoto, contentDescription = null, tint = Color.White.copy(alpha = 0.6f))
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        stringResource(R.string.widget_photo), 
-                        color = Color.White.copy(alpha = 0.6f), 
-                        style = MaterialTheme.typography.labelSmall.withGlassShadow()
-                    )
-                }
             }
         }
     }

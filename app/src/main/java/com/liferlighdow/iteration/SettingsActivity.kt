@@ -29,7 +29,14 @@ class SettingsActivity : AppCompatActivity() {
             val viewModel: MainViewModel = viewModel()
             val themeMode by viewModel.themeMode.collectAsState()
             val isAmoledBlack by viewModel.isAmoledBlack.collectAsState()
-            IterationTheme(themeMode = themeMode, isAmoledBlack = isAmoledBlack) {
+            val isMaterialYouEnabled by viewModel.isMaterialYouEnabled.collectAsState()
+            val seedColor by viewModel.seedColor.collectAsState()
+            IterationTheme(
+                themeMode = themeMode,
+                isAmoledBlack = isAmoledBlack,
+                isMaterialYouEnabled = isMaterialYouEnabled,
+                seedColor = seedColor
+            ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

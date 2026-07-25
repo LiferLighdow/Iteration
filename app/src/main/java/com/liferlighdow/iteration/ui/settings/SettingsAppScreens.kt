@@ -196,7 +196,7 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     color = MaterialTheme.colorScheme.primary
                 )
-                SearchBar(searchQuery) { searchQuery = it }
+                IterationSearchBar(query = searchQuery, onQueryChange = { searchQuery = it })
             }
             
             val filteredApps = if (searchQuery.isEmpty()) allApps.filter { !it.isFrozen && !it.isPrivate }
@@ -345,7 +345,7 @@ fun RenameAppsScreen(onBack: () -> Unit) {
         }
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
-            SearchBar(searchQuery) { searchQuery = it }
+            IterationSearchBar(query = searchQuery, onQueryChange = { searchQuery = it })
             
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(filteredApps, key = { it.uniqueId }) { app ->
@@ -470,7 +470,7 @@ fun HideAppsScreen(onBack: () -> Unit) {
                             }
                         )
                         Text(
-                            text = "設定密碼以保護隱藏的應用程式",
+                            text = stringResource(R.string.password_description),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 8.dp, start = 4.dp)
@@ -491,7 +491,7 @@ fun HideAppsScreen(onBack: () -> Unit) {
 
             item {
                 Column {
-                    SearchBar(searchQuery) { searchQuery = it }
+                    IterationSearchBar(query = searchQuery, onQueryChange = { searchQuery = it })
                     
                     Row(
                         modifier = Modifier
@@ -532,15 +532,15 @@ fun HideAppsScreen(onBack: () -> Unit) {
                 SettingsGroup {
                     if (filteredApps.isEmpty()) {
                         Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                            Text("找不到相符的應用程式", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.no_apps_found), color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     } else {
                         filteredApps.forEachIndexed { index, app ->
-                            ListItem(
-                                headlineContent = { Text(app.label) },
-                                supportingContent = { Text(app.packageName, maxLines = 1, style = MaterialTheme.typography.labelSmall) },
+                            val appIcon = viewModel.getIcon(app.uniqueId)
+                            SettingSwitchItem(
+                                title = app.label,
+                                supportingText = app.packageName,
                                 leadingContent = {
-                                    val appIcon = viewModel.getIcon(app.uniqueId)
                                     if (appIcon != null) {
                                         Image(
                                             bitmap = appIcon,
@@ -554,14 +554,8 @@ fun HideAppsScreen(onBack: () -> Unit) {
                                         Box(Modifier.size(40.dp).background(MaterialTheme.colorScheme.surfaceVariant, shape))
                                     }
                                 },
-                                trailingContent = {
-                                    Checkbox(
-                                        checked = app.isHidden,
-                                        onCheckedChange = { viewModel.toggleHiddenApp(app.packageName) }
-                                    )
-                                },
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                modifier = Modifier.clickable { viewModel.toggleHiddenApp(app.packageName) }
+                                checked = app.isHidden,
+                                onCheckedChange = { viewModel.toggleHiddenApp(app.packageName) }
                             )
                             if (index < filteredApps.size - 1) {
                                 HorizontalDivider(

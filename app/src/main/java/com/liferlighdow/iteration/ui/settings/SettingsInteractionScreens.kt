@@ -306,11 +306,10 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
                     )
                     availableOptions.forEach { (key, resId) ->
                         val isChecked = menuOptions.contains(key)
-                        ListItem(
-                            headlineContent = { Text(stringResource(resId)) },
-                            trailingContent = { Switch(checked = isChecked, onCheckedChange = { viewModel.setHomeMenuOption(key, it) }) },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                            modifier = Modifier.clickable { viewModel.setHomeMenuOption(key, !isChecked) }
+                        SettingSwitchItem(
+                            title = stringResource(resId),
+                            checked = isChecked,
+                            onCheckedChange = { viewModel.setHomeMenuOption(key, it) }
                         )
                     }
                 }
@@ -638,14 +637,11 @@ fun MultiAppExclusionPickerDialog(
                 )
 
                 var searchQuery by remember { mutableStateOf("") }
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                    placeholder = { Text(stringResource(R.string.search_apps_hint)) },
-                    leadingIcon = { Icon(Icons.Default.Search, null, tint = MaterialTheme.colorScheme.primary) },
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp)
+                IterationSearchBar(
+                    query = searchQuery,
+                    placeholder = stringResource(R.string.search_apps_hint),
+                    onQueryChange = { searchQuery = it },
+                    modifier = Modifier.padding(bottom = 8.dp)
                 )
 
                 val filteredApps = remember(allApps, searchQuery) {
@@ -655,25 +651,20 @@ fun MultiAppExclusionPickerDialog(
 
                 LazyColumn(modifier = Modifier.weight(1f)) {
                     items(filteredApps, key = { it.uniqueId }) { app ->
-                        ListItem(
-                            headlineContent = { Text(app.label) },
-                            leadingContent = {
-                                val appIcon = viewModel.getIcon(app.uniqueId)
-                                if (appIcon != null) {
+                        val appIcon = viewModel.getIcon(app.uniqueId)
+                        SettingSwitchItem(
+                            title = app.label,
+                            leadingContent = appIcon?.let {
+                                {
                                     Image(
-                                        bitmap = appIcon,
+                                        bitmap = it,
                                         contentDescription = null,
                                         modifier = Modifier.size(40.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.1f))
                                     )
                                 }
                             },
-                            trailingContent = {
-                                Switch(
-                                    checked = excludedPackages.contains(app.packageName),
-                                    onCheckedChange = { onToggle(app.packageName) }
-                                )
-                            },
-                            modifier = Modifier.clickable { onToggle(app.packageName) }
+                            checked = excludedPackages.contains(app.packageName),
+                            onCheckedChange = { onToggle(app.packageName) }
                         )
                     }
                 }

@@ -611,15 +611,17 @@ fun CustomIconStylePickerDialog(
             LazyColumn {
                 item {
                     Text(stringResource(R.string.background_settings), style = MaterialTheme.typography.titleSmall)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.use_original_bg), modifier = Modifier.weight(1f))
-                        Switch(checked = useOriginalBg, onCheckedChange = { viewModel.setCustomIconUseOriginalBg(it) })
-                    }
+                    SettingSwitchItem(
+                        title = stringResource(R.string.use_original_bg),
+                        checked = useOriginalBg,
+                        onCheckedChange = { viewModel.setCustomIconUseOriginalBg(it) }
+                    )
                     if (!useOriginalBg) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(stringResource(R.string.use_dominant_bg_color), modifier = Modifier.weight(1f))
-                            Switch(checked = useDominantColor, onCheckedChange = { viewModel.setCustomIconUseDominantColor(it) })
-                        }
+                        SettingSwitchItem(
+                            title = stringResource(R.string.use_dominant_bg_color),
+                            checked = useDominantColor,
+                            onCheckedChange = { viewModel.setCustomIconUseDominantColor(it) }
+                        )
                         if (!useDominantColor) {
                             ColorPicker(
                                 initialColor = bgColor,
@@ -635,10 +637,11 @@ fun CustomIconStylePickerDialog(
                     Spacer(modifier = Modifier.height(16.dp))
                     
                     Text(stringResource(R.string.foreground_settings), style = MaterialTheme.typography.titleSmall, color = if (useOriginal) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.use_original_icon), modifier = Modifier.weight(1f))
-                        Switch(checked = useOriginal, onCheckedChange = { viewModel.setCustomIconUseOriginal(it) })
-                    }
+                    SettingSwitchItem(
+                        title = stringResource(R.string.use_original_icon),
+                        checked = useOriginal,
+                        onCheckedChange = { viewModel.setCustomIconUseOriginal(it) }
+                    )
                     if (!useOriginal) {
                         var showCustomIconPackPicker by remember { mutableStateOf(false) }
                         val iconPacks by produceState<List<IconPackInfo>>(initialValue = emptyList()) {
@@ -783,7 +786,7 @@ fun ChangeIconScreen(onBack: () -> Unit) {
         }
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
-            SearchBar(searchQuery) { searchQuery = it }
+            IterationSearchBar(query = searchQuery, onQueryChange = { searchQuery = it })
             
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(filteredApps, key = { it.uniqueId }) { app ->

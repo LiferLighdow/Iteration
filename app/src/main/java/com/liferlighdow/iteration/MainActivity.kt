@@ -75,6 +75,8 @@ class MainActivity : AppCompatActivity() {
             val showStatusBar by viewModel.showStatusBar.collectAsState()
             val showNavigationBar by viewModel.showNavigationBar.collectAsState()
             val isLightWallpaper by viewModel.isLightWallpaper.collectAsState()
+            val isMaterialYouEnabled by viewModel.isMaterialYouEnabled.collectAsState()
+            val seedColor by viewModel.seedColor.collectAsState()
             val newVersion by viewModel.newVersionAvailable.collectAsState()
             val downloadUrl by viewModel.newVersionDownloadUrl.collectAsState()
 
@@ -98,7 +100,12 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            IterationTheme(themeMode = themeMode, isAmoledBlack = isAmoledBlack) {
+            IterationTheme(
+                themeMode = themeMode,
+                isAmoledBlack = isAmoledBlack,
+                isMaterialYouEnabled = isMaterialYouEnabled,
+                seedColor = seedColor
+            ) {
                 Box(modifier = Modifier.fillMaxSize().background(Color.Transparent)) {
                     LauncherScreen(
                         viewModel = viewModel,
