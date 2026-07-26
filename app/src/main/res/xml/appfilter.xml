@@ -1,9 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Contacts -->
+    <!-- 系統級相機鎖定 (不使用模糊關鍵字匹配) -->
+    <item component="com.android.camera" drawable="ic_builtin_camera" />
+    <item component="com.android.camera2" drawable="ic_builtin_camera" />
+    <item component="com.google.android.GoogleCamera" drawable="ic_builtin_camera" />
+    <item component="com.sec.android.app.camera" drawable="ic_builtin_camera" />
+    <item component="com.miui.camera" drawable="ic_builtin_camera" />
+    <item component="com.oppo.camera" drawable="ic_builtin_camera" />
+    <item component="com.oneplus.camera" drawable="ic_builtin_camera" />
+    <item component="com.sonyericsson.android.camera" drawable="ic_builtin_camera" />
+    <item component="com.motorola.cameraone" drawable="ic_builtin_camera" />
+    <item component="com.motorola.camera" drawable="ic_builtin_camera" />
+    <item component="com.mediatek.camera" drawable="ic_builtin_camera" />
+    <item component="org.codeaurora.snapcam" drawable="ic_builtin_camera" />
+    <item component="com.huawei.camera" drawable="ic_builtin_camera" />
+    <item component="com.asus.camera" drawable="ic_builtin_camera" />
+    <item component="com.lge.camera" drawable="ic_builtin_camera" />
+
+    <!-- 客製化系統相機 (Custom ROMs) -->
+    <item component="org.lineageos.aperture" drawable="ic_builtin_camera" />
+    <item component="org.cyanogenmod.snap" drawable="ic_builtin_camera" />
+    <item component="org.grapheneos.camera" drawable="ic_builtin_camera" />
+
+    <!-- Xiaomi / MIUI / POCO (Contacts) -->
     <item component="com.android.contacts" drawable="ic_builtin_contacts" />
 
-    <!-- Dialer fallbacks -->
+    <!-- Vivo / Oppo (Dialer fallbacks) -->
     <item component="com.android.contacts/com.android.contacts.activities.DialtactsActivity" drawable="ic_builtin_phone" />
     <item component="com.coloros.safecenter" drawable="ic_builtin_phone" />
 

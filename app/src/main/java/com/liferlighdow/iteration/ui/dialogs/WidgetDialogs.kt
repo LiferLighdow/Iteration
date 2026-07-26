@@ -253,8 +253,7 @@ fun WidgetStackPickerDialog(
                         Triple(WidgetType.Calendar(false), R.string.widget_calendar, Icons.Default.CalendarMonth),
                         Triple(WidgetType.Music(false), R.string.widget_music, Icons.Default.MusicNote),
                         Triple(WidgetType.Photo(false), R.string.widget_photo, Icons.Default.AddAPhoto),
-                        Triple(WidgetType.Note(text = "", isWide = false), null, Icons.Default.Note),
-                        Triple(WidgetType.Weather(false), null, Icons.Default.WbSunny)
+                        Triple(WidgetType.Note(text = "", isWide = false), null, Icons.Default.Note)
                     )
                     
                     val availableFiltered = if (isWide) {

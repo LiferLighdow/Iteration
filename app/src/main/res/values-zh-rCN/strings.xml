@@ -627,6 +627,7 @@
     <string name="builtin_browser">浏览器</string>
     <string name="builtin_contacts">联系人</string>
     <string name="builtin_camera">相机</string>
+    <string name="builtin_gallery">相册</string>
     <string name="builtin_settings">设置</string>
     <string name="builtin_files">文件</string>
     <string name="experimental_features">实验性功能</string>

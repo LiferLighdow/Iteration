@@ -230,8 +230,10 @@ class IconPackManager(private val context: Context) {
                 lowerPkg.contains("documentsui") || lowerPkg.contains("myfiles") || 
                 lowerPkg.endsWith(".files") || lowerPkg.contains("com.google.android.apps.nbu.files")) {
                 drawableName = "ic_builtin_files"
-            } else if (lowerPkg.contains("camera") || lowerPkg.contains("gallery") || lowerPkg.contains("photo")) {
-                drawableName = "ic_builtin_camera"
+            } else if (lowerPkg.contains("gallery") || lowerPkg.contains("album") || 
+                lowerPkg.contains("com.google.android.apps.photos") || 
+                (lowerPkg.contains("photo") && !lowerPkg.contains("camera"))) {
+                drawableName = "ic_builtin_gallery"
             }
         }
 
