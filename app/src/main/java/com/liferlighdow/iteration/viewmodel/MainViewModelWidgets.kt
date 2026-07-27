@@ -36,6 +36,7 @@ fun MainViewModel.addWidget(type: WidgetType, pageIndex: Int = -1) {
         is WidgetType.Weather -> "Weather"
         is WidgetType.ToDoList -> "ToDo List"
         is WidgetType.RSS -> "RSS Feed"
+        is WidgetType.Countdown -> "Countdown"
         is WidgetType.Stack -> if (type.isWide) "Wide Widget Stacker" else "Stack"
         is WidgetType.InfoHub -> "Info Hub"
         is WidgetType.InfoHub2 -> "Info Hub 2"
@@ -265,4 +266,26 @@ fun MainViewModel.updateRssUrl(widgetId: String, url: String) {
 
     saveLayout()
     saveWidgets(newMinusOne)
+}
+
+fun MainViewModel.updateCountdown(widgetId: String, name: String, timestamp: Long) {
+    fun updateItem(item: AppModel): AppModel {
+        val w = item.widget
+        if (w?.id == widgetId && w.widgetType is WidgetType.Countdown) {
+            return item.copy(widget = w.copy(widgetType = w.widgetType.copy(eventName = name, targetTimestamp = timestamp)))
+        }
+        if (item.isFolder) {
+            return item.copy(folderItems = item.folderItems.map { updateItem(it) })
+        }
+        return item
+    }
+
+    _pages.value = _pages.value.map { page -> page.map { updateItem(it) } }
+    _minusOneWidgets.value = _minusOneWidgets.value.map { widget ->
+        if (widget.id == widgetId && widget.widgetType is WidgetType.Countdown) {
+            widget.copy(widgetType = widget.widgetType.copy(eventName = name, targetTimestamp = timestamp))
+        } else widget
+    }
+    saveLayout()
+    saveWidgets(_minusOneWidgets.value)
 }

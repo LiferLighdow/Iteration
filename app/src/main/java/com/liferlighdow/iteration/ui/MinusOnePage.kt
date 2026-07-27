@@ -93,6 +93,7 @@ fun MinusOnePage(
     var todoToEdit by remember { mutableStateOf<WidgetModel?>(null) }
     var weatherToEdit by remember { mutableStateOf<WidgetModel?>(null) }
     var rssToEdit by remember { mutableStateOf<WidgetModel?>(null) }
+    var countdownToEdit by remember { mutableStateOf<WidgetModel?>(null) }
     var photoToAdjust by remember { mutableStateOf<WidgetModel?>(null) }
     var photoToPick by remember { mutableStateOf<WidgetModel?>(null) }
     var showCropDialogByUri by remember { mutableStateOf<android.net.Uri?>(null) }
@@ -297,6 +298,7 @@ fun MinusOnePage(
                             (widget.type as? WidgetType.ToDoList)?.isWide == true ||
                             (widget.type as? WidgetType.Weather)?.isWide == true ||
                             (widget.type as? WidgetType.RSS)?.isWide == true ||
+                            (widget.type as? WidgetType.Countdown)?.isWide == true ||
                             (widget.type as? WidgetType.Stack)?.isWide == true ||
                             (widget.type as? WidgetType.Custom)?.size == "4x2" ||
                             widget.type is WidgetType.InfoHub ||
@@ -399,6 +401,7 @@ fun MinusOnePage(
                                 is WidgetType.ToDoList -> TodoWidget(widget = widget, displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
                                 is WidgetType.Weather -> WeatherWidget(displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
                                 is WidgetType.RSS -> RSSWidget(widget = widget, displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
+                                is WidgetType.Countdown -> CountdownWidget(widget = widget, displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
                                 is WidgetType.InfoHub -> InfoHubWidget(displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
                                 is WidgetType.InfoHub2 -> InfoHub2Widget(displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
                                 is WidgetType.Stack -> StackWidget(widget = widget, viewModel = viewModel, backdrop = backdrop, isMinusOnePage = true)
@@ -486,6 +489,13 @@ fun MinusOnePage(
                                         text = { Text(stringResource(R.string.edit_rss)) },
                                         leadingIcon = { Icon(Icons.Default.RssFeed, null) },
                                         onClick = { rssToEdit = widget; showContextMenu = false }
+                                    )
+                                }
+                                if (widget.type is WidgetType.Countdown) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.edit_countdown)) },
+                                        leadingIcon = { Icon(Icons.Default.Edit, null) },
+                                        onClick = { countdownToEdit = widget; showContextMenu = false }
                                     )
                                 }
                             }
@@ -681,6 +691,16 @@ fun MinusOnePage(
             initialUrl = (rssToEdit!!.type as WidgetType.RSS).url,
             viewModel = viewModel,
             onDismiss = { rssToEdit = null }
+        )
+    }
+
+    if (countdownToEdit != null) {
+        CountdownEditDialog(
+            widgetId = countdownToEdit!!.id,
+            initialName = (countdownToEdit!!.type as WidgetType.Countdown).eventName,
+            initialTimestamp = (countdownToEdit!!.type as WidgetType.Countdown).targetTimestamp,
+            viewModel = viewModel,
+            onDismiss = { countdownToEdit = null }
         )
     }
 

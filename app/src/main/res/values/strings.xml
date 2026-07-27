@@ -632,7 +632,7 @@
     <string name="select_icon_source">Select Icon Source</string>
     <string name="select_icon_source_desc">Would you like to use built-in design icons or select your own image from the gallery?</string>
     <string name="gallery_pick">Gallery Pick</string>
-    <string name="builtin_icons">Built-in Icons</string>
+    <string name="builtin_icons">Iteration</string>
     <string name="pick_builtin_icon">Pick Built-in Icon</string>
     <string name="builtin_phone">Phone</string>
     <string name="builtin_messages">Messages</string>
@@ -646,4 +646,17 @@
     <string name="material_you_title">Use Material You (Testing)</string>
     <string name="material_you_desc">Extract primary colors from your current wallpaper and apply them to UI text and elements.</string>
     <string name="widget_stacker_cyclic">Cyclic Scroll</string>
+    <string name="pager_settings_title">Pager Animation Settings</string>
+    <string name="pager_snap_threshold_title">Pager Snap Threshold</string>
+    <string name="pager_snap_threshold_desc">Adjust how much distance is needed to trigger a page switch. Lower values make it easier to flip pages.</string>
+    <string name="pager_snap_threshold_current">Current Threshold: %1$.2f</string>
+    <string name="pager_damping_ratio_title">Pager Damping Ratio</string>
+    <string name="pager_damping_ratio_desc">Adjust the bounciness of the page flipping animation. 1.0 is no bouncy, lower values add bounce, higher values add more resistance.</string>
+    <string name="pager_damping_ratio_current">Current Damping: %1$.2f</string>
+    <string name="widget_countdown">Countdown</string>
+    <string name="widget_countdown_desc">Countdown to a specific date and time</string>
+    <string name="edit_countdown">Edit Countdown</string>
+    <string name="event_name_hint">Event Name</string>
+    <string name="target_date">Target Date</string>
+    <string name="target_time">Target Time</string>
 </resources>

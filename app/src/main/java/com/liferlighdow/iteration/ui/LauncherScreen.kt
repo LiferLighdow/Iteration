@@ -117,6 +117,8 @@ fun LauncherScreen(
     val isApplyingWallpaper by viewModel.isApplyingWallpaper.collectAsState()
     val isDesktopLocked by viewModel.isDesktopLocked.collectAsState()
     val iconScaleFactor by viewModel.iconScale.collectAsState()
+    val pagerSnapThreshold by viewModel.pagerSnapThreshold.collectAsState()
+    val pagerDampingRatio by viewModel.pagerDampingRatio.collectAsState()
 
     var showDesktopMenu by remember { mutableStateOf(false) }
     var showGlobalSearch by remember { mutableStateOf(false) }
@@ -445,9 +447,9 @@ fun LauncherScreen(
                     beyondViewportPageCount = 1,
                     flingBehavior = PagerDefaults.flingBehavior(
                         state = pagerState,
-                        snapPositionalThreshold = 0.4f,
+                        snapPositionalThreshold = pagerSnapThreshold,
                         snapAnimationSpec = spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            dampingRatio = pagerDampingRatio,
                             stiffness = 180f
                         )
                     )

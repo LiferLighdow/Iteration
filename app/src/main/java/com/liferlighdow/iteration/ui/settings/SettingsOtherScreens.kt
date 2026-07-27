@@ -802,7 +802,111 @@ fun AdvancedSettingsScreen(onBack: () -> Unit) {
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(32.dp))
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp))
+
+                    // --- Pager Animation Settings ---
+                    val pagerSnapThreshold by viewModel.pagerSnapThreshold.collectAsState()
+                    val pagerDampingRatio by viewModel.pagerDampingRatio.collectAsState()
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            stringResource(R.string.pager_settings_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        TextButton(onClick = { viewModel.resetPagerAnimationSettings() }) {
+                            Icon(Icons.Default.Restore, null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text(stringResource(R.string.restore_default))
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Snap Threshold
+                    Text(
+                        stringResource(R.string.pager_snap_threshold_title),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        stringResource(R.string.pager_snap_threshold_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        stringResource(R.string.pager_snap_threshold_current, pagerSnapThreshold),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                    ) {
+                        IconButton(onClick = {
+                            viewModel.setPagerSnapThreshold((pagerSnapThreshold - 0.05f).coerceAtLeast(0.1f))
+                        }) {
+                            Icon(Icons.Default.Remove, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        }
+
+                        Slider(
+                            value = pagerSnapThreshold,
+                            onValueChange = { viewModel.setPagerSnapThreshold(it) },
+                            valueRange = 0.1f..0.4f,
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        IconButton(onClick = {
+                            viewModel.setPagerSnapThreshold((pagerSnapThreshold + 0.05f).coerceAtMost(0.4f))
+                        }) {
+                            Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Damping Ratio
+                    Text(
+                        stringResource(R.string.pager_damping_ratio_title),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        stringResource(R.string.pager_damping_ratio_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        stringResource(R.string.pager_damping_ratio_current, pagerDampingRatio),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                    ) {
+                        IconButton(onClick = {
+                            viewModel.setPagerDampingRatio((pagerDampingRatio - 0.05f).coerceAtLeast(0.8f))
+                        }) {
+                            Icon(Icons.Default.Remove, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        }
+
+                        Slider(
+                            value = pagerDampingRatio,
+                            onValueChange = { viewModel.setPagerDampingRatio(it) },
+                            valueRange = 0.8f..1.2f,
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        IconButton(onClick = {
+                            viewModel.setPagerDampingRatio((pagerDampingRatio + 0.05f).coerceAtMost(1.2f))
+                        }) {
+                            Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp))
 
                     Text(
                         stringResource(R.string.settings_update_check_interval),

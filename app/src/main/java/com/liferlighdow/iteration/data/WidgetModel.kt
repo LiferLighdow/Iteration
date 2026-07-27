@@ -27,6 +27,11 @@ sealed class WidgetType {
         val isCyclic: Boolean = false
     ) : WidgetType()
     @Serializable @SerialName("RSS") data class RSS(val url: String = "", val isWide: Boolean = true, val isTall: Boolean = false) : WidgetType()
+    @Serializable @SerialName("Countdown") data class Countdown(
+        val targetTimestamp: Long = 0L,
+        val eventName: String = "",
+        val isWide: Boolean = false
+    ) : WidgetType()
     @Serializable @SerialName("InfoHub") object InfoHub : WidgetType()
     @Serializable @SerialName("InfoHub2") object InfoHub2 : WidgetType()
     @Serializable @SerialName("Custom") data class Custom(

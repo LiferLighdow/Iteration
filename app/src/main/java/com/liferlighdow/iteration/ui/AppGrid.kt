@@ -141,6 +141,7 @@ fun AppGrid(
     var todoToEdit by remember { mutableStateOf<WidgetModel?>(null) }
     var weatherToEdit by remember { mutableStateOf<WidgetModel?>(null) }
     var rssToEdit by remember { mutableStateOf<WidgetModel?>(null) }
+    var countdownToEdit by remember { mutableStateOf<WidgetModel?>(null) }
     var photoToAdjust by remember { mutableStateOf<WidgetModel?>(null) }
     var photoToPick by remember { mutableStateOf<WidgetModel?>(null) }
     var showCropDialogByUri by remember { mutableStateOf<Uri?>(null) }
@@ -192,6 +193,7 @@ fun AppGrid(
                     is WidgetType.Weather -> if (type.isWide) 4 else 2
                     is WidgetType.ToDoList -> if (type.isWide) 4 else 2
                     is WidgetType.RSS -> 4
+                    is WidgetType.Countdown -> if (type.isWide) 4 else 2
                     is WidgetType.InfoHub -> 4
                     is WidgetType.InfoHub2 -> 4
                     is WidgetType.Custom -> if (type.size == "4x2") 4 else 2
@@ -346,6 +348,7 @@ fun AppGrid(
                         is WidgetType.Weather -> if (type.isWide) 4 else 2
                         is WidgetType.ToDoList -> if (type.isWide) 4 else 2
                         is WidgetType.RSS -> 4
+                        is WidgetType.Countdown -> if (type.isWide) 4 else 2
                         is WidgetType.InfoHub -> 4
                         is WidgetType.InfoHub2 -> 4
                         is WidgetType.Custom -> if (type.size == "4x2") 4 else 2
@@ -468,6 +471,7 @@ fun AppGrid(
                             onUpdateTodoToEdit = { todoToEdit = it },
                             onUpdateWeatherToEdit = { weatherToEdit = it },
                             onUpdateRssToEdit = { rssToEdit = it },
+                            onUpdateCountdownToEdit = { countdownToEdit = it },
                             onUpdatePhotoToAdjust = { photoToAdjust = it },
                             onUpdatePhotoToPick = { photoToPick = it },
                             onShowContextMenu = { showContextMenu = true },
@@ -556,6 +560,16 @@ fun AppGrid(
         )
     }
 
+    if (countdownToEdit != null) {
+        CountdownEditDialog(
+            widgetId = countdownToEdit!!.id,
+            initialName = (countdownToEdit!!.type as WidgetType.Countdown).eventName,
+            initialTimestamp = (countdownToEdit!!.type as WidgetType.Countdown).targetTimestamp,
+            viewModel = viewModel,
+            onDismiss = { countdownToEdit = null }
+        )
+    }
+
     if (photoToAdjust != null) {
         val type = photoToAdjust!!.type as? WidgetType.Photo
         val uriStr = type?.uri
@@ -604,6 +618,7 @@ private fun WidgetGridItem(
     onUpdateTodoToEdit: (WidgetModel) -> Unit,
     onUpdateWeatherToEdit: (WidgetModel) -> Unit,
     onUpdateRssToEdit: (WidgetModel) -> Unit,
+    onUpdateCountdownToEdit: (WidgetModel) -> Unit,
     onUpdatePhotoToAdjust: (WidgetModel) -> Unit,
     onUpdatePhotoToPick: (WidgetModel) -> Unit,
     onShowContextMenu: () -> Unit,
@@ -618,6 +633,7 @@ private fun WidgetGridItem(
         is WidgetType.Weather -> type.isWide
         is WidgetType.ToDoList -> type.isWide
         is WidgetType.RSS -> type.isWide
+        is WidgetType.Countdown -> type.isWide
         is WidgetType.InfoHub -> true
         is WidgetType.InfoHub2 -> true
         is WidgetType.Custom -> type.size == "4x2"
@@ -719,6 +735,12 @@ private fun WidgetGridItem(
                         backdrop = backdrop
                     )
                     is WidgetType.RSS -> RSSWidget(
+                        widget = widget,
+                        displayMode = widget.displayMode,
+                        modifier = Modifier.fillMaxSize(),
+                        backdrop = backdrop
+                    )
+                    is WidgetType.Countdown -> CountdownWidget(
                         widget = widget,
                         displayMode = widget.displayMode,
                         modifier = Modifier.fillMaxSize(),
@@ -884,6 +906,16 @@ private fun WidgetGridItem(
                     leadingIcon = { Icon(Icons.Default.RssFeed, null, tint = MaterialTheme.colorScheme.primary) },
                     onClick = {
                         onUpdateRssToEdit(app.widget!!)
+                        onContextMenuDismiss()
+                    }
+                )
+            }
+            if (app.widget?.type is WidgetType.Countdown) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.edit_countdown)) },
+                    leadingIcon = { Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary) },
+                    onClick = {
+                        onUpdateCountdownToEdit(app.widget!!)
                         onContextMenuDismiss()
                     }
                 )

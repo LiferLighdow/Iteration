@@ -490,3 +490,18 @@ fun MainViewModel.setMaterialYouEnabled(enabled: Boolean) {
         updateBlurredWallpaper()
     }
 }
+
+fun MainViewModel.setPagerSnapThreshold(value: Float) {
+    _pagerSnapThreshold.value = value
+    prefs.edit().putFloat("pager_snap_threshold", value).apply()
+}
+
+fun MainViewModel.setPagerDampingRatio(value: Float) {
+    _pagerDampingRatio.value = value
+    prefs.edit().putFloat("pager_damping_ratio", value).apply()
+}
+
+fun MainViewModel.resetPagerAnimationSettings() {
+    setPagerSnapThreshold(0.4f)
+    setPagerDampingRatio(1.0f)
+}

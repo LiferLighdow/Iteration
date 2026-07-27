@@ -56,6 +56,7 @@ import kotlinx.coroutines.*
 import org.json.JSONObject
 import java.net.URL
 import java.net.URLEncoder
+import java.util.*
 import kotlin.math.roundToInt
 
 @Composable
@@ -253,7 +254,8 @@ fun WidgetStackPickerDialog(
                         Triple(WidgetType.Calendar(false), R.string.widget_calendar, Icons.Default.CalendarMonth),
                         Triple(WidgetType.Music(false), R.string.widget_music, Icons.Default.MusicNote),
                         Triple(WidgetType.Photo(false), R.string.widget_photo, Icons.Default.AddAPhoto),
-                        Triple(WidgetType.Note(text = "", isWide = false), null, Icons.Default.Note)
+                        Triple(WidgetType.Note(text = "", isWide = false), null, Icons.Default.Note),
+                        Triple(WidgetType.Countdown(targetTimestamp = 0L, eventName = "", isWide = false), R.string.widget_countdown, Icons.Default.Timer)
                     )
                     
                     val availableFiltered = if (isWide) {
@@ -264,6 +266,7 @@ fun WidgetStackPickerDialog(
                             Triple(WidgetType.Note(text = "", isWide = true), null, Icons.Default.Description),
                             Triple(WidgetType.ToDoList(tasks = emptyList(), isWide = true), R.string.widget_todo, Icons.Default.PlaylistAddCheck),
                             Triple(WidgetType.Weather(true), null, Icons.Default.WbSunny),
+                            Triple(WidgetType.Countdown(targetTimestamp = 0L, eventName = "", isWide = true), R.string.widget_countdown, Icons.Default.Timer),
                             Triple(WidgetType.InfoHub, R.string.widget_info_hub, Icons.Default.Info),
                             Triple(WidgetType.InfoHub2, R.string.widget_info_hub2, Icons.Default.Dashboard)
                         )
@@ -939,6 +942,15 @@ fun WidgetPickerDialog(
                 )
             ),
             WidgetTemplate(
+                nameRes = R.string.widget_countdown,
+                descRes = R.string.widget_countdown_desc,
+                icon = Icons.Default.Timer,
+                sizes = listOf(
+                    "2x2" to WidgetType.Countdown(isWide = false),
+                    "4x2" to WidgetType.Countdown(isWide = true)
+                )
+            ),
+            WidgetTemplate(
                 nameRes = R.string.widget_info_hub,
                 descRes = R.string.desc_info_hub,
                 icon = Icons.Default.Info,
@@ -1249,4 +1261,98 @@ fun RssEditDialog(widgetId: String, initialUrl: String, viewModel: MainViewModel
             }
         }
     }
+}
+
+@Composable
+fun CountdownEditDialog(
+    widgetId: String,
+    initialName: String,
+    initialTimestamp: Long,
+    viewModel: MainViewModel,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    var name by remember { mutableStateOf(initialName) }
+    var timestamp by remember { mutableLongStateOf(if (initialTimestamp == 0L) System.currentTimeMillis() else initialTimestamp) }
+
+    val calendar = Calendar.getInstance().apply { timeInMillis = timestamp }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.edit_countdown)) },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text(stringResource(R.string.event_name_hint)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+
+                // Date Picker Button
+                OutlinedButton(
+                    onClick = {
+                        android.app.DatePickerDialog(
+                            context,
+                            { _, year, month, dayOfMonth ->
+                                calendar.set(year, month, dayOfMonth)
+                                timestamp = calendar.timeInMillis
+                            },
+                            calendar.get(Calendar.YEAR),
+                            calendar.get(Calendar.MONTH),
+                            calendar.get(Calendar.DAY_OF_MONTH)
+                        ).show()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.Event, null)
+                    Spacer(Modifier.width(8.dp))
+                    val locale = androidx.compose.ui.text.intl.Locale.current.platformLocale
+                    val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", locale)
+                    Text("${stringResource(R.string.target_date)}: ${sdf.format(Date(timestamp))}")
+                }
+
+                // Time Picker Button
+                OutlinedButton(
+                    onClick = {
+                        android.app.TimePickerDialog(
+                            context,
+                            { _, hourOfDay, minute ->
+                                calendar.set(Calendar.HOUR_OF_DAY, hourOfDay)
+                                calendar.set(Calendar.MINUTE, minute)
+                                calendar.set(Calendar.SECOND, 0)
+                                timestamp = calendar.timeInMillis
+                            },
+                            calendar.get(Calendar.HOUR_OF_DAY),
+                            calendar.get(Calendar.MINUTE),
+                            true
+                        ).show()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.Schedule, null)
+                    Spacer(Modifier.width(8.dp))
+                    val locale = androidx.compose.ui.text.intl.Locale.current.platformLocale
+                    val sdf = java.text.SimpleDateFormat("HH:mm", locale)
+                    Text("${stringResource(R.string.target_time)}: ${sdf.format(Date(timestamp))}")
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                viewModel.updateCountdown(widgetId, name, timestamp)
+                onDismiss()
+            }) {
+                Text(stringResource(R.string.done))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
 }

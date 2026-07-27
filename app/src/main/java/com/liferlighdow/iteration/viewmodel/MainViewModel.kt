@@ -180,6 +180,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     internal val _iconScale = MutableStateFlow(prefs.getFloat("icon_scale", 1.0f))
     val iconScale = _iconScale.asStateFlow()
 
+    internal val _pagerSnapThreshold = MutableStateFlow(prefs.getFloat("pager_snap_threshold", 0.4f))
+    val pagerSnapThreshold = _pagerSnapThreshold.asStateFlow()
+
+    internal val _pagerDampingRatio = MutableStateFlow(prefs.getFloat("pager_damping_ratio", 1.0f))
+    val pagerDampingRatio = _pagerDampingRatio.asStateFlow()
+
     internal val _showMinusOnePage = MutableStateFlow(prefs.getBoolean("show_minus_one", true))
     val showMinusOnePage = _showMinusOnePage.asStateFlow()
 
@@ -859,6 +865,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
             "icon_scale" -> {
                 _iconScale.value = sharedPreferences.getFloat(key, 1.0f)
+            }
+            "pager_snap_threshold" -> {
+                _pagerSnapThreshold.value = sharedPreferences.getFloat(key, 0.4f)
+            }
+            "pager_damping_ratio" -> {
+                _pagerDampingRatio.value = sharedPreferences.getFloat(key, 1.0f)
             }
         }
     }

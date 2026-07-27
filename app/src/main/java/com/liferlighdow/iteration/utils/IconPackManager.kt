@@ -7,6 +7,7 @@ import android.content.res.Resources
 import android.graphics.drawable.Drawable
 import android.os.Build
 import android.util.Log
+import com.liferlighdow.iteration.R
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
 import java.io.InputStream
@@ -38,7 +39,7 @@ class IconPackManager(private val context: Context) {
         // Add built-in icon pack
         iconPacks[BUILTIN_PACKAGE_NAME] = IconPackInfo(
             packageName = BUILTIN_PACKAGE_NAME,
-            label = "Built-in Icons",
+            label = context.getString(R.string.builtin_icons),
             icon = context.packageManager.getApplicationIcon(context.packageName)
         )
 

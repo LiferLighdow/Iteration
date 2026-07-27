@@ -104,6 +104,7 @@ fun StackWidget(
                             is WidgetType.ToDoList -> TodoWidget(widget = item, displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage, drawFrame = true)
                             is WidgetType.Weather -> WeatherWidget(displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage, drawFrame = true)
                             is WidgetType.RSS -> RSSWidget(widget = item, displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage, drawFrame = true)
+                            is WidgetType.Countdown -> CountdownWidget(widget = item, displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage, drawFrame = true)
                             is WidgetType.InfoHub -> InfoHubWidget(displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage, drawFrame = true)
                             is WidgetType.InfoHub2 -> InfoHub2Widget(displayMode = item.displayMode, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage, drawFrame = true)
                             is WidgetType.Custom -> CustomWidget(widget = item, modifier = Modifier.fillMaxSize(), backdrop = backdrop, isMinusOnePage = isMinusOnePage, drawFrame = true)

@@ -620,7 +620,7 @@
     <string name="select_icon_source">选择图标来源</string>
     <string name="select_icon_source_desc">您想要使用内置的设计图标，还是从相册中选取自己的图片？</string>
     <string name="gallery_pick">相册选取</string>
-    <string name="builtin_icons">内置图标</string>
+    <string name="builtin_icons">Iteration</string>
     <string name="pick_builtin_icon">挑选内置图标</string>
     <string name="builtin_phone">电话</string>
     <string name="builtin_messages">信息</string>
@@ -634,4 +634,17 @@
     <string name="material_you_title">使用 Material You (测试中)</string>
     <string name="material_you_desc">从您目前的壁纸提取主要颜色，并应用到 UI 文字与元素上。</string>
     <string name="widget_stacker_cyclic">循环滚动</string>
+    <string name="pager_settings_title">分頁翻頁動畫設定</string>
+    <string name="pager_snap_threshold_title">翻頁觸發域值</string>
+    <string name="pager_snap_threshold_desc">調整觸發翻頁所需的滑動距離。數值越低越容易翻頁。</string>
+    <string name="pager_snap_threshold_current">目前域值: %1$.2f</string>
+    <string name="pager_damping_ratio_title">翻頁阻尼比</string>
+    <string name="pager_damping_ratio_desc">調整翻頁動畫的回彈感。1.0 為無回彈，低於 1.0 會產生回彈，高於 1.0 則會增加阻力。</string>
+    <string name="pager_damping_ratio_current">目前阻尼: %1$.2f</string>
+    <string name="widget_countdown">倒计时</string>
+    <string name="widget_countdown_desc">针对特定日期与时间进行倒计时</string>
+    <string name="edit_countdown">编辑倒计时</string>
+    <string name="event_name_hint">事件名称</string>
+    <string name="target_date">目标日期</string>
+    <string name="target_time">目标时间</string>
 </resources>
