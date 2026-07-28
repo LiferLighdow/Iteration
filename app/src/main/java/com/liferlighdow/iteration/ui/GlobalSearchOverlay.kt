@@ -8,10 +8,9 @@ import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.*
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -36,6 +35,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
@@ -1041,6 +1041,10 @@ fun GlobalSearchOverlay(
                     }
                 }
             }
+
+            if (query.contains("❄️")) {
+                SnowfallEffect()
+            }
         }
     }
 
@@ -1493,3 +1497,52 @@ fun calculateRelatedCurrencies(value: Double, from: String, rates: Map<String, D
         }
     }
 }
+
+@Composable
+fun SnowfallEffect() {
+    val snowflakes = remember {
+        List(50) {
+            Snowflake(
+                x = (0..1000).random().toFloat() / 1000f,
+                y = (0..1000).random().toFloat() / 1000f,
+                speed = (10..30).random().toFloat() / 2000f,
+                size = (5..15).random().toFloat()
+            )
+        }
+    }
+
+    val infiniteTransition = rememberInfiniteTransition(label = "snow")
+    val time by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(10000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "time"
+    )
+
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val width = size.width
+        val height = size.height
+        snowflakes.forEach { flake ->
+            val currentY = (flake.y + time * (flake.speed * 100)) % 1f
+            val xOffset = sin(time.toDouble() * 10.0 + flake.y.toDouble() * 100.0).toFloat() * 0.02f
+            drawCircle(
+                color = Color.White.copy(alpha = 0.7f),
+                radius = flake.size,
+                center = Offset(
+                    x = (flake.x + xOffset) * width,
+                    y = currentY * height
+                )
+            )
+        }
+    }
+}
+
+private data class Snowflake(
+    val x: Float,
+    val y: Float,
+    val speed: Float,
+    val size: Float
+)

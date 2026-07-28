@@ -235,6 +235,10 @@ class IconPackManager(private val context: Context) {
                 lowerPkg.contains("com.google.android.apps.photos") || 
                 (lowerPkg.contains("photo") && !lowerPkg.contains("camera"))) {
                 drawableName = "ic_builtin_gallery"
+            } else if (lowerPkg.contains("map") || lowerPkg.contains("navigation") || lowerPkg.contains("waze") || lowerPkg.contains("foundation.e.maps")) {
+                drawableName = "ic_builtin_maps"
+            } else if (lowerPkg.contains("mail") || lowerPkg.contains("outlook") || lowerPkg.contains("gmail") || lowerPkg.contains("foundation.e.mail")) {
+                drawableName = "ic_builtin_mail"
             }
         }
 

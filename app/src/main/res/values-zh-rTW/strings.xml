@@ -636,6 +636,8 @@
     <string name="builtin_gallery">相簿</string>
     <string name="builtin_settings">設定</string>
     <string name="builtin_files">檔案</string>
+    <string name="builtin_maps">地圖</string>
+    <string name="builtin_mail">電子郵件</string>
     <string name="experimental_features">實驗性功能</string>
     <string name="material_you_title">使用 Material You (測試中)</string>
     <string name="material_you_desc">從您目前的桌布擷取主要顏色，並套用到 UI 文字與元素上。</string>

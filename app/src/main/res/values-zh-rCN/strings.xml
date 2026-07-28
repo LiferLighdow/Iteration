@@ -628,6 +628,8 @@
     <string name="builtin_gallery">相册</string>
     <string name="builtin_settings">设置</string>
     <string name="builtin_files">文件</string>
+    <string name="builtin_maps">地图</string>
+    <string name="builtin_mail">电子邮件</string>
     <string name="experimental_features">实验性功能</string>
     <string name="material_you_title">使用 Material You (测试中)</string>
     <string name="material_you_desc">从您目前的壁纸提取主要颜色，并应用到 UI 文字与元素上。</string>

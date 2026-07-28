@@ -115,10 +115,8 @@ fun AppGrid(
     refractionHeight: Float = 24f,
     refractionAmount: Float = 48f,
     chromaticAberration: Boolean = true,
-    pageIndex: Int,
-    rawHoveredKey: String?,
-    confirmedHoveredKey: String?,
-    confirmedHoveredSlotIdx: Int?, confirmedIntent: MainViewModel.DropType,
+    pageIndex: Int = -1,
+    confirmedHoveredSlotIdx: Int? = null,
     onAppClick: (AppModel, Offset) -> Unit,
     onSlotPositioned: (Int, Rect) -> Unit,
     onDragStart: (AppModel, Offset) -> Unit,
@@ -162,13 +160,11 @@ fun AppGrid(
         }
     }
 
-    val displayApps = remember(apps, confirmedHoveredSlotIdx, draggingUniqueId, confirmedIntent) {
+    val displayApps = remember(apps, confirmedHoveredSlotIdx, draggingUniqueId) {
         val list = apps.toMutableList()
         val fromIdx = list.indexOfFirst { it.uniqueId == draggingUniqueId }
 
-        // 只有在明確的 REORDER（排序）意圖下，才進行列表重排預覽
-        // 如果是 FOLDER（合併）或沒有懸停，則保持原始順序，這能防止目標 App B 在合併前彈開
-        if (confirmedHoveredSlotIdx != null && confirmedIntent == MainViewModel.DropType.REORDER) {
+        if (confirmedHoveredSlotIdx != null) {
             if (fromIdx != -1) {
                 val item = list.removeAt(fromIdx)
                 val targetIdx = confirmedHoveredSlotIdx.coerceIn(0, list.size)
@@ -388,8 +384,6 @@ fun AppGrid(
                 } else { w = 1; h = 1 }
 
                 val lastPosition = remember { object { var pos = Offset.Zero } }
-                val isHoveredFolder = confirmedHoveredSlotIdx == index && confirmedIntent == MainViewModel.DropType.FOLDER
-                val scale by animateFloatAsState(if (isHoveredFolder) 1.25f else 1.0f, label = "folderScale")
                 
                 val infiniteTransition = rememberInfiniteTransition(label = "jiggle")
                 val rotation by infiniteTransition.animateFloat(
@@ -475,11 +469,7 @@ fun AppGrid(
                                     chromaticAberration = chromaticAberration,
                                     isEditMode = isEditMode,
                                     draggingUniqueId = draggingUniqueId,
-                                    scale = scale,
                                     rotation = rotation,
-                                    isHoveredFolder = (confirmedHoveredKey?.startsWith("$pageIndex-") == true && confirmedHoveredKey?.substringAfter("-")?.toIntOrNull() == index) || 
-                                                     (rawHoveredKey?.startsWith("$pageIndex-") == true && rawHoveredKey?.substringAfter("-")?.toIntOrNull() == index),
-                                    confirmedIntent = confirmedIntent,
                                     labelFontSize = labelFontSize,
                                     showContextMenu = showContextMenu,
                                     onContextMenuDismiss = { 
@@ -1063,10 +1053,7 @@ private fun AppGridItem(
     chromaticAberration: Boolean,
     isEditMode: Boolean,
     draggingUniqueId: String?,
-    scale: Float,
     rotation: Float,
-    isHoveredFolder: Boolean,
-    confirmedIntent: MainViewModel.DropType,
     labelFontSize: androidx.compose.ui.unit.TextUnit = 12.sp,
     showContextMenu: Boolean,
     onContextMenuDismiss: () -> Unit,
@@ -1139,25 +1126,12 @@ private fun AppGridItem(
             notificationCountProvider = notificationCountProvider,
             modifier = Modifier.graphicsLayer {
                 alpha = alphaAnim
-                // 實作新邏輯：如果目前是準備變成資料夾的目標，則縮小底部圖示
-                val isFolderTarget = isHoveredFolder && confirmedIntent == MainViewModel.DropType.FOLDER
-                val targetScale = if (isFolderTarget) 0.85f else 1.0f
-                scaleX = scale * scaleAnim * targetScale
-                scaleY = scale * scaleAnim * targetScale
+                scaleX = scaleAnim
+                scaleY = scaleAnim
                 if (isEditMode && !isBeingDragged) rotationZ = rotation
             }
         )
         
-        // 實作新視覺：準備變成資料夾的半透明外框
-        if (isHoveredFolder && confirmedIntent == MainViewModel.DropType.FOLDER) {
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .padding(4.dp)
-                    .background(Color.White.copy(alpha = 0.25f), RoundedCornerShape(16.dp))
-                    .border(1.5.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
-            )
-        }
         val menuOptions by viewModel.homeMenuOptions.collectAsState()
         val isDesktopLocked by viewModel.isDesktopLocked.collectAsState()
         

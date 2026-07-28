@@ -960,7 +960,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     internal val widgetPhotoDir = File(getApplication<Application>().filesDir, "widget_photos").apply { mkdirs() }
 
-    enum class DropType { REORDER, FOLDER }
+    enum class DropType { REORDER }
 
     // 具體邏輯已移至各個 MainViewModel*.kt 擴充檔案中
     fun saveLayout() {

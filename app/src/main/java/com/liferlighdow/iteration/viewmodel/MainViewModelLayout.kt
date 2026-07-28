@@ -21,8 +21,7 @@ fun MainViewModel.handleAppDrop(
     targetId: String?,
     targetPageIndex: Int,
     targetSlotIndex: Int? = null,
-    isFromLibrary: Boolean,
-    dropType: MainViewModel.DropType
+    isFromLibrary: Boolean
 ) {
     // 使用備份作為基準，如果沒有備份則使用當前狀態
     val basePages = dragBackupPages ?: _pages.value
@@ -72,58 +71,28 @@ fun MainViewModel.handleAppDrop(
     val item = movingItem ?: return
 
     // 2. 處理落點
-    when (dropType) {
-        MainViewModel.DropType.FOLDER -> {
-            if (targetId != null) {
-                var success = false
-                for (page in currentPages) {
-                    val tIdx = page.indexOfFirst { it.uniqueId == targetId }
-                    if (tIdx != -1) {
-                        val targetItem = page[tIdx]
-                        if (targetItem.isFolder) {
-                            page[tIdx] = targetItem.copy(
-                                folderItems = (targetItem.folderItems + item).sortedBy { it.label.lowercase() }
-                            )
-                        } else {
-                            page[tIdx] = AppModel(
-                                label = getApplication<Application>().getString(R.string.folder_default_name),
-                                isFolder = true,
-                                folderItems = listOf(targetItem, item).sortedBy { it.label.lowercase() },
-                                uniqueId = "folder_${System.currentTimeMillis()}"
-                            )
-                        }
-                        success = true
-                        break
-                    }
-                }
-                if (!success) insertAtPage(currentPages, targetPageIndex, item)
-            }
-        }
-        MainViewModel.DropType.REORDER -> {
-            var success = false
-            
-            // 優先嘗試使用目標插槽索引進行插入，這比 ID 查找更精確 (尤其是回到原位時)
-            if (targetSlotIndex != null && targetPageIndex in currentPages.indices) {
-                val page = currentPages[targetPageIndex]
-                page.add(targetSlotIndex.coerceIn(0, page.size), item)
+    var success = false
+    
+    // 優先嘗試使用目標插槽索引進行插入，這比 ID 查找更精確 (尤其是回到原位時)
+    if (targetSlotIndex != null && targetPageIndex in currentPages.indices) {
+        val page = currentPages[targetPageIndex]
+        page.add(targetSlotIndex.coerceIn(0, page.size), item)
+        success = true
+    } 
+    
+    // 如果插槽插入失敗，則嘗試按 ID 查找 (作為保險)
+    if (!success && targetId != null) {
+        for (page in currentPages) {
+            val tIdx = page.indexOfFirst { it.uniqueId == targetId }
+            if (tIdx != -1) {
+                page.add(tIdx, item)
                 success = true
-            } 
-            
-            // 如果插槽插入失敗，則嘗試按 ID 查找 (作為保險)
-            if (!success && targetId != null) {
-                for (page in currentPages) {
-                    val tIdx = page.indexOfFirst { it.uniqueId == targetId }
-                    if (tIdx != -1) {
-                        page.add(tIdx, item)
-                        success = true
-                        break
-                    }
-                }
+                break
             }
-            
-            if (!success) insertAtPage(currentPages, targetPageIndex, item)
         }
     }
+    
+    if (!success) insertAtPage(currentPages, targetPageIndex, item)
 
     reorganizeAllPages(currentPages)
 }

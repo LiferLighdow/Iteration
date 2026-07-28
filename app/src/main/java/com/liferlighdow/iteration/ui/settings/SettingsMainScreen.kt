@@ -58,16 +58,11 @@ fun SettingsMainScreen(
     // 定義所有設定項的元數據，以便進行搜尋
     val allSettingsItems = remember {
         listOf(
-            SettingsMetadata(context.getString(R.string.settings_icon_theme), context.getString(R.string.settings_icon_theme_desc), Icons.Default.Palette, Color(0xFF4285F4), onNavigateToIconTheme),
+            // --- 核心類別 ---
+            SettingsMetadata(context.getString(R.string.icon_theme_title), context.getString(R.string.settings_icon_theme_desc), Icons.Default.Palette, Color(0xFF4285F4), onNavigateToIconTheme),
             SettingsMetadata(context.getString(R.string.pwa_manage_title), context.getString(R.string.pwa_manage_desc), Icons.Default.Public, Color(0xFF009688), onNavigateToPwaMaker),
             SettingsMetadata(context.getString(R.string.widget_maker_title), context.getString(R.string.widget_maker_desc), Icons.Default.Widgets, Color(0xFF673AB7), onNavigateToWidgetMaker),
-            SettingsMetadata(context.getString(R.string.liquid_glass_title), context.getString(R.string.settings_liquid_glass_desc), Icons.Default.BlurOn, Color(0xFF34A853), {
-                if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) {
-                    showApiWarningDialog = true
-                } else {
-                    onNavigateToLiquidGlass()
-                }
-            }, isLiquidGlass = true),
+            SettingsMetadata(context.getString(R.string.liquid_glass_title), context.getString(R.string.settings_liquid_glass_desc), Icons.Default.BlurOn, Color(0xFF34A853), onNavigateToLiquidGlass, isLiquidGlass = true),
             SettingsMetadata(context.getString(R.string.settings_home_screen), context.getString(R.string.settings_home_screen_desc), Icons.Default.Dashboard, Color(0xFFFBBC04), onNavigateToDock),
             SettingsMetadata(context.getString(R.string.settings_library), context.getString(R.string.settings_library_desc), Icons.Default.Apps, Color(0xFFEA4335), onNavigateToAppLibrary),
             SettingsMetadata(context.getString(R.string.settings_gestures), context.getString(R.string.settings_gestures_desc), Icons.Default.TouchApp, Color(0xFF9C27B0), onNavigateToGestures),
@@ -75,14 +70,44 @@ fun SettingsMainScreen(
             SettingsMetadata(context.getString(R.string.settings_permissions), context.getString(R.string.settings_permissions_desc), Icons.Default.Security, Color(0xFF607D8B), onNavigateToPermissions),
             SettingsMetadata(context.getString(R.string.settings_language), context.getString(R.string.language_system_default), Icons.Default.Language, Color(0xFF3F51B5), onNavigateToLanguage),
             SettingsMetadata(context.getString(R.string.settings_advanced), context.getString(R.string.settings_advanced_desc), Icons.Default.Settings, Color(0xFF607D8B), onNavigateToAdvanced),
-            SettingsMetadata(context.getString(R.string.user_manual_title), context.getString(R.string.user_manual_desc), Icons.AutoMirrored.Filled.MenuBook, Color(0xFFFF9800), onNavigateToManuals),
+            
+            // --- 圖示與風格子項 ---
+            SettingsMetadata(context.getString(R.string.settings_change_icon), context.getString(R.string.settings_change_icon_desc), Icons.Default.Edit, Color(0xFF4285F4), onNavigateToIconTheme),
+            SettingsMetadata(context.getString(R.string.change_icon_shape), "", Icons.Default.Category, Color(0xFF4285F4), onNavigateToIconTheme),
+            SettingsMetadata(context.getString(R.string.icon_pack), "", Icons.Default.AutoFixHigh, Color(0xFF4285F4), onNavigateToIconTheme),
+            SettingsMetadata(context.getString(R.string.settings_themed_icons), context.getString(R.string.settings_themed_icons_desc), Icons.Default.InvertColors, Color(0xFF4285F4), onNavigateToIconTheme),
+            SettingsMetadata(context.getString(R.string.settings_rename_apps), context.getString(R.string.settings_rename_apps_desc), Icons.Default.Edit, Color(0xFF673AB7), onNavigateToRenameApps),
+            
+            // --- 桌面與 Dock 子項 ---
+            SettingsMetadata(context.getString(R.string.show_minus_one), context.getString(R.string.show_minus_one_desc), Icons.Default.AutoAwesomeMotion, Color(0xFFFBBC04), onNavigateToDock),
+            SettingsMetadata(context.getString(R.string.lock_desktop), context.getString(R.string.lock_desktop_desc), Icons.Default.Lock, Color(0xFFFBBC04), onNavigateToDock),
+            SettingsMetadata(context.getString(R.string.show_status_bar), context.getString(R.string.show_status_bar_desc), Icons.Default.Expand, Color(0xFFFBBC04), onNavigateToDock),
+            SettingsMetadata(context.getString(R.string.show_nav_handle), context.getString(R.string.show_nav_handle_desc), Icons.Default.HorizontalRule, Color(0xFFFBBC04), onNavigateToDock),
+            SettingsMetadata(context.getString(R.string.settings_theme_mode), context.getString(R.string.theme_follow_system), Icons.Default.Brightness4, Color(0xFFFBBC04), onNavigateToDock),
+            SettingsMetadata(context.getString(R.string.amoled_black), context.getString(R.string.amoled_black_desc), Icons.Default.Contrast, Color(0xFFFBBC04), onNavigateToDock),
+            
+            // --- Liquid Glass 子項 ---
+            SettingsMetadata(context.getString(R.string.glass_dock), context.getString(R.string.glass_dock_desc), Icons.Default.BlurCircular, Color(0xFF34A853), onNavigateToLiquidGlass, isLiquidGlass = true),
+            SettingsMetadata(context.getString(R.string.glass_folders_home), context.getString(R.string.glass_folders_home_desc), Icons.Default.FolderCopy, Color(0xFF34A853), onNavigateToLiquidGlass, isLiquidGlass = true),
+            SettingsMetadata(context.getString(R.string.glass_search_global), context.getString(R.string.glass_search_global_desc), Icons.Default.Search, Color(0xFF34A853), onNavigateToLiquidGlass, isLiquidGlass = true),
+            SettingsMetadata(context.getString(R.string.glass_widgets), context.getString(R.string.glass_widgets_desc), Icons.Default.Widgets, Color(0xFF34A853), onNavigateToLiquidGlass, isLiquidGlass = true),
+            SettingsMetadata(context.getString(R.string.chromatic_aberration), "", Icons.Default.ColorLens, Color(0xFF34A853), onNavigateToLiquidGlass, isLiquidGlass = true),
+
+            // --- 進階設定子項 ---
+            SettingsMetadata(context.getString(R.string.material_you_title), context.getString(R.string.material_you_desc), Icons.Default.Palette, Color(0xFF607D8B), onNavigateToAdvanced),
+            SettingsMetadata(context.getString(R.string.icon_size_title), context.getString(R.string.icon_size_desc), Icons.Default.PhotoSizeSelectLarge, Color(0xFF607D8B), onNavigateToAdvanced),
+            SettingsMetadata(context.getString(R.string.icon_scale_title), context.getString(R.string.icon_scale_desc), Icons.Default.AspectRatio, Color(0xFF607D8B), onNavigateToAdvanced),
+            
+            // --- 安全與備份 ---
             SettingsMetadata(context.getString(R.string.settings_hide_apps), context.getString(R.string.settings_hide_apps_desc), Icons.Default.VisibilityOff, Color(0xFF795548), {
                 if (viewModel.getPassword().isNullOrEmpty()) onNavigateToHideApps() else {} // 觸發 PasswordGate
             }, isHideApps = true),
-            SettingsMetadata(context.getString(R.string.settings_rename_apps), context.getString(R.string.settings_rename_apps_desc), Icons.Default.Edit, Color(0xFF673AB7), onNavigateToRenameApps),
             SettingsMetadata(context.getString(R.string.settings_export), context.getString(R.string.settings_backup_restore_desc), Icons.Default.Backup, Color(0xFF4CAF50), { /* Launcher Logic */ }, isExport = true),
             SettingsMetadata(context.getString(R.string.settings_import), context.getString(R.string.import_from_backup), Icons.Default.Restore, Color(0xFF03A9F4), { /* Launcher Logic */ }, isImport = true),
-            SettingsMetadata(context.getString(R.string.settings_restart_launcher), context.getString(R.string.settings_restart_desc), Icons.Default.RestartAlt, Color.Red, { /* Launcher Logic */ }, isRestart = true)
+            SettingsMetadata(context.getString(R.string.settings_restart_launcher), context.getString(R.string.settings_restart_desc), Icons.Default.RestartAlt, Color.Red, { /* Launcher Logic */ }, isRestart = true),
+            
+            // --- 其他 ---
+            SettingsMetadata(context.getString(R.string.user_manual_title), context.getString(R.string.user_manual_desc), Icons.AutoMirrored.Filled.MenuBook, Color(0xFFFF9800), onNavigateToManuals)
         )
     }
 

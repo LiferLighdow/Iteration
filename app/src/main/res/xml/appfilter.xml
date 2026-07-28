@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- 系統級相機鎖定 (不使用模糊關鍵字匹配) -->
+    <!-- 系統級相機鎖定 -->
     <item component="com.android.camera" drawable="ic_builtin_camera" />
     <item component="com.android.camera2" drawable="ic_builtin_camera" />
     <item component="com.google.android.GoogleCamera" drawable="ic_builtin_camera" />
@@ -16,13 +16,11 @@
     <item component="com.huawei.camera" drawable="ic_builtin_camera" />
     <item component="com.asus.camera" drawable="ic_builtin_camera" />
     <item component="com.lge.camera" drawable="ic_builtin_camera" />
-
-    <!-- 客製化系統相機 (Custom ROMs) -->
     <item component="org.lineageos.aperture" drawable="ic_builtin_camera" />
     <item component="org.cyanogenmod.snap" drawable="ic_builtin_camera" />
     <item component="org.grapheneos.camera" drawable="ic_builtin_camera" />
 
-    <!-- Xiaomi / MIUI / POCO (Contacts) -->
+    <!-- Contacts -->
     <item component="com.android.contacts" drawable="ic_builtin_contacts" />
 
     <!-- Vivo / Oppo (Dialer fallbacks) -->
@@ -31,4 +29,16 @@
 
     <!-- Settings -->
     <item component="com.android.settings" drawable="ic_builtin_settings" />
+
+    <!-- Maps -->
+    <item component="com.google.android.apps.maps" drawable="ic_builtin_maps" />
+    <item component="foundation.e.maps" drawable="ic_builtin_maps" />
+    <item component="com.baidu.BaiduMap" drawable="ic_builtin_maps" />
+    <item component="com.autonavi.minimap" drawable="ic_builtin_maps" />
+
+    <!-- Mail -->
+    <item component="com.google.android.gm" drawable="ic_builtin_mail" />
+    <item component="foundation.e.mail" drawable="ic_builtin_mail" />
+    <item component="com.microsoft.office.outlook" drawable="ic_builtin_mail" />
+    <item component="com.tencent.androidqqmail" drawable="ic_builtin_mail" />
 </resources>

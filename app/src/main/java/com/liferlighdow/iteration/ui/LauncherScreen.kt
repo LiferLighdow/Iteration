@@ -238,19 +238,13 @@ fun LauncherScreen(
 
     LaunchedEffect(rawHoveredKey, confirmedIntent) {
         if (rawHoveredKey == null) {
-            delay(150) // 離開後稍微延遲再清空，增加佈局穩定性
+            delay(80) // 離開後稍微延遲再清空，增加佈局穩定性
             confirmedHoveredKey = null
             return@LaunchedEffect
         }
         
-        // 根據意圖決定確認時間
-        if (confirmedIntent == MainViewModel.DropType.FOLDER) {
-            // 合併意圖：給予 400ms 的確認時間，期間佈局不應跳動
-            delay(400)
-        } else {
-            // 排序意圖：快速反應，但仍給予微小緩衝避免閃爍
-            delay(150)
-        }
+        // 排序意圖：快速反應，但仍給予微小緩衝避免閃爍
+        delay(80)
         confirmedHoveredKey = rawHoveredKey
     }
 
@@ -564,12 +558,9 @@ fun LauncherScreen(
                                 refractionAmount = refractionAmount,
                                 chromaticAberration = chromaticAberration,
                                 pageIndex = pageIndex,
-                                rawHoveredKey = rawHoveredKey,
-                                confirmedHoveredKey = confirmedHoveredKey,
-                                draggingApp = draggingApp,
                                 confirmedHoveredSlotIdx = if (confirmedHoveredKey?.startsWith("$pageIndex-") == true)
                                     confirmedHoveredKey?.substringAfter("-")?.toIntOrNull() else null,
-                                confirmedIntent = if (isEditMode) MainViewModel.DropType.REORDER else confirmedIntent,
+                                draggingApp = draggingApp,
                                 onAppClick = { app, pos ->
                                     if (isEditMode) {
                                         if (!app.isFolder) appToEdit = app
@@ -617,11 +608,7 @@ fun LauncherScreen(
                                     
                                     // 調整門檻：提高 FOLDER 的門檻，讓使用者必須更精確地「瞄準」
                                     // 同時讓 REORDER 更難誤觸
-                                    confirmedIntent = if (!isEditMode && maxOverlap > 0.55f) {
-                                        MainViewModel.DropType.FOLDER
-                                    } else {
-                                        MainViewModel.DropType.REORDER
-                                    }
+                                    confirmedIntent = MainViewModel.DropType.REORDER
                                 },
                                 onDragEnd = {
                                     if (draggingApp != null) {
@@ -647,15 +634,12 @@ fun LauncherScreen(
                                             val targetApp =
                                                 pages.getOrNull(tPageIdx - desktopStartIndex)
                                                     ?.getOrNull(tSlotIdx)
-                                            val dropType =
-                                                if (!isEditMode && maxOverlap > 0.50f && targetApp != null) MainViewModel.DropType.FOLDER else MainViewModel.DropType.REORDER
                                             viewModel.handleAppDrop(
                                                 fromId = draggingApp!!.uniqueId,
                                                 targetId = targetApp?.uniqueId,
                                                 targetPageIndex = tPageIdx - desktopStartIndex,
                                                 targetSlotIndex = tSlotIdx,
-                                                isFromLibrary = false,
-                                                dropType = dropType
+                                                isFromLibrary = false
                                             )
                                         } else {
                                             val currentPage = pagerState.currentPage
@@ -672,8 +656,7 @@ fun LauncherScreen(
                                                     targetId = null,
                                                     targetPageIndex = targetIdx,
                                                     targetSlotIndex = null,
-                                                    isFromLibrary = false,
-                                                    dropType = MainViewModel.DropType.REORDER
+                                                    isFromLibrary = false
                                                 )
                                             }
                                         }
@@ -777,8 +760,7 @@ fun LauncherScreen(
                                         targetId = null,
                                         targetPageIndex = (pagerState.currentPage - desktopStartIndex).coerceIn(0, desktopPageCount - 1),
                                         targetSlotIndex = null,
-                                        isFromLibrary = true,
-                                        dropType = MainViewModel.DropType.REORDER
+                                        isFromLibrary = true
                                     )
                                     draggingApp = null; rawHoveredKey = null; confirmedHoveredKey =
                                     null
@@ -931,11 +913,8 @@ fun LauncherScreen(
 
         lastDraggingApp?.let { app ->
             if (draggingAlpha > 0f) {
-                // 如果目前的放置意圖是變成資料夾，則讓手中的圖示也縮小
-                val inHandScale by animateFloatAsState(
-                    if (confirmedIntent == MainViewModel.DropType.FOLDER && confirmedHoveredKey != null) 0.85f else 1.2f,
-                    label = "inHandScale"
-                )
+                // 手中的圖示縮放
+                val inHandScale by animateFloatAsState(1.2f, label = "inHandScale")
                 
                 Box(
                     modifier = Modifier

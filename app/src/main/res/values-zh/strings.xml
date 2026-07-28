@@ -578,6 +578,8 @@
     <string name="builtin_gallery">藝廊</string>
     <string name="builtin_settings">設定</string>
     <string name="builtin_files">檔案</string>
+    <string name="builtin_maps">地圖</string>
+    <string name="builtin_mail">電子郵件</string>
     <string name="experimental_features">实验性功能</string>
     <string name="material_you_title">使用 Material You (测试中)</string>
     <string name="material_you_desc">从您目前的壁纸提取主要颜色，并应用到 UI 文字与元素上。</string>
