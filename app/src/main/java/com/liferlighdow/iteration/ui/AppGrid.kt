@@ -255,6 +255,18 @@ fun AppGrid(
                     awaitPointerEventScope {
                         while (true) {
                             val down = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                            
+                            // 關鍵修正：如果觸摸點擊在某個 icon 上（正在被按下），或是目前正處於聚焦模式（選單開啟中）
+                            // 則忽略背景手勢，避免與 icon 內部的長按、拖拽或選單操作相衝突
+                            if (viewModel.pressedItemId.value != null || viewModel.activeContextMenuId.value != null) {
+                                // 等待這次手勢結束
+                                do {
+                                    val event = awaitPointerEvent(pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                                    val anyPressed = event.changes.any { it.pressed }
+                                } while (anyPressed)
+                                continue
+                            }
+
                             var hasTriggered = false
                             var directionLocked = 0 // 0: 未定, 1: 垂直鎖定 (Search), 2: 水平鎖定 (Pager), 3: 多指鎖定
                             var totalDragY = 0f
@@ -384,6 +396,12 @@ fun AppGrid(
                 val density = LocalDensity.current
                 var showContextMenu by remember { mutableStateOf(false) }
 
+                // 為了避免 pointerInput 捕捉到舊的變數值導致拖拽失效或 BUG
+                val currentOnDragStart by rememberUpdatedState(onDragStart)
+                val currentOnDrag by rememberUpdatedState(onDrag)
+                val currentOnDragEnd by rememberUpdatedState(onDragEnd)
+                val currentOnAppClick by rememberUpdatedState(onAppClick)
+
                 Box(
                     modifier = Modifier
                         .graphicsLayer {
@@ -397,129 +415,139 @@ fun AppGrid(
                             val pos = it.positionInRoot()
                             lastPosition.pos = pos
                             onSlotPositioned(index, Rect(pos, Size(it.size.width.toFloat(), it.size.height.toFloat())))
-                        }
-                        .pointerInput(app.uniqueId, isEditMode) {
-                            if (isEditMode) {
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .pointerInput(app.uniqueId) {
+                                var totalDragDistance = 0f
+                                var hasTriggeredDrag = false
                                 detectDragGesturesAfterLongPress(
-                                    onDragStart = { onDragStart(app, lastPosition.pos + it) },
-                                    onDrag = { _, delta -> onDrag(delta) },
-                                    onDragCancel = onDragEnd,
-                                    onDragEnd = onDragEnd
+                                    onDragStart = { _ ->
+                                        totalDragDistance = 0f
+                                        hasTriggeredDrag = false
+                                        
+                                        // 大一統邏輯：無論是否在 Edit Mode，長按皆觸發聚焦縮放並彈出選單
+                                        viewModel.setActiveContextMenuId(app.uniqueId)
+                                        showContextMenu = true
+                                    },
+                                    onDrag = { change, dragAmount ->
+                                        totalDragDistance += dragAmount.getDistance()
+                                        
+                                        // 統一觸發門檻：拖動一段距離後啟動「跟手」位移
+                                        if (!hasTriggeredDrag && totalDragDistance > 25f) {
+                                            // 如果尚未在編輯模式，則進入編輯模式
+                                            if (!viewModel.isEditMode.value) {
+                                                viewModel.setEditMode(true)
+                                            }
+                                            
+                                            // 一旦開始拖拽移動，關閉選單並取消聚焦縮放，讓圖示回歸正常大小被拎起
+                                            showContextMenu = false
+                                            viewModel.setActiveContextMenuId(null) 
+                                            
+                                            currentOnDragStart(app, lastPosition.pos + change.position)
+                                            hasTriggeredDrag = true
+                                        }
+                                        
+                                        if (hasTriggeredDrag) {
+                                            change.consume()
+                                            currentOnDrag(dragAmount)
+                                        }
+                                    },
+                                    onDragCancel = {
+                                        currentOnDragEnd()
+                                        hasTriggeredDrag = false
+                                        // 若此時選單已關閉（例如發生了拖拽），則清除聚焦 ID
+                                        if (!showContextMenu) {
+                                            viewModel.setActiveContextMenuId(null)
+                                        }
+                                    },
+                                    onDragEnd = {
+                                        currentOnDragEnd()
+                                        hasTriggeredDrag = false
+                                        // 若此時選單已關閉，則清除聚焦 ID
+                                        if (!showContextMenu) {
+                                            viewModel.setActiveContextMenuId(null)
+                                        }
+                                    }
                                 )
-                            } else {
+                            }
+                            .pointerInput(app.uniqueId) {
                                 detectTapGestures(
                                     onPress = {
                                         viewModel.setPressedItemId(app.uniqueId)
                                         try { awaitRelease() } finally { viewModel.setPressedItemId(null) }
                                     },
-                                    onLongPress = { 
-                                        viewModel.setActiveContextMenuId(app.uniqueId)
-                                        showContextMenu = true 
-                                    },
-                                    onTap = { 
-                                    if (!app.isWidget) {
-                                        onAppClick(app, lastPosition.pos)
-                                    } else {
-                                        val widget = app.widget
-                                        if (widget != null) {
-                                            when (widget.type) {
-                                                is WidgetType.Clock -> {
-                                                    try {
-                                                        val intent = Intent(android.provider.AlarmClock.ACTION_SHOW_ALARMS).apply {
-                                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                                        }
-                                                        mContext.startActivity(intent)
-                                                    } catch (e: Exception) {
-                                                        try {
-                                                            val pm = mContext.packageManager
-                                                            val fallbackIntent = pm.getLaunchIntentForPackage("com.google.android.deskclock")
-                                                                ?: pm.getLaunchIntentForPackage("com.android.deskclock")
-                                                            if (fallbackIntent != null) mContext.startActivity(fallbackIntent)
-                                                        } catch (e2: Exception) {}
-                                                    }
-                                                }
-                                                is WidgetType.Calendar -> {
-                                                    try {
-                                                        val intent = Intent(Intent.ACTION_MAIN).apply {
-                                                            addCategory(Intent.CATEGORY_APP_CALENDAR)
-                                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                                        }
-                                                        mContext.startActivity(intent)
-                                                    } catch (e: Exception) {}
-                                                }
-                                                is WidgetType.Music -> {
-                                                    mediaInfo?.packageName?.let { pkg ->
-                                                        val intent = mContext.packageManager.getLaunchIntentForPackage(pkg)
-                                                        if (intent != null) mContext.startActivity(intent)
-                                                    }
-                                                }
-                                                else -> {}
-                                            }
+                                    onTap = {
+                                        // 只有在非編輯模式且沒有正在顯示選單時才觸發啟動
+                                        if (!viewModel.isEditMode.value && !showContextMenu) {
+                                            currentOnAppClick(app, lastPosition.pos)
                                         }
                                     }
-                                }
                                 )
-                            }
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (app.isWidget) {
-                        WidgetGridItem(
-                            app = app,
-                            draggingUniqueId = draggingUniqueId,
-                            isEditMode = isEditMode,
-                            backdrop = backdrop,
-                            viewModel = viewModel,
-                            labelFontSize = labelFontSize,
-                            showLabel = showWidgetLabel,
-                            showContextMenu = showContextMenu,
-                            onContextMenuDismiss = { 
-                                showContextMenu = false 
-                                viewModel.setActiveContextMenuId(null)
                             },
-                            onUpdateStackToEdit = { stackToEdit = it },
-                            onUpdateNoteToEdit = { noteToEdit = it },
-                            onUpdateTodoToEdit = { todoToEdit = it },
-                            onUpdateWeatherToEdit = { weatherToEdit = it },
-                            onUpdateRssToEdit = { rssToEdit = it },
-                            onUpdateCountdownToEdit = { countdownToEdit = it },
-                            onUpdatePhotoToAdjust = { photoToAdjust = it },
-                            onUpdatePhotoToPick = { photoToPick = it },
-                            onShowContextMenu = { showContextMenu = true },
-                            photoPickerLauncher = photoPickerLauncher
-                        )
-                    } else {
-                        AppGridItem(
-                            app = app,
-                            iconSize = iconSize,
-                            isLiquidGlass = isLiquidGlass,
-                            backdrop = backdrop,
-                            iconShape = iconShape,
-                            blurRadius = blurRadius,
-                            refractionHeight = refractionHeight,
-                            refractionAmount = refractionAmount,
-                            chromaticAberration = chromaticAberration,
-                            isEditMode = isEditMode,
-                            draggingUniqueId = draggingUniqueId,
-                            scale = scale,
-                            rotation = rotation,
-                            labelFontSize = labelFontSize,
-                            showContextMenu = showContextMenu,
-                            onContextMenuDismiss = { 
-                                showContextMenu = false 
-                                viewModel.setActiveContextMenuId(null)
-                            },
-                            onAppClick = { onAppClick(app, lastPosition.pos) },
-                            onEditApp = { onEditApp(app) },
-                            notificationCountProvider = {
-                                if (app.isFolder) {
-                                    app.folderItems.sumOf { notificationCounts[it.packageName] ?: 0 }
-                                } else {
-                                    notificationCounts[app.packageName] ?: 0
-                                }
-                            },
-                            viewModel = viewModel
-                        )
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (app.isWidget) {
+                            WidgetGridItem(
+                                app = app,
+                                draggingUniqueId = draggingUniqueId,
+                                isEditMode = isEditMode,
+                                backdrop = backdrop,
+                                viewModel = viewModel,
+                                labelFontSize = labelFontSize,
+                                showLabel = showWidgetLabel,
+                                showContextMenu = showContextMenu,
+                                onContextMenuDismiss = { 
+                                    showContextMenu = false 
+                                    viewModel.setActiveContextMenuId(null)
+                                },
+                                onUpdateStackToEdit = { stackToEdit = it },
+                                onUpdateNoteToEdit = { noteToEdit = it },
+                                onUpdateTodoToEdit = { todoToEdit = it },
+                                onUpdateWeatherToEdit = { weatherToEdit = it },
+                                onUpdateRssToEdit = { rssToEdit = it },
+                                onUpdateCountdownToEdit = { countdownToEdit = it },
+                                onUpdatePhotoToAdjust = { photoToAdjust = it },
+                                onUpdatePhotoToPick = { photoToPick = it },
+                                onShowContextMenu = { showContextMenu = true },
+                                photoPickerLauncher = photoPickerLauncher
+                            )
+                        } else {
+                            AppGridItem(
+                                app = app,
+                                iconSize = iconSize,
+                                isLiquidGlass = isLiquidGlass,
+                                backdrop = backdrop,
+                                iconShape = iconShape,
+                                blurRadius = blurRadius,
+                                refractionHeight = refractionHeight,
+                                refractionAmount = refractionAmount,
+                                chromaticAberration = chromaticAberration,
+                                isEditMode = isEditMode,
+                                draggingUniqueId = draggingUniqueId,
+                                scale = scale,
+                                rotation = rotation,
+                                labelFontSize = labelFontSize,
+                                showContextMenu = showContextMenu,
+                                onContextMenuDismiss = { 
+                                    showContextMenu = false 
+                                    viewModel.setActiveContextMenuId(null)
+                                },
+                                onAppClick = { onAppClick(app, lastPosition.pos) },
+                                onEditApp = { onEditApp(app) },
+                                notificationCountProvider = {
+                                    if (app.isFolder) {
+                                        app.folderItems.sumOf { notificationCounts[it.packageName] ?: 0 }
+                                    } else {
+                                        notificationCounts[app.packageName] ?: 0
+                                    }
+                                },
+                                viewModel = viewModel
+                            )
+                        }
                     }
                 }
             }

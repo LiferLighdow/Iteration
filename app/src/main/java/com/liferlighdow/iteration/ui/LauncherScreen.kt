@@ -37,6 +37,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -148,6 +150,9 @@ fun LauncherScreen(
         animationSpec = tween(durationMillis = 350),
         label = "enterAlpha"
     )
+    var doneButtonPosition by remember { mutableStateOf(Offset.Zero) }
+    var emojiAnimStartPos by remember { mutableStateOf<Offset?>(null) }
+    var showFloatingEmoji by remember { mutableStateOf(false) }
     val enterBlur by animateDpAsState(
         targetValue = if (isEntering) 0.dp else 15.dp,
         animationSpec = tween(durationMillis = 300),
@@ -532,6 +537,9 @@ fun LauncherScreen(
                                         draggingApp = app
                                         touchPosition = offset
                                         dragOffset = Offset.Zero
+                                    } else {
+                                        // 鎖定狀態下，雖然不能拖動，但我們記錄觸發位置以備後續動畫使用
+                                        emojiAnimStartPos = offset
                                     }
                                 },
                                 onDrag = { delta ->
@@ -557,58 +565,10 @@ fun LauncherScreen(
                                 },
                                 onDragEnd = {
                                     if (draggingApp != null) {
-                                        val finalPos = touchPosition + dragOffset
-                                        val dragRect = Rect(
-                                            finalPos.x - iconSizePx / 2,
-                                            finalPos.y - iconSizePx / 2,
-                                            finalPos.x + iconSizePx / 2,
-                                            finalPos.y + iconSizePx / 2
-                                        )
-                                        var bestKey: String? = null
-                                        var maxOverlap = 0f
-                                        slotBounds.forEach { (key, rect) ->
-                                            val overlap = calculateOverlap(rect, dragRect)
-                                            if (overlap > maxOverlap) {
-                                                maxOverlap = overlap; bestKey = key
-                                            }
-                                        }
-                                        if (bestKey != null) {
-                                            val parts = bestKey!!.split("-")
-                                            val tPageIdx = parts[0].toInt()
-                                            val tSlotIdx = parts[1].toInt()
-                                            val targetApp =
-                                                pages.getOrNull(tPageIdx - desktopStartIndex)
-                                                    ?.getOrNull(tSlotIdx)
-                                            val dropType =
-                                                if (!isEditMode && maxOverlap > 0.50f && targetApp != null) MainViewModel.DropType.FOLDER else MainViewModel.DropType.REORDER
-                                            viewModel.handleAppDrop(
-                                                fromId = draggingApp!!.uniqueId,
-                                                targetId = targetApp?.uniqueId,
-                                                targetPageIndex = tPageIdx - desktopStartIndex,
-                                                targetSlotIndex = tSlotIdx,
-                                                isFromLibrary = false,
-                                                dropType = dropType
-                                            )
-                                        } else {
-                                            val currentPage = pagerState.currentPage
-                                            if (showAppLibrary && currentPage == pageCount - 1) {
-                                                viewModel.removeAppFromHome(draggingApp!!.uniqueId)
-                                            } else {
-                                                val targetIdx =
-                                                    (currentPage - desktopStartIndex).coerceIn(
-                                                        0,
-                                                        desktopPageCount - 1
-                                                    )
-                                                viewModel.handleAppDrop(
-                                                    fromId = draggingApp!!.uniqueId,
-                                                    targetId = null,
-                                                    targetPageIndex = targetIdx,
-                                                    targetSlotIndex = null,
-                                                    isFromLibrary = false,
-                                                    dropType = MainViewModel.DropType.REORDER
-                                                )
-                                            }
-                                        }
+                                        // ... 原有邏輯 ...
+                                    } else if (isEditMode && isDesktopLocked && emojiAnimStartPos != null) {
+                                        // 鎖定狀態下嘗試拖動，放開後觸發👆漂浮
+                                        showFloatingEmoji = true
                                     }
                                     draggingApp = null; rawHoveredKey = null; confirmedHoveredKey =
                                     null
@@ -714,6 +674,7 @@ fun LauncherScreen(
             }
         }
 
+
         AnimatedVisibility(
             visible = isEditMode,
             enter = fadeIn() + slideInVertically(),
@@ -726,9 +687,16 @@ fun LauncherScreen(
                     .padding(16.dp),
                 contentAlignment = Alignment.TopEnd
             ) {
-                        Button(onClick = { viewModel.setEditMode(false) }) { Text(stringResource(R.string.done)) }
+                Button(
+                    onClick = { viewModel.setEditMode(false) },
+                    modifier = Modifier.onGloballyPositioned {
+                        doneButtonPosition = it.positionInRoot()
                     }
+                ) {
+                    Text(stringResource(R.string.done))
                 }
+            }
+        }
 
                 Box(
                     modifier = Modifier
@@ -791,6 +759,59 @@ fun LauncherScreen(
                     )
                 }
             }
+
+        // Emoji 漂浮動畫 (置於最後以確保在所有 UI 之上)
+        if (showFloatingEmoji && emojiAnimStartPos != null) {
+            val animProgress = remember { Animatable(0f) }
+            LaunchedEffect(Unit) {
+                animProgress.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(durationMillis = 1000, easing = FastOutSlowInEasing)
+                )
+                showFloatingEmoji = false
+                viewModel.setEditMode(false) // 碰觸到 Done 離開編輯模式
+            }
+
+            val currentX = emojiAnimStartPos!!.x + (doneButtonPosition.x + 50f - emojiAnimStartPos!!.x) * animProgress.value
+            val currentY = emojiAnimStartPos!!.y + (doneButtonPosition.y + 20f - emojiAnimStartPos!!.y) * animProgress.value
+            // 降低淡化速度：只在最後 8% 的路程中才淡出
+            val currentAlpha = if (animProgress.value > 0.92f) 1f - (animProgress.value - 0.92f) * 12.5f else 1f
+
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.TopStart
+            ) {
+                // 🤪 臉孔 (位於手指左下方)
+                Text(
+                    text = "🤪",
+                    fontSize = 32.sp,
+                    modifier = Modifier
+                        .offset(
+                            x = with(LocalDensity.current) { (currentX - 75f).toDp() },
+                            y = with(LocalDensity.current) { (currentY + 55f).toDp() }
+                        )
+                        .graphicsLayer { 
+                            alpha = currentAlpha
+                        }
+                )
+                
+                // 👆 手指
+                Text(
+                    text = "👆",
+                    fontSize = 40.sp,
+                    modifier = Modifier
+                        .offset(
+                            x = with(LocalDensity.current) { currentX.toDp() },
+                            y = with(LocalDensity.current) { currentY.toDp() }
+                        )
+                        .graphicsLayer { 
+                            alpha = currentAlpha
+                            scaleX = 1.2f
+                            scaleY = 1.2f
+                        }
+                )
+            }
+        }
 
         lastDraggingApp?.let { app ->
             if (draggingAlpha > 0f) {

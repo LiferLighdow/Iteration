@@ -18,7 +18,6 @@
     <string name="confirm">確認</string>
 
     <!-- 啟動器內容選單 -->
-    <string name="menu_edit_mode">進入編輯模式</string>
     <string name="menu_add_widget">新增小工具</string>
     <string name="menu_add_shortcut">新增捷徑</string>
     <string name="select_shortcut">選擇捷徑</string>
@@ -59,7 +58,7 @@
     <string name="folder_name_hint">資料夾名稱</string>
     <string name="folder_add_app">新增應用程式</string>
     <string name="folder_delete">刪除資料夾</string>
-    <string name="folder_delete_confirm_title">刪除資料夾？</string>
+    <string name="folder_delete_confirm_title">編輯資料夾</string>
     <string name="folder_delete_confirm_msg">您是否要將此資料夾中的圖示保留在主畫面上？</string>
     <string name="folder_delete_keep">保留圖示</string>
     <string name="folder_delete_discard">捨棄圖示</string>

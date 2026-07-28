@@ -17,7 +17,6 @@
     <string name="confirm">Confirm</string>
 
     <!-- Launcher Context Menu -->
-    <string name="menu_edit_mode">Enter Edit Mode</string>
     <string name="menu_add_widget">Add Widget</string>
     <string name="menu_add_shortcut">Add Shortcut</string>
     <string name="select_shortcut">Select Shortcut</string>
@@ -58,7 +57,7 @@
     <string name="folder_name_hint">Folder Name</string>
     <string name="folder_add_app">Add App</string>
     <string name="folder_delete">Delete Folder</string>
-    <string name="folder_delete_confirm_title">Delete Folder?</string>
+    <string name="folder_delete_confirm_title">Edit Folder</string>
     <string name="folder_delete_confirm_msg">Would you like to keep the icons contained in this folder on your home screen?</string>
     <string name="folder_delete_keep">Keep Icons</string>
     <string name="folder_delete_discard">Discard Icons</string>

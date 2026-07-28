@@ -38,14 +38,6 @@ fun LauncherMenu(
             Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                 if (!isDesktopLocked) {
                     ListItem(
-                        headlineContent = { Text(stringResource(R.string.menu_edit_mode)) },
-                        leadingContent = { Icon(Icons.Default.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                        modifier = Modifier.clickable {
-                            viewModel.setEditMode(true)
-                            onDismiss()
-                        }
-                    )
-                    ListItem(
                         headlineContent = { Text(stringResource(R.string.menu_add_widget)) },
                         leadingContent = { Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                         modifier = Modifier.clickable {
