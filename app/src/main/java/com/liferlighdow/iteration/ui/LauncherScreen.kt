@@ -236,13 +236,21 @@ fun LauncherScreen(
     var confirmedHoveredKey by remember { mutableStateOf<String?>(null) }
     var confirmedIntent by remember { mutableStateOf(MainViewModel.DropType.REORDER) }
 
-    LaunchedEffect(rawHoveredKey) {
+    LaunchedEffect(rawHoveredKey, confirmedIntent) {
         if (rawHoveredKey == null) {
-            delay(200) // 增加 200ms 緩衝，讓 ViewModel 有時間更新數據，防止佈局跳變
+            delay(150) // 離開後稍微延遲再清空，增加佈局穩定性
             confirmedHoveredKey = null
             return@LaunchedEffect
         }
-        delay(100)
+        
+        // 根據意圖決定確認時間
+        if (confirmedIntent == MainViewModel.DropType.FOLDER) {
+            // 合併意圖：給予 400ms 的確認時間，期間佈局不應跳動
+            delay(400)
+        } else {
+            // 排序意圖：快速反應，但仍給予微小緩衝避免閃爍
+            delay(150)
+        }
         confirmedHoveredKey = rawHoveredKey
     }
 
@@ -337,6 +345,49 @@ fun LauncherScreen(
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val density = LocalDensity.current
+        val screenWidthPx = with(density) { maxWidth.toPx() }
+        val edgeThresholdPx = with(density) { 40.dp.toPx() }
+
+        // --- 修正後的拖拽邊緣切頁邏輯 ---
+        var lastEdgeTriggerTime by remember { mutableLongStateOf(0L) }
+        
+        LaunchedEffect(draggingApp != null) {
+            if (draggingApp == null) return@LaunchedEffect
+            
+            while (true) {
+                val currentX = touchPosition.x + dragOffset.x
+                val isAtRightEdge = currentX > screenWidthPx - edgeThresholdPx
+                val isAtLeftEdge = currentX < edgeThresholdPx
+                
+                if (isAtRightEdge || isAtLeftEdge) {
+                    if (lastEdgeTriggerTime == 0L) {
+                        lastEdgeTriggerTime = System.currentTimeMillis()
+                    } else if (System.currentTimeMillis() - lastEdgeTriggerTime > 800) {
+                        // 觸發翻頁或新增
+                        val currentPage = pagerState.currentPage
+                        if (isAtRightEdge) {
+                            if (currentPage < desktopStartIndex + desktopPageCount - 1) {
+                                pagerState.animateScrollToPage(currentPage + 1)
+                            } else if (currentPage == desktopStartIndex + desktopPageCount - 1) {
+                                viewModel.addEmptyPage()
+                                delay(100) // 等待列表更新
+                                pagerState.animateScrollToPage(currentPage + 1)
+                            }
+                        } else if (isAtLeftEdge) {
+                            if (currentPage > desktopStartIndex) {
+                                pagerState.animateScrollToPage(currentPage - 1)
+                            }
+                        }
+                        lastEdgeTriggerTime = 0L // 觸發後重置計時
+                        delay(1000) // 防止連續快速翻頁
+                    }
+                } else {
+                    lastEdgeTriggerTime = 0L
+                }
+                delay(50) // 每 50ms 檢查一次位置
+            }
+        }
+
         val screenRatio = maxHeight / maxWidth
         
         val userRows by viewModel.desktopRows.collectAsState()
@@ -512,9 +563,12 @@ fun LauncherScreen(
                                 refractionHeight = refractionHeight,
                                 refractionAmount = refractionAmount,
                                 chromaticAberration = chromaticAberration,
+                                pageIndex = pageIndex,
+                                rawHoveredKey = rawHoveredKey,
+                                confirmedHoveredKey = confirmedHoveredKey,
                                 draggingApp = draggingApp,
                                 confirmedHoveredSlotIdx = if (confirmedHoveredKey?.startsWith("$pageIndex-") == true)
-                                    confirmedHoveredKey?.substringAfter("-")?.toInt() else null,
+                                    confirmedHoveredKey?.substringAfter("-")?.toIntOrNull() else null,
                                 confirmedIntent = if (isEditMode) MainViewModel.DropType.REORDER else confirmedIntent,
                                 onAppClick = { app, pos ->
                                     if (isEditMode) {
@@ -559,10 +613,15 @@ fun LauncherScreen(
                                             maxOverlap = overlap; bestKey = key
                                         }
                                     }
-                                    // 關鍵修正：只有重疊超過 20% 才判定為有效懸停，避免太早跳開
-                                    rawHoveredKey = if (maxOverlap > 0.20f) bestKey else null
-                                    confirmedIntent =
-                                        if (!isEditMode && maxOverlap > 0.50f) MainViewModel.DropType.FOLDER else MainViewModel.DropType.REORDER
+                                    rawHoveredKey = if (maxOverlap > 0.15f) bestKey else null
+                                    
+                                    // 調整門檻：提高 FOLDER 的門檻，讓使用者必須更精確地「瞄準」
+                                    // 同時讓 REORDER 更難誤觸
+                                    confirmedIntent = if (!isEditMode && maxOverlap > 0.55f) {
+                                        MainViewModel.DropType.FOLDER
+                                    } else {
+                                        MainViewModel.DropType.REORDER
+                                    }
                                 },
                                 onDragEnd = {
                                     if (draggingApp != null) {
@@ -622,6 +681,11 @@ fun LauncherScreen(
                                         // 鎖定狀態下嘗試拖動，放開後觸發👆漂浮
                                         showFloatingEmoji = true
                                     }
+                                    
+                                    // 在拖拽結束時，命令 ViewModel 檢查並清理多餘的空白頁面
+                                    // 我們傳入當前頁面索引，避免刪掉使用者正看著的那一頁
+                                    viewModel.cleanupEmptyPages(pagerState.currentPage - desktopStartIndex)
+
                                     draggingApp = null; rawHoveredKey = null; confirmedHoveredKey =
                                     null
                                 },
@@ -836,11 +900,11 @@ fun LauncherScreen(
                 // 🤪 臉孔 (位於手指左下方)
                 Text(
                     text = "🤪",
-                    fontSize = 32.sp,
+                    fontSize = 60.sp,
                     modifier = Modifier
                         .offset(
-                            x = with(LocalDensity.current) { (currentX - 75f).toDp() },
-                            y = with(LocalDensity.current) { (currentY + 55f).toDp() }
+                            x = with(LocalDensity.current) { (currentX - 155f).toDp() },
+                            y = with(LocalDensity.current) { (currentY + 135f).toDp() }
                         )
                         .graphicsLayer { 
                             alpha = currentAlpha
@@ -878,9 +942,11 @@ fun LauncherScreen(
                         .graphicsLayer {
                             translationX = touchPosition.x + dragOffset.x - iconSizePx / 2
                             translationY = touchPosition.y + dragOffset.y - iconSizePx / 2
-                            alpha = 0.8f * draggingAlpha
+                            // 改為完全不透明 (1.0f)，讓 icon 看起來更紮實
+                            alpha = draggingAlpha
                             scaleX = inHandScale
                             scaleY = inHandScale
+                            // 稍微增加一點陰影感（如果硬體支援渲染效果，這裡可以用 renderEffect，目前先用 alpha 保證清晰）
                         }
                 ) {
                     AppItem(

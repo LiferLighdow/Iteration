@@ -115,6 +115,9 @@ fun AppGrid(
     refractionHeight: Float = 24f,
     refractionAmount: Float = 48f,
     chromaticAberration: Boolean = true,
+    pageIndex: Int,
+    rawHoveredKey: String?,
+    confirmedHoveredKey: String?,
     confirmedHoveredSlotIdx: Int?, confirmedIntent: MainViewModel.DropType,
     onAppClick: (AppModel, Offset) -> Unit,
     onSlotPositioned: (Int, Rect) -> Unit,
@@ -282,6 +285,12 @@ fun AppGrid(
                                 val anyPressed = event.changes.any { it.pressed }
                                 if (!anyPressed) break
 
+                                // 關鍵修正：如果在滑動偵測過程中，icon 進入了按下或聚焦狀態
+                                // 則背景立即退出手勢識別，將控制權交還給 icon (拖拽邏輯)
+                                if (viewModel.pressedItemId.value != null || viewModel.activeContextMenuId.value != null) {
+                                    break
+                                }
+
                                 // 1. 偵測多指：一旦出現兩隻手指以上，立刻切換到多指模式
                                 if (pointerCount >= 2 && directionLocked != 3) {
                                     directionLocked = 3
@@ -423,135 +432,138 @@ fun AppGrid(
                 ) {
                     Box(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .pointerInput(app.uniqueId) {
-                                var totalDragDistance = 0f
-                                var hasTriggeredDrag = false
-                                detectDragGesturesAfterLongPress(
-                                    onDragStart = { _ ->
-                                        totalDragDistance = 0f
-                                        hasTriggeredDrag = false
-                                        
-                                        // 大一統邏輯：無論是否在 Edit Mode，長按皆觸發聚焦縮放並彈出選單
-                                        viewModel.setActiveContextMenuId(app.uniqueId)
-                                        showContextMenu = true
+                            .size(if (app.isWidget) (cellWidth * w) else (cellWidth * 0.9f), if (app.isWidget) (cellHeight * h) else (iconSize + 40.dp)),
+                        contentAlignment = Alignment.TopCenter
+                    ) {
+                        // 1. 內容層 (純渲染，不攔截手勢)
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            if (app.isWidget) {
+                                WidgetGridItem(
+                                    app = app,
+                                    draggingUniqueId = draggingUniqueId,
+                                    isEditMode = isEditMode,
+                                    backdrop = backdrop,
+                                    viewModel = viewModel,
+                                    labelFontSize = labelFontSize,
+                                    showLabel = showWidgetLabel,
+                                    showContextMenu = showContextMenu,
+                                    onContextMenuDismiss = { 
+                                        showContextMenu = false 
+                                        viewModel.setActiveContextMenuId(null)
                                     },
-                                    onDrag = { change, dragAmount ->
-                                        totalDragDistance += dragAmount.getDistance()
-                                        
-                                        if (!hasTriggeredDrag && totalDragDistance > 25f) {
-                                            if (!viewModel.isEditMode.value) {
-                                                viewModel.setEditMode(true)
-                                            }
-                                            
-                                            showContextMenu = false
-                                            viewModel.setActiveContextMenuId(null) 
-                                            
-                                            // 關鍵修正：將當前座標設為起始點，並標記已觸發
-                                            currentOnDragStart(app, lastPosition.pos + change.position)
-                                            hasTriggeredDrag = true
-                                        }
-                                        
-                                        if (hasTriggeredDrag) {
-                                            change.consume()
-                                            // 這裡傳遞原始的 delta 即可，LauncherScreen 會累加它
-                                            currentOnDrag(dragAmount)
+                                    onUpdateStackToEdit = { stackToEdit = it },
+                                    onUpdateNoteToEdit = { noteToEdit = it },
+                                    onUpdateTodoToEdit = { todoToEdit = it },
+                                    onUpdateWeatherToEdit = { weatherToEdit = it },
+                                    onUpdateRssToEdit = { rssToEdit = it },
+                                    onUpdateCountdownToEdit = { countdownToEdit = it },
+                                    onUpdatePhotoToAdjust = { photoToAdjust = it },
+                                    onUpdatePhotoToPick = { photoToPick = it },
+                                    onShowContextMenu = { showContextMenu = true },
+                                    photoPickerLauncher = photoPickerLauncher
+                                )
+                            } else {
+                                AppGridItem(
+                                    app = app,
+                                    iconSize = iconSize,
+                                    isLiquidGlass = isLiquidGlass,
+                                    backdrop = backdrop,
+                                    iconShape = iconShape,
+                                    blurRadius = blurRadius,
+                                    refractionHeight = refractionHeight,
+                                    refractionAmount = refractionAmount,
+                                    chromaticAberration = chromaticAberration,
+                                    isEditMode = isEditMode,
+                                    draggingUniqueId = draggingUniqueId,
+                                    scale = scale,
+                                    rotation = rotation,
+                                    isHoveredFolder = (confirmedHoveredKey?.startsWith("$pageIndex-") == true && confirmedHoveredKey?.substringAfter("-")?.toIntOrNull() == index) || 
+                                                     (rawHoveredKey?.startsWith("$pageIndex-") == true && rawHoveredKey?.substringAfter("-")?.toIntOrNull() == index),
+                                    confirmedIntent = confirmedIntent,
+                                    labelFontSize = labelFontSize,
+                                    showContextMenu = showContextMenu,
+                                    onContextMenuDismiss = { 
+                                        showContextMenu = false 
+                                        viewModel.setActiveContextMenuId(null)
+                                    },
+                                    onAppClick = { onAppClick(app, lastPosition.pos) },
+                                    onEditApp = { onEditApp(app) },
+                                    notificationCountProvider = {
+                                        if (app.isFolder) {
+                                            app.folderItems.sumOf { notificationCounts[it.packageName] ?: 0 }
+                                        } else {
+                                            notificationCounts[app.packageName] ?: 0
                                         }
                                     },
-                                    onDragCancel = {
-                                        currentOnDragEnd()
-                                        hasTriggeredDrag = false
-                                        // 若此時選單已關閉（例如發生了拖拽），則清除聚焦 ID
-                                        if (!showContextMenu) {
-                                            viewModel.setActiveContextMenuId(null)
-                                        }
-                                    },
-                                    onDragEnd = {
-                                        currentOnDragEnd()
-                                        hasTriggeredDrag = false
-                                        // 若此時選單已關閉，則清除聚焦 ID
-                                        if (!showContextMenu) {
-                                            viewModel.setActiveContextMenuId(null)
-                                        }
-                                    }
+                                    viewModel = viewModel
                                 )
                             }
-                            .pointerInput(app.uniqueId) {
-                                detectTapGestures(
-                                    onPress = {
-                                        viewModel.setPressedItemId(app.uniqueId)
-                                        try { awaitRelease() } finally { viewModel.setPressedItemId(null) }
-                                    },
-                                    onTap = {
-                                        // 只有在非編輯模式且沒有正在顯示選單時才觸發啟動
-                                        if (!viewModel.isEditMode.value && !showContextMenu) {
-                                            currentOnAppClick(app, lastPosition.pos)
-                                        }
-                                    }
-                                )
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (app.isWidget) {
-                            WidgetGridItem(
-                                app = app,
-                                draggingUniqueId = draggingUniqueId,
-                                isEditMode = isEditMode,
-                                backdrop = backdrop,
-                                viewModel = viewModel,
-                                labelFontSize = labelFontSize,
-                                showLabel = showWidgetLabel,
-                                showContextMenu = showContextMenu,
-                                onContextMenuDismiss = { 
-                                    showContextMenu = false 
-                                    viewModel.setActiveContextMenuId(null)
-                                },
-                                onUpdateStackToEdit = { stackToEdit = it },
-                                onUpdateNoteToEdit = { noteToEdit = it },
-                                onUpdateTodoToEdit = { todoToEdit = it },
-                                onUpdateWeatherToEdit = { weatherToEdit = it },
-                                onUpdateRssToEdit = { rssToEdit = it },
-                                onUpdateCountdownToEdit = { countdownToEdit = it },
-                                onUpdatePhotoToAdjust = { photoToAdjust = it },
-                                onUpdatePhotoToPick = { photoToPick = it },
-                                onShowContextMenu = { showContextMenu = true },
-                                photoPickerLauncher = photoPickerLauncher
-                            )
-                        } else {
-                            AppGridItem(
-                                app = app,
-                                iconSize = iconSize,
-                                isLiquidGlass = isLiquidGlass,
-                                backdrop = backdrop,
-                                iconShape = iconShape,
-                                blurRadius = blurRadius,
-                                refractionHeight = refractionHeight,
-                                refractionAmount = refractionAmount,
-                                chromaticAberration = chromaticAberration,
-                                isEditMode = isEditMode,
-                                draggingUniqueId = draggingUniqueId,
-                                scale = scale,
-                                rotation = rotation,
-                                isHoveredFolder = isHoveredFolder,
-                                confirmedIntent = confirmedIntent,
-                                labelFontSize = labelFontSize,
-                                showContextMenu = showContextMenu,
-                                onContextMenuDismiss = { 
-                                    showContextMenu = false 
-                                    viewModel.setActiveContextMenuId(null)
-                                },
-                                onAppClick = { onAppClick(app, lastPosition.pos) },
-                                onEditApp = { onEditApp(app) },
-                                notificationCountProvider = {
-                                    if (app.isFolder) {
-                                        app.folderItems.sumOf { notificationCounts[it.packageName] ?: 0 }
-                                    } else {
-                                        notificationCounts[app.packageName] ?: 0
-                                    }
-                                },
-                                viewModel = viewModel
-                            )
                         }
+
+                        // 2. 手勢層 (覆蓋在圖示上方，高度僅限圖示區域)
+                        Box(
+                            modifier = Modifier
+                                .size(if (app.isWidget) (cellWidth * w) else (cellWidth * 0.9f), if (app.isWidget) (cellHeight * h) else (iconSize + 8.dp))
+                                .pointerInput(app.uniqueId) {
+                                    var totalDragDistance = 0f
+                                    var hasTriggeredDrag = false
+                                    detectDragGesturesAfterLongPress(
+                                        onDragStart = { _ ->
+                                            totalDragDistance = 0f
+                                            hasTriggeredDrag = false
+                                            viewModel.setActiveContextMenuId(app.uniqueId)
+                                            showContextMenu = true
+                                        },
+                                        onDrag = { change, dragAmount ->
+                                            totalDragDistance += dragAmount.getDistance()
+                                            
+                                            if (!hasTriggeredDrag && totalDragDistance > 25f) {
+                                                if (!viewModel.isEditMode.value) {
+                                                    viewModel.setEditMode(true)
+                                                }
+                                                
+                                                showContextMenu = false
+                                                viewModel.setActiveContextMenuId(null) 
+                                                
+                                                currentOnDragStart(app, lastPosition.pos + change.position)
+                                                hasTriggeredDrag = true
+                                            }
+                                            
+                                            if (hasTriggeredDrag) {
+                                                change.consume()
+                                                currentOnDrag(dragAmount)
+                                            }
+                                        },
+                                        onDragCancel = {
+                                            currentOnDragEnd()
+                                            hasTriggeredDrag = false
+                                            if (!showContextMenu) {
+                                                viewModel.setActiveContextMenuId(null)
+                                            }
+                                        },
+                                        onDragEnd = {
+                                            currentOnDragEnd()
+                                            hasTriggeredDrag = false
+                                            if (!showContextMenu) {
+                                                viewModel.setActiveContextMenuId(null)
+                                            }
+                                        }
+                                    )
+                                }
+                                .pointerInput(app.uniqueId) {
+                                    detectTapGestures(
+                                        onPress = {
+                                            viewModel.setPressedItemId(app.uniqueId)
+                                            try { awaitRelease() } finally { viewModel.setPressedItemId(null) }
+                                        },
+                                        onTap = {
+                                            if (!viewModel.isEditMode.value && !showContextMenu) {
+                                                currentOnAppClick(app, lastPosition.pos)
+                                            }
+                                        }
+                                    )
+                                }
+                        )
                     }
                 }
             }

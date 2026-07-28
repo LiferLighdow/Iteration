@@ -26,7 +26,6 @@
     <string name="pin_shortcut_msg">按住图标即可在主屏幕上移动位置。</string>
     <string name="add_to_home">添加至主屏幕</string>
     <string name="menu_new_folder">新建文件夹</string>
-    <string name="menu_add_page">新建页面</string>
     <string name="menu_delete_page">删除此页面</string>
     <string name="menu_launcher_settings">启动器设置</string>
     <string name="menu_wallpaper">壁纸</string>

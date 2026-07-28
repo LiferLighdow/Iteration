@@ -209,6 +209,25 @@ fun MainViewModel.deletePage(index: Int) {
     }
 }
 
+fun MainViewModel.cleanupEmptyPages(exceptPageIndex: Int) {
+    val currentPages = _pages.value.map { it.toMutableList() }.toMutableList()
+    var changed = false
+    
+    // 從後往前遍歷，避免索引錯亂
+    for (i in currentPages.indices.reversed()) {
+        // 如果分頁是空的，且不是使用者正停留的分頁，且總頁數大於 1
+        if (currentPages[i].isEmpty() && i != exceptPageIndex && currentPages.size > 1) {
+            currentPages.removeAt(i)
+            changed = true
+        }
+    }
+    
+    if (changed) {
+        _pages.value = currentPages
+        saveLayout()
+    }
+}
+
 fun MainViewModel.reorganizeAllPages(pages: MutableList<MutableList<AppModel>>) {
     val result = mutableListOf<MutableList<AppModel>>()
     var overflowItems = mutableListOf<AppModel>()

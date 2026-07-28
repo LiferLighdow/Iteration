@@ -61,14 +61,6 @@ fun LauncherMenu(
                             onDismiss()
                         }
                     )
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.menu_add_page)) },
-                        leadingContent = { Icon(Icons.Default.PostAdd, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                        modifier = Modifier.clickable {
-                            viewModel.addEmptyPage()
-                            onDismiss()
-                        }
-                    )
 
                     if (isMultiplePages) {
                         ListItem(
