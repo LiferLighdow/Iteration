@@ -237,7 +237,7 @@ fun LauncherScreen(
             confirmedHoveredKey = null
             return@LaunchedEffect
         }
-        delay(500)
+        delay(100)
         confirmedHoveredKey = rawHoveredKey
     }
 
@@ -480,7 +480,7 @@ fun LauncherScreen(
                                 backdrop = backdrop,
                                 isEditMode = isEditMode,
                                 onAddClick = { showWidgetPicker = true },
-                                onRemoveWidget = { viewModel.removeWidget(it) },
+                                onRemoveWidget = { viewModel.removeWidgetWithAnimation(it) },
                                 onUpdateWidgetMode = { id, mode ->
                                     viewModel.updateWidgetDisplayMode(
                                         id,

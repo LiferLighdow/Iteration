@@ -49,6 +49,7 @@ import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.foundation.Image
@@ -407,7 +408,14 @@ fun AppGrid(
                                 )
                             } else {
                                 detectTapGestures(
-                                    onLongPress = { showContextMenu = true },
+                                    onPress = {
+                                        viewModel.setPressedItemId(app.uniqueId)
+                                        try { awaitRelease() } finally { viewModel.setPressedItemId(null) }
+                                    },
+                                    onLongPress = { 
+                                        viewModel.setActiveContextMenuId(app.uniqueId)
+                                        showContextMenu = true 
+                                    },
                                     onTap = { 
                                     if (!app.isWidget) {
                                         onAppClick(app, lastPosition.pos)
@@ -465,7 +473,10 @@ fun AppGrid(
                             labelFontSize = labelFontSize,
                             showLabel = showWidgetLabel,
                             showContextMenu = showContextMenu,
-                            onContextMenuDismiss = { showContextMenu = false },
+                            onContextMenuDismiss = { 
+                                showContextMenu = false 
+                                viewModel.setActiveContextMenuId(null)
+                            },
                             onUpdateStackToEdit = { stackToEdit = it },
                             onUpdateNoteToEdit = { noteToEdit = it },
                             onUpdateTodoToEdit = { todoToEdit = it },
@@ -494,7 +505,10 @@ fun AppGrid(
                             rotation = rotation,
                             labelFontSize = labelFontSize,
                             showContextMenu = showContextMenu,
-                            onContextMenuDismiss = { showContextMenu = false },
+                            onContextMenuDismiss = { 
+                                showContextMenu = false 
+                                viewModel.setActiveContextMenuId(null)
+                            },
                             onAppClick = { onAppClick(app, lastPosition.pos) },
                             onEditApp = { onEditApp(app) },
                             notificationCountProvider = {
@@ -642,7 +656,47 @@ private fun WidgetGridItem(
 
     val isDesktopLocked by viewModel.isDesktopLocked.collectAsState()
 
+    val removingItemIds by viewModel.removingItemIds.collectAsState()
+    val isRemoving = remember(removingItemIds, app.uniqueId) { removingItemIds.contains(app.uniqueId) }
+
+    val removalScale by animateFloatAsState(
+        targetValue = if (isRemoving) 0f else 1f,
+        animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing),
+        label = "RemovingScale"
+    )
+
+    val removalAlpha by animateFloatAsState(
+        targetValue = if (isRemoving) 0f else 1f,
+        animationSpec = tween(durationMillis = 400),
+        label = "RemovingAlpha"
+    )
+
     val isBeingDragged = app.uniqueId == draggingUniqueId
+    val activeContextMenuId by viewModel.activeContextMenuId.collectAsState()
+    val pressedItemId by viewModel.pressedItemId.collectAsState()
+    val isOtherMenuVisible = activeContextMenuId != null && activeContextMenuId != app.uniqueId
+    val isThisMenuVisible = activeContextMenuId == app.uniqueId
+    val isBeingPressed = pressedItemId == app.uniqueId
+
+    val menuAlpha by animateFloatAsState(
+        targetValue = if (isOtherMenuVisible) 0f else 1f,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "MenuAlpha"
+    )
+
+    val focusScale by animateFloatAsState(
+        targetValue = when {
+            isThisMenuVisible -> 1.1f
+            isBeingPressed -> 0.96f
+            else -> 1f
+        },
+        animationSpec = spring(
+            dampingRatio = if (isThisMenuVisible) Spring.DampingRatioMediumBouncy else Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "FocusScale"
+    )
+
     val alphaAnim by animateFloatAsState(
         targetValue = if (isBeingDragged) 0f else 1f,
         animationSpec = if (isBeingDragged) snap() else spring(stiffness = Spring.StiffnessLow),
@@ -665,9 +719,25 @@ private fun WidgetGridItem(
                 end = 8.dp
             )
             .graphicsLayer { 
-                alpha = alphaAnim
-                scaleX = scaleAnim
-                scaleY = scaleAnim
+                alpha = alphaAnim * removalAlpha * menuAlpha
+                scaleX = scaleAnim * removalScale * focusScale
+                scaleY = scaleAnim * removalScale * focusScale
+                if (isRemoving) {
+                    rotationZ = (1f - removalScale) * 30f // 增加旋轉動感
+                    // Android 12+ 模糊效果 (質感提升)
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                        val blurAmount = (1f - removalScale) * 30f
+                        if (blurAmount > 0.01f) {
+                            renderEffect = android.graphics.RenderEffect.createBlurEffect(
+                                blurAmount,
+                                blurAmount,
+                                android.graphics.Shader.TileMode.CLAMP
+                            ).asComposeRenderEffect()
+                        } else {
+                            renderEffect = null
+                        }
+                    }
+                }
             }
     ) {
         Box(modifier = Modifier.fillMaxWidth().fillMaxHeight(if (showLabel) 0.85f else 1f)) {
@@ -961,6 +1031,31 @@ private fun AppGridItem(
 ) {
     val mContext = LocalContext.current
     val isBeingDragged = app.uniqueId == draggingUniqueId
+    val activeContextMenuId by viewModel.activeContextMenuId.collectAsState()
+    val pressedItemId by viewModel.pressedItemId.collectAsState()
+    val isOtherMenuVisible = activeContextMenuId != null && activeContextMenuId != app.uniqueId
+    val isThisMenuVisible = activeContextMenuId == app.uniqueId
+    val isBeingPressed = pressedItemId == app.uniqueId
+
+    val menuAlpha by animateFloatAsState(
+        targetValue = if (isOtherMenuVisible) 0f else 1f,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "MenuAlpha"
+    )
+
+    val focusScale by animateFloatAsState(
+        targetValue = when {
+            isThisMenuVisible -> 1.1f
+            isBeingPressed -> 0.96f
+            else -> 1f
+        },
+        animationSpec = spring(
+            dampingRatio = if (isThisMenuVisible) Spring.DampingRatioMediumBouncy else Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "FocusScale"
+    )
+
     val alphaAnim by animateFloatAsState(
         targetValue = if (isBeingDragged) 0f else 1f,
         animationSpec = if (isBeingDragged) snap() else spring(stiffness = Spring.StiffnessLow),

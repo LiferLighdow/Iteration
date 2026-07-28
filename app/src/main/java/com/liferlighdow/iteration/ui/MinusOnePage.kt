@@ -34,6 +34,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
@@ -106,6 +107,14 @@ fun MinusOnePage(
 
     val isDesktopLocked by viewModel.isDesktopLocked.collectAsState()
 
+    val activeContextMenuId by viewModel.activeContextMenuId.collectAsState()
+    val isAnyMenuVisible = activeContextMenuId != null
+    val menuAlpha by animateFloatAsState(
+        targetValue = if (isAnyMenuVisible) 0f else 1f,
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "MenuAlpha"
+    )
+
     if (isSearching) {
         BackHandler {
             isSearching = false
@@ -147,7 +156,8 @@ fun MinusOnePage(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp),
+                .height(56.dp)
+                .graphicsLayer { alpha = menuAlpha },
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -309,6 +319,43 @@ fun MinusOnePage(
                         val index = widgets.indexOfFirst { it.id == widget.id }
                         val isDragging = draggingWidgetId == widget.id
 
+                        val removingItemIds by viewModel.removingItemIds.collectAsState()
+                        val isRemoving = remember(removingItemIds, widget.id) { removingItemIds.contains(widget.id) }
+                        val isActiveMenu = activeContextMenuId == widget.id
+                        val pressedItemId by viewModel.pressedItemId.collectAsState()
+                        val isBeingPressed = pressedItemId == widget.id
+
+                        val itemMenuAlpha by animateFloatAsState(
+                            targetValue = if (isAnyMenuVisible && !isActiveMenu) 0f else 1f,
+                            animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                            label = "ItemMenuAlpha"
+                        )
+
+                        val focusScale by animateFloatAsState(
+                            targetValue = when {
+                                isActiveMenu -> 1.1f
+                                isBeingPressed -> 0.96f
+                                else -> 1f
+                            },
+                            animationSpec = spring(
+                                dampingRatio = if (isActiveMenu) Spring.DampingRatioMediumBouncy else Spring.DampingRatioNoBouncy,
+                                stiffness = Spring.StiffnessLow
+                            ),
+                            label = "FocusScale"
+                        )
+
+                        val removalScale by animateFloatAsState(
+                            targetValue = if (isRemoving) 0f else 1f,
+                            animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing),
+                            label = "RemovingScale"
+                        )
+
+                        val removalAlpha by animateFloatAsState(
+                            targetValue = if (isRemoving) 0f else 1f,
+                            animationSpec = tween(durationMillis = 400),
+                            label = "RemovingAlpha"
+                        )
+
                         val infiniteTransition = rememberInfiniteTransition(label = "jiggle")
                         val rotation by infiniteTransition.animateFloat(
                             initialValue = -1.5f,
@@ -337,6 +384,25 @@ fun MinusOnePage(
                                         scaleX = 1.06f
                                         scaleY = 1.06f
                                         alpha = 0.8f
+                                    } else {
+                                        scaleX = removalScale * focusScale
+                                        scaleY = removalScale * focusScale
+                                        alpha = removalAlpha * itemMenuAlpha
+                                        if (isRemoving) {
+                                            rotationZ = (1f - removalScale) * 30f
+                                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                                                val blurAmount = (1f - removalScale) * 30f
+                                                if (blurAmount > 0.01f) {
+                                                    renderEffect = android.graphics.RenderEffect.createBlurEffect(
+                                                        blurAmount,
+                                                        blurAmount,
+                                                        android.graphics.Shader.TileMode.CLAMP
+                                                    ).asComposeRenderEffect()
+                                                } else {
+                                                    renderEffect = null
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                                 .zIndex(if (isDragging) 10f else 0f)
@@ -374,10 +440,15 @@ fun MinusOnePage(
                                 .pointerInput(widget.type, effectiveEditMode) {
                                     if (!effectiveEditMode) {
                                         detectTapGestures(
+                                            onPress = {
+                                                viewModel.setPressedItemId(widget.id)
+                                                try { awaitRelease() } finally { viewModel.setPressedItemId(null) }
+                                            },
                                             onLongPress = {
                                                 if (widget.type is WidgetType.Stack) {
                                                     stackToEdit = widget
                                                 } else {
+                                                    viewModel.setActiveContextMenuId(widget.id)
                                                     showContextMenu = true
                                                 }
                                             }
@@ -409,7 +480,10 @@ fun MinusOnePage(
                                     widget = widget, 
                                     backdrop = backdrop, 
                                     isMinusOnePage = true,
-                                    onLongClick = { showContextMenu = true }
+                                    onLongClick = { 
+                                        viewModel.setActiveContextMenuId(widget.id)
+                                        showContextMenu = true 
+                                    }
                                 )
                             }
 
@@ -427,7 +501,13 @@ fun MinusOnePage(
                                 }
                             }
 
-                            DropdownMenu(expanded = showContextMenu, onDismissRequest = { showContextMenu = false }) {
+                            DropdownMenu(
+                                expanded = showContextMenu,
+                                onDismissRequest = { 
+                                    showContextMenu = false 
+                                    viewModel.setActiveContextMenuId(null)
+                                }
+                            ) {
                                 if (widget.type !is WidgetType.Stack && widget.type !is WidgetType.Photo) {
                                     DropdownMenuItem(
                                         text = { Text(stringResource(if (widget.displayMode == WidgetDisplayMode.COLOR) R.string.widget_glass_mode else R.string.widget_color_mode)) },
@@ -505,7 +585,7 @@ fun MinusOnePage(
                     // 底部 Edit 膠囊按鈕
                     if (!effectiveEditMode && !isDesktopLocked) {
                         item(span = { GridItemSpan(4) }) {
-                            Box(modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
+                            Box(modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp).graphicsLayer { alpha = menuAlpha }, contentAlignment = Alignment.Center) {
                                 Surface(
                                     onClick = { isReorderMode = true },
                                     modifier = Modifier.liquidGlass(

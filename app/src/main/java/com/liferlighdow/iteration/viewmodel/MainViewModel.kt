@@ -238,6 +238,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     internal val _removingItemIds = MutableStateFlow<Set<String>>(emptySet())
     val removingItemIds = _removingItemIds.asStateFlow()
 
+    internal val _activeContextMenuId = MutableStateFlow<String?>(null)
+    val activeContextMenuId = _activeContextMenuId.asStateFlow()
+
+    internal val _pressedItemId = MutableStateFlow<String?>(null)
+    val pressedItemId = _pressedItemId.asStateFlow()
+
+    fun setActiveContextMenuId(id: String?) {
+        _activeContextMenuId.value = id
+    }
+
+    fun setPressedItemId(id: String?) {
+        _pressedItemId.value = id
+    }
+
     internal val _showVNaviInstallDialog = MutableStateFlow(false)
     val showVNaviInstallDialog = _showVNaviInstallDialog.asStateFlow()
 

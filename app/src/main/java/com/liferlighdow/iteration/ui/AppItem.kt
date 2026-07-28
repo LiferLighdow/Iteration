@@ -3,6 +3,8 @@ package com.liferlighdow.iteration.ui
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -108,6 +110,32 @@ fun AppItem(
     val removingItemIds by viewModel.removingItemIds.collectAsState()
     val isRemoving = remember(removingItemIds, app.uniqueId) { removingItemIds.contains(app.uniqueId) }
 
+    val activeContextMenuId by viewModel.activeContextMenuId.collectAsState()
+    val pressedItemId by viewModel.pressedItemId.collectAsState()
+    
+    val isOtherMenuVisible = activeContextMenuId != null && activeContextMenuId != app.uniqueId
+    val isThisMenuVisible = activeContextMenuId == app.uniqueId
+    val isBeingPressed = pressedItemId == app.uniqueId
+
+    val menuAlpha by animateFloatAsState(
+        targetValue = if (isOtherMenuVisible) 0f else 1f,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "MenuAlpha"
+    )
+
+    val focusScale by animateFloatAsState(
+        targetValue = when {
+            isThisMenuVisible -> 1.1f
+            isBeingPressed -> 0.96f
+            else -> 1f
+        },
+        animationSpec = spring(
+            dampingRatio = if (isThisMenuVisible) Spring.DampingRatioMediumBouncy else Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessLow // 降低剛度，讓縮放過程更明顯、更緩慢
+        ),
+        label = "FocusScale"
+    )
+
     // 解決資料夾進場太早的問題：增加一個微小的準備狀態
     var isFolderReady by remember(app.uniqueId) { mutableStateOf(false) }
     if (app.isFolder) {
@@ -133,9 +161,9 @@ fun AppItem(
         modifier = modifier
             .padding(vertical = if (showLabel) 4.dp else 0.dp)
             .graphicsLayer {
-                scaleX = animatedScale
-                scaleY = animatedScale
-                alpha = animatedAlpha
+                scaleX = animatedScale * focusScale
+                scaleY = animatedScale * focusScale
+                alpha = animatedAlpha * menuAlpha
                 if (isRemoving) {
                     rotationZ = (1f - animatedScale) * 30f // 增加旋轉動感
                     // Android 12+ 模糊效果 (質感提升)

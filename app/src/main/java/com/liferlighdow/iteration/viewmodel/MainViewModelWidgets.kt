@@ -9,6 +9,9 @@ import com.liferlighdow.iteration.data.TodoTask
 import com.liferlighdow.iteration.data.WidgetDisplayMode
 import com.liferlighdow.iteration.data.WidgetModel
 import com.liferlighdow.iteration.data.WidgetType
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.json.JSONArray
 import java.io.File
 import java.io.FileOutputStream
@@ -72,6 +75,15 @@ fun MainViewModel.removeWidget(id: String) {
     val newList = _minusOneWidgets.value.filter { it.id != id }
     _minusOneWidgets.value = newList
     saveWidgets(newList)
+}
+
+fun MainViewModel.removeWidgetWithAnimation(id: String) {
+    viewModelScope.launch {
+        _removingItemIds.value += id
+        delay(500)
+        removeWidget(id)
+        _removingItemIds.value -= id
+    }
 }
 
 fun MainViewModel.updateWidgetDisplayMode(id: String, mode: WidgetDisplayMode) {

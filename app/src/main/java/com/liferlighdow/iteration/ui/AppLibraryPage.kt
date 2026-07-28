@@ -41,6 +41,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -48,6 +49,9 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
 import kotlinx.coroutines.launch
 import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.ui.res.stringResource
@@ -103,6 +107,14 @@ fun AppLibraryPage(
     val suggestedApps by viewModel.suggestedApps.collectAsState()
     val userCategories by viewModel.userCategories.collectAsState()
 
+    val activeContextMenuId by viewModel.activeContextMenuId.collectAsState()
+    val isAnyMenuVisible = activeContextMenuId != null
+    val menuAlpha by animateFloatAsState(
+        targetValue = if (isAnyMenuVisible) 0f else 1f,
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "MenuAlpha"
+    )
+
     // 用於重新命名的狀態
     var appToRename by remember { mutableStateOf<AppModel?>(null) }
     var newLabelText by remember { mutableStateOf("") }
@@ -130,7 +142,13 @@ fun AppLibraryPage(
     
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = horizontalPadding)) {
         // 搜尋欄：縮減垂直 padding 以平衡視覺
-        Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp, bottom = 12.dp)
+                .graphicsLayer { alpha = menuAlpha },
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             if (selectedCategory != null && selectedCategory != "All") {
                 IconButton(onClick = { viewModel.setSelectedCategory("All") }) {
                     Icon(Icons.Default.ArrowBack, null, tint = Color.White)
@@ -299,10 +317,19 @@ fun AppLibraryPage(
                                                 if (app.isFrozen) appToUnfreeze = app
                                                 else onAppClick(app) 
                                             },
-                                            onLongClick = { showMenu = true }
+                                            onLongClick = { 
+                                                viewModel.setActiveContextMenuId(app.uniqueId)
+                                                showMenu = true 
+                                            }
                                         )
                                     )
-                                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                                    DropdownMenu(
+                                        expanded = showMenu,
+                                        onDismissRequest = { 
+                                            showMenu = false 
+                                            viewModel.setActiveContextMenuId(null)
+                                        }
+                                    ) {
                                         val actionMode by viewModel.actionMode.collectAsState()
                                         if (menuOptions.contains("freeze") && (actionMode == ActionMode.SHIZUKU || actionMode == ActionMode.ROOT)) {
                                             DropdownMenuItem(
@@ -690,13 +717,20 @@ fun LibraryItemWithMenu(
                 onLongClick = {
                     if (folderName != "Hidden Apps") {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        viewModel.setActiveContextMenuId(app.uniqueId)
                         showMenu = true
                     }
                 }
             )
         )
 
-        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+        DropdownMenu(
+            expanded = showMenu,
+            onDismissRequest = { 
+                showMenu = false 
+                viewModel.setActiveContextMenuId(null)
+            }
+        ) {
             val actionMode by viewModel.actionMode.collectAsState()
             if (menuOptions.contains("freeze") && (actionMode == ActionMode.SHIZUKU || actionMode == ActionMode.ROOT)) {
                 DropdownMenuItem(

@@ -61,6 +61,15 @@ fun Dock(
     onReplaceClick: (Int) -> Unit,
     onDeleteClick: ((AppModel) -> Unit)? = null
 ) {
+    val viewModel: MainViewModel = viewModel()
+    val activeContextMenuId by viewModel.activeContextMenuId.collectAsState()
+    val isAnyMenuVisible = activeContextMenuId != null
+    val menuAlpha by animateFloatAsState(
+        targetValue = if (isAnyMenuVisible) 0f else 1f,
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "MenuAlpha"
+    )
+
     val navPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     
     // 容器總高度
@@ -84,6 +93,7 @@ fun Dock(
                         .padding(horizontal = 12.dp)
                         .padding(bottom = navPadding)
                         .fillMaxSize() // 讓 Modern 背景填滿容器（減去 padding）
+                        .graphicsLayer { alpha = menuAlpha }
                         .liquidGlassDock(
                             isLiquidGlass = isLiquidGlass,
                             backdrop = backdrop,
@@ -100,6 +110,7 @@ fun Dock(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
+                        .graphicsLayer { alpha = menuAlpha }
                         .liquidGlassDock(
                             isLiquidGlass = isLiquidGlass,
                             backdrop = backdrop,
@@ -116,6 +127,7 @@ fun Dock(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(44.dp + navPadding)
+                        .graphicsLayer { alpha = menuAlpha }
                         .liquidGlassDock(
                             isLiquidGlass = isLiquidGlass,
                             backdrop = backdrop,
@@ -167,7 +179,6 @@ fun Dock(
                         animationSpec = infiniteRepeatable(animation = tween(120, easing = LinearEasing), repeatMode = RepeatMode.Reverse), label = "jiggle"
                     )
                     
-                    val viewModel: MainViewModel = viewModel()
                     val isDesktopLocked by viewModel.isDesktopLocked.collectAsState()
                     var showContextMenu by remember { mutableStateOf(false) }
                     val context = LocalContext.current
@@ -196,7 +207,10 @@ fun Dock(
                             },
                             onLongClick = {
                                 if (app.isFolder || app.packageName.isNotEmpty()) {
-                                    if (!isEditMode && !isDesktopLocked) showContextMenu = true
+                                    if (!isEditMode && !isDesktopLocked) {
+                                        viewModel.setActiveContextMenuId(app.uniqueId)
+                                        showContextMenu = true
+                                    }
                                 } else {
                                     if (!isDesktopLocked) onLongClick(index)
                                 }
@@ -208,7 +222,10 @@ fun Dock(
 
                     DropdownMenu(
                         expanded = showContextMenu,
-                        onDismissRequest = { showContextMenu = false }
+                        onDismissRequest = { 
+                            showContextMenu = false 
+                            viewModel.setActiveContextMenuId(null)
+                        }
                     ) {
                         val actionMode by viewModel.actionMode.collectAsState()
                         val menuOptions by viewModel.homeMenuOptions.collectAsState()
