@@ -17,6 +17,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -162,6 +163,8 @@ fun AppGrid(
         val list = apps.toMutableList()
         val fromIdx = list.indexOfFirst { it.uniqueId == draggingUniqueId }
 
+        // 只有在明確的 REORDER（排序）意圖下，才進行列表重排預覽
+        // 如果是 FOLDER（合併）或沒有懸停，則保持原始順序，這能防止目標 App B 在合併前彈開
         if (confirmedHoveredSlotIdx != null && confirmedIntent == MainViewModel.DropType.REORDER) {
             if (fromIdx != -1) {
                 val item = list.removeAt(fromIdx)
@@ -436,23 +439,22 @@ fun AppGrid(
                                     onDrag = { change, dragAmount ->
                                         totalDragDistance += dragAmount.getDistance()
                                         
-                                        // 統一觸發門檻：拖動一段距離後啟動「跟手」位移
                                         if (!hasTriggeredDrag && totalDragDistance > 25f) {
-                                            // 如果尚未在編輯模式，則進入編輯模式
                                             if (!viewModel.isEditMode.value) {
                                                 viewModel.setEditMode(true)
                                             }
                                             
-                                            // 一旦開始拖拽移動，關閉選單並取消聚焦縮放，讓圖示回歸正常大小被拎起
                                             showContextMenu = false
                                             viewModel.setActiveContextMenuId(null) 
                                             
+                                            // 關鍵修正：將當前座標設為起始點，並標記已觸發
                                             currentOnDragStart(app, lastPosition.pos + change.position)
                                             hasTriggeredDrag = true
                                         }
                                         
                                         if (hasTriggeredDrag) {
                                             change.consume()
+                                            // 這裡傳遞原始的 delta 即可，LauncherScreen 會累加它
                                             currentOnDrag(dragAmount)
                                         }
                                     },
@@ -530,6 +532,8 @@ fun AppGrid(
                                 draggingUniqueId = draggingUniqueId,
                                 scale = scale,
                                 rotation = rotation,
+                                isHoveredFolder = isHoveredFolder,
+                                confirmedIntent = confirmedIntent,
                                 labelFontSize = labelFontSize,
                                 showContextMenu = showContextMenu,
                                 onContextMenuDismiss = { 
@@ -1049,6 +1053,8 @@ private fun AppGridItem(
     draggingUniqueId: String?,
     scale: Float,
     rotation: Float,
+    isHoveredFolder: Boolean,
+    confirmedIntent: MainViewModel.DropType,
     labelFontSize: androidx.compose.ui.unit.TextUnit = 12.sp,
     showContextMenu: Boolean,
     onContextMenuDismiss: () -> Unit,
@@ -1121,11 +1127,25 @@ private fun AppGridItem(
             notificationCountProvider = notificationCountProvider,
             modifier = Modifier.graphicsLayer {
                 alpha = alphaAnim
-                scaleX = scale * scaleAnim
-                scaleY = scale * scaleAnim
+                // 實作新邏輯：如果目前是準備變成資料夾的目標，則縮小底部圖示
+                val isFolderTarget = isHoveredFolder && confirmedIntent == MainViewModel.DropType.FOLDER
+                val targetScale = if (isFolderTarget) 0.85f else 1.0f
+                scaleX = scale * scaleAnim * targetScale
+                scaleY = scale * scaleAnim * targetScale
                 if (isEditMode && !isBeingDragged) rotationZ = rotation
             }
         )
+        
+        // 實作新視覺：準備變成資料夾的半透明外框
+        if (isHoveredFolder && confirmedIntent == MainViewModel.DropType.FOLDER) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .padding(4.dp)
+                    .background(Color.White.copy(alpha = 0.25f), RoundedCornerShape(16.dp))
+                    .border(1.5.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
+            )
+        }
         val menuOptions by viewModel.homeMenuOptions.collectAsState()
         val isDesktopLocked by viewModel.isDesktopLocked.collectAsState()
         

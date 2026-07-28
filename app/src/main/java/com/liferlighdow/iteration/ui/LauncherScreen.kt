@@ -537,8 +537,8 @@ fun LauncherScreen(
                                         draggingApp = app
                                         touchPosition = offset
                                         dragOffset = Offset.Zero
+                                        emojiAnimStartPos = null // 非鎖定狀態清空動畫坐標
                                     } else {
-                                        // 鎖定狀態下，雖然不能拖動，但我們記錄觸發位置以備後續動畫使用
                                         emojiAnimStartPos = offset
                                     }
                                 },
@@ -559,13 +559,65 @@ fun LauncherScreen(
                                             maxOverlap = overlap; bestKey = key
                                         }
                                     }
-                                    rawHoveredKey = bestKey
+                                    // 關鍵修正：只有重疊超過 20% 才判定為有效懸停，避免太早跳開
+                                    rawHoveredKey = if (maxOverlap > 0.20f) bestKey else null
                                     confirmedIntent =
                                         if (!isEditMode && maxOverlap > 0.50f) MainViewModel.DropType.FOLDER else MainViewModel.DropType.REORDER
                                 },
                                 onDragEnd = {
                                     if (draggingApp != null) {
-                                        // ... 原有邏輯 ...
+                                        val finalPos = touchPosition + dragOffset
+                                        val dragRect = Rect(
+                                            finalPos.x - iconSizePx / 2,
+                                            finalPos.y - iconSizePx / 2,
+                                            finalPos.x + iconSizePx / 2,
+                                            finalPos.y + iconSizePx / 2
+                                        )
+                                        var bestKey: String? = null
+                                        var maxOverlap = 0f
+                                        slotBounds.forEach { (key, rect) ->
+                                            val overlap = calculateOverlap(rect, dragRect)
+                                            if (overlap > maxOverlap) {
+                                                maxOverlap = overlap; bestKey = key
+                                            }
+                                        }
+                                        if (bestKey != null) {
+                                            val parts = bestKey!!.split("-")
+                                            val tPageIdx = parts[0].toInt()
+                                            val tSlotIdx = parts[1].toInt()
+                                            val targetApp =
+                                                pages.getOrNull(tPageIdx - desktopStartIndex)
+                                                    ?.getOrNull(tSlotIdx)
+                                            val dropType =
+                                                if (!isEditMode && maxOverlap > 0.50f && targetApp != null) MainViewModel.DropType.FOLDER else MainViewModel.DropType.REORDER
+                                            viewModel.handleAppDrop(
+                                                fromId = draggingApp!!.uniqueId,
+                                                targetId = targetApp?.uniqueId,
+                                                targetPageIndex = tPageIdx - desktopStartIndex,
+                                                targetSlotIndex = tSlotIdx,
+                                                isFromLibrary = false,
+                                                dropType = dropType
+                                            )
+                                        } else {
+                                            val currentPage = pagerState.currentPage
+                                            if (showAppLibrary && currentPage == pageCount - 1) {
+                                                viewModel.removeAppFromHome(draggingApp!!.uniqueId)
+                                            } else {
+                                                val targetIdx =
+                                                    (currentPage - desktopStartIndex).coerceIn(
+                                                        0,
+                                                        desktopPageCount - 1
+                                                    )
+                                                viewModel.handleAppDrop(
+                                                    fromId = draggingApp!!.uniqueId,
+                                                    targetId = null,
+                                                    targetPageIndex = targetIdx,
+                                                    targetSlotIndex = null,
+                                                    isFromLibrary = false,
+                                                    dropType = MainViewModel.DropType.REORDER
+                                                )
+                                            }
+                                        }
                                     } else if (isEditMode && isDesktopLocked && emojiAnimStartPos != null) {
                                         // 鎖定狀態下嘗試拖動，放開後觸發👆漂浮
                                         showFloatingEmoji = true
@@ -815,14 +867,20 @@ fun LauncherScreen(
 
         lastDraggingApp?.let { app ->
             if (draggingAlpha > 0f) {
+                // 如果目前的放置意圖是變成資料夾，則讓手中的圖示也縮小
+                val inHandScale by animateFloatAsState(
+                    if (confirmedIntent == MainViewModel.DropType.FOLDER && confirmedHoveredKey != null) 0.85f else 1.2f,
+                    label = "inHandScale"
+                )
+                
                 Box(
                     modifier = Modifier
                         .graphicsLayer {
                             translationX = touchPosition.x + dragOffset.x - iconSizePx / 2
                             translationY = touchPosition.y + dragOffset.y - iconSizePx / 2
                             alpha = 0.8f * draggingAlpha
-                            scaleX = 1.2f
-                            scaleY = 1.2f
+                            scaleX = inHandScale
+                            scaleY = inHandScale
                         }
                 ) {
                     AppItem(
