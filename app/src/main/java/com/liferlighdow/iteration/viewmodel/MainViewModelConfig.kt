@@ -30,6 +30,12 @@ fun MainViewModel.exportConfig(): String {
             iconShape = _iconShape.value,
             libraryShape = _libraryShape.value,
             searchEngineUrl = _searchEngineUrl.value,
+            searchKeywordsEnabled = _searchKeywordsEnabled.value,
+            searchCalculatorEnabled = _searchCalculatorEnabled.value,
+            searchUnitConvEnabled = _searchUnitConvEnabled.value,
+            searchCurrencyConvEnabled = _searchCurrencyConvEnabled.value,
+            searchFilesEnabled = _searchFilesEnabled.value,
+            searchQuickSettingsEnabled = _searchQuickSettingsEnabled.value,
             autoAddAppsToHome = _autoAddAppsToHome.value,
             showStatusBar = _showStatusBar.value,
             showNavigationBar = _showNavigationBar.value,
@@ -131,6 +137,13 @@ fun MainViewModel.applyConfig(config: LauncherConfig) {
     _showStatusBar.value = settings.showStatusBar
     _showNavigationBar.value = settings.showNavigationBar
     
+    _searchKeywordsEnabled.value = settings.searchKeywordsEnabled
+    _searchCalculatorEnabled.value = settings.searchCalculatorEnabled
+    _searchUnitConvEnabled.value = settings.searchUnitConvEnabled
+    _searchCurrencyConvEnabled.value = settings.searchCurrencyConvEnabled
+    _searchFilesEnabled.value = settings.searchFilesEnabled
+    _searchQuickSettingsEnabled.value = settings.searchQuickSettingsEnabled
+    
     prefs.edit().apply {
         putBoolean("themed_icons", settings.themedIcons)
         putBoolean("liquid_glass_enabled", settings.liquidGlassEnabled)
@@ -149,6 +162,13 @@ fun MainViewModel.applyConfig(config: LauncherConfig) {
         putBoolean("auto_add_apps_to_home", settings.autoAddAppsToHome)
         putBoolean("show_status_bar", settings.showStatusBar)
         putBoolean("show_navigation_bar", settings.showNavigationBar)
+        
+        putBoolean("search_keywords_enabled", settings.searchKeywordsEnabled)
+        putBoolean("search_calculator_enabled", settings.searchCalculatorEnabled)
+        putBoolean("search_unit_conv_enabled", settings.searchUnitConvEnabled)
+        putBoolean("search_currency_conv_enabled", settings.searchCurrencyConvEnabled)
+        putBoolean("search_files_enabled", settings.searchFilesEnabled)
+        putBoolean("search_quick_settings_enabled", settings.searchQuickSettingsEnabled)
         
         putInt("icon_size_px", settings.iconSizePx)
         putFloat("icon_scale", settings.iconScale)

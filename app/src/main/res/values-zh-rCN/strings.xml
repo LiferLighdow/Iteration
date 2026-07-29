@@ -99,6 +99,14 @@
     <string name="settings_search_desc">配置搜索引擎与结果</string>
     <string name="search_engine">搜索引擎</string>
     <string name="search_engine_desc">选择全局搜索中“网页搜索”所使用的引擎。</string>
+    <string name="search_functions_title">搜索功能设置</string>
+    <string name="search_functions_desc">开启或关闭特定的搜索能力。最少必须保留一个启用的项目。</string>
+    <string name="search_func_keywords">关键字建议</string>
+    <string name="search_func_calculator">万能计算器</string>
+    <string name="search_func_unit_conv">单位换算器</string>
+    <string name="search_func_currency_conv">汇率换算器</string>
+    <string name="search_func_files">文件大搜索</string>
+    <string name="search_func_quick_settings">快捷设置控</string>
     <string name="custom_search_url">自定义搜索网址</string>
     <string name="custom_search_url_desc">输入自定义搜索网址，并以查询参数结尾。</string>
     <string name="settings_themed_icons">主题图标</string>

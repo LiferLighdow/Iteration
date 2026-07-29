@@ -98,7 +98,7 @@ fun AppLibraryPage(
     val isSearchFocused by viewModel.isLibrarySearchFocused.collectAsState()
     val filteredApps by viewModel.filteredLibraryApps.collectAsState()
     val menuOptions by viewModel.homeMenuOptions.collectAsState()
-    
+
     var isHiddenUnlocked by remember { mutableStateOf(false) }
     var showPasswordDialog by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
@@ -204,7 +204,7 @@ fun AppLibraryPage(
             )
 
             if (isSearchFocused || searchQuery.isNotEmpty()) {
-                TextButton(onClick = { 
+                TextButton(onClick = {
                     viewModel.setSearchQuery("")
                     focusManager.clearFocus()
                     viewModel.setLibrarySearchFocused(false)
@@ -229,7 +229,7 @@ fun AppLibraryPage(
         ) { targetIsLibraryView ->
             if (targetIsLibraryView) {
                 val appsToShow = if (selectedCategory == "Hidden Apps" && !isHiddenUnlocked) emptyList() else filteredApps
-                
+
                 val listState = rememberLazyListState()
                 val coroutineScope = rememberCoroutineScope()
                 val haptic = LocalHapticFeedback.current
@@ -313,20 +313,20 @@ fun AppLibraryPage(
                                         },
                                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                                         modifier = Modifier.combinedClickable(
-                                            onClick = { 
+                                            onClick = {
                                                 if (app.isFrozen) appToUnfreeze = app
-                                                else onAppClick(app) 
+                                                else onAppClick(app)
                                             },
-                                            onLongClick = { 
+                                            onLongClick = {
                                                 viewModel.setActiveContextMenuId(app.uniqueId)
-                                                showMenu = true 
+                                                showMenu = true
                                             }
                                         )
                                     )
                                     DropdownMenu(
                                         expanded = showMenu,
-                                        onDismissRequest = { 
-                                            showMenu = false 
+                                        onDismissRequest = {
+                                            showMenu = false
                                             viewModel.setActiveContextMenuId(null)
                                         }
                                     ) {
@@ -459,9 +459,9 @@ fun AppLibraryPage(
                     val folderList = mutableListOf<Pair<String, List<AppModel>>>()
                     if (suggestedApps.isNotEmpty()) folderList.add("Suggestions" to suggestedApps.take(4))
                     folderList.addAll(categories)
-                    
+
                     if (showHiddenFolder) folderList.add("Hidden Apps" to hiddenApps)
-                    
+
                     // 優化點：加入穩定的 key，提升列表重組效能
                     items(folderList, key = { it.first }) { (name, apps) ->
                         AppLibraryFolder(
@@ -476,14 +476,14 @@ fun AppLibraryPage(
                             refractionAmount = refractionAmount,
                             chromaticAberration = chromaticAberration,
                             isLocked = (name == "Hidden Apps" && !isHiddenUnlocked),
-                            onAppClick = { 
-                                if (name == "Hidden Apps" && !isHiddenUnlocked) showPasswordDialog = true 
+                            onAppClick = {
+                                if (name == "Hidden Apps" && !isHiddenUnlocked) showPasswordDialog = true
                                 else if (it.isFrozen) appToUnfreeze = it
-                                else onAppClick(it) 
+                                else onAppClick(it)
                             },
-                            onMoreClick = { 
-                                if (name == "Hidden Apps" && !isHiddenUnlocked) showPasswordDialog = true 
-                                else viewModel.setSelectedCategory(name) 
+                            onMoreClick = {
+                                if (name == "Hidden Apps" && !isHiddenUnlocked) showPasswordDialog = true
+                                else viewModel.setSelectedCategory(name)
                             },
                             onDragStart = onDragStart, onDrag = onDrag, onDragEnd = onDragEnd
                         )
@@ -543,12 +543,12 @@ fun AppLibraryFolder(
     isLocked: Boolean = false
 ) {
     val viewModel: MainViewModel = viewModel()
-    
+
     // 根據形狀決定裁切方式：只有圓形才強制裁切（防止脫框），Default 則不裁切（確保圖示角角完整）
     val folderShape = if (libraryShape == IconShape.CIRCLE) CircleShape else null
     val folderPadding = if (libraryShape == IconShape.CIRCLE) (iconSize * 0.27f) else (iconSize * 0.16f)
     val internalIconSize = iconSize // 直接使用傳入的大小，或者是比例換算
-    
+
     val showLock = isLocked
 
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
@@ -696,15 +696,15 @@ fun LibraryItemWithMenu(
     // 用於重新命名的狀態
     var showRenameDialog by remember { mutableStateOf(false) }
     var renameText by remember { mutableStateOf(app.label) }
-    
+
     val menuOptions by viewModel.homeMenuOptions.collectAsState()
-    
+
     val shortcuts = remember(showMenu) {
         if (showMenu && menuOptions.contains("shortcuts") && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N_MR1) {
             viewModel.getAppShortcuts(app.packageName, app.userId)
         } else emptyList()
     }
-    
+
     Box {
         AppItem(
             app = app,
@@ -724,19 +724,21 @@ fun LibraryItemWithMenu(
             )
         )
 
+        val dismissMenu = {
+            showMenu = false
+            viewModel.clearFocusState()
+        }
+
         DropdownMenu(
             expanded = showMenu,
-            onDismissRequest = { 
-                showMenu = false 
-                viewModel.setActiveContextMenuId(null)
-            }
+            onDismissRequest = dismissMenu
         ) {
             val actionMode by viewModel.actionMode.collectAsState()
             if (menuOptions.contains("freeze") && (actionMode == ActionMode.SHIZUKU || actionMode == ActionMode.ROOT)) {
                 DropdownMenuItem(
                     text = { Text(stringResource(if (app.isFrozen) R.string.unfreeze else R.string.freeze)) },
                     leadingIcon = { Icon(Icons.Default.AcUnit, null) },
-                    onClick = { viewModel.toggleFreezeApp(app, mContext); showMenu = false }
+                    onClick = { viewModel.toggleFreezeApp(app, mContext); dismissMenu() }
                 )
                 HorizontalDivider()
             }
@@ -744,9 +746,9 @@ fun LibraryItemWithMenu(
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N_MR1 && shortcuts.isNotEmpty()) {
                 shortcuts.forEach { shortcut ->
                     DropdownMenuItem(
-                        text = { 
+                        text = {
                             @Suppress("NewApi")
-                            Text(shortcut.shortLabel?.toString() ?: shortcut.longLabel?.toString() ?: "") 
+                            Text(shortcut.shortLabel?.toString() ?: shortcut.longLabel?.toString() ?: "")
                         },
                         leadingIcon = {
                             val icon = viewModel.getShortcutIcon(shortcut)
@@ -757,7 +759,7 @@ fun LibraryItemWithMenu(
                         onClick = {
                             @Suppress("NewApi")
                             viewModel.launchShortcut(app.packageName, shortcut.id, app.userId)
-                            showMenu = false
+                            dismissMenu()
                         }
                     )
                 }
@@ -768,18 +770,18 @@ fun LibraryItemWithMenu(
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.menu_add_to_home)) },
                     leadingIcon = { Icon(Icons.Default.Add, null) },
-                    onClick = { viewModel.addAppToHome(app.uniqueId); showMenu = false }
+                    onClick = { viewModel.addAppToHome(app.uniqueId); dismissMenu() }
                 )
             }
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.rename)) },
                 leadingIcon = { Icon(Icons.Default.Edit, null) },
-                onClick = { showRenameDialog = true; showMenu = false }
+                onClick = { showRenameDialog = true; dismissMenu() }
             )
             DropdownMenuItem(
                 text = { Text(stringResource(if (app.isHidden) R.string.unhide else R.string.hide)) },
                 leadingIcon = { Icon(if (app.isHidden) Icons.Default.Visibility else Icons.Default.VisibilityOff, null) },
-                onClick = { viewModel.toggleHiddenApp(app.packageName); showMenu = false }
+                onClick = { viewModel.toggleHiddenApp(app.packageName); dismissMenu() }
             )
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.menu_app_info)) },
@@ -790,7 +792,7 @@ fun LibraryItemWithMenu(
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK
                     }
                     mContext.startActivity(intent)
-                    showMenu = false
+                    dismissMenu()
                 }
             )
             if (!app.isSystem) {
@@ -803,7 +805,7 @@ fun LibraryItemWithMenu(
                             showNativeUninstallDialog(mContext, app.label) {
                                 viewModel.deletePWA(app)
                             }
-                            showMenu = false
+                            dismissMenu()
                             return@DropdownMenuItem
                         }
                         Log.d("Iteration", "Uninstalling: ${app.packageName}")
@@ -817,7 +819,7 @@ fun LibraryItemWithMenu(
                         } catch (e: Exception) {
                             Log.e("Iteration", "Uninstall failed", e)
                         }
-                        showMenu = false
+                        dismissMenu()
                     }
                 )
             }

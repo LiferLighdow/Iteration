@@ -252,6 +252,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _pressedItemId.value = id
     }
 
+    fun clearFocusState() {
+        _activeContextMenuId.value = null
+        _pressedItemId.value = null
+    }
+
     internal val _showVNaviInstallDialog = MutableStateFlow(false)
     val showVNaviInstallDialog = _showVNaviInstallDialog.asStateFlow()
 
@@ -475,6 +480,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             ?: "https://www.google.com/search?q="
     )
     val searchEngineUrl = _searchEngineUrl.asStateFlow()
+
+    internal val _searchKeywordsEnabled = MutableStateFlow(prefs.getBoolean("search_keywords_enabled", true))
+    val searchKeywordsEnabled = _searchKeywordsEnabled.asStateFlow()
+
+    internal val _searchCalculatorEnabled = MutableStateFlow(prefs.getBoolean("search_calculator_enabled", true))
+    val searchCalculatorEnabled = _searchCalculatorEnabled.asStateFlow()
+
+    internal val _searchUnitConvEnabled = MutableStateFlow(prefs.getBoolean("search_unit_conv_enabled", true))
+    val searchUnitConvEnabled = _searchUnitConvEnabled.asStateFlow()
+
+    internal val _searchCurrencyConvEnabled = MutableStateFlow(prefs.getBoolean("search_currency_conv_enabled", true))
+    val searchCurrencyConvEnabled = _searchCurrencyConvEnabled.asStateFlow()
+
+    internal val _searchFilesEnabled = MutableStateFlow(prefs.getBoolean("search_files_enabled", true))
+    val searchFilesEnabled = _searchFilesEnabled.asStateFlow()
+
+    internal val _searchQuickSettingsEnabled = MutableStateFlow(prefs.getBoolean("search_quick_settings_enabled", true))
+    val searchQuickSettingsEnabled = _searchQuickSettingsEnabled.asStateFlow()
 
     internal val _excludedThemedPackages =
         MutableStateFlow(prefs.getStringSet("excluded_themed_packages", emptySet()) ?: emptySet())

@@ -101,6 +101,14 @@
     <string name="settings_search_desc">設定搜尋引擎與結果</string>
     <string name="search_engine">搜尋引擎</string>
     <string name="search_engine_desc">選擇全域搜尋中「網頁搜尋」所使用的引擎。</string>
+    <string name="search_functions_title">搜尋功能</string>
+    <string name="search_functions_desc">開啟或關閉特定的搜尋功能。最少必須保留一個啟用的項目。</string>
+    <string name="search_func_keywords">關鍵字</string>
+    <string name="search_func_calculator">計算機</string>
+    <string name="search_func_unit_conv">單位換算</string>
+    <string name="search_func_currency_conv">匯率換算</string>
+    <string name="search_func_files">查找檔案</string>
+    <string name="search_func_quick_settings">快捷設定</string>
     <string name="custom_search_url">自訂搜尋網址</string>
     <string name="custom_search_url_desc">輸入自訂搜尋網址，並以查詢參數結尾。</string>
     <string name="settings_themed_icons">主題圖示</string>

@@ -220,12 +220,14 @@ fun Dock(
                         iconSize = iconSize
                     )
 
+                    val dismissMenu = {
+                        showContextMenu = false
+                        viewModel.clearFocusState()
+                    }
+
                     DropdownMenu(
                         expanded = showContextMenu,
-                        onDismissRequest = { 
-                            showContextMenu = false 
-                            viewModel.setActiveContextMenuId(null)
-                        }
+                        onDismissRequest = dismissMenu
                     ) {
                         val actionMode by viewModel.actionMode.collectAsState()
                         val menuOptions by viewModel.homeMenuOptions.collectAsState()
@@ -235,7 +237,7 @@ fun Dock(
                             DropdownMenuItem(
                                 text = { Text(stringResource(if (app.isFrozen) R.string.unfreeze else R.string.freeze)) },
                                 leadingIcon = { Icon(Icons.Default.AcUnit, null) },
-                                onClick = { viewModel.toggleFreezeApp(app, context); showContextMenu = false }
+                                onClick = { viewModel.toggleFreezeApp(app, context); dismissMenu() }
                             )
                         }
 
@@ -243,7 +245,7 @@ fun Dock(
                         DropdownMenuItem(
                             text = { Text(stringResource(if (app.isFolder) R.string.change_to_app else R.string.replace_app)) },
                             leadingIcon = { Icon(Icons.Default.SwapHoriz, null) },
-                            onClick = { onReplaceClick(index); showContextMenu = false }
+                            onClick = { onReplaceClick(index); dismissMenu() }
                         )
 
                         // 3. 轉為資料夾 (Change to Folder) - 僅在非資料夾且有 App 時出現
@@ -251,7 +253,7 @@ fun Dock(
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.change_to_folder)) },
                                 leadingIcon = { Icon(Icons.Default.CreateNewFolder, null) },
-                                onClick = { viewModel.convertDockAppToFolder(index); showContextMenu = false }
+                                onClick = { viewModel.convertDockAppToFolder(index); dismissMenu() }
                             )
                         }
 
@@ -261,7 +263,7 @@ fun Dock(
                             leadingIcon = { Icon(Icons.Default.Delete, null) },
                             onClick = { 
                                 viewModel.removeAppFromDock(index)
-                                showContextMenu = false 
+                                dismissMenu() 
                             }
                         )
 
@@ -287,7 +289,7 @@ fun Dock(
                                             }
                                         }
                                     }
-                                    showContextMenu = false
+                                    dismissMenu()
                                 }
                             )
                         }

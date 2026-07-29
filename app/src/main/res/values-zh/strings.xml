@@ -86,6 +86,14 @@
     <string name="settings_search_desc">設定搜尋引擎與結果</string>
     <string name="search_engine">搜尋引擎</string>
     <string name="search_engine_desc">在全域搜尋中選擇用於「網路搜尋」的引擎。</string>
+    <string name="search_functions_title">搜尋功能設定</string>
+    <string name="search_functions_desc">主人可以自由決定要開啟哪些強大的搜尋能力喔♡ 但為了不讓人家變笨，最少要留一個啟用的項目呢！</string>
+    <string name="search_func_keywords">關鍵字建議</string>
+    <string name="search_func_calculator">萬能計算機</string>
+    <string name="search_func_unit_conv">單位換算器</string>
+    <string name="search_func_currency_conv">匯率變換術</string>
+    <string name="search_func_files">檔案大搜尋</string>
+    <string name="search_func_quick_settings">快捷設定控</string>
     <string name="custom_search_url">自定義搜尋網址</string>
     <string name="custom_search_url_desc">輸入以查詢參數結尾的自訂搜尋網址。</string>
     <string name="settings_themed_icons">主題風格圖示</string>

@@ -14,6 +14,9 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -37,7 +40,7 @@ data class SettingsMetadata(
 )
 
 enum class SettingsPage {
-    MAIN, HIDE_APPS, RENAME_APPS, CHANGE_ICON, APP_LIBRARY, ICON_THEME, DOCK, LIQUID_GLASS, GESTURES, SEARCH, PERMISSIONS, MANUALS, GLOBAL_SEARCH_MANUAL, ICON_ENGINE_MANUAL, DOCK_MANUAL, LANGUAGE, ADVANCED, PWA_MAKER, PWA_MANAGE, WIDGET_MAKER, WIDGET_WORKSHOP
+    MAIN, HIDE_APPS, RENAME_APPS, CHANGE_ICON, APP_LIBRARY, ICON_THEME, DOCK, LIQUID_GLASS, GESTURES, SEARCH, SEARCH_ENGINE, PERMISSIONS, MANUALS, GLOBAL_SEARCH_MANUAL, ICON_ENGINE_MANUAL, DOCK_MANUAL, LANGUAGE, ADVANCED, PWA_MAKER, PWA_MANAGE, WIDGET_MAKER, WIDGET_WORKSHOP
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -48,13 +51,14 @@ fun IterationSearchBar(
     onQueryChange: (String) -> Unit,
     modifier: Modifier = Modifier,
     isGlass: Boolean = false,
-    backdrop: com.kyant.backdrop.Backdrop? = null
+    backdrop: com.kyant.backdrop.Backdrop? = null,
+    focusRequester: FocusRequester? = null
 ) {
     val content = @Composable {
         TextField(
             value = query,
             onValueChange = onQueryChange,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier),
             placeholder = { Text(placeholder, color = (if (isGlass) Color.White else MaterialTheme.colorScheme.onSurfaceVariant).copy(alpha = 0.6f)) },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = if (isGlass) Color.White else MaterialTheme.colorScheme.onSurfaceVariant) },
             trailingIcon = {

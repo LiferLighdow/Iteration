@@ -443,7 +443,7 @@ fun AppGrid(
                                     showContextMenu = showContextMenu,
                                     onContextMenuDismiss = { 
                                         showContextMenu = false 
-                                        viewModel.setActiveContextMenuId(null)
+                                        viewModel.clearFocusState()
                                     },
                                     onUpdateStackToEdit = { stackToEdit = it },
                                     onUpdateNoteToEdit = { noteToEdit = it },
@@ -474,7 +474,7 @@ fun AppGrid(
                                     showContextMenu = showContextMenu,
                                     onContextMenuDismiss = { 
                                         showContextMenu = false 
-                                        viewModel.setActiveContextMenuId(null)
+                                        viewModel.clearFocusState()
                                     },
                                     onAppClick = { onAppClick(app, lastPosition.pos) },
                                     onEditApp = { onEditApp(app) },

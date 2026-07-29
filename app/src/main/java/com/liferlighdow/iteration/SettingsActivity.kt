@@ -61,6 +61,7 @@ fun SettingsNavigation() {
             SettingsPage.ICON_ENGINE_MANUAL -> currentPage = SettingsPage.MANUALS
             SettingsPage.DOCK_MANUAL -> currentPage = SettingsPage.MANUALS
             SettingsPage.WIDGET_WORKSHOP -> currentPage = SettingsPage.WIDGET_MAKER
+            SettingsPage.SEARCH_ENGINE -> currentPage = SettingsPage.SEARCH
             else -> currentPage = SettingsPage.MAIN
         }
     }
@@ -94,7 +95,11 @@ fun SettingsNavigation() {
         SettingsPage.DOCK -> DesktopSettingsScreen(onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.LIQUID_GLASS -> LiquidGlassSettingsScreen(onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.GESTURES -> GesturesSettingsScreen(onBack = { currentPage = SettingsPage.MAIN })
-        SettingsPage.SEARCH -> SearchSettingsScreen(onBack = { currentPage = SettingsPage.MAIN })
+        SettingsPage.SEARCH -> SearchSettingsScreen(
+            onBack = { currentPage = SettingsPage.MAIN },
+            onNavigateToSearchEngine = { currentPage = SettingsPage.SEARCH_ENGINE }
+        )
+        SettingsPage.SEARCH_ENGINE -> SearchEngineSettingsScreen(onBack = { currentPage = SettingsPage.SEARCH })
         SettingsPage.PERMISSIONS -> PermissionsSettingsScreen(onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.MANUALS -> ManualsScreen(
             onBack = { currentPage = SettingsPage.MAIN },

@@ -277,16 +277,21 @@ fun FolderOverlay(
                                                     } else emptyList()
                                                 }
 
+                                                val dismissMenu = {
+                                                    showItemMenu = false
+                                                    viewModel.clearFocusState()
+                                                }
+
                                                 DropdownMenu(
                                                     expanded = showItemMenu,
-                                                    onDismissRequest = { showItemMenu = false }
+                                                    onDismissRequest = dismissMenu
                                                 ) {
                                                     val actionMode by viewModel.actionMode.collectAsState()
                                                     if (!app.isFolder && menuOptions.contains("freeze") && (actionMode == ActionMode.SHIZUKU || actionMode == ActionMode.ROOT)) {
                                                         DropdownMenuItem(
                                                             text = { Text(stringResource(if (app.isFrozen) R.string.unfreeze else R.string.freeze)) },
                                                             leadingIcon = { Icon(Icons.Default.AcUnit, null) },
-                                                            onClick = { viewModel.toggleFreezeApp(app, mContext); showItemMenu = false }
+                                                            onClick = { viewModel.toggleFreezeApp(app, mContext); dismissMenu() }
                                                         )
                                                         HorizontalDivider()
                                                     }
@@ -307,7 +312,7 @@ fun FolderOverlay(
                                                                 onClick = {
                                                                     @Suppress("NewApi")
                                                                     viewModel.launchShortcut(app.packageName, shortcut.id, app.userId)
-                                                                    showItemMenu = false
+                                                                    dismissMenu()
                                                                 }
                                                             )
                                                         }
@@ -320,7 +325,7 @@ fun FolderOverlay(
                                                             leadingIcon = { Icon(Icons.Default.Delete, null) },
                                                             onClick = {
                                                                 viewModel.removeAppFromFolderWithAnimation(currentFolder.uniqueId, app.uniqueId)
-                                                                showItemMenu = false
+                                                                dismissMenu()
                                                             }
                                                         )
                                                     }
@@ -330,7 +335,7 @@ fun FolderOverlay(
                                                             leadingIcon = { Icon(Icons.Default.Edit, null) },
                                                             onClick = {
                                                                 onEditApp(app)
-                                                                showItemMenu = false
+                                                                dismissMenu()
                                                             }
                                                         )
                                                     }
@@ -343,7 +348,7 @@ fun FolderOverlay(
                                                                     showNativeUninstallDialog(mContext, app.label) {
                                                                         viewModel.deletePWA(app)
                                                                     }
-                                                                    showItemMenu = false
+                                                                    dismissMenu()
                                                                     return@DropdownMenuItem
                                                                 }
                                                                 try {
@@ -355,7 +360,7 @@ fun FolderOverlay(
                                                                 } catch (e: Exception) {
                                                                     Log.e("Iteration", "Uninstall failed", e)
                                                                 }
-                                                                showItemMenu = false
+                                                                dismissMenu()
                                                             }
                                                         )
                                                     }
@@ -365,7 +370,7 @@ fun FolderOverlay(
                                                             leadingIcon = { Icon(Icons.Default.VisibilityOff, null) },
                                                             onClick = {
                                                                 viewModel.toggleHiddenApp(app.packageName)
-                                                                showItemMenu = false
+                                                                dismissMenu()
                                                             }
                                                         )
                                                     }
@@ -383,7 +388,7 @@ fun FolderOverlay(
                                                                 } catch (e: Exception) {
                                                                     Log.e("Iteration", "Open App Info failed", e)
                                                                 }
-                                                                showItemMenu = false
+                                                                dismissMenu()
                                                             }
                                                         )
                                                     }
@@ -395,7 +400,7 @@ fun FolderOverlay(
                                                             leadingIcon = { Icon(if (isFavorite) Icons.Default.Star else Icons.Default.StarOutline, null) },
                                                             onClick = {
                                                                 viewModel.toggleFavoriteApp(app.packageName)
-                                                                showItemMenu = false
+                                                                dismissMenu()
                                                             }
                                                         )
                                                     }

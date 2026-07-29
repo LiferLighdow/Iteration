@@ -109,6 +109,14 @@
     <string name="settings_search_desc">Configure search engines and results</string>
     <string name="search_engine">Search Engine</string>
     <string name="search_engine_desc">Select the engine used for \'Search on Web\' in Global Search.</string>
+    <string name="search_functions_title">Search Features</string>
+    <string name="search_functions_desc">Enable or disable specific search capabilities. At least one must remain active.</string>
+    <string name="search_func_keywords">Keywords</string>
+    <string name="search_func_calculator">Calculator</string>
+    <string name="search_func_unit_conv">Unit Converter</string>
+    <string name="search_func_currency_conv">Currency Converter</string>
+    <string name="search_func_files">Find Files</string>
+    <string name="search_func_quick_settings">Quick Settings</string>
     <string name="custom_search_url">Custom Search URL</string>
     <string name="custom_search_url_desc">Enter a custom search URL ending with the query parameter.</string>
     <string name="settings_themed_icons">Themed Icons</string>

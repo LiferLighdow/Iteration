@@ -32,7 +32,6 @@
 
     <!-- Maps -->
     <item component="com.google.android.apps.maps" drawable="ic_builtin_maps" />
-    <item component="foundation.e.maps" drawable="ic_builtin_maps" />
     <item component="com.baidu.BaiduMap" drawable="ic_builtin_maps" />
     <item component="com.autonavi.minimap" drawable="ic_builtin_maps" />
 

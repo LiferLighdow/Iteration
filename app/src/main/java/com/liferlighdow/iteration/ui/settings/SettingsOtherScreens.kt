@@ -404,7 +404,122 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchSettingsScreen(onBack: () -> Unit) {
+fun SearchSettingsScreen(onBack: () -> Unit, onNavigateToSearchEngine: () -> Unit) {
+    val viewModel: MainViewModel = viewModel()
+    
+    val searchKeywordsEnabled by viewModel.searchKeywordsEnabled.collectAsState()
+    val searchCalculatorEnabled by viewModel.searchCalculatorEnabled.collectAsState()
+    val searchUnitConvEnabled by viewModel.searchUnitConvEnabled.collectAsState()
+    val searchCurrencyConvEnabled by viewModel.searchCurrencyConvEnabled.collectAsState()
+    val searchFilesEnabled by viewModel.searchFilesEnabled.collectAsState()
+    val searchQuickSettingsEnabled by viewModel.searchQuickSettingsEnabled.collectAsState()
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.settings_search)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        LazyColumn(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+        ) {
+            item {
+                Text(
+                    stringResource(R.string.search_engine),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 32.dp, top = 16.dp, bottom = 8.dp)
+                )
+            }
+            item {
+                SettingsGroup {
+                    SettingsItem(
+                        headline = stringResource(R.string.search_engine),
+                        supporting = stringResource(R.string.search_engine_desc),
+                        icon = Icons.Default.Search,
+                        iconColor = MaterialTheme.colorScheme.primary,
+                        onClick = onNavigateToSearchEngine
+                    )
+                }
+            }
+
+            item {
+                Text(
+                    stringResource(R.string.search_functions_title),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 32.dp, top = 24.dp, bottom = 8.dp)
+                )
+            }
+            item {
+                SettingsGroup {
+                    SettingSwitchItem(
+                        title = stringResource(R.string.search_func_keywords),
+                        icon = Icons.Default.Key,
+                        checked = searchKeywordsEnabled,
+                        onCheckedChange = { viewModel.setSearchKeywordsEnabled(it) }
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    SettingSwitchItem(
+                        title = stringResource(R.string.search_func_calculator),
+                        icon = Icons.Default.Calculate,
+                        checked = searchCalculatorEnabled,
+                        onCheckedChange = { viewModel.setSearchCalculatorEnabled(it) }
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    SettingSwitchItem(
+                        title = stringResource(R.string.search_func_unit_conv),
+                        icon = Icons.Default.Straighten,
+                        checked = searchUnitConvEnabled,
+                        onCheckedChange = { viewModel.setSearchUnitConvEnabled(it) }
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    SettingSwitchItem(
+                        title = stringResource(R.string.search_func_currency_conv),
+                        icon = Icons.Default.CurrencyExchange,
+                        checked = searchCurrencyConvEnabled,
+                        onCheckedChange = { viewModel.setSearchCurrencyConvEnabled(it) }
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    SettingSwitchItem(
+                        title = stringResource(R.string.search_func_files),
+                        icon = Icons.Default.Folder,
+                        checked = searchFilesEnabled,
+                        onCheckedChange = { viewModel.setSearchFilesEnabled(it) }
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    SettingSwitchItem(
+                        title = stringResource(R.string.search_func_quick_settings),
+                        icon = Icons.Default.SettingsInputComponent,
+                        checked = searchQuickSettingsEnabled,
+                        onCheckedChange = { viewModel.setSearchQuickSettingsEnabled(it) }
+                    )
+                }
+            }
+
+            item {
+                Text(
+                    stringResource(R.string.search_functions_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp)
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SearchEngineSettingsScreen(onBack: () -> Unit) {
     val viewModel: MainViewModel = viewModel()
     val currentSearchEngineUrl by viewModel.searchEngineUrl.collectAsState()
     var customUrl by remember { mutableStateOf(currentSearchEngineUrl) }

@@ -362,6 +362,53 @@ fun MainViewModel.setSearchEngineUrl(url: String) {
     prefs.edit().putString("search_engine_url", url).apply()
 }
 
+private fun MainViewModel.countEnabledSearchFunctions(): Int {
+    var count = 0
+    if (_searchKeywordsEnabled.value) count++
+    if (_searchCalculatorEnabled.value) count++
+    if (_searchUnitConvEnabled.value) count++
+    if (_searchCurrencyConvEnabled.value) count++
+    if (_searchFilesEnabled.value) count++
+    if (_searchQuickSettingsEnabled.value) count++
+    return count
+}
+
+fun MainViewModel.setSearchKeywordsEnabled(enabled: Boolean) {
+    if (!enabled && countEnabledSearchFunctions() <= 1) return
+    _searchKeywordsEnabled.value = enabled
+    prefs.edit().putBoolean("search_keywords_enabled", enabled).apply()
+}
+
+fun MainViewModel.setSearchCalculatorEnabled(enabled: Boolean) {
+    if (!enabled && countEnabledSearchFunctions() <= 1) return
+    _searchCalculatorEnabled.value = enabled
+    prefs.edit().putBoolean("search_calculator_enabled", enabled).apply()
+}
+
+fun MainViewModel.setSearchUnitConvEnabled(enabled: Boolean) {
+    if (!enabled && countEnabledSearchFunctions() <= 1) return
+    _searchUnitConvEnabled.value = enabled
+    prefs.edit().putBoolean("search_unit_conv_enabled", enabled).apply()
+}
+
+fun MainViewModel.setSearchCurrencyConvEnabled(enabled: Boolean) {
+    if (!enabled && countEnabledSearchFunctions() <= 1) return
+    _searchCurrencyConvEnabled.value = enabled
+    prefs.edit().putBoolean("search_currency_conv_enabled", enabled).apply()
+}
+
+fun MainViewModel.setSearchFilesEnabled(enabled: Boolean) {
+    if (!enabled && countEnabledSearchFunctions() <= 1) return
+    _searchFilesEnabled.value = enabled
+    prefs.edit().putBoolean("search_files_enabled", enabled).apply()
+}
+
+fun MainViewModel.setSearchQuickSettingsEnabled(enabled: Boolean) {
+    if (!enabled && countEnabledSearchFunctions() <= 1) return
+    _searchQuickSettingsEnabled.value = enabled
+    prefs.edit().putBoolean("search_quick_settings_enabled", enabled).apply()
+}
+
 fun MainViewModel.setPageSize(size: Int) {
     pageSize = size
     repaginate(allApps.value)
