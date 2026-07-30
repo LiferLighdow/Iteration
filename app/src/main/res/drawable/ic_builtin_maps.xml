@@ -39,14 +39,21 @@
         android:fillColor="#F5F5F5"
         android:pathData="M650,300 L1000,650 L1000,750 L650,400 Z" />
 
-    <!-- 8. 中央導航指示器容器 - 藍色圓形 -->
-    <path
-        android:fillColor="#007AFF"
-        android:pathData="M 500, 500 m -125, 0 a 125,125 0 1,0 250,0 a 125,125 0 1,0 -250,0" />
+    <!-- 8 & 9. 導航指示器組合 (放大 1.5 倍) -->
+    <group
+        android:pivotX="500"
+        android:pivotY="200"
+        android:scaleX="1.5"
+        android:scaleY="1.5">
+        <!-- 8. 中央導航指示器容器 - 藍色圓形 -->
+        <path
+            android:fillColor="#007AFF"
+            android:pathData="M 500, 500 m -125, 0 a 125,125 0 1,0 250,0 a 125,125 0 1,0 -250,0" />
 
-    <!-- 9. 導航箭頭 (白色) -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M500,420 L560,560 L500,530 L440,560 Z" />
+        <!-- 9. 導航箭頭 (白色) -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M500,420 L560,560 L500,530 L440,560 Z" />
+    </group>
 
 </vector>

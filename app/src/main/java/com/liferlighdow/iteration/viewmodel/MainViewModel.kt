@@ -213,7 +213,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val calendarPackages = setOf(
         "com.google.android.calendar", "com.android.calendar", "com.samsung.android.calendar",
         "com.miui.calendar", "com.huawei.calendar", "com.oppo.calendar", "com.bbk.calendar",
-        "com.sonymobile.calendar", "com.htc.calendar", "com.google.android.calendar.AllInOneActivity"
+        "com.sonymobile.calendar", "com.htc.calendar", "com.google.android.calendar.AllInOneActivity",
+        "org.lineageos.etar"
     )
 
     val clockPackages = setOf(

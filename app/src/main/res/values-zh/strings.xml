@@ -590,6 +590,7 @@
     <string name="builtin_mail">電子郵件</string>
     <string name="builtin_music">音樂播放器</string>
     <string name="builtin_calculator">萬能計算機</string>
+    <string name="builtin_recorder">聲紋刻印 (錄音機)</string>
     <string name="builtin_pack_setup_title">啟動 Iteration 核心圖標配置</string>
     <string name="builtin_pack_setup_desc">主人～請選擇哪些眷屬要套用人家為您準備的專屬圖標喔♡</string>
     <string name="experimental_features">实验性功能</string>

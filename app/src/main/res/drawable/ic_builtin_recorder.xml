@@ -1,0 +1,53 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="200dp"
+    android:viewportWidth="1000"
+    android:viewportHeight="1000">
+
+    <!-- 背景：純黑方形底塊 -->
+    <path
+        android:fillColor="#121212"
+        android:pathData="M0,0 h1000 v1000 h-1000 z" />
+
+    <group
+        android:pivotX="500"
+        android:pivotY="500"
+        android:scaleX="1.15"
+        android:scaleY="1.15">
+
+        <!-- 左側：紅色音波 (已錄製部分) -->
+        <path android:fillColor="#FF5252" android:pathData="M150,485 h15 v30 h-15 z" />
+        <path android:fillColor="#FF5252" android:pathData="M185,470 h15 v60 h-15 z" />
+        <path android:fillColor="#FF5252" android:pathData="M220,440 h15 v120 h-15 z" />
+        <path android:fillColor="#FF5252" android:pathData="M255,410 h15 v180 h-15 z" />
+        <path android:fillColor="#FF5252" android:pathData="M290,350 h15 v300 h-15 z" />
+        <path android:fillColor="#FF5252" android:pathData="M325,400 h15 v200 h-15 z" />
+        <path android:fillColor="#FF5252" android:pathData="M360,280 h15 v440 h-15 z" />
+        <path android:fillColor="#FF5252" android:pathData="M395,360 h15 v280 h-15 z" />
+        <path android:fillColor="#FF5252" android:pathData="M430,420 h15 v160 h-15 z" />
+        <path android:fillColor="#FF5252" android:pathData="M465,450 h15 v100 h-15 z" />
+
+        <!-- 中間：藍色進度條與端點 -->
+        <path
+            android:fillColor="#1D9BF0"
+            android:pathData="M495,200 h10 v600 h-10 z" />
+        <path
+            android:fillColor="#1D9BF0"
+            android:pathData="M500,200 m-25,0 a25,25 0 1,1 50,0 a25,25 0 1,1 -50,0" />
+        <path
+            android:fillColor="#1D9BF0"
+            android:pathData="M500,800 m-25,0 a25,25 0 1,1 50,0 a25,25 0 1,1 -50,0" />
+
+        <!-- 右側：白色音波 (預期/未錄製部分) -->
+        <path android:fillColor="#FFFFFF" android:pathData="M525,440 h15 v120 h-15 z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M560,460 h15 v80 h-15 z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M595,430 h15 v140 h-15 z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M630,470 h15 v60 h-15 z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M665,485 h15 v30 h-15 z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M700,492 h15 v16 h-15 z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M735,495 h15 v10 h-15 z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M770,497 h15 v6 h-15 z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M805,498 h15 v4 h-15 z" />
+
+    </group>
+</vector>

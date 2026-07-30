@@ -648,6 +648,7 @@
     <string name="builtin_mail">電子郵件</string>
     <string name="builtin_music">音樂</string>
     <string name="builtin_calculator">計算機</string>
+    <string name="builtin_recorder">錄音機</string>
     <string name="builtin_pack_setup_title">Iteration 圖示包設定</string>
     <string name="builtin_pack_setup_desc">請選擇哪些應用程式要套用內建的圖示。</string>
     <string name="experimental_features">實驗性功能</string>

@@ -652,6 +652,7 @@
     <string name="builtin_mail">Mail</string>
     <string name="builtin_music">Music</string>
     <string name="builtin_calculator">Calculator</string>
+    <string name="builtin_recorder">Recorder</string>
     <string name="builtin_pack_setup_title">Iteration Pack Setup</string>
     <string name="builtin_pack_setup_desc">Select which apps will apply the built-in icons for these categories.</string>
     <string name="experimental_features">Experimental Features</string>

@@ -34,6 +34,9 @@
     <item component="com.google.android.apps.maps" drawable="ic_builtin_maps" />
     <item component="com.baidu.BaiduMap" drawable="ic_builtin_maps" />
     <item component="com.autonavi.minimap" drawable="ic_builtin_maps" />
+    <item component="com.generalmagic.magicearth" drawable="ic_builtin_maps" />
+    <item component="com.tencent.map" drawable="ic_builtin_maps" />
+    <item component="com.google.android.apps.mapslite" drawable="ic_builtin_maps" />
 
     <!-- Mail -->
     <item component="com.google.android.gm" drawable="ic_builtin_mail" />
@@ -62,7 +65,8 @@
     <item component="io.github.muntashirakon.music" drawable="ic_builtin_music" />
     <item component="code.name.gumdrop.retromusic" drawable="ic_builtin_music" />
     <item component="com.piyush.music" drawable="ic_builtin_music" />
-
+    <item component="org.lineageos.twelve" drawable="ic_builtin_music" />
+    <item component="com.msob7y.namida" drawable="ic_builtin_music" />
 
     <!-- Calculator -->
     <item component="com.android.calculator2" drawable="ic_builtin_calculator" />
@@ -77,7 +81,6 @@
     <item component="com.asus.calculator" drawable="ic_builtin_calculator" />
     <item component="com.liferlighdow.calculator" drawable="ic_builtin_calculator" />
 
-
     <!-- Gallery -->
     <item component="com.android.gallery3d" drawable="ic_builtin_gallery" />
     <item component="com.google.android.apps.photos" drawable="ic_builtin_gallery" />
@@ -88,7 +91,7 @@
     <item component="com.oneplus.gallery" drawable="ic_builtin_gallery" />
     <item component="com.huawei.photos" drawable="ic_builtin_gallery" />
     <item component="com.sonyericsson.album" drawable="ic_builtin_gallery" />
-
+    <item component="org.lineageos.glimpse" drawable="ic_builtin_gallery" />
 
     <!-- Files -->
     <item component="com.google.android.documentsui" drawable="ic_builtin_files" />
@@ -100,6 +103,36 @@
     <item component="com.coloros.filemanager" drawable="ic_builtin_files" />
     <item component="com.oneplus.filemanager" drawable="ic_builtin_files" />
     <item component="com.huawei.android.documents" drawable="ic_builtin_files" />
+    <item component="me.zhanghai.android.files" drawable="ic_builtin_files" />
+    <item component="com.mixplorer.silver" drawable="ic_builtin_files" />
+    <item component="com.amaze.filemanager" drawable="ic_builtin_files" />
+    <item component="com.ghisler.android.TotalCommander" drawable="ic_builtin_files" />
+    <item component="pl.solidexplorer2" drawable="ic_builtin_files" />
+    <item component="nextapp.fx" drawable="ic_builtin_files" />
+    <item component="com.cxinventor.file.explorer" drawable="ic_builtin_files" />
 
+    <!-- Recorder -->
+    <item component="com.android.soundrecorder" drawable="ic_builtin_recorder" />
+    <item component="com.google.android.apps.recorder" drawable="ic_builtin_recorder" />
+    <item component="com.sec.android.app.voicenote" drawable="ic_builtin_recorder" />
+    <item component="com.miui.notes" drawable="ic_builtin_recorder" />
+    <item component="com.miui.voicerecorder" drawable="ic_builtin_recorder" />
+    <item component="com.coloros.soundrecorder" drawable="ic_builtin_recorder" />
+    <item component="com.huawei.soundrecorder" drawable="ic_builtin_recorder" />
+    <item component="com.sonymobile.android.voicerecorder" drawable="ic_builtin_recorder" />
+    <item component="com.asus.soundrecorder" drawable="ic_builtin_recorder" />
+    <item component="com.oneplus.soundrecorder" drawable="ic_builtin_recorder" />
+    <item component="org.lineageos.recorder" drawable="ic_builtin_recorder" />
+
+    <!-- SU -->
+    <item component="com.topjohnwu.magisk" drawable="ic_builtin_su" />
+    <item component="me.tiann.kernelsu" drawable="ic_builtin_su" />
+    <item component="me.bmax.apatch" drawable="ic_builtin_su" />
+    <item component="eu.chainfire.supersu" drawable="ic_builtin_su" />
+    <item component="eu.chainfire.supersu.pro" drawable="ic_builtin_su" />
+    <item component="com.koushikdutta.superuser" drawable="ic_builtin_su" />
+    <item component="com.noshufou.android.su" drawable="ic_builtin_su" />
+    <item component="com.kingroot.kinguser" drawable="ic_builtin_su" />
+    <item component="com.kingoapp.root" drawable="ic_builtin_su" />
 
 </resources>

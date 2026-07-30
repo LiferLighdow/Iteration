@@ -887,6 +887,7 @@ fun ChangeIconScreen(onBack: () -> Unit) {
                 "ic_builtin_mail" to stringResource(R.string.builtin_mail),
                 "ic_builtin_music" to stringResource(R.string.builtin_music),
                 "ic_builtin_calculator" to stringResource(R.string.builtin_calculator),
+                "ic_builtin_recorder" to stringResource(R.string.builtin_recorder),
                 "ic_builtin_settings" to stringResource(R.string.builtin_settings)
             )
 
