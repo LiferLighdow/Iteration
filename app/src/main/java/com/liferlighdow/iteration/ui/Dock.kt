@@ -18,6 +18,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -199,23 +201,29 @@ fun Dock(
                         notificationCountProvider = { notificationCounts[app.packageName] ?: 0 },
                         modifier = Modifier.graphicsLayer {
                             if (isEditMode) rotationZ = rotation
-                        }.combinedClickable(
-                            onClick = {
-                                if (app.isFolder || app.packageName.isNotEmpty()) onAppClick(app) else {
-                                    if (!isDesktopLocked) onLongClick(index)
-                                }
-                            },
-                            onLongClick = {
-                                if (app.isFolder || app.packageName.isNotEmpty()) {
-                                    if (!isEditMode && !isDesktopLocked) {
-                                        viewModel.setActiveContextMenuId(app.uniqueId)
-                                        showContextMenu = true
+                        }.pointerInput(app.uniqueId) {
+                            detectTapGestures(
+                                onPress = {
+                                    viewModel.setPressedItemId(app.uniqueId)
+                                    try { awaitRelease() } finally { viewModel.setPressedItemId(null) }
+                                },
+                                onTap = {
+                                    if (app.isFolder || app.packageName.isNotEmpty()) onAppClick(app) else {
+                                        if (!isDesktopLocked) onLongClick(index)
                                     }
-                                } else {
-                                    if (!isDesktopLocked) onLongClick(index)
+                                },
+                                onLongPress = {
+                                    if (app.isFolder || app.packageName.isNotEmpty()) {
+                                        if (!isEditMode && !isDesktopLocked) {
+                                            viewModel.setActiveContextMenuId(app.uniqueId)
+                                            showContextMenu = true
+                                        }
+                                    } else {
+                                        if (!isDesktopLocked) onLongClick(index)
+                                    }
                                 }
-                            }
-                        ),
+                            )
+                        },
                         showLabel = false,
                         iconSize = iconSize
                     )
@@ -227,7 +235,8 @@ fun Dock(
 
                     DropdownMenu(
                         expanded = showContextMenu,
-                        onDismissRequest = dismissMenu
+                        onDismissRequest = dismissMenu,
+                        shape = RoundedCornerShape(20.dp)
                     ) {
                         val actionMode by viewModel.actionMode.collectAsState()
                         val menuOptions by viewModel.homeMenuOptions.collectAsState()

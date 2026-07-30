@@ -140,9 +140,11 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
                         }
                     }
 
+                    val defaultPackLabel = stringResource(R.string.shape_default)
+                    val unknownLabel = stringResource(R.string.unknown)
                     val currentPackName = remember(currentIconPack, iconPacks) {
-                        if (currentIconPack.isEmpty()) context.getString(R.string.shape_default)
-                        else iconPacks.find { it.packageName == currentIconPack }?.label ?: context.getString(R.string.unknown)
+                        if (currentIconPack.isEmpty()) defaultPackLabel
+                        else iconPacks.find { it.packageName == currentIconPack }?.label ?: unknownLabel
                     }
 
                     ListItem(
@@ -373,6 +375,23 @@ fun IconPackPickerDialog(
     }
     val currentShape by viewModel.iconShape.collectAsState()
     val shape = if (currentShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp)
+    
+    var showBuiltinSetup by remember { mutableStateOf(false) }
+
+    if (showBuiltinSetup) {
+        val allApps by viewModel.allApps.collectAsState()
+        val currentSelected by viewModel.builtinIconSelectedPackages.collectAsState()
+        BuiltinIconPackSetupDialog(
+            allApps = allApps,
+            initialSelection = currentSelected,
+            onDismiss = { showBuiltinSetup = false },
+            onConfirm = { selectedPackages -> 
+                viewModel.setBuiltinIconSelectedPackages(selectedPackages)
+                onPackSelected(com.liferlighdow.iteration.utils.IconPackManager.BUILTIN_PACKAGE_NAME)
+                showBuiltinSetup = false
+            }
+        )
+    }
 
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -417,7 +436,13 @@ fun IconPackPickerDialog(
                                     modifier = Modifier.size(40.dp).clip(shape)
                                 )
                             },
-                            modifier = Modifier.clickable { onPackSelected(pack.packageName) }
+                            modifier = Modifier.clickable { 
+                                if (pack.packageName == com.liferlighdow.iteration.utils.IconPackManager.BUILTIN_PACKAGE_NAME) {
+                                    showBuiltinSetup = true
+                                } else {
+                                    onPackSelected(pack.packageName)
+                                }
+                            }
                         )
                     }
                 }
@@ -649,8 +674,9 @@ fun CustomIconStylePickerDialog(
                                 viewModel.getInstalledIconPacks()
                             }
                         }
+                        val defaultSymbolLabel = stringResource(R.string.default_symbol)
                         val customPackLabel = remember(customIconPack, iconPacks) {
-                            if (customIconPack.isEmpty()) context.getString(R.string.default_symbol)
+                            if (customIconPack.isEmpty()) defaultSymbolLabel
                             else iconPacks.find { it.packageName == customIconPack }?.label ?: customIconPack
                         }
 
@@ -859,6 +885,8 @@ fun ChangeIconScreen(onBack: () -> Unit) {
                 "ic_builtin_files" to stringResource(R.string.builtin_files),
                 "ic_builtin_maps" to stringResource(R.string.builtin_maps),
                 "ic_builtin_mail" to stringResource(R.string.builtin_mail),
+                "ic_builtin_music" to stringResource(R.string.builtin_music),
+                "ic_builtin_calculator" to stringResource(R.string.builtin_calculator),
                 "ic_builtin_settings" to stringResource(R.string.builtin_settings)
             )
 
@@ -950,6 +978,132 @@ fun ChangeIconScreen(onBack: () -> Unit) {
                     selectedApp = null
                 }
             )
+        }
+    }
+}
+
+@Composable
+fun BuiltinIconPackSetupDialog(
+    allApps: List<com.liferlighdow.iteration.data.AppModel>,
+    initialSelection: Set<String>,
+    onDismiss: () -> Unit,
+    onConfirm: (Set<String>) -> Unit
+) {
+    val viewModel: MainViewModel = viewModel()
+    val categories = remember(allApps) {
+        val manager = viewModel.iconPackManager
+        manager.loadIconPack(com.liferlighdow.iteration.utils.IconPackManager.BUILTIN_PACKAGE_NAME)
+        
+        listOf(
+            Triple(
+                "Music",
+                manager.getMappedPackagesFor("ic_builtin_music"),
+                R.string.cat_audio
+            ),
+            Triple(
+                "Calculator",
+                manager.getMappedPackagesFor("ic_builtin_calculator"),
+                R.string.calculator
+            ),
+            Triple(
+                "Files",
+                manager.getMappedPackagesFor("ic_builtin_files"),
+                R.string.files
+            )
+        ).map { (id, mappedPkgs, resId) ->
+            val apps = allApps.filter { app ->
+                mappedPkgs.contains(app.packageName)
+            }.sortedBy { it.label }
+            id to (resId to apps)
+        }.filter { it.second.second.isNotEmpty() }
+    }
+
+    // 關鍵修正：使用 initialSelection 作為 key，確保對話框開啟時正確初始化
+    // 且如果 initialSelection 為空，則預設全選偵測到的應用
+    var selected by remember(initialSelection) {
+        mutableStateOf(
+            if (initialSelection.isEmpty()) {
+                categories.flatMap { it.second.second.map { app -> app.packageName } }.toSet().toMutableSet()
+            } else {
+                initialSelection.toMutableSet()
+            }
+        ) 
+    }
+
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier.fillMaxWidth().fillMaxHeight(0.85f),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(stringResource(R.string.builtin_pack_setup_title), style = MaterialTheme.typography.headlineSmall)
+                Text(stringResource(R.string.builtin_pack_setup_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                if (categories.isEmpty()) {
+                    Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Text(stringResource(R.string.no_apps_found), color = MaterialTheme.colorScheme.outline)
+                    }
+                } else {
+                    LazyColumn(modifier = Modifier.weight(1f)) {
+                        categories.forEach { (catId, pair) ->
+                            val (labelRes, apps) = pair
+                            item {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(stringResource(labelRes), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                                    TextButton(onClick = {
+                                        val allPkg = apps.map { it.packageName }
+                                        if (allPkg.all { selected.contains(it) }) {
+                                            selected = (selected - allPkg.toSet()).toMutableSet()
+                                        } else {
+                                            selected = (selected + allPkg.toSet()).toMutableSet()
+                                        }
+                                    }) {
+                                        Text(stringResource(R.string.all_label))
+                                    }
+                                }
+                            }
+                            items(apps) { app ->
+                                ListItem(
+                                    headlineContent = { Text(app.label) },
+                                    supportingContent = { Text(app.packageName) },
+                                    trailingContent = {
+                                        Checkbox(
+                                            checked = selected.contains(app.packageName),
+                                            onCheckedChange = { checked ->
+                                                selected = if (checked) (selected + app.packageName).toMutableSet()
+                                                else (selected - app.packageName).toMutableSet()
+                                            }
+                                        )
+                                    },
+                                    modifier = Modifier.clickable {
+                                        val checked = !selected.contains(app.packageName)
+                                        selected = if (checked) (selected + app.packageName).toMutableSet()
+                                        else (selected - app.packageName).toMutableSet()
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+                    Button(
+                        onClick = { onConfirm(selected) },
+                        enabled = categories.isEmpty() || selected.isNotEmpty()
+                    ) {
+                        Text(stringResource(R.string.confirm))
+                    }
+                }
+            }
         }
     }
 }

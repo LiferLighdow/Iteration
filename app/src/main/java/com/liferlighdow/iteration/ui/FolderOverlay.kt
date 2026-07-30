@@ -9,6 +9,7 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -157,7 +158,8 @@ fun FolderOverlay(
                                 }
                                 DropdownMenu(
                                     expanded = showMoreMenu,
-                                    onDismissRequest = { showMoreMenu = false }
+                                    onDismissRequest = { showMoreMenu = false },
+                                    shape = RoundedCornerShape(20.dp)
                                 ) {
                                     DropdownMenuItem(
                                         text = { Text(stringResource(R.string.rename)) },
@@ -259,9 +261,15 @@ fun FolderOverlay(
                                                         }
                                                         .pointerInput(app.uniqueId) {
                                                             detectTapGestures(
+                                                                onPress = {
+                                                                    viewModel.setPressedItemId(app.uniqueId)
+                                                                    try { awaitRelease() } finally { viewModel.setPressedItemId(null) }
+                                                                },
                                                                 onLongPress = {
-                                                                    if (!isEditMode) showItemMenu =
-                                                                        true
+                                                                    if (!isEditMode) {
+                                                                        showItemMenu = true
+                                                                        viewModel.setActiveContextMenuId(app.uniqueId)
+                                                                    }
                                                                 },
                                                                 onTap = {
                                                                     onAppClick(app)
@@ -284,7 +292,8 @@ fun FolderOverlay(
 
                                                 DropdownMenu(
                                                     expanded = showItemMenu,
-                                                    onDismissRequest = dismissMenu
+                                                    onDismissRequest = dismissMenu,
+                                                    shape = RoundedCornerShape(20.dp)
                                                 ) {
                                                     val actionMode by viewModel.actionMode.collectAsState()
                                                     if (!app.isFolder && menuOptions.contains("freeze") && (actionMode == ActionMode.SHIZUKU || actionMode == ActionMode.ROOT)) {

@@ -40,4 +40,66 @@
     <item component="foundation.e.mail" drawable="ic_builtin_mail" />
     <item component="com.microsoft.office.outlook" drawable="ic_builtin_mail" />
     <item component="com.tencent.androidqqmail" drawable="ic_builtin_mail" />
+
+    <!-- Music -->
+    <item component="com.android.music" drawable="ic_builtin_music" />
+    <item component="com.google.android.music" drawable="ic_builtin_music" />
+    <item component="com.google.android.apps.youtube.music" drawable="ic_builtin_music" />
+    <item component="com.sec.android.app.music" drawable="ic_builtin_music" />
+    <item component="com.miui.player" drawable="ic_builtin_music" />
+    <item component="com.oppo.music" drawable="ic_builtin_music" />
+    <item component="com.coloros.musicplayer" drawable="ic_builtin_music" />
+    <item component="com.oneplus.music" drawable="ic_builtin_music" />
+    <item component="com.huawei.music" drawable="ic_builtin_music" />
+    <item component="com.sonyericsson.music" drawable="ic_builtin_music" />
+    <item component="com.netease.cloudmusic" drawable="ic_builtin_music" />
+    <item component="com.tencent.qqmusic" drawable="ic_builtin_music" />
+    <item component="com.kugou.android" drawable="ic_builtin_music" />
+    <item component="com.spotify.music" drawable="ic_builtin_music" />
+    <item component="com.apple.android.music" drawable="ic_builtin_music" />
+    <item component="com.namida.player" drawable="ic_builtin_music" />
+    <item component="org.oxycblt.auxio" drawable="ic_builtin_music" />
+    <item component="io.github.muntashirakon.music" drawable="ic_builtin_music" />
+    <item component="code.name.gumdrop.retromusic" drawable="ic_builtin_music" />
+    <item component="com.piyush.music" drawable="ic_builtin_music" />
+
+
+    <!-- Calculator -->
+    <item component="com.android.calculator2" drawable="ic_builtin_calculator" />
+    <item component="com.google.android.calculator" drawable="ic_builtin_calculator" />
+    <item component="com.sec.android.app.popupcalculator" drawable="ic_builtin_calculator" />
+    <item component="com.miui.calculator" drawable="ic_builtin_calculator" />
+    <item component="com.oppo.calculator" drawable="ic_builtin_calculator" />
+    <item component="com.coloros.calculator" drawable="ic_builtin_calculator" />
+    <item component="com.oneplus.calculator" drawable="ic_builtin_calculator" />
+    <item component="com.huawei.calculator" drawable="ic_builtin_calculator" />
+    <item component="com.meizu.flyme.calculator" drawable="ic_builtin_calculator" />
+    <item component="com.asus.calculator" drawable="ic_builtin_calculator" />
+    <item component="com.liferlighdow.calculator" drawable="ic_builtin_calculator" />
+
+
+    <!-- Gallery -->
+    <item component="com.android.gallery3d" drawable="ic_builtin_gallery" />
+    <item component="com.google.android.apps.photos" drawable="ic_builtin_gallery" />
+    <item component="com.sec.android.gallery3d" drawable="ic_builtin_gallery" />
+    <item component="com.miui.gallery" drawable="ic_builtin_gallery" />
+    <item component="com.coloros.gallery" drawable="ic_builtin_gallery" />
+    <item component="com.oppo.gallery" drawable="ic_builtin_gallery" />
+    <item component="com.oneplus.gallery" drawable="ic_builtin_gallery" />
+    <item component="com.huawei.photos" drawable="ic_builtin_gallery" />
+    <item component="com.sonyericsson.album" drawable="ic_builtin_gallery" />
+
+
+    <!-- Files -->
+    <item component="com.google.android.documentsui" drawable="ic_builtin_files" />
+    <item component="com.android.documentsui" drawable="ic_builtin_files" />
+    <item component="com.google.android.apps.nbu.files" drawable="ic_builtin_files" />
+    <item component="com.mi.android.globalFileexplorer" drawable="ic_builtin_files" />
+    <item component="com.sec.android.app.myfiles" drawable="ic_builtin_files" />
+    <item component="com.oppo.filemanager" drawable="ic_builtin_files" />
+    <item component="com.coloros.filemanager" drawable="ic_builtin_files" />
+    <item component="com.oneplus.filemanager" drawable="ic_builtin_files" />
+    <item component="com.huawei.android.documents" drawable="ic_builtin_files" />
+
+
 </resources>

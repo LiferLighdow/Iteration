@@ -552,3 +552,10 @@ fun MainViewModel.resetPagerAnimationSettings() {
     setPagerSnapThreshold(0.4f)
     setPagerDampingRatio(1.0f)
 }
+
+fun MainViewModel.setBuiltinIconSelectedPackages(packages: Set<String>) {
+    _builtinIconSelectedPackages.value = packages
+    prefs.edit().putStringSet("builtin_icon_selected_packages", packages).apply()
+    iconCache.evictAll()
+    loadApps()
+}

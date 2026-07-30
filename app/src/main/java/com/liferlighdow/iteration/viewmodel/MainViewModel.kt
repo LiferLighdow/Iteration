@@ -499,6 +499,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     internal val _searchQuickSettingsEnabled = MutableStateFlow(prefs.getBoolean("search_quick_settings_enabled", true))
     val searchQuickSettingsEnabled = _searchQuickSettingsEnabled.asStateFlow()
 
+    internal val _builtinIconSelectedPackages = MutableStateFlow(
+        prefs.getStringSet("builtin_icon_selected_packages", emptySet()) ?: emptySet()
+    )
+    val builtinIconSelectedPackages = _builtinIconSelectedPackages.asStateFlow()
+
     internal val _excludedThemedPackages =
         MutableStateFlow(prefs.getStringSet("excluded_themed_packages", emptySet()) ?: emptySet())
     val excludedThemedPackages = _excludedThemedPackages.asStateFlow()

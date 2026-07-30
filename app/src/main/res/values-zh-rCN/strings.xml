@@ -638,6 +638,10 @@
     <string name="builtin_files">文件</string>
     <string name="builtin_maps">地图</string>
     <string name="builtin_mail">电子邮件</string>
+    <string name="builtin_music">音乐</string>
+    <string name="builtin_calculator">计算器</string>
+    <string name="builtin_pack_setup_title">Iteration 图标包设置</string>
+    <string name="builtin_pack_setup_desc">请选择哪些应用要套用内置图标。</string>
     <string name="experimental_features">实验性功能</string>
     <string name="material_you_title">使用 Material You (测试中)</string>
     <string name="material_you_desc">从您目前的壁纸提取主要颜色，并应用到 UI 文字与元素上。</string>

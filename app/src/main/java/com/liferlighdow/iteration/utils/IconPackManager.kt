@@ -11,15 +11,16 @@ import com.liferlighdow.iteration.R
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
 import java.io.InputStream
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.collections.iterator
 
 class IconPackManager(private val context: Context) {
     private val pm: PackageManager = context.packageManager
     private var iconPackPackageName: String? = null
     private var iconPackResources: Resources? = null
-    private val iconMapping = mutableMapOf<String, String>()
+    private val iconMapping = ConcurrentHashMap<String, String>()
     // 新增：packageName 到 component 的快速索引快取
-    private val packageToComponentCache = mutableMapOf<String, String>()
+    private val packageToComponentCache = ConcurrentHashMap<String, String>()
 
     companion object {
         private const val TAG = "IconPackManager"
@@ -193,7 +194,13 @@ class IconPackManager(private val context: Context) {
         }
     }
 
-    fun getIcon(packageName: String, uniqueId: String? = null): Drawable? {
+    fun getMappedPackagesFor(drawableName: String): List<String> {
+        return iconMapping.filterValues { it == drawableName }.keys.map { 
+            if (it.contains("/")) it.substringBefore("/") else it
+        }.distinct()
+    }
+
+    fun getIcon(packageName: String, uniqueId: String? = null, builtinSelectedPackages: Set<String> = emptySet()): Drawable? {
         val res = iconPackResources ?: return null
         val iconPkg = iconPackPackageName ?: return null
 
@@ -218,28 +225,23 @@ class IconPackManager(private val context: Context) {
             drawableName = iconMapping[pkgFromId] ?: iconMapping[packageName]
         }
 
-        // 4. 針對內建圖示包的動態判定與關鍵字模糊匹配 (最後防線)
+        // --- 核心修正：針對 Music/Calculator/Files 的手動複選過濾 ---
+        if (iconPkg == BUILTIN_PACKAGE_NAME && (drawableName == "ic_builtin_music" || drawableName == "ic_builtin_calculator" || drawableName == "ic_builtin_files")) {
+            if (builtinSelectedPackages.isNotEmpty() && !builtinSelectedPackages.contains(packageName)) {
+                drawableName = null
+            }
+        }
+
+        // 4. 針對內建圖示包的動態判定 (僅限系統預設類)
         if (drawableName == null && iconPkg == BUILTIN_PACKAGE_NAME) {
-            val lowerPkg = packageName.lowercase()
             if (isDefaultDialer(packageName)) {
                 drawableName = "ic_builtin_phone"
             } else if (isDefaultSmsApp(packageName)) {
                 drawableName = "ic_builtin_messages"
             } else if (isDefaultBrowser(packageName)) {
                 drawableName = "ic_builtin_browser"
-            } else if (lowerPkg.contains("filemanager") || lowerPkg.contains("explorer") || 
-                lowerPkg.contains("documentsui") || lowerPkg.contains("myfiles") || 
-                lowerPkg.endsWith(".files") || lowerPkg.contains("com.google.android.apps.nbu.files")) {
-                drawableName = "ic_builtin_files"
-            } else if (lowerPkg.contains("gallery") || lowerPkg.contains("album") || 
-                lowerPkg.contains("com.google.android.apps.photos") || 
-                (lowerPkg.contains("photo") && !lowerPkg.contains("camera"))) {
-                drawableName = "ic_builtin_gallery"
-            } else if (lowerPkg.contains("map") || lowerPkg.contains("navigation") || lowerPkg.contains("waze") || lowerPkg.contains("foundation.e.maps")) {
-                drawableName = "ic_builtin_maps"
-            } else if (lowerPkg.contains("mail") || lowerPkg.contains("outlook") || lowerPkg.contains("gmail") || lowerPkg.contains("foundation.e.mail")) {
-                drawableName = "ic_builtin_mail"
             }
+            // 徹底移除所有關鍵字匹配 (Music/Calc/Files/Gallery/Maps/Mail 全部只看 appfilter)
         }
 
         if (drawableName != null) {

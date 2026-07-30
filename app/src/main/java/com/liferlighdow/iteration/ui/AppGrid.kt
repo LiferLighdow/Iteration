@@ -20,6 +20,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AcUnit
 import androidx.compose.material.icons.filled.BlurOn
@@ -84,7 +85,6 @@ import com.liferlighdow.iteration.data.WidgetModel
 import com.liferlighdow.iteration.data.WidgetType
 import com.liferlighdow.iteration.data.CustomComponent
 import com.liferlighdow.iteration.viewmodel.removeAppFromHomeWithAnimation
-import androidx.compose.foundation.shape.RoundedCornerShape
 import kotlin.math.abs
 
 fun calculateOverlap(r1: Rect, r2: Rect): Float {
@@ -903,7 +903,11 @@ private fun WidgetGridItem(
             )
         }
 
-        DropdownMenu(expanded = showContextMenu, onDismissRequest = onContextMenuDismiss) {
+        DropdownMenu(
+            expanded = showContextMenu,
+            onDismissRequest = onContextMenuDismiss,
+            shape = RoundedCornerShape(20.dp)
+        ) {
             val widget = app.widget
             if (widget != null && widget.type !is WidgetType.Stack && widget.type !is WidgetType.Photo) {
                 if (widget.displayMode == WidgetDisplayMode.COLOR) {
@@ -1144,7 +1148,8 @@ private fun AppGridItem(
         DropdownMenu(
             expanded = showContextMenu,
             onDismissRequest = onContextMenuDismiss,
-            modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+            shape = RoundedCornerShape(20.dp),
+            containerColor = MaterialTheme.colorScheme.surface
         ) {
             val actionMode by viewModel.actionMode.collectAsState()
             if (!app.isFolder && menuOptions.contains("freeze") && (actionMode == ActionMode.SHIZUKU || actionMode == ActionMode.ROOT)) {

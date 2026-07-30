@@ -1,0 +1,52 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="200dp"
+    android:viewportWidth="1000"
+    android:viewportHeight="1000">
+
+    <!-- 背景：純白方形底塊 (保持系統一致性) -->
+    <path
+        android:fillColor="#FEFEFE"
+        android:pathData="M0,0 h1000 v1000 h-1000 z" />
+
+    <!-- 縮小至 90% 的內容組 -->
+    <group
+        android:pivotX="500"
+        android:pivotY="500"
+        android:scaleX="0.9"
+        android:scaleY="0.9">
+
+        <!-- 現代「聲頻脈衝」設計 (Modern Sonic Pulse) -->
+        <!-- 圓潤的弧線設計，既具備高度識別度，又展現了簡潔的現代美學 -->
+
+        <!-- 1. 核心點：導航藍 (視覺中心) -->
+        <path
+            android:fillColor="#1D9BF0"
+            android:pathData="M500,500 m-80,0 a80,80 0 1,1 160,0 a80,80 0 1,1 -160,0" />
+
+        <!-- 2. 第一層律動：馬卡龍粉 (左右對稱的圓潤弧條) -->
+        <path
+            android:fillColor="#F48FB1"
+            android:pathData="M650,350 C700,400 700,600 650,650 L600,600 C630,570 630,430 600,400 Z" />
+        <path
+            android:fillColor="#F48FB1"
+            android:pathData="M350,350 C300,400 300,600 350,650 L400,600 C370,570 370,430 400,400 Z" />
+
+        <!-- 3. 第二層律動：柔綠色 (外圍擴散的圓潤弧條) -->
+        <path
+            android:fillColor="#A5D6A7"
+            android:pathData="M780,220 C880,320 880,680 780,780 L730,730 C800,660 800,340 730,270 Z" />
+        <path
+            android:fillColor="#A5D6A7"
+            android:pathData="M220,220 C120,320 120,680 220,780 L270,730 C200,660 200,340 270,270 Z" />
+
+        <!-- 4. 裝飾點綴：亮黃色圓點 (節奏的亮點) -->
+        <path
+            android:fillColor="#FFF59D"
+            android:pathData="M500,200 m-35,0 a35,35 0 1,1 70,0 a35,35 0 1,1 -70,0" />
+        <path
+            android:fillColor="#FFF59D"
+            android:pathData="M500,800 m-35,0 a35,35 0 1,1 70,0 a35,35 0 1,1 -70,0" />
+    </group>
+
+</vector>

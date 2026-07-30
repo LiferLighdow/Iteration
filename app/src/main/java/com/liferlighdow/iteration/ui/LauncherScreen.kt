@@ -1023,7 +1023,7 @@ fun LauncherScreen(
         appToEdit = appToEdit,
         onDismissAppEdit = { appToEdit = null },
         folderToOpenId = folderToOpenId,
-        onDismissFolder = { folderToOpenId = null },
+        onDismissFolder = { folderToOpenId = null; viewModel.clearFocusState() },
         currentPage = pagerState.currentPage - desktopStartIndex,
         pages = pages,
         allAppsFlat = allAppsFlat,

@@ -650,6 +650,10 @@
     <string name="builtin_files">Files</string>
     <string name="builtin_maps">Maps</string>
     <string name="builtin_mail">Mail</string>
+    <string name="builtin_music">Music</string>
+    <string name="builtin_calculator">Calculator</string>
+    <string name="builtin_pack_setup_title">Iteration Pack Setup</string>
+    <string name="builtin_pack_setup_desc">Select which apps will apply the built-in icons for these categories.</string>
     <string name="experimental_features">Experimental Features</string>
     <string name="material_you_title">Use Material You (Testing)</string>
     <string name="material_you_desc">Extract primary colors from your current wallpaper and apply them to UI text and elements.</string>

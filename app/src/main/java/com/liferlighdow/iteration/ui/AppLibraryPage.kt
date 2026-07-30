@@ -328,7 +328,8 @@ fun AppLibraryPage(
                                         onDismissRequest = {
                                             showMenu = false
                                             viewModel.setActiveContextMenuId(null)
-                                        }
+                                        },
+                                        shape = RoundedCornerShape(20.dp)
                                     ) {
                                         val actionMode by viewModel.actionMode.collectAsState()
                                         if (menuOptions.contains("freeze") && (actionMode == ActionMode.SHIZUKU || actionMode == ActionMode.ROOT)) {
@@ -712,16 +713,22 @@ fun LibraryItemWithMenu(
             iconSize = iconSize,
             iconShape = iconShape,
             getIcon = { pkg -> viewModel.getIcon(pkg) },
-            modifier = Modifier.combinedClickable(
-                onClick = { onAppClick(app) },
-                onLongClick = {
-                    if (folderName != "Hidden Apps") {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        viewModel.setActiveContextMenuId(app.uniqueId)
-                        showMenu = true
+            modifier = Modifier.pointerInput(app.uniqueId) {
+                detectTapGestures(
+                    onPress = {
+                        viewModel.setPressedItemId(app.uniqueId)
+                        try { awaitRelease() } finally { viewModel.setPressedItemId(null) }
+                    },
+                    onTap = { onAppClick(app) },
+                    onLongPress = {
+                        if (folderName != "Hidden Apps") {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            viewModel.setActiveContextMenuId(app.uniqueId)
+                            showMenu = true
+                        }
                     }
-                }
-            )
+                )
+            }
         )
 
         val dismissMenu = {
@@ -731,7 +738,8 @@ fun LibraryItemWithMenu(
 
         DropdownMenu(
             expanded = showMenu,
-            onDismissRequest = dismissMenu
+            onDismissRequest = dismissMenu,
+            shape = RoundedCornerShape(20.dp)
         ) {
             val actionMode by viewModel.actionMode.collectAsState()
             if (menuOptions.contains("freeze") && (actionMode == ActionMode.SHIZUKU || actionMode == ActionMode.ROOT)) {

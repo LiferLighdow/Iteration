@@ -534,10 +534,12 @@ fun MainViewModel.processNewIcon(
         return iconProcessor.processIcon(finalRawIcon, false, null, IconStyle.STANDARD, currentShape, sizePx, customBgColor = 0, customFgColor = 0, customUseOriginal = true, customUseOriginalBg = true, customUseDominantColor = false, originalIcon = null, userId = app.userId, calendarDay = calendarDay, clockTime = clockTime)
     }
 
+    val builtinSelected = _builtinIconSelectedPackages.value
+
     // 優先順序：全域圖標包 > 自定義樣式圖標包 > 原始圖標
     val sourceIcon = when {
-        currentIconPack.isNotEmpty() -> iconPackManager.getIcon(app.packageName, app.uniqueId) ?: finalRawIcon
-        customIconPack.isNotEmpty() -> iconPackManager.getIcon(app.packageName, app.uniqueId) ?: finalRawIcon
+        currentIconPack.isNotEmpty() -> iconPackManager.getIcon(app.packageName, app.uniqueId, builtinSelected) ?: finalRawIcon
+        customIconPack.isNotEmpty() -> iconPackManager.getIcon(app.packageName, app.uniqueId, builtinSelected) ?: finalRawIcon
         else -> finalRawIcon
     }
 
