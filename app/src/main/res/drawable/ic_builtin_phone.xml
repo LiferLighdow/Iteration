@@ -1,14 +1,25 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="512dp"
     android:height="512dp"
     android:viewportWidth="512"
     android:viewportHeight="512">
-    <!-- 背景層：暖沙灰 -->
+    <!-- 背景 -->
     <path
-        android:pathData="M0,0 h1000 v1000 h-1000 z"
-        android:fillColor="#28CD49" />
+        android:pathData="M0,0 h1000 v1000 h-1000 z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="256"
+                android:startY="0"
+                android:endX="256"
+                android:endY="512"
+                android:startColor="#00e454"
+                android:endColor="#01bb60"
+                android:type="linear" />
+        </aapt:attr>
+    </path>
 
-    <!-- 話筒層：白色 (縮小並置中) -->
+    <!-- 話筒 -->
     <group
         android:pivotX="256"
         android:pivotY="256"

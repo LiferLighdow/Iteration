@@ -1,12 +1,24 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="512dp"
     android:height="512dp"
     android:viewportWidth="512"
     android:viewportHeight="512">
+
     <!-- 背景層：水藍色 -->
     <path
-        android:pathData="M0,0 h1000 v1000 h-1000 z"
-        android:fillColor="#33A9E7" />
+        android:pathData="M0,0 h1000 v1000 h-1000 z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="256"
+                android:startY="0"
+                android:endX="256"
+                android:endY="512"
+                android:startColor="#01c3ff"
+                android:endColor="#028bff"
+                android:type="linear" />
+        </aapt:attr>
+    </path>
 
     <!-- 瀏覽器前景層：天藍色圓框 + 純白填滿 -->
     <group
@@ -18,9 +30,20 @@
         <path
             android:fillColor="#B3E5FC"
             android:pathData="M256,64C150.1,64 64,150.1 64,256s86.1,192 192,192s192,-86.1 192,-192S361.9,64 256,64z" />
-        <!-- 純白色內圓 (覆蓋掉中間區域並移除線條) -->
+        <!-- 漸層內圓：從左上到右下 -->
         <path
-            android:fillColor="#FFFFFF"
-            android:pathData="M256,400c-79.5,0 -144,-64.5 -144,-144s64.5,-144 144,-144s144,64.5 144,144S335.5,400 256,400z" />
+            android:pathData="M256,400c-79.5,0 -144,-64.5 -144,-144s64.5,-144 144,-144s144,64.5 144,144S335.5,400 256,400z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:startX="112"
+                    android:startY="112"
+                    android:endX="400"
+                    android:endY="400"
+                    android:type="linear">
+                    <item android:offset="0" android:color="#F4FDFF" />
+                    <item android:offset="1" android:color="#8BD6FF" />
+                </gradient>
+            </aapt:attr>
+        </path>
     </group>
 </vector>

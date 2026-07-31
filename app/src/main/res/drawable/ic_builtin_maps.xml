@@ -11,28 +11,28 @@
 
     <!-- 2. 左上區塊 - 柔和綠 -->
     <path
-        android:fillColor="#A5D6A7"
+        android:fillColor="#A5FFA7"
         android:pathData="M0,0 L350,0 L350,380 L0,380 Z" />
 
     <!-- 3. 左下區塊 - 馬卡龍粉 -->
     <path
-        android:fillColor="#F48FB1"
+        android:fillColor="#FF80B1"
         android:pathData="M0,450 L350,450 L350,1000 L0,1000 Z" />
 
-    <!-- 4. 中央藍色快速道路 -->
+    <!-- 4. 導航路線 (僅出現在指示器前方) -->
     <path
-        android:fillColor="#1D9BF0"
-        android:pathData="M430,0 L570,0 L570,1000 L430,1000 Z" />
+        android:fillColor="#007AFF"
+        android:pathData="M430,0 L570,0 L570,600 L430,600 Z" />
 
     <!-- 5. 右上區塊 - 嫩綠色 -->
     <path
-        android:fillColor="#81C784"
+        android:fillColor="#81FF84"
         android:pathData="M650,0 L1000,0 L1000,600 L650,600 Z" />
 
-    <!-- 6. 右下區塊 - 溫暖黃 (向左延伸至 720) -->
+    <!-- 6. 右下區塊 - 溫暖黃 (向左延伸至 650) -->
     <path
-        android:fillColor="#FFF59D"
-        android:pathData="M720,650 L1000,650 L1000,1000 L720,1000 Z" />
+        android:fillColor="#FFF55D"
+        android:pathData="M650,650 L1000,650 L1000,1000 L650,1000 Z" />
 
     <!-- 7. 輔助斜向灰色塊 -->
     <path
@@ -42,9 +42,14 @@
     <!-- 8 & 9. 導航指示器組合 (放大 1.5 倍) -->
     <group
         android:pivotX="500"
-        android:pivotY="200"
+        android:pivotY="300"
         android:scaleX="1.5"
         android:scaleY="1.5">
+        <!-- 8-1. 白色外框 -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M 500, 500 m -145, 0 a 145,145 0 1,0 290,0 a 145,145 0 1,0 -290,0" />
+
         <!-- 8. 中央導航指示器容器 - 藍色圓形 -->
         <path
             android:fillColor="#007AFF"

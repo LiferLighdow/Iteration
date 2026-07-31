@@ -1,62 +1,51 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="200dp"
     android:height="200dp"
-    android:viewportWidth="1000"
-    android:viewportHeight="1000">
+    android:viewportWidth="100"
+    android:viewportHeight="100">
 
-    <!-- 背景 -->
+    <!-- 背景方塊 (維持原配色) -->
     <path
-        android:fillColor="#202020"
-        android:pathData="M0,0 h1000 v1000 h-1000 z" />
+        android:fillColor="#252525"
+        android:pathData="M0,0h50v50h-50z" />
+    <path
+        android:fillColor="#252525"
+        android:pathData="M50,0h50v50h-50z" />
+    <path
+        android:fillColor="#252525"
+        android:pathData="M0,50h50v50h-50z" />
+    <path
+        android:fillColor="#ff6300"
+        android:pathData="M50,50h50v50h-50z" />
 
-    <!-- 縮小至 90% 的內容組 -->
+    <!-- 左上角 (+)：置中於 (30, 30) -->
+    <path
+        android:fillColor="#FFF"
+        android:pathData="M23,28.5h14v3h-14z M28.5,23h3v14h-3z" />
+
+    <!-- 右上角 (×)：置中於 (70, 30)，旋轉 45 度 -->
     <group
-        android:pivotX="500"
-        android:pivotY="500"
-        android:scaleX="0.8"
-        android:scaleY="0.8">
-
-        <!-- 直向計算機主體：超圓角長矩形 (Squircle Style) -->
+        android:pivotX="70"
+        android:pivotY="30"
+        android:rotation="45">
         <path
-            android:fillColor="#676767"
-            android:pathData="M300,120 h400 c80,0 120,40 120,120 v520 c0,80 -40,120 -120,120 h-400 c-80,0 -120,-40 -120,-120 v-520 c0,-80 40,-120 120,-120 z" />
-
-        <!-- 顯示螢幕：圓潤的馬卡龍藍 -->
-        <path
-            android:fillColor="#1D9BF0"
-            android:fillAlpha="0.9"
-            android:pathData="M300,180 h400 a40,40 0 0,1 40,40 v60 a40,40 0 0,1 -40,40 h-400 a40,40 0 0,1 -40,-40 v-60 a40,40 0 0,1 40,-40 z" />
-
-        <!-- 按鈕佈局：圓潤馬卡龍色系 -->
-
-        <!-- 第一排 -->
-        <path android:fillColor="#F48FB1" android:pathData="M350,380 m-50,0 a50,50 0 1,1 100,0 a50,50 0 1,1 -100,0" />
-        <path android:fillColor="#FFF59D" android:pathData="M500,380 m-50,0 a50,50 0 1,1 100,0 a50,50 0 1,1 -100,0" />
-        <path android:fillColor="#A5D6A7" android:pathData="M650,380 m-50,0 a50,50 0 1,1 100,0 a50,50 0 1,1 -100,0" />
-
-        <!-- 第二排 -->
-        <path android:fillColor="#E0E0E0" android:pathData="M350,500 m-50,0 a50,50 0 1,1 100,0 a50,50 0 1,1 -100,0" />
-        <path android:fillColor="#E0E0E0" android:pathData="M500,500 m-50,0 a50,50 0 1,1 100,0 a50,50 0 1,1 -100,0" />
-        <path android:fillColor="#E0E0E0" android:pathData="M650,500 m-50,0 a50,50 0 1,1 100,0 a50,50 0 1,1 -100,0" />
-
-        <!-- 第三排 -->
-        <path android:fillColor="#E0E0E0" android:pathData="M350,620 m-50,0 a50,50 0 1,1 100,0 a50,50 0 1,1 -100,0" />
-        <path android:fillColor="#E0E0E0" android:pathData="M500,620 m-50,0 a50,50 0 1,1 100,0 a50,50 0 1,1 -100,0" />
-        <path android:fillColor="#E0E0E0" android:pathData="M650,620 m-50,0 a50,50 0 1,1 100,0 a50,50 0 1,1 -100,0" />
-
-        <!-- 第四排 (底部) -->
-        <!-- 左側 0 按鈕 -->
-        <path android:fillColor="#E0E0E0" android:pathData="M350,740 m-50,0 a50,50 0 1,1 100,0 a50,50 0 1,1 -100,0" />
-        <!-- 等於號按鈕：修正垂直 y 軸至 690-790 以對齊左側按鈕 (中心點 740)，水平跨越 500-650 列 -->
-        <path
-            android:fillColor="#007AFF"
-            android:pathData="M500,690 h150 a50,50 0 0,1 50,50 v0 a50,50 0 0,1 -50,50 h-150 a50,50 0 0,1 -50,-50 v0 a50,50 0 0,1 50,-50 z" />
-
-        <!-- 螢幕內的高光裝飾 -->
-        <path
-            android:fillColor="#FFFFFF"
-            android:fillAlpha="0.3"
-            android:pathData="M580,210 h80 v15 h-80 z" />
+            android:fillColor="#FFF"
+            android:pathData="M63,28.5h14v3h-14z M68.5,23h3v14h-3z" />
     </group>
+
+    <!-- 左下角 (-)：置中於 (30, 70) -->
+    <path
+        android:fillColor="#FFF"
+        android:pathData="M23,68.5h14v3h-14z" />
+
+    <!-- 右下角 (=)：置中於 (70, 70) -->
+    <path
+        android:fillColor="#FFF"
+        android:pathData="M63,65.5h14v3h-14z M63,71.5h14v3h-14z" />
+
+    <!-- 十字分割線 (寬度 1) -->
+    <path
+        android:fillColor="#000"
+        android:pathData="M49.5,0h1v100h-1z M0,49.5h100v1h-100z" />
 
 </vector>
