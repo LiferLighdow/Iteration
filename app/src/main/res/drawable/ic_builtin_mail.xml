@@ -34,18 +34,18 @@
         <!-- 信封摺痕 (淺灰色) -->
         <!-- 上方大 V 摺痕 -->
         <path
-            android:strokeColor="#E0E0E0"
-            android:strokeWidth="1.5"
+            android:strokeColor="#DDD"
+            android:strokeWidth="2.5"
             android:strokeLineJoin="round"
             android:strokeLineCap="round"
-            android:pathData="M10,25l40,30l40,-30" />
+            android:pathData="M11,26l39,30l39,-30" />
 
-        <!-- 兩側下方的小斜線 (增加細節感) -->
+        <!-- 兩側下方的小斜線 -->
         <path
             android:strokeColor="#E0E0E0"
             android:strokeWidth="1.2"
             android:strokeLineJoin="round"
             android:strokeLineCap="round"
-            android:pathData="M10,75l25,-20 M90,75l-25,-20" />
+            android:pathData="M11,74l25,-20 M89,74l-25,-20" />
     </group>
 </vector>

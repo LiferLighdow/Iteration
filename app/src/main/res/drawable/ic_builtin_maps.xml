@@ -6,40 +6,44 @@
 
     <!-- 1. 底層背景 (道路與空隙顏色) -->
     <path
-        android:fillColor="#FFFFFF"
+        android:fillColor="#f2f1f6"
         android:pathData="M0,0 L1000,0 L1000,1000 L0,1000 Z" />
 
     <!-- 2. 左上區塊 - 柔和綠 -->
     <path
-        android:fillColor="#A5FFA7"
+        android:fillColor="#75ea79"
         android:pathData="M0,0 L350,0 L350,380 L0,380 Z" />
 
     <!-- 3. 左下區塊 - 馬卡龍粉 -->
     <path
-        android:fillColor="#FF80B1"
+        android:fillColor="#f082ca"
         android:pathData="M0,450 L350,450 L350,1000 L0,1000 Z" />
 
-    <!-- 4. 導航路線 (僅出現在指示器前方) -->
+    <!-- 4. 導航路線 -->
     <path
-        android:fillColor="#007AFF"
+        android:fillColor="#0483fb"
         android:pathData="M430,0 L570,0 L570,600 L430,600 Z" />
 
     <!-- 5. 右上區塊 - 嫩綠色 -->
     <path
-        android:fillColor="#81FF84"
+        android:fillColor="#50dc67"
         android:pathData="M650,0 L1000,0 L1000,600 L650,600 Z" />
 
-    <!-- 6. 右下區塊 - 溫暖黃 (向左延伸至 650) -->
+    <!-- 6. 右下區塊 - 溫暖黃 -->
     <path
-        android:fillColor="#FFF55D"
+        android:fillColor="#ffcc00"
         android:pathData="M650,650 L1000,650 L1000,1000 L650,1000 Z" />
 
     <!-- 7. 輔助斜向灰色塊 -->
     <path
-        android:fillColor="#F5F5F5"
+        android:fillColor="#f2f1f6"
+        android:pathData="M650,250 L1000,600 L1000,800 L650,450 Z" />
+
+    <path
+        android:fillColor="#d2d1d6"
         android:pathData="M650,300 L1000,650 L1000,750 L650,400 Z" />
 
-    <!-- 8 & 9. 導航指示器組合 (放大 1.5 倍) -->
+    <!-- 8 & 9. 導航指示器組合 -->
     <group
         android:pivotX="500"
         android:pivotY="300"
@@ -47,17 +51,17 @@
         android:scaleY="1.5">
         <!-- 8-1. 白色外框 -->
         <path
-            android:fillColor="#FFFFFF"
+            android:fillColor="#FFF"
             android:pathData="M 500, 500 m -145, 0 a 145,145 0 1,0 290,0 a 145,145 0 1,0 -290,0" />
 
         <!-- 8. 中央導航指示器容器 - 藍色圓形 -->
         <path
-            android:fillColor="#007AFF"
+            android:fillColor="#0687ff"
             android:pathData="M 500, 500 m -125, 0 a 125,125 0 1,0 250,0 a 125,125 0 1,0 -250,0" />
 
         <!-- 9. 導航箭頭 (白色) -->
         <path
-            android:fillColor="#FFFFFF"
+            android:fillColor="#FFF"
             android:pathData="M500,420 L560,560 L500,530 L440,560 Z" />
     </group>
 

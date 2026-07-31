@@ -1,52 +1,56 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="200dp"
     android:height="200dp"
     android:viewportWidth="1000"
     android:viewportHeight="1000">
 
-    <!-- 背景：純白方形底塊 (保持系統一致性) -->
+    <!-- 背景：柔和的現代漸層 (保留) -->
     <path
-        android:fillColor="#FEFEFE"
-        android:pathData="M0,0 h1000 v1000 h-1000 z" />
+        android:pathData="M0,0 h1000 v1000 h-1000 z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="500"
+                android:startY="0"
+                android:endX="500"
+                android:endY="1000"
+                android:startColor="#FFFFFF"
+                android:endColor="#E9EAF7"
+                android:type="linear" />
+        </aapt:attr>
+    </path>
 
-    <!-- 縮小至 90% 的內容組 -->
+    <!-- 底部柔和投影：增加懸浮感與高級感 -->
+    <path
+        android:fillColor="#1A2D2B55"
+        android:pathData="M500,820 m-300,0 a300,100 0 1,0 600,0 a300,100 0 1,0 -600,0" />
+
+    <!-- 簡潔現代的音符設計 (優化：更纖細、優雅) -->
     <group
-        android:pivotX="500"
-        android:pivotY="500"
-        android:scaleX="0.9"
-        android:scaleY="0.9">
+        android:pivotX="900"
+        android:pivotY="600"
+        android:scaleX="0.85"
+        android:scaleY="0.85"
+        android:translateY="-20">
 
-        <!-- 現代「聲頻脈衝」設計 (Modern Sonic Pulse) -->
-        <!-- 圓潤的弧線設計，既具備高度識別度，又展現了簡潔的現代美學 -->
+        <!-- 使用漸層藍綠色，線條變細 -->
+        <path
+            android:pathData="M260,750 C260,794 226,830 180,830 C134,830 100,794 100,750 C100,706 134,670 180,670 C200,670 215,675 230,685 L230,200 L730,100 L730,650 C730,694 696,730 650,730 C604,730 570,694 570,650 C570,606 604,570 650,570 C670,570 685,575 700,585 L700,240 L260,330 L260,750 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:startX="450"
+                    android:startY="100"
+                    android:endX="450"
+                    android:endY="830"
+                    android:startColor="#4DD0E1"
+                    android:endColor="#00838F"
+                    android:type="linear" />
+            </aapt:attr>
+        </path>
 
-        <!-- 1. 核心點：導航藍 (視覺中心) -->
+        <!-- 音符頂部的亮面細節 (同步變細) -->
         <path
-            android:fillColor="#1D9BF0"
-            android:pathData="M500,500 m-80,0 a80,80 0 1,1 160,0 a80,80 0 1,1 -160,0" />
-
-        <!-- 2. 第一層律動：馬卡龍粉 (左右對稱的圓潤弧條) -->
-        <path
-            android:fillColor="#F48FB1"
-            android:pathData="M650,350 C700,400 700,600 650,650 L600,600 C630,570 630,430 600,400 Z" />
-        <path
-            android:fillColor="#F48FB1"
-            android:pathData="M350,350 C300,400 300,600 350,650 L400,600 C370,570 370,430 400,400 Z" />
-
-        <!-- 3. 第二層律動：柔綠色 (外圍擴散的圓潤弧條) -->
-        <path
-            android:fillColor="#A5D6A7"
-            android:pathData="M780,220 C880,320 880,680 780,780 L730,730 C800,660 800,340 730,270 Z" />
-        <path
-            android:fillColor="#A5D6A7"
-            android:pathData="M220,220 C120,320 120,680 220,780 L270,730 C200,660 200,340 270,270 Z" />
-
-        <!-- 4. 裝飾點綴：亮黃色圓點 (節奏的亮點) -->
-        <path
-            android:fillColor="#FFF59D"
-            android:pathData="M500,200 m-35,0 a35,35 0 1,1 70,0 a35,35 0 1,1 -70,0" />
-        <path
-            android:fillColor="#FFF59D"
-            android:pathData="M500,800 m-35,0 a35,35 0 1,1 70,0 a35,35 0 1,1 -70,0" />
+            android:fillColor="#33FFFFFF"
+            android:pathData="M260,330 L730,240 L730,280 L260,370 Z" />
     </group>
-
 </vector>

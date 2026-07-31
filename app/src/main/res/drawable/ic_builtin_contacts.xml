@@ -7,18 +7,8 @@
 
   <!-- 1. 筆記本本體 (置於底層) -->
   <path
-      android:pathData="M0,0 h1000 v1000 h-1000 z">
-    <aapt:attr name="android:fillColor">
-      <gradient
-          android:startX="256"
-          android:startY="0"
-          android:endX="256"
-          android:endY="512"
-          android:startColor="#b7e6f2"
-          android:endColor="#a0c8d2"
-          android:type="linear" />
-    </aapt:attr>
-  </path>
+      android:pathData="M0,0 h1000 v1000 h-1000 z"
+      android:fillColor="#d7ccc8"/>
 
   <!-- 2. 右側標籤層 (下移 16px 使其置中) -->
 
@@ -55,7 +45,7 @@
       <!-- 圓底盤 -->
       <path
           android:pathData="M256,256m-110,0a110,110 0,1 1,220 0a110,110 0,1 1,-220 0"
-          android:fillColor="#556b70"/>
+          android:fillColor="#9e9e9e"/>
       <!-- 頭部 -->
       <path
           android:pathData="M256,216m-40,0a40,40 0,1 1,80 0a40,40 0,1 1,-80 0"
