@@ -3,6 +3,7 @@ package com.liferlighdow.iteration.ui
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.net.Uri
 import android.os.Build
 import android.util.Log
@@ -47,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -1054,29 +1056,52 @@ fun LauncherScreen(
         AlertDialog(
             onDismissRequest = { showWallpaperTypeDialog = false },
             title = { Text(stringResource(R.string.menu_wallpaper)) },
-            text = { Text(stringResource(R.string.select_wallpaper_type_desc)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    showWallpaperTypeDialog = false
-                    wallpaperLauncher.launch("image/*")
-                }) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Image, null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.widget_photo))
-                    }
+            text = {
+                Column {
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.wallpaper_default)) },
+                        supportingContent = { Text(stringResource(R.string.iteration_style)) },
+                        leadingContent = { Icon(Icons.Default.AutoAwesome, null, tint = MaterialTheme.colorScheme.primary) },
+                        modifier = Modifier.clickable {
+                            showWallpaperTypeDialog = false
+                            val dm = mContext.resources.displayMetrics
+                            val drawable = ContextCompat.getDrawable(mContext, R.drawable.ic_builtin_wallpaper)
+                            if (drawable != null) {
+                                val bitmap = Bitmap.createBitmap(dm.widthPixels, dm.heightPixels, Bitmap.Config.ARGB_8888)
+                                val canvas = Canvas(bitmap)
+                                drawable.setBounds(0, 0, dm.widthPixels, dm.heightPixels)
+                                drawable.draw(canvas)
+                                viewModel.setCustomWallpaperColor(0)
+                                viewModel.setEmojiWallpaperText("")
+                                viewModel.setCustomWallpaper(bitmap)
+                            }
+                        }
+                    )
+
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.widget_photo)) },
+                        supportingContent = { Text(stringResource(R.string.select_wallpaper_type_desc)) },
+                        leadingContent = { Icon(Icons.Default.Image, null, tint = MaterialTheme.colorScheme.primary) },
+                        modifier = Modifier.clickable {
+                            showWallpaperTypeDialog = false
+                            wallpaperLauncher.launch("image/*")
+                        }
+                    )
+
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.style_custom)) },
+                        supportingContent = { Text(stringResource(R.string.emoji_hint)) },
+                        leadingContent = { Icon(Icons.Default.Palette, null, tint = MaterialTheme.colorScheme.primary) },
+                        modifier = Modifier.clickable {
+                            showWallpaperTypeDialog = false
+                            showColorPickerByWallpaper = true
+                        }
+                    )
                 }
             },
-            dismissButton = {
-                TextButton(onClick = {
-                    showWallpaperTypeDialog = false
-                    showColorPickerByWallpaper = true
-                }) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Palette, null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.style_custom))
-                    }
+            confirmButton = {
+                TextButton(onClick = { showWallpaperTypeDialog = false }) {
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )

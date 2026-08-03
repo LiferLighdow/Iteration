@@ -253,11 +253,15 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
                     }
                     
                     var expanded by remember { mutableStateOf(false) }
-                    val options = listOf(
-                        ActionMode.ACCESSIBILITY to stringResource(R.string.action_mode_accessibility),
-                        ActionMode.SHIZUKU to stringResource(R.string.action_mode_shizuku),
-                        ActionMode.ROOT to stringResource(R.string.action_mode_root)
-                    )
+                    val options = remember(context) {
+                        buildList {
+                            add(ActionMode.ACCESSIBILITY to context.getString(R.string.action_mode_accessibility))
+                            if (android.os.Build.VERSION.SDK_INT >= 24) {
+                                add(ActionMode.SHIZUKU to context.getString(R.string.action_mode_shizuku))
+                            }
+                            add(ActionMode.ROOT to context.getString(R.string.action_mode_root))
+                        }
+                    }
                     val currentLabel = options.find { it.first == actionMode }?.second ?: stringResource(R.string.action_mode_accessibility)
 
                     ListItem(

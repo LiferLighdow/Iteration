@@ -29,8 +29,12 @@ fun MainViewModel.setDoubleTapAction(action: GestureAction) {
 }
 
 fun MainViewModel.setActionMode(mode: ActionMode) {
-    _actionMode.value = mode
-    prefs.edit().putString("action_mode", mode.name).apply()
+    var finalMode = mode
+    if (android.os.Build.VERSION.SDK_INT < 24 && mode == ActionMode.SHIZUKU) {
+        finalMode = ActionMode.ACCESSIBILITY
+    }
+    _actionMode.value = finalMode
+    prefs.edit().putString("action_mode", finalMode.name).apply()
 }
 
 fun MainViewModel.requestRootAccess(onResult: (Boolean) -> Unit) {
@@ -50,6 +54,7 @@ fun MainViewModel.requestRootAccess(onResult: (Boolean) -> Unit) {
 }
 
 fun MainViewModel.checkShizukuPermission(): Boolean {
+    if (android.os.Build.VERSION.SDK_INT < 24) return false
     return try {
         if (Shizuku.pingBinder()) {
             Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED

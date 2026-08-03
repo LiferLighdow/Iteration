@@ -1,0 +1,84 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="200dp"
+    android:height="200dp"
+    android:viewportWidth="1000"
+    android:viewportHeight="1000">
+
+    <!-- 1. 背景：明亮的淺色漸層 (類 Aurora 風格) -->
+    <path
+        android:pathData="M0,0 h1000 v1000 h-1000 z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="500"
+                android:startY="0"
+                android:endX="500"
+                android:endY="1000"
+                android:type="linear">
+                <item android:offset="0" android:color="#FFFFFF"/>
+                <item android:offset="1" android:color="#F2F2F2"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- 2. 購物袋主體：清透藍色磨砂玻璃質感 -->
+    <group
+        android:translateX="250"
+        android:translateY="260">
+
+        <!-- 提手 (調整為淺灰色以在白色背景顯現) -->
+        <path
+            android:strokeColor="#C0C0C0"
+            android:strokeWidth="28"
+            android:strokeLineCap="round"
+            android:pathData="M165,65 c0,-100 170,-100 170,0" />
+
+        <!-- 袋身 (淡藍色半透明，模擬玻璃感) -->
+        <path
+            android:fillColor="#150066FF"
+            android:pathData="M100,60 h300 c30,0 45,20 55,50 l40,320 c10,35 -15,65 -50,65 h-390 c-35,0 -60,-30 -50,-65 l40,-320 c10,-30 25,-50 55,-50 z" />
+
+        <!-- 袋子邊緣的細微高光 -->
+        <path
+            android:strokeColor="#30000000"
+            android:strokeWidth="2"
+            android:pathData="M100,60 h300 c30,0 45,20 55,50 l40,320 c10,35 -15,65 -50,65 h-390 c-35,0 -60,-30 -50,-65 l40,-320 c10,-30 25,-50 55,-50 z" />
+
+        <!-- 3. 中心標誌：套用 Aurora 四色的 'A' -->
+        <group
+            android:translateX="250"
+            android:translateY="270">
+
+            <!-- 倒 V 左側 (綠色) -->
+            <path
+                android:strokeColor="#00C497"
+                android:strokeWidth="45"
+                android:strokeLineCap="round"
+                android:strokeLineJoin="round"
+                android:pathData="M-110,110 L0,-110" />
+
+            <!-- 倒 V 右側 (黃色) -->
+            <path
+                android:strokeColor="#FFC107"
+                android:strokeWidth="45"
+                android:strokeLineCap="round"
+                android:strokeLineJoin="round"
+                android:pathData="M0,-110 L110,110" />
+
+            <!-- 箭頭主體/橫槓 (紅色) -->
+            <path
+                android:strokeColor="#FF5252"
+                android:strokeWidth="45"
+                android:strokeLineCap="round"
+                android:strokeLineJoin="round"
+                android:pathData="M-140,40 C-40,40 60,30 160,-60" />
+
+            <!-- 箭頭尖端 (藍色) -->
+            <path
+                android:fillColor="#03A9F4"
+                android:pathData="M145,-90 L225,-110 L185,-30 Z" />
+
+        </group>
+    </group>
+
+</vector>

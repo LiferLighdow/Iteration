@@ -10,12 +10,15 @@ android {
 
     defaultConfig {
         applicationId = "com.liferlighdow.iteration"
-        minSdk = 24
+        minSdk = 23
         targetSdk = 37
-        versionCode = 76
-        versionName = "5.2.3"
+        versionCode = 77
+        versionName = "5.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        vectorDrawables {
+            useSupportLibrary = true
+        }
     }
 
     buildTypes {
@@ -47,6 +50,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
     }
 }
 
@@ -55,6 +59,7 @@ kotlin {
 }
 
 dependencies {
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.core.ktx)
     implementation(libs.material)

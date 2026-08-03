@@ -561,7 +561,7 @@
     <string name="icon_size_recommend_desc">将分辨率与屏幕物理像素对齐，以獲得最佳清晰度与性能。</string>
 
     <string name="icon_scale_title">Icon 尺寸微调</string>
-    <string name="icon_scale_desc">微调桌面图标的显示大小 (90% 到 110%)。</string>
+    <string name="icon_scale_desc">微调桌面图标的显示大小 (90%% 到 110%%)。</string>
     <string name="icon_scale_current">当前比例：%1$d%%</string>
 
     <string name="settings_update_check_interval">更新检查间隔</string>

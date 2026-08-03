@@ -518,7 +518,7 @@
     <string name="icon_size_recommend">裝置建議值</string>
     <string name="icon_size_recommend_desc">將解析度與螢幕物理像素對齊，以獲得最佳清晰度與效能。</string>
     <string name="icon_scale_title">Icon 尺寸微調</string>
-    <string name="icon_scale_desc">微調桌面圖標的顯示大小 (90% 到 110%)。</string>
+    <string name="icon_scale_desc">微調桌面圖標的顯示大小 (90%% 到 110%%)。</string>
     <string name="icon_scale_current">當前比例：%1$d%%</string>
     <string name="settings_update_check_interval">檢查更新頻率</string>
     <string name="settings_update_check_interval_desc">設定自動檢查更新的時間間隔（0 到 36 小時，0 為不檢查）。</string>
@@ -530,6 +530,7 @@
     <string name="applying_wallpaper">正在套用桌布</string>
     <string name="applying_wallpaper_desc">正在為您的新樣貌優化顏色並生成效果。</string>
     <string name="select_wallpaper_type_desc">您想要從相簿中選擇照片，還是建立一個純色的桌布？</string>
+    <string name="wallpaper_default">預設桌布</string>
     <string name="emoji_label">表情符號 (Emoji)</string>
     <string name="emoji_hint">輸入一個或多個 Emoji</string>
     <string name="wallpaper_mode_title">渲染模式</string>
@@ -589,6 +590,9 @@
     <string name="builtin_maps">地圖</string>
     <string name="builtin_mail">電子郵件</string>
     <string name="builtin_music">音樂播放器</string>
+    <string name="builtin_note">記事本</string>
+    <string name="builtin_store">應用商店 (現代)</string>
+    <string name="builtin_store2">應用商店 (極光)</string>
     <string name="builtin_calculator">萬能計算機</string>
     <string name="builtin_recorder">聲紋刻印 (錄音機)</string>
     <string name="builtin_pack_setup_title">啟動 Iteration 核心圖標配置</string>

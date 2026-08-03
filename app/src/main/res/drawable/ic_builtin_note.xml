@@ -1,0 +1,42 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="200dp"
+    android:height="200dp"
+    android:viewportWidth="1000"
+    android:viewportHeight="1000">
+
+    <!-- 1. 底層：米黃色紙張背景 (滿版) -->
+    <path
+        android:pathData="M0,0 h1000 v1000 h-1000 z"
+        android:fillColor="#FFF9E1" />
+
+    <!-- 2. 頂部裝訂條：橘紅色漸層 (滿版寬度) -->
+    <path
+        android:pathData="M0,0 h1000 v300 h-1000 z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="500"
+                android:startY="0"
+                android:endX="500"
+                android:endY="300"
+                android:type="linear">
+                <item android:offset="0" android:color="#FF9500"/>
+                <item android:offset="1" android:color="#FF5E00"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- 3. 裝訂條下方的細小深色陰影線，增加層次感 -->
+    <path
+        android:fillColor="#20000000"
+        android:pathData="M0,300 h1000 v10 h-1000 z" />
+
+    <!-- 4. 內文橫線 (灰褐色) - 調整為四條 -->
+    <group>
+        <path android:fillColor="#DED3B8" android:pathData="M0,450 h1000 v6 h-1000 z" />
+        <path android:fillColor="#DED3B8" android:pathData="M0,600 h1000 v6 h-1000 z" />
+        <path android:fillColor="#DED3B8" android:pathData="M0,750 h1000 v6 h-1000 z" />
+        <path android:fillColor="#DED3B8" android:pathData="M0,900 h1000 v6 h-1000 z" />
+    </group>
+
+</vector>

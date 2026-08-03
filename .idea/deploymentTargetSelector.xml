@@ -37,10 +37,10 @@
       </SelectionState>
       <SelectionState runConfigName="androidTest">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-07-30T04:24:15.210927100Z">
+        <DropdownSelection timestamp="2026-08-03T03:21:12.276031500Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="Default" identifier="serial=192.168.194.154:5555;connection=7f1e58dd" />
+              <DeviceId pluginId="Default" identifier="serial=192.168.194.154:5555;connection=8a6a0f99" />
             </handle>
           </Target>
         </DropdownSelection>

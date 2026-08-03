@@ -335,7 +335,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     internal val _actionMode = MutableStateFlow(
         try {
-            ActionMode.valueOf(prefs.getString("action_mode", "ACCESSIBILITY") ?: "ACCESSIBILITY")
+            val savedMode = ActionMode.valueOf(prefs.getString("action_mode", "ACCESSIBILITY") ?: "ACCESSIBILITY")
+            if (android.os.Build.VERSION.SDK_INT < 24 && savedMode == ActionMode.SHIZUKU) {
+                ActionMode.ACCESSIBILITY
+            } else {
+                savedMode
+            }
         } catch (e: Exception) {
             ActionMode.ACCESSIBILITY
         }
@@ -600,15 +605,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // 過濾掉被凍結的應用與私密空間應用 (確保私密應用不進入普通庫)
         val activeApps = apps.filter { !it.isFrozen && !it.isPrivate }
         
-        if (query.isEmpty() && category == "All") return@combine activeApps
-
         activeApps.filter { app ->
             val matchesQuery =
                 if (query.isEmpty()) true else app.label.contains(query, ignoreCase = true)
+            
+            // 核心修正：除了 "Hidden Apps" 分類外，其餘視圖（包括所有分類與搜尋）皆應排除隱藏應用
             val matchesCategory = when (category) {
-                "All" -> true
                 "Hidden Apps" -> app.isHidden
-                else -> app.displayCategory == category
+                "All" -> !app.isHidden
+                else -> app.displayCategory == category && !app.isHidden
             }
             matchesQuery && matchesCategory
         }

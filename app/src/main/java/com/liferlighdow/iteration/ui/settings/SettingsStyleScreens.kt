@@ -886,6 +886,9 @@ fun ChangeIconScreen(onBack: () -> Unit) {
                 "ic_builtin_maps" to stringResource(R.string.builtin_maps),
                 "ic_builtin_mail" to stringResource(R.string.builtin_mail),
                 "ic_builtin_music" to stringResource(R.string.builtin_music),
+                "ic_builtin_note" to stringResource(R.string.builtin_note),
+                "ic_builtin_store" to stringResource(R.string.builtin_store),
+                "ic_builtin_store2" to stringResource(R.string.builtin_store2),
                 "ic_builtin_calculator" to stringResource(R.string.builtin_calculator),
                 "ic_builtin_recorder" to stringResource(R.string.builtin_recorder),
                 "ic_builtin_settings" to stringResource(R.string.builtin_settings)
@@ -1002,6 +1005,21 @@ fun BuiltinIconPackSetupDialog(
                 R.string.cat_audio
             ),
             Triple(
+                "Note",
+                manager.getMappedPackagesFor("ic_builtin_note"),
+                R.string.builtin_note
+            ),
+            Triple(
+                "Store",
+                manager.getMappedPackagesFor("ic_builtin_store"),
+                R.string.builtin_store
+            ),
+            Triple(
+                "Store2",
+                manager.getMappedPackagesFor("ic_builtin_store2"),
+                R.string.builtin_store2
+            ),
+            Triple(
                 "Calculator",
                 manager.getMappedPackagesFor("ic_builtin_calculator"),
                 R.string.calculator
@@ -1019,12 +1037,25 @@ fun BuiltinIconPackSetupDialog(
         }.filter { it.second.second.isNotEmpty() }
     }
 
-    // 關鍵修正：使用 initialSelection 作為 key，確保對話框開啟時正確初始化
-    // 且如果 initialSelection 為空，則預設全選偵測到的應用
+    // 關鍵修正：支援新格式的初始化邏輯
     var selected by remember(initialSelection) {
         mutableStateOf(
             if (initialSelection.isEmpty()) {
-                categories.flatMap { it.second.second.map { app -> app.packageName } }.toSet().toMutableSet()
+                // 預設全選，但針對 Store 隻預設選擇第一個樣式 (Modern)
+                categories.flatMap { (catId, pair) ->
+                    val (_, apps) = pair
+                    val iconName = when(catId) {
+                        "Music" -> "ic_builtin_music"
+                        "Note" -> "ic_builtin_note"
+                        "Store" -> "ic_builtin_store"
+                        "Store2" -> "ic_builtin_store2"
+                        "Calculator" -> "ic_builtin_calculator"
+                        "Files" -> "ic_builtin_files"
+                        else -> ""
+                    }
+                    if (catId == "Store2") emptyList() // 預設不選 Aurora 樣式
+                    else apps.map { "$iconName:${it.packageName}" }
+                }.toSet().toMutableSet()
             } else {
                 initialSelection.toMutableSet()
             }
@@ -1058,34 +1089,99 @@ fun BuiltinIconPackSetupDialog(
                                 ) {
                                     Text(stringResource(labelRes), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                                     TextButton(onClick = {
-                                        val allPkg = apps.map { it.packageName }
-                                        if (allPkg.all { selected.contains(it) }) {
-                                            selected = (selected - allPkg.toSet()).toMutableSet()
-                                        } else {
-                                            selected = (selected + allPkg.toSet()).toMutableSet()
+                                        val iconName = when(catId) {
+                                            "Music" -> "ic_builtin_music"
+                                            "Note" -> "ic_builtin_note"
+                                            "Store" -> "ic_builtin_store"
+                                            "Store2" -> "ic_builtin_store2"
+                                            "Calculator" -> "ic_builtin_calculator"
+                                            "Files" -> "ic_builtin_files"
+                                            else -> ""
                                         }
+                                        val allWithIcon = apps.map { "$iconName:${it.packageName}" }
+                                        val mutableSelected = selected.toMutableSet()
+                                        
+                                        if (allWithIcon.all { mutableSelected.contains(it) }) {
+                                            // 全部取消
+                                            mutableSelected.removeAll(allWithIcon.toSet())
+                                            // 同時移除可能存在的舊格式 (為了保險)
+                                            mutableSelected.removeAll(apps.map { it.packageName }.toSet())
+                                        } else {
+                                            // 全部勾選
+                                            allWithIcon.forEach { key ->
+                                                mutableSelected.add(key)
+                                                val pkg = key.substringAfter(":")
+                                                // 互斥處理
+                                                if (catId == "Store") {
+                                                    mutableSelected.remove("ic_builtin_store2:$pkg")
+                                                } else if (catId == "Store2") {
+                                                    mutableSelected.remove("ic_builtin_store:$pkg")
+                                                    mutableSelected.remove(pkg)
+                                                }
+                                            }
+                                        }
+                                        selected = mutableSelected
                                     }) {
                                         Text(stringResource(R.string.all_label))
                                     }
                                 }
                             }
                             items(apps) { app ->
+                                val currentIconName = when(catId) {
+                                    "Music" -> "ic_builtin_music"
+                                    "Note" -> "ic_builtin_note"
+                                    "Store" -> "ic_builtin_store"
+                                    "Store2" -> "ic_builtin_store2"
+                                    "Calculator" -> "ic_builtin_calculator"
+                                    "Files" -> "ic_builtin_files"
+                                    else -> ""
+                                }
+                                val currentKey = "$currentIconName:${app.packageName}"
+                                
+                                // 判定是否勾選：支持新舊兩種格式
+                                val isChecked = selected.contains(currentKey) || 
+                                              (selected.contains(app.packageName) && (catId != "Store2"))
+
                                 ListItem(
                                     headlineContent = { Text(app.label) },
                                     supportingContent = { Text(app.packageName) },
                                     trailingContent = {
                                         Checkbox(
-                                            checked = selected.contains(app.packageName),
+                                            checked = isChecked,
                                             onCheckedChange = { checked ->
-                                                selected = if (checked) (selected + app.packageName).toMutableSet()
-                                                else (selected - app.packageName).toMutableSet()
+                                                val mutableSelected = selected.toMutableSet()
+                                                if (checked) {
+                                                    mutableSelected.add(currentKey)
+                                                    // 互斥邏輯：Store 與 Store2 隻能二選一
+                                                    if (catId == "Store") {
+                                                        mutableSelected.remove("ic_builtin_store2:${app.packageName}")
+                                                    } else if (catId == "Store2") {
+                                                        mutableSelected.remove("ic_builtin_store:${app.packageName}")
+                                                        mutableSelected.remove(app.packageName) // Store 2 不兼容舊格式
+                                                    }
+                                                } else {
+                                                    mutableSelected.remove(currentKey)
+                                                    mutableSelected.remove(app.packageName)
+                                                }
+                                                selected = mutableSelected
                                             }
                                         )
                                     },
                                     modifier = Modifier.clickable {
-                                        val checked = !selected.contains(app.packageName)
-                                        selected = if (checked) (selected + app.packageName).toMutableSet()
-                                        else (selected - app.packageName).toMutableSet()
+                                        val mutableSelected = selected.toMutableSet()
+                                        if (!isChecked) {
+                                            mutableSelected.add(currentKey)
+                                            if (catId == "Store") {
+                                                mutableSelected.remove("ic_builtin_store2:${app.packageName}")
+                                            } else if (catId == "Store2") {
+                                                mutableSelected.remove("ic_builtin_store:${app.packageName}")
+                                                mutableSelected.remove(app.packageName)
+                                            }
+                                        } else {
+                                            mutableSelected.remove(currentKey)
+                                            mutableSelected.remove(app.packageName)
+                                        }
+                                        selected = mutableSelected
                                     }
                                 )
                             }

@@ -115,7 +115,6 @@
     <item component="com.android.soundrecorder" drawable="ic_builtin_recorder" />
     <item component="com.google.android.apps.recorder" drawable="ic_builtin_recorder" />
     <item component="com.sec.android.app.voicenote" drawable="ic_builtin_recorder" />
-    <item component="com.miui.notes" drawable="ic_builtin_recorder" />
     <item component="com.miui.voicerecorder" drawable="ic_builtin_recorder" />
     <item component="com.coloros.soundrecorder" drawable="ic_builtin_recorder" />
     <item component="com.huawei.soundrecorder" drawable="ic_builtin_recorder" />
@@ -123,6 +122,59 @@
     <item component="com.asus.soundrecorder" drawable="ic_builtin_recorder" />
     <item component="com.oneplus.soundrecorder" drawable="ic_builtin_recorder" />
     <item component="org.lineageos.recorder" drawable="ic_builtin_recorder" />
+
+    <!-- Notes -->
+    <item component="com.google.android.keep" drawable="ic_builtin_note" />
+    <item component="com.microsoft.office.onenote" drawable="ic_builtin_note" />
+    <item component="com.evernote" drawable="ic_builtin_note" />
+    <item component="com.samsung.android.app.notes" drawable="ic_builtin_note" />
+    <item component="com.miui.notes" drawable="ic_builtin_note" />
+    <item component="com.coloros.note" drawable="ic_builtin_note" />
+    <item component="com.huawei.notepad" drawable="ic_builtin_note" />
+    <item component="com.asus.note" drawable="ic_builtin_note" />
+    <item component="com.meizu.notepaper" drawable="ic_builtin_note" />
+    <item component="org.lineageos.jelly" drawable="ic_builtin_note" />
+    <item component="com.standardnotes" drawable="ic_builtin_note" />
+    <item component="com.zoho.notebook" drawable="ic_builtin_note" />
+    <item component="com.simplenote" drawable="ic_builtin_note" />
+    <item component="org.quetzacoel.notion" drawable="ic_builtin_note" />
+    <item component="com.android.notes" drawable="ic_builtin_note" />
+    <item component="com.google.android.apps.docs" drawable="ic_builtin_note" />
+    <item component="com.google.android.apps.docs.editors" drawable="ic_builtin_note" />
+    <item component="foundation.e.notes" drawable="ic_builtin_note" />
+
+    <!-- Store -->
+    <item component="com.android.vending" drawable="ic_builtin_store" />
+    <item component="com.sec.android.app.samsungapps" drawable="ic_builtin_store" />
+    <item component="com.xiaomi.mipicks" drawable="ic_builtin_store" />
+    <item component="com.oppo.market" drawable="ic_builtin_store" />
+    <item component="com.heytap.market" drawable="ic_builtin_store" />
+    <item component="com.huawei.appmarket" drawable="ic_builtin_store" />
+    <item component="com.amazon.venezia" drawable="ic_builtin_store" />
+    <item component="org.fdroid.fdroid" drawable="ic_builtin_store" />
+    <item component="com.aurora.store" drawable="ic_builtin_store" />
+    <item component="com.coolapk.market" drawable="ic_builtin_store" />
+    <item component="com.tencent.android.qqdownloader" drawable="ic_builtin_store" />
+    <item component="com.qihoo.appstore" drawable="ic_builtin_store" />
+    <item component="com.baidu.appsearch" drawable="ic_builtin_store" />
+    <item component="foundation.e.apps" drawable="ic_builtin_store" />
+
+    <!-- Store 2 -->
+    <item component="com.android.vending" drawable="ic_builtin_store2" />
+    <item component="com.sec.android.app.samsungapps" drawable="ic_builtin_store2" />
+    <item component="com.xiaomi.mipicks" drawable="ic_builtin_store2" />
+    <item component="com.oppo.market" drawable="ic_builtin_store2" />
+    <item component="com.heytap.market" drawable="ic_builtin_store2" />
+    <item component="com.huawei.appmarket" drawable="ic_builtin_store2" />
+    <item component="com.amazon.venezia" drawable="ic_builtin_store2" />
+    <item component="org.fdroid.fdroid" drawable="ic_builtin_store2" />
+    <item component="com.aurora.store" drawable="ic_builtin_store2" />
+    <item component="com.coolapk.market" drawable="ic_builtin_store2" />
+    <item component="com.tencent.android.qqdownloader" drawable="ic_builtin_store2" />
+    <item component="com.qihoo.appstore" drawable="ic_builtin_store2" />
+    <item component="com.baidu.appsearch" drawable="ic_builtin_store2" />
+    <item component="foundation.e.apps" drawable="ic_builtin_store2" />
+
 
     <!-- SU -->
     <item component="com.topjohnwu.magisk" drawable="ic_builtin_su" />

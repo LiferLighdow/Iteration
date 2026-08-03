@@ -573,7 +573,7 @@
     <string name="icon_size_recommend_desc">Matches resolution to your physical screen pixels for optimal clarity and performance.</string>
 
     <string name="icon_scale_title">Icon Size Fine-tuning</string>
-    <string name="icon_scale_desc">Fine-tune the display size of icons on the desktop (90% to 110%).</string>
+    <string name="icon_scale_desc">Fine-tune the display size of icons on the desktop (90%% to 110%%).</string>
     <string name="icon_scale_current">Current Scale: %1$d%%</string>
 
     <string name="settings_update_check_interval">Update Check Interval</string>
@@ -591,6 +591,7 @@
     <string name="applying_wallpaper">Applying Wallpaper</string>
     <string name="applying_wallpaper_desc">Optimizing colors and generating effects for your new look.</string>
     <string name="select_wallpaper_type_desc">Would you like to use a photo from your gallery or create a solid color wallpaper?</string>
+    <string name="wallpaper_default">Default</string>
     <string name="emoji_label">Emoji</string>
     <string name="emoji_hint">Enter one or more emojis</string>
     <string name="wallpaper_mode_title">Rendering Mode</string>
@@ -651,6 +652,9 @@
     <string name="builtin_maps">Maps</string>
     <string name="builtin_mail">Mail</string>
     <string name="builtin_music">Music</string>
+    <string name="builtin_note">Note</string>
+    <string name="builtin_store">App Store (Modern)</string>
+    <string name="builtin_store2">App Store (Aurora)</string>
     <string name="builtin_calculator">Calculator</string>
     <string name="builtin_recorder">Recorder</string>
     <string name="builtin_pack_setup_title">Iteration Pack Setup</string>

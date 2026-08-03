@@ -225,10 +225,15 @@ class IconPackManager(private val context: Context) {
             drawableName = iconMapping[pkgFromId] ?: iconMapping[packageName]
         }
 
-        // --- 核心修正：針對 Music/Calculator/Files 的手動複選過濾 ---
-        if (iconPkg == BUILTIN_PACKAGE_NAME && (drawableName == "ic_builtin_music" || drawableName == "ic_builtin_calculator" || drawableName == "ic_builtin_files")) {
-            if (builtinSelectedPackages.isNotEmpty() && !builtinSelectedPackages.contains(packageName)) {
-                drawableName = null
+        // --- 核心修正：針對 Music/Note/Store/Store2/Calculator/Files 的手動複選過濾 ---
+        val builtinDrawables = setOf("ic_builtin_music", "ic_builtin_note", "ic_builtin_store", "ic_builtin_store2", "ic_builtin_calculator", "ic_builtin_files")
+        if (iconPkg == BUILTIN_PACKAGE_NAME && builtinDrawables.contains(drawableName)) {
+            if (builtinSelectedPackages.isNotEmpty()) {
+                // 優先檢查帶有圖示名稱的精確匹配 (支援多樣式選擇)
+                val exactMatch = "$drawableName:$packageName"
+                if (!builtinSelectedPackages.contains(exactMatch) && !builtinSelectedPackages.contains(packageName)) {
+                    drawableName = null
+                }
             }
         }
 

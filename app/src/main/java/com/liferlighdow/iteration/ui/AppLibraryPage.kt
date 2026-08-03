@@ -227,6 +227,13 @@ fun AppLibraryPage(
             },
             label = "LibraryTransition"
         ) { targetIsLibraryView ->
+            // 當切換視圖（如從列表回退到目錄）時，確保清除全域聚焦狀態，防止 context menu 殘留導致手勢阻塞
+            DisposableEffect(targetIsLibraryView) {
+                onDispose {
+                    viewModel.clearFocusState()
+                }
+            }
+
             if (targetIsLibraryView) {
                 val appsToShow = if (selectedCategory == "Hidden Apps" && !isHiddenUnlocked) emptyList() else filteredApps
 
@@ -283,6 +290,10 @@ fun AppLibraryPage(
 
                             items(apps, key = { it.uniqueId }) { app ->
                                 var showMenu by remember { mutableStateOf(false) }
+                                val dismissMenu = {
+                                    showMenu = false
+                                    viewModel.clearFocusState()
+                                }
                                 Box(modifier = Modifier.fillMaxWidth()) {
                                     ListItem(
                                         headlineContent = { Text(app.label, color = Color.White) },
@@ -325,10 +336,7 @@ fun AppLibraryPage(
                                     )
                                     DropdownMenu(
                                         expanded = showMenu,
-                                        onDismissRequest = {
-                                            showMenu = false
-                                            viewModel.setActiveContextMenuId(null)
-                                        },
+                                        onDismissRequest = dismissMenu,
                                         shape = RoundedCornerShape(20.dp)
                                     ) {
                                         val actionMode by viewModel.actionMode.collectAsState()
@@ -336,15 +344,15 @@ fun AppLibraryPage(
                                             DropdownMenuItem(
                                                 text = { Text(stringResource(if (app.isFrozen) R.string.unfreeze else R.string.freeze)) },
                                                 leadingIcon = { Icon(Icons.Default.AcUnit, null, tint = MaterialTheme.colorScheme.primary) },
-                                                onClick = { viewModel.toggleFreezeApp(app, mContext); showMenu = false }
+                                                onClick = { viewModel.toggleFreezeApp(app, mContext); dismissMenu() }
                                             )
                                             HorizontalDivider()
                                         }
                                         if (!app.isPrivate) {
-                                            DropdownMenuItem(text = { Text(stringResource(R.string.menu_add_to_home)) }, leadingIcon = { Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.primary) }, onClick = { viewModel.addAppToHome(app.uniqueId); showMenu = false })
+                                            DropdownMenuItem(text = { Text(stringResource(R.string.menu_add_to_home)) }, leadingIcon = { Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.primary) }, onClick = { viewModel.addAppToHome(app.uniqueId); dismissMenu() })
                                         }
-                                        DropdownMenuItem(text = { Text(stringResource(R.string.rename)) }, leadingIcon = { Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary) }, onClick = { appToRename = app; newLabelText = app.label; showMenu = false })
-                                        DropdownMenuItem(text = { Text(stringResource(if (app.isHidden) R.string.unhide else R.string.hide)) }, leadingIcon = { Icon(if (app.isHidden) Icons.Default.Visibility else Icons.Default.VisibilityOff, null, tint = MaterialTheme.colorScheme.primary) }, onClick = { viewModel.toggleHiddenApp(app.uniqueId); showMenu = false })
+                                        DropdownMenuItem(text = { Text(stringResource(R.string.rename)) }, leadingIcon = { Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary) }, onClick = { appToRename = app; newLabelText = app.label; dismissMenu() })
+                                        DropdownMenuItem(text = { Text(stringResource(if (app.isHidden) R.string.unhide else R.string.hide)) }, leadingIcon = { Icon(if (app.isHidden) Icons.Default.Visibility else Icons.Default.VisibilityOff, null, tint = MaterialTheme.colorScheme.primary) }, onClick = { viewModel.toggleHiddenApp(app.uniqueId); dismissMenu() })
                                         DropdownMenuItem(
                                             text = { Text(stringResource(R.string.menu_app_info)) },
                                             leadingIcon = { Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary) },
@@ -354,7 +362,7 @@ fun AppLibraryPage(
                                                     flags = Intent.FLAG_ACTIVITY_NEW_TASK
                                                 }
                                                 mContext.startActivity(intent)
-                                                showMenu = false
+                                                dismissMenu()
                                             }
                                         )
                                         if (!app.isSystem) {
@@ -367,7 +375,7 @@ fun AppLibraryPage(
                                                         showNativeUninstallDialog(mContext, app.label) {
                                                             viewModel.deletePWA(app)
                                                         }
-                                                        showMenu = false
+                                                        dismissMenu()
                                                         return@DropdownMenuItem
                                                     }
                                                     try {
@@ -379,7 +387,7 @@ fun AppLibraryPage(
                                                     } catch (e: Exception) {
                                                         Log.e("Iteration", "Uninstall failed", e)
                                                     }
-                                                    showMenu = false
+                                                    dismissMenu()
                                                 }
                                             )
                                         }

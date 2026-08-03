@@ -997,30 +997,42 @@ fun MainViewModel.loadApps() {
                         val itemValue = pageArray.get(j)
                         val jsonStr = if (itemValue is JSONObject) itemValue.toString() else itemValue as String
                         ConfigSerializer.deserializeAppModel(jsonStr)?.let { savedApp ->
+                            val isHidden = hiddenPackages.contains(savedApp.uniqueId) || hiddenPackages.contains(savedApp.packageName)
                             if (savedApp.isFolder || savedApp.isWidget || savedApp.isPWA) {
-                                pageItems.add(savedApp)
+                                if (!isHidden) {
+                                    if (savedApp.isFolder) {
+                                        val filteredItems = savedApp.folderItems.filter { child ->
+                                            !hiddenPackages.contains(child.uniqueId) && !hiddenPackages.contains(child.packageName)
+                                        }
+                                        pageItems.add(savedApp.copy(folderItems = filteredItems))
+                                    } else {
+                                        pageItems.add(savedApp)
+                                    }
+                                }
                             } else if (savedApp.isShortcut && !savedApp.shortcutId.isNullOrEmpty()) {
-                                // 處理 Shortcut 圖示快取
-                                val currentStyle = currentStyleSuffix
-                                val cacheKey = "${savedApp.uniqueId}_$currentStyle"
-                                if (iconCache[cacheKey] == null) {
-                                    viewModelScope.launch(Dispatchers.IO) {
-                                        val info = getShortcutInfoById(savedApp.packageName, savedApp.shortcutId, savedApp.userId)
-                                        info?.let { si ->
-                                            getShortcutIcon(si)?.let { icon ->
-                                                iconCache.put(cacheKey, icon)
-                                                triggerIconUpdate()
+                                if (!isHidden) {
+                                    // 處理 Shortcut 圖示快取
+                                    val currentStyle = currentStyleSuffix
+                                    val cacheKey = "${savedApp.uniqueId}_$currentStyle"
+                                    if (iconCache[cacheKey] == null) {
+                                        viewModelScope.launch(Dispatchers.IO) {
+                                            val info = getShortcutInfoById(savedApp.packageName, savedApp.shortcutId, savedApp.userId)
+                                            info?.let { si ->
+                                                getShortcutIcon(si)?.let { icon ->
+                                                    iconCache.put(cacheKey, icon)
+                                                    triggerIconUpdate()
+                                                }
                                             }
                                         }
                                     }
+                                    pageItems.add(savedApp)
                                 }
-                                pageItems.add(savedApp)
                             } else {
                                 val baseApp = processedApps.find { it.uniqueId == savedApp.uniqueId }
                                     ?: processedApps.find { it.packageName == savedApp.packageName && it.userId == savedApp.userId }
                                 baseApp?.let {
-                                    if (!it.isFrozen && !it.isPrivate) {
-                                        pageItems.add(it.copy(uniqueId = savedApp.uniqueId, label = customLabels[savedApp.uniqueId] ?: customLabels[savedApp.packageName] ?: it.label, isHidden = hiddenPackages.contains(savedApp.uniqueId) || hiddenPackages.contains(savedApp.packageName)))
+                                    if (!it.isFrozen && !it.isPrivate && !it.isHidden) {
+                                        pageItems.add(it.copy(uniqueId = savedApp.uniqueId, label = customLabels[savedApp.uniqueId] ?: customLabels[savedApp.packageName] ?: it.label, isHidden = false))
                                     }
                                 }
                             }
@@ -1093,12 +1105,27 @@ fun MainViewModel.loadApps() {
                 saveDock()
             }
         } else {
-            // 同步最新的 App 資訊 (Label 等)
+            // 同步最新的 App 資訊 (Label 等)，同時過濾掉已隱藏的 App
             val updatedDock = _dockItems.value.map { dockApp ->
+                val isHidden = hiddenPackages.contains(dockApp.uniqueId) || hiddenPackages.contains(dockApp.packageName)
                 if (dockApp.isFolder || dockApp.isPWA || dockApp.isShortcut) {
-                    dockApp
+                    if (isHidden) {
+                        AppModel(label = "", packageName = "", uniqueId = "empty_dock_${System.currentTimeMillis()}")
+                    } else if (dockApp.isFolder) {
+                        val filteredItems = dockApp.folderItems.filter { child ->
+                            !hiddenPackages.contains(child.uniqueId) && !hiddenPackages.contains(child.packageName)
+                        }
+                        dockApp.copy(folderItems = filteredItems)
+                    } else {
+                        dockApp
+                    }
                 } else if (dockApp.packageName.isNotEmpty()) {
-                    processedApps.find { it.packageName == dockApp.packageName && it.userId == dockApp.userId } ?: dockApp
+                    val base = processedApps.find { it.packageName == dockApp.packageName && it.userId == dockApp.userId }
+                    if (base != null && !base.isHidden && !base.isFrozen && !base.isPrivate) {
+                        base
+                    } else {
+                        AppModel(label = "", packageName = "", uniqueId = "empty_dock_${System.currentTimeMillis()}")
+                    }
                 } else {
                     dockApp
                 }

@@ -1,0 +1,88 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="90dp"
+    android:height="180dp"
+    android:viewportWidth="90"
+    android:viewportHeight="180">
+
+    <!-- Layer 1: Green Background -->
+    <path
+        android:pathData="M0,0h90v180h-90z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="90"
+                android:startY="0"
+                android:endX="0"
+                android:endY="80"
+                android:type="linear">
+                <item android:offset="0" android:color="#78d701"/>
+                <item android:offset="1" android:color="#ffc800"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Layer 2: Yellow/Orange Wave -->
+    <path
+        android:pathData="M90,45 C70,45 40,105 0,95 V180 H90 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="45"
+                android:startY="45"
+                android:endX="45"
+                android:endY="125"
+                android:type="linear">
+                <item android:offset="0" android:color="#f8c102"/>
+                <item android:offset="1" android:color="#fe7235"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Layer 2 Reversed: Flipped Copy of Layer 2 -->
+    <path
+        android:pathData="M0,35 C20,35 50,95 90,85 V180 H0 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="45"
+                android:startY="55"
+                android:endX="45"
+                android:endY="115"
+                android:type="linear">
+                <item android:offset="0" android:color="#f7c100"/>
+                <item android:offset="1" android:color="#ff147b"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Layer 4: Magenta/Purple Wave -->
+    <path
+        android:pathData="M90,105 C65,85 25,145 0,120 V180 H90 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="45"
+                android:startY="95"
+                android:endX="45"
+                android:endY="165"
+                android:type="linear">
+                <item android:offset="0" android:color="#e801b3"/>
+                <item android:offset="1" android:color="#8736f5"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Layer 5: Blue Wave -->
+    <path
+        android:pathData="M90,135 C55,125 30,175 0,160 V180 H90 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="45"
+                android:startY="155"
+                android:endX="45"
+                android:endY="180"
+                android:type="linear">
+                <item android:offset="0" android:color="#00aaff"/>
+                <item android:offset="1" android:color="#5e4fff"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+</vector>
