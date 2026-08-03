@@ -49,6 +49,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.graphics.asComposeRenderEffect
@@ -400,6 +402,7 @@ fun AppGrid(
                 val animY by animateDpAsState(targetY, label = "y")
 
                 val density = LocalDensity.current
+                val haptic = LocalHapticFeedback.current
                 var showContextMenu by remember { mutableStateOf(false) }
 
                 // 為了避免 pointerInput 捕捉到舊的變數值導致拖拽失效或 BUG
@@ -499,6 +502,7 @@ fun AppGrid(
                                     var hasTriggeredDrag = false
                                     detectDragGesturesAfterLongPress(
                                         onDragStart = { _ ->
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                             totalDragDistance = 0f
                                             hasTriggeredDrag = false
                                             viewModel.setActiveContextMenuId(app.uniqueId)

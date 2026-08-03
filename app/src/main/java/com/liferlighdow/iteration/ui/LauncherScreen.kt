@@ -121,6 +121,11 @@ fun LauncherScreen(
     val isApplyingWallpaper by viewModel.isApplyingWallpaper.collectAsState()
     val isDesktopLocked by viewModel.isDesktopLocked.collectAsState()
     val iconScaleFactor by viewModel.iconScale.collectAsState()
+    val userRows by viewModel.desktopRows.collectAsState()
+    val isBalanced = userRows == -1
+    val baseIconSize = if (isBalanced) 61.5.dp else 62.dp
+    val iconSize = baseIconSize * iconScaleFactor
+
     val pagerSnapThreshold by viewModel.pagerSnapThreshold.collectAsState()
     val pagerDampingRatio by viewModel.pagerDampingRatio.collectAsState()
 
@@ -386,15 +391,11 @@ fun LauncherScreen(
 
         val screenRatio = maxHeight / maxWidth
         
-        val userRows by viewModel.desktopRows.collectAsState()
-        val isBalanced = userRows == -1
         val rows = if (isBalanced) 6 else if (userRows > 0) userRows else (if (screenRatio < 2.0f) 5 else 6)
         
         val showWidgetLabel = if (rows >= 7) screenRatio >= 2.22f else true
 
         // 畫質調整不會影響這個顯示尺寸
-        val baseIconSize = if (isBalanced) 61.5.dp else 62.dp
-        val iconSize = baseIconSize * iconScaleFactor
         val labelFontSize = if (isBalanced) 11.8.sp else 12.sp
         val iconSizePx = with(density) { iconSize.toPx() }
         val columns = 4
@@ -568,12 +569,23 @@ fun LauncherScreen(
                                         if (!app.isFolder) appToEdit = app
                                         return@AppGrid
                                     }
+                                    
+                                    // 計算點擊位置的 Rect (用於啟動動畫)
+                                    val density = mContext.resources.displayMetrics.density
+                                    val sizePx = (iconSize.value * density).toInt()
+                                    val rect = android.graphics.Rect(
+                                        pos.x.toInt(), 
+                                        pos.y.toInt(), 
+                                        (pos.x + sizePx).toInt(), 
+                                        (pos.y + sizePx).toInt()
+                                    )
+
                                     if (app.isFolder) {
                                         folderIconPosition = pos
                                         folderToOpenId = app.uniqueId
                                     } else if (app.isFrozen) {
                                         appToUnfreeze = app
-                                    } else viewModel.launchApp(app)
+                                    } else viewModel.launchApp(app, rect)
                                 },
                                 onSlotPositioned = { idx, rect ->
                                     slotBounds["$pageIndex-$idx"] = rect
@@ -739,13 +751,21 @@ fun LauncherScreen(
                                 horizontalPadding = if (isBalanced) 28.dp else horizontalPadding,
                                 iconSize = (if (isBalanced) 70.dp else 72.dp) * iconScaleFactor,
                                 labelFontSize = if (isBalanced) 11.sp else labelFontSize,
-                                onAppClick = { app ->
+                                onAppClick = { app, pos ->
                                     if (app.isFolder) {
                                         folderToOpenId = app.uniqueId
                                     } else if (app.isFrozen) {
                                         appToUnfreeze = app
                                     } else {
-                                        onAppClick(app)
+                                        val density = mContext.resources.displayMetrics.density
+                                        val sizePx = (iconSize.value * density).toInt()
+                                        val rect = android.graphics.Rect(
+                                            pos.x.toInt(), 
+                                            pos.y.toInt(), 
+                                            (pos.x + sizePx).toInt(), 
+                                            (pos.y + sizePx).toInt()
+                                        )
+                                        viewModel.launchApp(app, rect)
                                     }
                                 },
                                 onDragStart = { app, offset ->
@@ -829,12 +849,23 @@ fun LauncherScreen(
                         myPackageName = myPackageName,
                         notificationCounts = notificationCounts,
                         onSearchClick = { showGlobalSearch = true },
-                        onAppClick = { app ->
+                        onAppClick = { app, pos ->
                             if (app.isFolder) {
+                                folderIconPosition = pos
                                 folderToOpenId = app.uniqueId
                             } else if (app.isFrozen) {
                                 appToUnfreeze = app
-                            } else onAppClick(app)
+                            } else {
+                                val density = mContext.resources.displayMetrics.density
+                                val sizePx = (iconSize.value * density).toInt()
+                                val rect = android.graphics.Rect(
+                                    pos.x.toInt(), 
+                                    pos.y.toInt(), 
+                                    (pos.x + sizePx).toInt(), 
+                                    (pos.y + sizePx).toInt()
+                                )
+                                viewModel.launchApp(app, rect)
+                            }
                         },
                         onSettingsClick = onSettingsClick,
                         onLongClick = { showDockAddTypePicker = it },
@@ -952,9 +983,19 @@ fun LauncherScreen(
             onDismiss = { showGlobalSearch = false },
             allApps = allAppsFlat,
             suggestedApps = viewModel.suggestedApps.collectAsState().value,
-            onAppClick = { app ->
+            onAppClick = { app, pos ->
                 if (app.isFrozen) appToUnfreeze = app
-                else onAppClick(app)
+                else {
+                    val density = mContext.resources.displayMetrics.density
+                    val sizePx = (iconSize.value * density).toInt()
+                    val rect = android.graphics.Rect(
+                        pos.x.toInt(), 
+                        pos.y.toInt(), 
+                        (pos.x + sizePx).toInt(), 
+                        (pos.y + sizePx).toInt()
+                    )
+                    viewModel.launchApp(app, rect)
+                }
             },
             iconShape = iconShape,
             isLiquidGlassEnabled = isLiquidGlassEnabled,
@@ -1046,9 +1087,19 @@ fun LauncherScreen(
         onAddShortcutClick = { showShortcutPicker = true },
         onWallpaperClick = { showWallpaperTypeDialog = true },
         onSettingsClick = onSettingsClick,
-        onAppClick = { app ->
+        onAppClick = { app, pos ->
             if (app.isFrozen) appToUnfreeze = app
-            else onAppClick(app)
+            else {
+                val density = mContext.resources.displayMetrics.density
+                val sizePx = (iconSize.value * density).toInt()
+                val rect = android.graphics.Rect(
+                    pos.x.toInt(), 
+                    pos.y.toInt(), 
+                    (pos.x + sizePx).toInt(), 
+                    (pos.y + sizePx).toInt()
+                )
+                viewModel.launchApp(app, rect)
+            }
         }
     )
 

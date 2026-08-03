@@ -9,6 +9,7 @@ import android.content.pm.LauncherApps
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Build
+import android.os.Bundle
 import android.os.UserHandle
 import android.os.UserManager
 import android.content.pm.ShortcutInfo
@@ -530,8 +531,14 @@ fun MainViewModel.processNewIcon(
         getApplication<Application>().packageManager.getApplicationIcon(app.packageName)
     } catch (e: Exception) { null }
 
+    val isExcluded = _excludedThemedPackages.value.contains(app.packageName)
+    val useMonochrome = _useMonochrome.value
+    val customHue = _customIconHue.value
+    val customSaturation = _customIconSaturation.value
+    val customBrightness = _customIconBrightness.value
+
     if (isExcluded) {
-        return iconProcessor.processIcon(finalRawIcon, false, null, IconStyle.STANDARD, currentShape, sizePx, customBgColor = 0, customFgColor = 0, customUseOriginal = true, customUseOriginalBg = true, customUseDominantColor = false, originalIcon = null, userId = app.userId, calendarDay = calendarDay, clockTime = clockTime)
+        return iconProcessor.processIcon(finalRawIcon, false, null, IconStyle.STANDARD, currentShape, sizePx, customBgColor = 0, customFgColor = 0, customUseOriginal = true, customUseOriginalBg = true, customUseDominantColor = false, useMonochrome = useMonochrome, customHue = customHue, customSaturation = customSaturation, customBrightness = customBrightness, originalIcon = null, userId = app.userId, calendarDay = calendarDay, clockTime = clockTime)
     }
 
     val builtinSelected = _builtinIconSelectedPackages.value
@@ -545,11 +552,29 @@ fun MainViewModel.processNewIcon(
 
     val isFromIconPack = (currentIconPack.isNotEmpty() || customIconPack.isNotEmpty()) && sourceIcon != finalRawIcon
 
-    return if (currentIconPack.isNotEmpty()) {
-        iconProcessor.processIcon(sourceIcon, false, null, IconStyle.STANDARD, currentShape, sizePx, isIconPack = isFromIconPack, originalIcon = finalRawIcon, userId = app.userId, isPrivate = app.isPrivate, calendarDay = calendarDay, clockTime = clockTime)
-    } else {
-        iconProcessor.processIcon(sourceIcon, isThemed, themeColors, currentStyle, currentShape, sizePx, isIconPack = isFromIconPack, customBgColor = customBg, customFgColor = customFg, customUseOriginal = customOriginal, customUseOriginalBg = customOriginalBg, customUseDominantColor = customUseDominantColor, originalIcon = finalRawIcon, userId = app.userId, isPrivate = app.isPrivate, calendarDay = calendarDay, clockTime = clockTime)
-    }
+    return iconProcessor.processIcon(
+        sourceIcon,
+        isThemed,
+        themeColors,
+        if (currentIconPack.isNotEmpty() && useMonochrome) IconStyle.STANDARD else currentStyle,
+        currentShape,
+        sizePx,
+        isIconPack = isFromIconPack,
+        customBgColor = customBg,
+        customFgColor = customFg,
+        customUseOriginal = customOriginal,
+        customUseOriginalBg = customOriginalBg,
+        customUseDominantColor = customUseDominantColor,
+        useMonochrome = useMonochrome,
+        customHue = customHue,
+        customSaturation = customSaturation,
+        customBrightness = customBrightness,
+        originalIcon = finalRawIcon,
+        userId = app.userId,
+        isPrivate = app.isPrivate,
+        calendarDay = calendarDay,
+        clockTime = clockTime
+    )
 }
 
 fun MainViewModel.saveIconToDisk(bitmap: ImageBitmap, file: File) {
@@ -811,25 +836,22 @@ fun MainViewModel.loadApps() {
         // 合併 PWA 應用程式
         val appsToProcess = rawApps + _pwaApps.value
 
-        val themeColors = if (isThemed) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                dynamicLightColorScheme(getApplication())
-            } else {
-                val seed = withContext(Dispatchers.IO) {
-                    try {
-                        val wm = WallpaperManager.getInstance(getApplication())
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-                            wm.getWallpaperColors(WallpaperManager.FLAG_SYSTEM)?.primaryColor?.toArgb()
-                        } else {
-                            wm.drawable?.toBitmap()
-                                ?.let { DynamicColorGenerator.extractSeedColorFromBitmap(it) }
-                        }
-                    } catch (e: Exception) {
-                        null
-                    }
-                }
-                seed?.let { DynamicColorGenerator.generateColorSchemeFromSeed(it, false) }
+        val isDark = when (_themeMode.value) {
+            ThemeMode.LIGHT -> false
+            ThemeMode.DARK -> true
+            ThemeMode.FOLLOW_SYSTEM -> {
+                val uiMode = getApplication<Application>().resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+                uiMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
             }
+        }
+
+        val themeColors = if (isThemed) {
+            DynamicColorGenerator.getColorScheme(
+                getApplication(),
+                _isMaterialYouEnabled.value,
+                isDark,
+                _seedColor.value
+            )
         } else null
 
         val colorKey = themeColors?.primary?.let {
@@ -1144,10 +1166,14 @@ fun MainViewModel.repaginate(allApps: List<AppModel>) {
     }
 }
 
-fun MainViewModel.launchApp(app: AppModel) {
-    val launcherApps = getApplication<Application>().getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
-    val userManager = getApplication<Application>().getSystemService(Context.USER_SERVICE) as UserManager
+fun MainViewModel.launchApp(app: AppModel, sourceRect: android.graphics.Rect? = null) {
+    val context = getApplication<Application>()
+    val launcherApps = context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
+    val userManager = context.getSystemService(Context.USER_SERVICE) as UserManager
     
+    // 對於普通 startActivity，設定 SourceBounds 幫助系統識別動畫起點
+    val options: Bundle? = null 
+
     try {
         val allProfiles = userManager.userProfiles
         val userHandle = allProfiles.find { 
@@ -1165,7 +1191,7 @@ fun MainViewModel.launchApp(app: AppModel) {
             try {
                 // 檢查是否選擇使用 vNavi 且是否安裝
                 val vNaviPackage = "com.liferlighdow.vnavi"
-                val pm = getApplication<Application>().packageManager
+                val pm = context.packageManager
                 val isVNaviInstalled = try {
                     pm.getPackageInfo(vNaviPackage, 0)
                     true
@@ -1182,26 +1208,28 @@ fun MainViewModel.launchApp(app: AppModel) {
                             putExtra("uniqueId", app.uniqueId)
                             putExtra("theme_color", app.pwaBgColor)
                             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            sourceBounds = sourceRect
                         }
-                        getApplication<Application>().startActivity(intent)
+                        context.startActivity(intent, options)
                     } else {
                         // 雖然選擇了但沒裝，提示安裝，且不再自動降級使用內建，以符合使用者設定
                         _showVNaviInstallDialog.value = true
                     }
                 } else {
                     // 用戶明確選擇使用內置
-                    val intent = Intent(getApplication(), PwaActivity::class.java).apply {
+                    val intent = Intent(context, PwaActivity::class.java).apply {
                         putExtra("url", rawUrl)
                         putExtra("label", app.label)
                         putExtra("uniqueId", app.uniqueId)
                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        sourceBounds = sourceRect
                     }
-                    getApplication<Application>().startActivity(intent)
+                    context.startActivity(intent, options)
                 }
                 logAppLaunch(app.packageName)
             } catch (e: Exception) {
                 android.util.Log.e("Iteration", "Failed to launch PWA", e)
-                android.widget.Toast.makeText(getApplication(), "PWA Error: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(context, "PWA Error: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
             }
             return
         }
@@ -1209,7 +1237,7 @@ fun MainViewModel.launchApp(app: AppModel) {
         // 增加 Shortcut 啟動邏輯
         if (app.isShortcut && !app.shortcutId.isNullOrEmpty()) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
-                launcherApps.startShortcut(app.packageName, app.shortcutId, null, null, userHandle)
+                launcherApps.startShortcut(app.packageName, app.shortcutId, sourceRect, options, userHandle)
             }
             logAppLaunch(app.packageName)
             return
@@ -1225,13 +1253,14 @@ fun MainViewModel.launchApp(app: AppModel) {
             val pkg = idWithoutUser.substringBefore("/")
             val cls = idWithoutUser.substringAfter("/")
             val component = android.content.ComponentName(pkg, cls)
-            launcherApps.startMainActivity(component, userHandle, null, null)
+            launcherApps.startMainActivity(component, userHandle, sourceRect, options)
         } else {
-            val intent = getApplication<Application>().packageManager.getLaunchIntentForPackage(app.packageName)
+            val intent = context.packageManager.getLaunchIntentForPackage(app.packageName)
             if (intent != null) {
-                getApplication<Application>().startActivity(intent.apply {
+                context.startActivity(intent.apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                })
+                    sourceBounds = sourceRect
+                }, options)
             }
         }
         logAppLaunch(app.packageName)
@@ -1239,6 +1268,8 @@ fun MainViewModel.launchApp(app: AppModel) {
         e.printStackTrace()
     }
 }
+
+
 
 fun MainViewModel.getAppShortcuts(packageName: String, userId: Long): List<ShortcutInfo> {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N_MR1) return emptyList()

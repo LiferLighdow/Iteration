@@ -474,6 +474,8 @@
     <string name="search_hint_general">搜索&#8230;</string>
     <string name="failed_to_load_image">图片加载失败</string>
 
+    <string name="use_monochrome_title">使用单色图层</string>
+    <string name="use_monochrome_desc">对支持的图标优先使用原生单色图层（仅限 Android 13+）</string>
     <string name="settings_language">语言</string>
     <string name="language_english">英文 (English)</string>
     <string name="language_chinese_tw">中文 (繁体)</string>

@@ -28,6 +28,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -116,7 +119,7 @@ fun FrozenAppsManagerDialog(
 fun PrivateSpaceManagerDialog(
     allApps: List<AppModel>,
     onDismiss: () -> Unit,
-    onAppClick: (AppModel) -> Unit
+    onAppClick: (AppModel, Offset) -> Unit
 ) {
     val viewModel: MainViewModel = viewModel()
     val mContext = LocalContext.current
@@ -162,7 +165,8 @@ fun PrivateSpaceManagerDialog(
                     LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp)) {
                         items(privateApps, key = { it.uniqueId }) { app ->
                             var showMenu by remember { mutableStateOf(false) }
-                            Box {
+                            var itemPosition by remember { mutableStateOf(Offset.Zero) }
+                            Box(modifier = Modifier.onGloballyPositioned { itemPosition = it.positionInRoot() }) {
                                 ListItem(
                                     headlineContent = { Text(app.label) },
                                     leadingContent = {
@@ -185,7 +189,7 @@ fun PrivateSpaceManagerDialog(
                                     },
                                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                                     modifier = Modifier.combinedClickable(
-                                        onClick = { onAppClick(app) },
+                                        onClick = { onAppClick(app, itemPosition) },
                                         onLongClick = { showMenu = true }
                                     )
                                 )

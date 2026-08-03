@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -47,7 +48,7 @@ fun LauncherBottomBar(
     notificationCounts: Map<String, Int> = emptyMap(),
     // 回調
     onSearchClick: () -> Unit,
-    onAppClick: (AppModel) -> Unit,
+    onAppClick: (AppModel, Offset) -> Unit,
     onSettingsClick: () -> Unit,
     onLongClick: (Int) -> Unit,
     onReplaceClick: (Int) -> Unit,
@@ -56,6 +57,7 @@ fun LauncherBottomBar(
     val viewModel: MainViewModel = viewModel()
     val activeContextMenuId by viewModel.activeContextMenuId.collectAsState()
     val isAnyMenuVisible = activeContextMenuId != null
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     val menuAlpha by animateFloatAsState(
         targetValue = if (isAnyMenuVisible) 0f else 1f,
@@ -135,8 +137,8 @@ fun LauncherBottomBar(
                         chromaticAberration = chromaticAberration,
                         isEditMode = isEditMode,
                         notificationCounts = notificationCounts,
-                        onAppClick = { app ->
-                            if (app.packageName == myPackageName) onSettingsClick() else onAppClick(app)
+                        onAppClick = { app, pos ->
+                            if (app.packageName == context.packageName) onSettingsClick() else onAppClick(app, pos)
                         },
                         onLongClick = onLongClick,
                         onReplaceClick = onReplaceClick,

@@ -41,6 +41,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
@@ -48,6 +50,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.hapticfeedback.HapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType.Companion.LongPress
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -87,7 +91,7 @@ fun AppLibraryPage(
     horizontalPadding: Dp = 16.dp,
     iconSize: Dp = 62.dp,
     labelFontSize: androidx.compose.ui.unit.TextUnit = 12.sp,
-    onAppClick: (AppModel) -> Unit,
+    onAppClick: (AppModel, Offset) -> Unit,
     onDragStart: (AppModel, Offset) -> Unit,
     onDrag: (Offset) -> Unit,
     onDragEnd: () -> Unit
@@ -294,7 +298,8 @@ fun AppLibraryPage(
                                     showMenu = false
                                     viewModel.clearFocusState()
                                 }
-                                Box(modifier = Modifier.fillMaxWidth()) {
+                                var itemPosition by remember { mutableStateOf(Offset.Zero) }
+                                Box(modifier = Modifier.fillMaxWidth().onGloballyPositioned { itemPosition = it.positionInRoot() }) {
                                     ListItem(
                                         headlineContent = { Text(app.label, color = Color.White) },
                                         leadingContent = {
@@ -326,9 +331,10 @@ fun AppLibraryPage(
                                         modifier = Modifier.combinedClickable(
                                             onClick = {
                                                 if (app.isFrozen) appToUnfreeze = app
-                                                else onAppClick(app)
+                                                else onAppClick(app, itemPosition)
                                             },
                                             onLongClick = {
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                                 viewModel.setActiveContextMenuId(app.uniqueId)
                                                 showMenu = true
                                             }
@@ -485,10 +491,10 @@ fun AppLibraryPage(
                             refractionAmount = refractionAmount,
                             chromaticAberration = chromaticAberration,
                             isLocked = (name == "Hidden Apps" && !isHiddenUnlocked),
-                            onAppClick = {
+                            onAppClick = { app, pos ->
                                 if (name == "Hidden Apps" && !isHiddenUnlocked) showPasswordDialog = true
-                                else if (it.isFrozen) appToUnfreeze = it
-                                else onAppClick(it)
+                                else if (app.isFrozen) appToUnfreeze = app
+                                else onAppClick(app, pos)
                             },
                             onMoreClick = {
                                 if (name == "Hidden Apps" && !isHiddenUnlocked) showPasswordDialog = true
@@ -543,7 +549,7 @@ fun AppLibraryFolder(
     refractionAmount: Float = 48f,
     chromaticAberration: Boolean = true,
     iconSize: Dp = 72.dp,
-    onAppClick: (AppModel) -> Unit,
+    onAppClick: (AppModel, Offset) -> Unit,
     onMoreClick: () -> Unit,
     onDragStart: (AppModel, Offset) -> Unit,
     onDrag: (Offset) -> Unit,
@@ -695,12 +701,13 @@ fun LibraryItemWithMenu(
     folderName: String,
     iconShape: IconShape = IconShape.DEFAULT,
     iconSize: Dp = 72.dp,
-    onAppClick: (AppModel) -> Unit
+    onAppClick: (AppModel, Offset) -> Unit
 ) {
     val viewModel: MainViewModel = viewModel()
     val mContext = LocalContext.current
     val haptic = LocalHapticFeedback.current
     var showMenu by remember { mutableStateOf(false) }
+    var itemPosition by remember { mutableStateOf(Offset.Zero) }
 
     // 用於重新命名的狀態
     var showRenameDialog by remember { mutableStateOf(false) }
@@ -714,7 +721,7 @@ fun LibraryItemWithMenu(
         } else emptyList()
     }
 
-    Box {
+    Box(modifier = Modifier.onGloballyPositioned { itemPosition = it.positionInRoot() }) {
         AppItem(
             app = app,
             showLabel = false,
@@ -727,7 +734,7 @@ fun LibraryItemWithMenu(
                         viewModel.setPressedItemId(app.uniqueId)
                         try { awaitRelease() } finally { viewModel.setPressedItemId(null) }
                     },
-                    onTap = { onAppClick(app) },
+                    onTap = { onAppClick(app, itemPosition) },
                     onLongPress = {
                         if (folderName != "Hidden Apps") {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)

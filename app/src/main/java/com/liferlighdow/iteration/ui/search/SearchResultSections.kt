@@ -6,10 +6,12 @@ import android.net.Uri
 import android.provider.ContactsContract
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,6 +28,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.ClipboardManager
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -98,14 +105,16 @@ fun CalculatorResultSection(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AppResultSection(
     apps: List<AppModel>,
     iconShape: IconShape,
     getIcon: (String) -> androidx.compose.ui.graphics.ImageBitmap?,
-    onAppClick: (AppModel) -> Unit
+    onAppClick: (AppModel, Offset) -> Unit
 ) {
     Text(stringResource(R.string.apps), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(vertical = 8.dp))
+    val haptic = LocalHapticFeedback.current
     Card(
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = glassFallbackColor(0.15f)),
@@ -114,6 +123,7 @@ fun AppResultSection(
     ) {
         Column {
             apps.take(4).forEach { app ->
+                var itemPosition by remember { mutableStateOf(Offset.Zero) }
                 ListItem(
                     headlineContent = { Text(app.label, color = Color.White) },
                     leadingContent = {
@@ -130,7 +140,15 @@ fun AppResultSection(
                         }
                     },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    modifier = Modifier.clickable { onAppClick(app) }
+                    modifier = Modifier
+                        .onGloballyPositioned { itemPosition = it.positionInRoot() }
+                        .combinedClickable(
+                            onClick = { onAppClick(app, itemPosition) },
+                            onLongClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                // 注意：這裡如果需要 context menu 也可以加，但目前好像只有 clickable
+                            }
+                        )
                 )
             }
         }
@@ -144,6 +162,7 @@ fun ContactResultSection(
     onDismiss: () -> Unit
 ) {
     Text(stringResource(R.string.contacts), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(vertical = 8.dp))
+    val haptic = LocalHapticFeedback.current
     Card(
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = glassFallbackColor(0.15f)),
@@ -193,6 +212,7 @@ fun FileResultSection(
         Text(stringResource(R.string.files), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelMedium)
         Text("${files.size} results", color = Color.White.copy(alpha = 0.4f), style = MaterialTheme.typography.labelSmall)
     }
+    val haptic = LocalHapticFeedback.current
     Card(
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = glassFallbackColor(0.15f)),
@@ -288,6 +308,7 @@ fun WebSuggestionSection(
     onSuggestionClick: (String) -> Unit
 ) {
     Text(stringResource(R.string.gesture_suggestions), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(vertical = 8.dp))
+    val haptic = LocalHapticFeedback.current
     Card(
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = glassFallbackColor(0.15f)),
@@ -318,6 +339,7 @@ fun MoreSearchesSection(
     onDismiss: () -> Unit
 ) {
     Text(stringResource(R.string.more_searches), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp))
+    val haptic = LocalHapticFeedback.current
     Card(
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = glassFallbackColor(0.15f)),

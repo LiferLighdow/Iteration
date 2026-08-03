@@ -1,5 +1,6 @@
 package com.liferlighdow.iteration.ui.settings
 
+import android.os.Build
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
@@ -58,7 +59,8 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
     val currentIconPack by viewModel.iconPackPackage.collectAsState()
     val isDynamicCalendarEnabled by viewModel.isDynamicCalendarEnabled.collectAsState()
     val isDynamicClockEnabled by viewModel.isDynamicClockEnabled.collectAsState()
-    
+    val useMonochrome by viewModel.useMonochrome.collectAsState()
+
     var showIconPackPicker by remember { mutableStateOf(false) }
     var showStyleInfoDialog by remember { mutableStateOf(false) }
     var showClearCacheDialog by remember { mutableStateOf(false) }
@@ -102,7 +104,7 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                         modifier = Modifier.clickable { onNavigateToChangeIcon() }
                     )
-                    
+
                     var expandedShape by remember { mutableStateOf(false) }
                     ListItem(
                         headlineContent = { Text(stringResource(R.string.change_icon_shape)) },
@@ -161,10 +163,10 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
                         title = stringResource(R.string.themed_icons_m3_title),
                         supportingText = stringResource(R.string.themed_icons_m3_desc),
                         checked = isThemedIconsEnabled,
-                        onCheckedChange = { if (currentIconPack.isEmpty()) viewModel.setThemedIconsEnabled(it) }
+                        onCheckedChange = { if (currentIconPack.isEmpty() || !useMonochrome) viewModel.setThemedIconsEnabled(it) }
                     )
                     
-                    if (currentIconPack.isNotEmpty()) {
+                    if (currentIconPack.isNotEmpty() && useMonochrome) {
                         Text(
                             text = stringResource(R.string.icon_pack_disabled_note),
                             style = MaterialTheme.typography.bodySmall,
@@ -192,6 +194,17 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
                         },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                     )
+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        val useMonochrome by viewModel.useMonochrome.collectAsState()
+                        SettingSwitchItem(
+                            icon = Icons.Default.FilterBAndW,
+                            title = stringResource(R.string.use_monochrome_title),
+                            supportingText = stringResource(R.string.use_monochrome_desc),
+                            checked = useMonochrome,
+                            onCheckedChange = { viewModel.setUseMonochrome(it) }
+                        )
+                    }
 
                     ListItem(
                         headlineContent = { Text(stringResource(R.string.custom_exclusions)) },
@@ -222,20 +235,20 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
                             headlineContent = { Text(label) },
                             trailingContent = {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    if (style == IconStyle.CUSTOM && currentStyle == IconStyle.CUSTOM && currentIconPack.isEmpty()) {
+                                    if (style == IconStyle.CUSTOM && currentStyle == IconStyle.CUSTOM && (currentIconPack.isEmpty() || !useMonochrome)) {
                                         IconButton(onClick = { showCustomPicker = true }) {
                                             Icon(Icons.Default.ColorLens, null, tint = MaterialTheme.colorScheme.primary)
                                         }
                                     }
                                     RadioButton(
-                                        enabled = currentIconPack.isEmpty(),
-                                        selected = currentStyle == style && currentIconPack.isEmpty(),
+                                        enabled = currentIconPack.isEmpty() || !useMonochrome,
+                                        selected = currentStyle == style && (currentIconPack.isEmpty() || !useMonochrome),
                                         onClick = { viewModel.setIconStyle(style) }
                                     )
                                 }
                             },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                            modifier = Modifier.clickable(enabled = currentIconPack.isEmpty()) { 
+                            modifier = Modifier.clickable(enabled = currentIconPack.isEmpty() || !useMonochrome) {
                                 viewModel.setIconStyle(style) 
                                 if (style == IconStyle.CUSTOM) showCustomPicker = true
                             }
@@ -322,14 +335,14 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     val sdk = android.os.Build.VERSION.SDK_INT
                     Text(stringResource(R.string.android_version_precision), style = MaterialTheme.typography.bodyMedium)
-                    
+
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                    
+
                     CompatibilityRow(stringResource(R.string.android_13_plus), stringResource(R.string.precision_perfect), stringResource(R.string.precision_perfect_desc), sdk >= 33)
                     CompatibilityRow(stringResource(R.string.android_12), stringResource(R.string.precision_high), stringResource(R.string.precision_high_desc), sdk == 31 || sdk == 32)
                     CompatibilityRow(stringResource(R.string.android_8_11), stringResource(R.string.precision_good), stringResource(R.string.precision_good_desc), sdk in 26..30)
                     CompatibilityRow(stringResource(R.string.android_6_7), stringResource(R.string.precision_basic), stringResource(R.string.precision_basic_desc), sdk in 23..25)
-                    
+
                     Text(stringResource(R.string.iteration_presets_note), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
                 }
             },
@@ -352,7 +365,7 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
 
 @Composable
 fun IconPackPickerDialog(
-    onDismiss: () -> Unit, 
+    onDismiss: () -> Unit,
     onPackSelected: (String) -> Unit,
     onlyLines: Boolean = false
 ) {
@@ -375,7 +388,7 @@ fun IconPackPickerDialog(
     }
     val currentShape by viewModel.iconShape.collectAsState()
     val shape = if (currentShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp)
-    
+
     var showBuiltinSetup by remember { mutableStateOf(false) }
 
     if (showBuiltinSetup) {
@@ -385,7 +398,7 @@ fun IconPackPickerDialog(
             allApps = allApps,
             initialSelection = currentSelected,
             onDismiss = { showBuiltinSetup = false },
-            onConfirm = { selectedPackages -> 
+            onConfirm = { selectedPackages ->
                 viewModel.setBuiltinIconSelectedPackages(selectedPackages)
                 onPackSelected(com.liferlighdow.iteration.utils.IconPackManager.BUILTIN_PACKAGE_NAME)
                 showBuiltinSetup = false
@@ -436,7 +449,7 @@ fun IconPackPickerDialog(
                                     modifier = Modifier.size(40.dp).clip(shape)
                                 )
                             },
-                            modifier = Modifier.clickable { 
+                            modifier = Modifier.clickable {
                                 if (pack.packageName == com.liferlighdow.iteration.utils.IconPackManager.BUILTIN_PACKAGE_NAME) {
                                     showBuiltinSetup = true
                                 } else {
@@ -579,6 +592,11 @@ fun CustomIconStylePickerDialog(
     val useDominantColor by viewModel.customIconUseDominantColor.collectAsState()
     val customIconPack by viewModel.customIconPackPackage.collectAsState()
     val iconShape by viewModel.iconShape.collectAsState()
+    val useMonochrome by viewModel.useMonochrome.collectAsState()
+
+    val hue by viewModel.customIconHue.collectAsState()
+    val saturation by viewModel.customIconSaturation.collectAsState()
+    val brightness by viewModel.customIconBrightness.collectAsState()
     
     // 預覽用的虛擬 AppModel
     val context = LocalContext.current
@@ -587,7 +605,7 @@ fun CustomIconStylePickerDialog(
     // 優化點：將耗時的圖標處理移至後台線程，避免阻塞 UI 滑動
     val previewBitmap by produceState<androidx.compose.ui.graphics.ImageBitmap?>(
         initialValue = null, 
-        bgColor, fgColor, useOriginal, useOriginalBg, useDominantColor, iconShape, customIconPack
+        bgColor, fgColor, useOriginal, useOriginalBg, useDominantColor, iconShape, customIconPack, useMonochrome, hue, saturation, brightness
     ) {
         value = withContext(Dispatchers.Default) {
             val processor = IconProcessor(context)
@@ -611,6 +629,10 @@ fun CustomIconStylePickerDialog(
                 customUseOriginal = useOriginal,
                 customUseOriginalBg = useOriginalBg,
                 customUseDominantColor = useDominantColor,
+                useMonochrome = useMonochrome,
+                customHue = hue,
+                customSaturation = saturation,
+                customBrightness = brightness,
                 originalIcon = previewIcon
             )
         }
@@ -635,39 +657,25 @@ fun CustomIconStylePickerDialog(
         text = {
             LazyColumn {
                 item {
-                    Text(stringResource(R.string.background_settings), style = MaterialTheme.typography.titleSmall)
-                    SettingSwitchItem(
-                        title = stringResource(R.string.use_original_bg),
-                        checked = useOriginalBg,
-                        onCheckedChange = { viewModel.setCustomIconUseOriginalBg(it) }
-                    )
-                    if (!useOriginalBg) {
-                        SettingSwitchItem(
-                            title = stringResource(R.string.use_dominant_bg_color),
-                            checked = useDominantColor,
-                            onCheckedChange = { viewModel.setCustomIconUseDominantColor(it) }
-                        )
-                        if (!useDominantColor) {
-                            ColorPicker(
-                                initialColor = bgColor,
-                                onColorChanged = { viewModel.setCustomIconBgColor(it) }
-                            )
-                        } else {
-                            Text(stringResource(R.string.dominant_bg_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(vertical = 8.dp))
-                        }
-                    } else {
-                        Text(stringResource(R.string.bg_disabled_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(vertical = 8.dp))
-                    }
-                    
+                    Text(stringResource(R.string.appearance), style = MaterialTheme.typography.titleSmall)
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Hue Slider
+                    Text(stringResource(R.string.hue, hue.toInt()), style = MaterialTheme.typography.labelMedium)
+                    Slider(value = hue, onValueChange = { viewModel.setCustomIconHue(it) }, valueRange = 0f..360f)
+
+                    // Saturation Slider
+                    Text(stringResource(R.string.saturation, (saturation * 100).toInt()), style = MaterialTheme.typography.labelMedium)
+                    Slider(value = saturation, onValueChange = { viewModel.setCustomIconSaturation(it) }, valueRange = 0f..1f)
+
+                    // Brightness Slider
+                    Text(stringResource(R.string.brightness, (brightness * 100).toInt()), style = MaterialTheme.typography.labelMedium)
+                    Slider(value = brightness, onValueChange = { viewModel.setCustomIconBrightness(it) }, valueRange = 0f..1f)
+
                     Spacer(modifier = Modifier.height(16.dp))
-                    
-                    Text(stringResource(R.string.foreground_settings), style = MaterialTheme.typography.titleSmall, color = if (useOriginal) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface)
-                    SettingSwitchItem(
-                        title = stringResource(R.string.use_original_icon),
-                        checked = useOriginal,
-                        onCheckedChange = { viewModel.setCustomIconUseOriginal(it) }
-                    )
-                    if (!useOriginal) {
+
+                    if (useMonochrome) {
+                        // 圖標包選擇 (僅在開啟 Monochrome 時顯示)
                         var showCustomIconPackPicker by remember { mutableStateOf(false) }
                         val iconPacks by produceState<List<IconPackInfo>>(initialValue = emptyList()) {
                             value = withContext(Dispatchers.IO) {
@@ -700,12 +708,11 @@ fun CustomIconStylePickerDialog(
                             )
                         }
 
-                        ColorPicker(
-                            initialColor = fgColor,
-                            onColorChanged = { viewModel.setCustomIconFgColor(it) }
+                        SettingSwitchItem(
+                            title = stringResource(R.string.use_original_icon),
+                            checked = useOriginal,
+                            onCheckedChange = { viewModel.setCustomIconUseOriginal(it) }
                         )
-                    } else {
-                        Text(stringResource(R.string.fg_disabled_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(vertical = 8.dp))
                     }
                 }
             }
@@ -735,7 +742,7 @@ fun CompatibilityRow(version: String, level: String, desc: String, isCurrentDevi
                 shape = RoundedCornerShape(4.dp)
             ) {
                 Text(
-                    text = level, 
+                    text = level,
                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                     style = MaterialTheme.typography.labelSmall,
                     color = when(level) {
@@ -746,7 +753,7 @@ fun CompatibilityRow(version: String, level: String, desc: String, isCurrentDevi
                     }
                 )
             }
-            
+
             if (isCurrentDevice) {
                 Spacer(modifier = Modifier.width(8.dp))
                 Surface(
@@ -775,13 +782,13 @@ fun ChangeIconScreen(onBack: () -> Unit) {
     val viewModel: MainViewModel = viewModel()
     val allApps by viewModel.allApps.collectAsState()
     val iconShape by viewModel.iconShape.collectAsState()
-    
+
     // 與 IconProcessor 邏輯保持一致的 UI 形狀
     val shape = remember(iconShape) {
-        if (iconShape == IconShape.CIRCLE) CircleShape 
+        if (iconShape == IconShape.CIRCLE) CircleShape
         else RoundedCornerShape(10.dp) // 40dp * 0.238 ≈ 10dp
     }
-    
+
     var searchQuery by remember { mutableStateOf("") }
 
     val filteredApps = remember(allApps, searchQuery) {
@@ -794,7 +801,7 @@ fun ChangeIconScreen(onBack: () -> Unit) {
     var pickedImageUri by remember { mutableStateOf<Uri?>(null) }
     var showSourceDialog by remember { mutableStateOf(false) }
     var showBuiltinPicker by remember { mutableStateOf(false) }
-    
+
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         pickedImageUri = uri
     }
@@ -813,7 +820,7 @@ fun ChangeIconScreen(onBack: () -> Unit) {
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
             IterationSearchBar(query = searchQuery, onQueryChange = { searchQuery = it })
-            
+
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(filteredApps, key = { it.uniqueId }) { app ->
                     ListItem(
@@ -929,21 +936,21 @@ fun ChangeIconScreen(onBack: () -> Unit) {
                                             val iconScale = 1.15f
                                             val scaledSize = (size * iconScale).toInt()
                                             val offset = (size - scaledSize) / 2f
-                                            
+
                                             // 1. 取得放大後的原始圖
                                             val rawBitmap = it.toBitmap(scaledSize, scaledSize)
                                             val maskedBitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
                                             val canvas = android.graphics.Canvas(maskedBitmap)
                                             val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-                                            
+
                                             // 2. 將放大後的圖置中繪製 (這會造成邊緣溢出，正是我們要的)
                                             canvas.drawBitmap(rawBitmap, offset, offset, paint)
-                                            
+
                                             // 3. 套用遮罩進行裁切
                                             val mask = viewModel.iconProcessor.getOrCreateMask(iconShape, size)
                                             paint.xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.DST_IN)
                                             canvas.drawBitmap(mask, 0f, 0f, paint)
-                                            
+
                                             viewModel.setCustomIcon(selectedApp!!.packageName, maskedBitmap)
                                         }
                                         showBuiltinPicker = false
@@ -970,9 +977,9 @@ fun ChangeIconScreen(onBack: () -> Unit) {
                     val maskedBitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
                     val canvas = android.graphics.Canvas(maskedBitmap)
                     val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-                    
+
                     canvas.drawBitmap(croppedBitmap, 0f, 0f, paint)
-                    
+
                     val mask = viewModel.iconProcessor.getOrCreateMask(iconShape, size)
                     paint.xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.DST_IN)
                     canvas.drawBitmap(mask, 0f, 0f, paint)
@@ -997,7 +1004,7 @@ fun BuiltinIconPackSetupDialog(
     val categories = remember(allApps) {
         val manager = viewModel.iconPackManager
         manager.loadIconPack(com.liferlighdow.iteration.utils.IconPackManager.BUILTIN_PACKAGE_NAME)
-        
+
         listOf(
             Triple(
                 "Music",
@@ -1059,7 +1066,7 @@ fun BuiltinIconPackSetupDialog(
             } else {
                 initialSelection.toMutableSet()
             }
-        ) 
+        )
     }
 
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
@@ -1070,9 +1077,9 @@ fun BuiltinIconPackSetupDialog(
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(stringResource(R.string.builtin_pack_setup_title), style = MaterialTheme.typography.headlineSmall)
                 Text(stringResource(R.string.builtin_pack_setup_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 if (categories.isEmpty()) {
                     Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                         Text(stringResource(R.string.no_apps_found), color = MaterialTheme.colorScheme.outline)
@@ -1100,7 +1107,7 @@ fun BuiltinIconPackSetupDialog(
                                         }
                                         val allWithIcon = apps.map { "$iconName:${it.packageName}" }
                                         val mutableSelected = selected.toMutableSet()
-                                        
+
                                         if (allWithIcon.all { mutableSelected.contains(it) }) {
                                             // 全部取消
                                             mutableSelected.removeAll(allWithIcon.toSet())
@@ -1137,9 +1144,9 @@ fun BuiltinIconPackSetupDialog(
                                     else -> ""
                                 }
                                 val currentKey = "$currentIconName:${app.packageName}"
-                                
+
                                 // 判定是否勾選：支持新舊兩種格式
-                                val isChecked = selected.contains(currentKey) || 
+                                val isChecked = selected.contains(currentKey) ||
                                               (selected.contains(app.packageName) && (catId != "Store2"))
 
                                 ListItem(
@@ -1188,9 +1195,9 @@ fun BuiltinIconPackSetupDialog(
                         }
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
                     Button(

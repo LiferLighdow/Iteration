@@ -171,6 +171,30 @@ fun MainViewModel.setCustomIconUseOriginalBg(useOriginalBg: Boolean) {
     loadApps()
 }
 
+fun MainViewModel.setUseMonochrome(enabled: Boolean) {
+    _useMonochrome.value = enabled
+    prefs.edit().putBoolean("use_monochrome", enabled).apply()
+    loadApps()
+}
+
+fun MainViewModel.setCustomIconHue(hue: Float) {
+    _customIconHue.value = hue
+    prefs.edit().putFloat("custom_icon_hue", hue).apply()
+    loadApps()
+}
+
+fun MainViewModel.setCustomIconSaturation(saturation: Float) {
+    _customIconSaturation.value = saturation
+    prefs.edit().putFloat("custom_icon_saturation", saturation).apply()
+    loadApps()
+}
+
+fun MainViewModel.setCustomIconBrightness(brightness: Float) {
+    _customIconBrightness.value = brightness
+    prefs.edit().putFloat("custom_icon_brightness", brightness).apply()
+    loadApps()
+}
+
 fun MainViewModel.setCustomIconUseDominantColor(enabled: Boolean) {
     _customIconUseDominantColor.value = enabled
     prefs.edit().putBoolean("custom_icon_use_dominant_color", enabled).apply()

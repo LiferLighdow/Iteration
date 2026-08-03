@@ -20,13 +20,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.foundation.Image
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.lifecycle.viewmodel.compose.viewModel
 import android.content.Intent
 import android.net.Uri
@@ -58,7 +63,7 @@ fun Dock(
     chromaticAberration: Boolean = true,
     isEditMode: Boolean = false,
     notificationCounts: Map<String, Int> = emptyMap(),
-    onAppClick: (AppModel) -> Unit,
+    onAppClick: (AppModel, Offset) -> Unit,
     onLongClick: (Int) -> Unit,
     onReplaceClick: (Int) -> Unit,
     onDeleteClick: ((AppModel) -> Unit)? = null
@@ -168,11 +173,13 @@ fun Dock(
             val contentBottomPadding = if (dockStyle == DockStyle.PLATFORM) 20.dp else 0.dp
 
             apps.forEachIndexed { index, app ->
+                var itemPosition by remember { mutableStateOf(Offset.Zero) }
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
-                        .padding(bottom = contentBottomPadding),
+                        .padding(bottom = contentBottomPadding)
+                        .onGloballyPositioned { itemPosition = it.positionInRoot() },
                     contentAlignment = if (dockStyle == DockStyle.PLATFORM) Alignment.BottomCenter else Alignment.Center
                 ) {
                     val infiniteTransition = rememberInfiniteTransition(label = "jiggle")
@@ -184,6 +191,7 @@ fun Dock(
                     val isDesktopLocked by viewModel.isDesktopLocked.collectAsState()
                     var showContextMenu by remember { mutableStateOf(false) }
                     val context = LocalContext.current
+                    val haptic = LocalHapticFeedback.current
 
                     AppItem(
                         app = app,
@@ -208,18 +216,22 @@ fun Dock(
                                     try { awaitRelease() } finally { viewModel.setPressedItemId(null) }
                                 },
                                 onTap = {
-                                    if (app.isFolder || app.packageName.isNotEmpty()) onAppClick(app) else {
+                                    if (app.isFolder || app.packageName.isNotEmpty()) onAppClick(app, itemPosition) else {
                                         if (!isDesktopLocked) onLongClick(index)
                                     }
                                 },
                                 onLongPress = {
                                     if (app.isFolder || app.packageName.isNotEmpty()) {
                                         if (!isEditMode && !isDesktopLocked) {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                             viewModel.setActiveContextMenuId(app.uniqueId)
                                             showContextMenu = true
                                         }
                                     } else {
-                                        if (!isDesktopLocked) onLongClick(index)
+                                        if (!isDesktopLocked) {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            onLongClick(index)
+                                        }
                                     }
                                 }
                             )

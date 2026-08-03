@@ -446,6 +446,8 @@
     <string name="manual_desktop_gestures">桌面 &amp; 手勢</string>
     <string name="coming_soon">即將推出#8230;</string>
     <string name="failed_to_load_image">圖片載入失敗嗚嗚</string>
+    <string name="use_monochrome_title">使用單色圖層</string>
+    <string name="use_monochrome_desc">對支援的圖標優先使用原生單色圖層（僅限 Android 13+）</string>
     <string name="settings_language">語言設定</string>
     <string name="language_english">英文</string>
     <string name="language_chinese_tw">繁體中文</string>

@@ -477,6 +477,8 @@
     <string name="search_hint_general">Search&#8230;</string>
     <string name="failed_to_load_image">Failed to load image</string>
 
+    <string name="use_monochrome_title">Use Monochrome Layer</string>
+    <string name="use_monochrome_desc">Prefer the native monochrome layer for supported icons (Android 13+ only)</string>
     <string name="settings_language">Language</string>
     <string name="language_english">English</string>
     <string name="language_chinese_tw">Chinese (Traditional)</string>

@@ -16,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -79,7 +80,7 @@ fun LauncherOverlays(
     onAddShortcutClick: () -> Unit,
     onWallpaperClick: () -> Unit,
     onSettingsClick: () -> Unit,
-    onAppClick: (AppModel) -> Unit
+    onAppClick: (AppModel, Offset) -> Unit
 ) {
     val mContext = LocalContext.current
     val dockApps by viewModel.dockItems.collectAsState()

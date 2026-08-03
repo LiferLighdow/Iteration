@@ -449,6 +449,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         MutableStateFlow(prefs.getBoolean("custom_icon_use_original_bg", false))
     val customIconUseOriginalBg = _customIconUseOriginalBg.asStateFlow()
 
+    internal val _useMonochrome =
+        MutableStateFlow(prefs.getBoolean("use_monochrome", true))
+    val useMonochrome = _useMonochrome.asStateFlow()
+
+    internal val _customIconHue =
+        MutableStateFlow(prefs.getFloat("custom_icon_hue", 210f))
+    val customIconHue = _customIconHue.asStateFlow()
+
+    internal val _customIconSaturation =
+        MutableStateFlow(prefs.getFloat("custom_icon_saturation", 0.5f))
+    val customIconSaturation = _customIconSaturation.asStateFlow()
+
+    internal val _customIconBrightness =
+        MutableStateFlow(prefs.getFloat("custom_icon_brightness", 0.8f))
+    val customIconBrightness = _customIconBrightness.asStateFlow()
+
     internal val _customIconUseDominantColor =
         MutableStateFlow(prefs.getBoolean("custom_icon_use_dominant_color", false))
     val customIconUseDominantColor = _customIconUseDominantColor.asStateFlow()

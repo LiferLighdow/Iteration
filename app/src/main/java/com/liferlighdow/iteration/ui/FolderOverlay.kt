@@ -24,7 +24,9 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.asImageBitmap
@@ -59,7 +61,7 @@ fun FolderOverlay(
     chromaticAberration: Boolean,
     isLiquidGlassEnabled: Boolean,
     isLiquidGlassHomeFolderEnabled: Boolean,
-    onAppClick: (AppModel) -> Unit,
+    onAppClick: (AppModel, Offset) -> Unit,
     onDismiss: () -> Unit,
     onDeleteFolderClick: () -> Unit,
     onEditApp: (AppModel) -> Unit
@@ -77,6 +79,7 @@ fun FolderOverlay(
     ) {
         val currentFolder = lastNonNullFolder.value ?: return@AnimatedVisibility
         val mContext = LocalContext.current
+        val haptic = LocalHapticFeedback.current
         var isEditingName by remember { mutableStateOf(false) }
         var tempName by remember(currentFolder.label) { mutableStateOf(currentFolder.label) }
         var showMoreMenu by remember { mutableStateOf(false) }
@@ -267,12 +270,13 @@ fun FolderOverlay(
                                                                 },
                                                                 onLongPress = {
                                                                     if (!isEditMode) {
+                                                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                                                         showItemMenu = true
                                                                         viewModel.setActiveContextMenuId(app.uniqueId)
                                                                     }
                                                                 },
                                                                 onTap = {
-                                                                    onAppClick(app)
+                                                                    onAppClick(app, lastPos.pos)
                                                                     onDismiss()
                                                                 }
                                                             )

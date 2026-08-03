@@ -117,10 +117,32 @@ object DynamicColorGenerator {
             )
         }
     }
+
+    /**
+     * 根據給定的設定取得對應的 ColorScheme，此邏輯與 IterationTheme 保持一致
+     */
+    fun getColorScheme(
+        context: android.content.Context,
+        isMaterialYouEnabled: Boolean,
+        isDark: Boolean,
+        seedColor: Int?
+    ): ColorScheme {
+        return if (isMaterialYouEnabled) {
+            if (seedColor != null) {
+                generateColorSchemeFromSeed(seedColor, isDark)
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            } else {
+                if (isDark) IterationDarkColors else IterationLightColors
+            }
+        } else {
+            if (isDark) IterationDarkColors else IterationLightColors
+        }
+    }
 }
 
 // 定義 Iteration 啟動器的經典藍色品牌色 (Light)
-private val IterationLightColors = lightColorScheme(
+val IterationLightColors = lightColorScheme(
     primary = Color(0xFF0061A4),
     onPrimary = Color(0xFFFFFFFF),
     primaryContainer = Color(0xFFD1E4FF),
@@ -131,8 +153,8 @@ private val IterationLightColors = lightColorScheme(
     onSurfaceVariant = Color(0xFF43474E)
 )
 
-// 定義 Iteration 啟動器的經典藍色品牌色 (Dark)
-private val IterationDarkColors = darkColorScheme(
+// 定義 Iteration 啟動器的經典藍色 brand 品牌色 (Dark)
+val IterationDarkColors = darkColorScheme(
     primary = Color(0xFF9ECAFF),
     onPrimary = Color(0xFF003258),
     primaryContainer = Color(0xFF00497D),

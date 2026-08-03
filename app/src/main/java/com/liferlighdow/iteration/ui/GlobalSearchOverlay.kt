@@ -21,6 +21,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -56,7 +59,7 @@ fun GlobalSearchOverlay(
     onDismiss: () -> Unit,
     allApps: List<AppModel>,
     suggestedApps: List<AppModel>,
-    onAppClick: (AppModel) -> Unit,
+    onAppClick: (AppModel, Offset) -> Unit,
     iconShape: IconShape,
     isLiquidGlassEnabled: Boolean,
     isLiquidGlassGlobalSearchEnabled: Boolean,
@@ -217,7 +220,7 @@ fun GlobalSearchOverlay(
                         item { TranslationResultCard(translationResult, isTranslating, clipboardManager, mContext) }
                     }
 
-                    if (filteredResults.isNotEmpty()) item { AppResultSection(filteredResults, iconShape, { viewModel.getIcon(it) }, { onAppClick(it); onDismiss() }) }
+                    if (filteredResults.isNotEmpty()) item { AppResultSection(filteredResults, iconShape, { viewModel.getIcon(it) }, { app, pos -> onAppClick(app, pos); onDismiss() }) }
 
                     val filteredContacts = contacts.filter { it.name.contains(query, ignoreCase = true) || it.phoneNumber.contains(query) }
                     if (filteredContacts.isNotEmpty()) item { ContactResultSection(filteredContacts, mContext, onDismiss) }
@@ -250,7 +253,7 @@ fun GlobalSearchOverlay(
 
     // 對話框邏輯保持不變 (但已移至 SearchDialogs.kt)
     if (showFrozenManager) FrozenAppsManagerDialog(allApps, { showFrozenManager = false }, { appToUnfreeze = it })
-    if (showPrivateManager) PrivateSpaceManagerDialog(allApps, { showPrivateManager = false }, { onAppClick(it); onDismiss() })
+    if (showPrivateManager) PrivateSpaceManagerDialog(allApps, { showPrivateManager = false }, { app, pos -> onAppClick(app, pos); onDismiss() })
     if (appToUnfreeze != null) {
         AlertDialog(
             onDismissRequest = { appToUnfreeze = null },
@@ -314,7 +317,7 @@ private fun SearchStartPage(
     viewModel: MainViewModel,
     clipboard: androidx.compose.ui.platform.ClipboardManager,
     onQueryChange: (String) -> Unit,
-    onAppClick: (AppModel) -> Unit,
+    onAppClick: (AppModel, Offset) -> Unit,
     onDismiss: () -> Unit
 ) {
     val favoritePackages by viewModel.favoritePackages.collectAsState()
@@ -348,7 +351,7 @@ private fun SearchStartPage(
         val favoriteApps = allApps.filter { favoritePackages.contains(it.packageName) && !it.isHidden && !it.isFrozen && !it.isPrivate }.take(8)
         if (favoriteApps.isNotEmpty()) {
             Text(stringResource(R.string.favorites), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 12.dp, bottom = 12.dp))
-            AppGrid(favoriteApps, iconScaleFactor, iconShape, viewModel) { onAppClick(it); onDismiss() }
+            AppGrid(favoriteApps, iconScaleFactor, iconShape, viewModel) { app, pos -> onAppClick(app, pos); onDismiss() }
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = glassFallbackColor(0.15f))
         }
 
@@ -356,23 +359,26 @@ private fun SearchStartPage(
         else allApps.filter { !it.isHidden && !it.isFrozen && !it.isPrivate }.take(8)
         
         Text(stringResource(R.string.app_suggestions), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 12.dp, bottom = 12.dp))
-        AppGrid(suggestions, iconScaleFactor, iconShape, viewModel) { onAppClick(it); onDismiss() }
+        AppGrid(suggestions, iconScaleFactor, iconShape, viewModel) { app, pos -> onAppClick(app, pos); onDismiss() }
     }
 }
 
 @Composable
-private fun AppGrid(apps: List<AppModel>, scale: Float, shape: IconShape, viewModel: MainViewModel, onClick: (AppModel) -> Unit) {
+private fun AppGrid(apps: List<AppModel>, scale: Float, shape: IconShape, viewModel: MainViewModel, onClick: (AppModel, Offset) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
         apps.chunked(4).forEach { rowApps ->
             Row(modifier = Modifier.fillMaxWidth()) {
                 rowApps.forEach { app ->
+                    var itemPosition by remember { mutableStateOf(Offset.Zero) }
                     AppItem(
                         app = app,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .onGloballyPositioned { itemPosition = it.positionInRoot() },
                         iconSize = 56.dp * scale,
                         iconShape = shape,
                         getIcon = { viewModel.getIcon(it) },
-                        onAppClick = { onClick(app) }
+                        onAppClick = { onClick(app, itemPosition) }
                     )
                 }
                 repeat(4 - rowApps.size) { Spacer(modifier = Modifier.weight(1f)) }
