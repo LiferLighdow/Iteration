@@ -13,6 +13,7 @@ data class LauncherConfig(
     val settings: LauncherSettings = LauncherSettings(),
     val layout: List<List<AppModel>> = emptyList(),
     val dock: List<String> = emptyList(),
+    val dockItems: List<AppModel> = emptyList(),
     val minusOneWidgets: List<WidgetModel> = emptyList(),
     val favorites: Set<String> = emptySet(),
     val hiddenApps: Set<String> = emptySet(),
@@ -23,7 +24,7 @@ data class LauncherConfig(
     val excludedThemed: Set<String> = emptySet(),
     val pwaApps: List<AppModel> = emptyList(),
     val launchCounts: String = "",
-    val version: Int = 3,
+    val version: Int = 4,
     val timestamp: Long = System.currentTimeMillis()
 )
 
@@ -71,6 +72,9 @@ data class LauncherSettings(
     val iconCacheSize: Int = 250,
     val updateCheckInterval: Int = 24,
     val isDesktopLocked: Boolean = false,
+    val isMaterialYouEnabled: Boolean = false,
+    val pagerSnapThreshold: Float = 0.4f,
+    val pagerDampingRatio: Float = 1.0f,
     val useVNaviForPwa: Boolean = true,
     val emojiWallpaperText: String = "",
     val customWallpaperColor: Int = 0,

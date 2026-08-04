@@ -286,7 +286,7 @@
     <string name="clear_icon_cache_confirm_msg">这将删除所有已处理的图标预览并重启启动器以重新生成。如果图标模糊或不正确，请使用此功能。</string>
     <string name="style_compatibility_title">Iteration 风格兼容性</string>
     <string name="got_it">知道了</string>
-    <string name="default_style_desc">默认（系统 + Iteration 风格）</string>
+    <string name="default_style_desc">默认（系统）</string>
 
     <!-- 设置 - 液态玻璃 -->
     <string name="liquid_glass_title">液态玻璃</string>
@@ -474,8 +474,6 @@
     <string name="search_hint_general">搜索&#8230;</string>
     <string name="failed_to_load_image">图片加载失败</string>
 
-    <string name="use_monochrome_title">使用单色图层</string>
-    <string name="use_monochrome_desc">对支持的图标优先使用原生单色图层（仅限 Android 13+）</string>
     <string name="settings_language">语言</string>
     <string name="language_english">英文 (English)</string>
     <string name="language_chinese_tw">中文 (繁体)</string>

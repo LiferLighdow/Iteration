@@ -39,6 +39,15 @@ import com.liferlighdow.iteration.viewmodel.*
 
 class MainActivity : AppCompatActivity() {
 
+    override fun onResume() {
+        super.onResume()
+        val viewModel = androidx.lifecycle.ViewModelProvider(this)[MainViewModel::class.java]
+        if (viewModel.shouldRefreshIconsOnReturn) {
+            viewModel.shouldRefreshIconsOnReturn = false
+            viewModel.clearIconCache()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         

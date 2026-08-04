@@ -54,6 +54,9 @@ fun MainViewModel.exportConfig(): String {
             iconCacheSize = _iconCacheSize.value,
             updateCheckInterval = _updateCheckInterval.value,
             isDesktopLocked = _isDesktopLocked.value,
+            isMaterialYouEnabled = _isMaterialYouEnabled.value,
+            pagerSnapThreshold = _pagerSnapThreshold.value,
+            pagerDampingRatio = _pagerDampingRatio.value,
             useVNaviForPwa = _useVNaviForPwa.value,
             emojiWallpaperText = _emojiWallpaperText.value,
             customWallpaperColor = _customWallpaperColor.value,
@@ -90,6 +93,7 @@ fun MainViewModel.exportConfig(): String {
         ),
         layout = _pages.value,
         dock = _dockPackageNames.value,
+        dockItems = _dockItems.value,
         minusOneWidgets = _minusOneWidgets.value,
         favorites = _favoritePackages.value.filterNotNull().toSet(),
         hiddenApps = hiddenPackages,
@@ -98,6 +102,7 @@ fun MainViewModel.exportConfig(): String {
         userCategories = _userCategories.value,
         categoryRenames = categoryRenames,
         excludedThemed = _excludedThemedPackages.value.filterNotNull().toSet(),
+        pwaApps = _pwaApps.value,
         launchCounts = prefs.getString("launch_counts", "") ?: ""
     )
 
@@ -178,6 +183,9 @@ fun MainViewModel.applyConfig(config: LauncherConfig) {
         putInt("icon_cache_size", settings.iconCacheSize)
         putInt("update_check_interval", settings.updateCheckInterval)
         putBoolean("is_desktop_locked", settings.isDesktopLocked)
+        putBoolean("material_you_enabled", settings.isMaterialYouEnabled)
+        putFloat("pager_snap_threshold", settings.pagerSnapThreshold)
+        putFloat("pager_damping_ratio", settings.pagerDampingRatio)
         putBoolean("use_vnavi_for_pwa", settings.useVNaviForPwa)
 
         putString("action_mode", settings.actionMode.name)
@@ -248,6 +256,9 @@ fun MainViewModel.applyConfig(config: LauncherConfig) {
     _iconCacheSize.value = settings.iconCacheSize
     _updateCheckInterval.value = settings.updateCheckInterval
     _isDesktopLocked.value = settings.isDesktopLocked
+    _isMaterialYouEnabled.value = settings.isMaterialYouEnabled
+    _pagerSnapThreshold.value = settings.pagerSnapThreshold
+    _pagerDampingRatio.value = settings.pagerDampingRatio
     _useVNaviForPwa.value = settings.useVNaviForPwa
 
     _liquidGlassBlur.value = settings.glassParams.blur
@@ -320,8 +331,20 @@ fun MainViewModel.applyConfig(config: LauncherConfig) {
     prefs.edit().putString("launcher_layout_v3", layoutArray.toString()).apply()
 
     // 5. 恢復 Dock & Stats
-    _dockPackageNames.value = config.dock
-    prefs.edit().putString("dock_packages", config.dock.joinToString(",")).apply()
+    if (config.dockItems.isNotEmpty()) {
+        _dockItems.value = config.dockItems
+        saveDock()
+    } else {
+        _dockPackageNames.value = config.dock
+        prefs.edit().putString("dock_packages", config.dock.joinToString(",")).apply()
+    }
+    
+    // 5.1 恢復 PWA Apps
+    if (config.pwaApps.isNotEmpty()) {
+        _pwaApps.value = config.pwaApps
+        savePwaApps()
+    }
+
     prefs.edit().putString("launch_counts", config.launchCounts).apply()
 
     // 6. 恢復純色/Emoji 桌布 (如果有)

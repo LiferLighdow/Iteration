@@ -109,6 +109,7 @@ class IconProcessor(private val context: Context) {
                 style == IconStyle.BLACK -> Color.DKGRAY
                 style == IconStyle.WHITE -> Color.WHITE
                 style == IconStyle.GLASS -> Color.LTGRAY
+                style == IconStyle.STANDARD -> Color.parseColor("#0061A4") // 修復點：STANDARD 模式下關閉 M3 時使用品牌藍
                 else -> Color.HSVToColor(floatArrayOf(customHue, customSaturation, customBrightness))
             }
 
@@ -140,13 +141,18 @@ class IconProcessor(private val context: Context) {
                 m3 to m3On
             } else null
 
-            val finalCustomBg = if (style == IconStyle.CUSTOM && customUseDominantColor) {
-                val colorSource = originalIcon ?: icon
-                colorSource?.let { extractDominantColor(it) } ?: customBgColor
+            // 修復點：當關閉 Monochrome 且為 CUSTOM 時，背景色應來自 HSB
+            val customColorFromHsb = if (!useMonochrome && style == IconStyle.CUSTOM) {
+                Color.HSVToColor(floatArrayOf(customHue, customSaturation, customBrightness))
             } else customBgColor
 
-            val bgColor = determineBgColor(style, isThemed, m3Colors?.first, finalCustomBg, customUseOriginalBg)
-            val fgColor = determineFgColor(style, isThemed, m3Colors, customFgColor, customUseOriginal)
+            val finalCustomBg = if (style == IconStyle.CUSTOM && customUseDominantColor) {
+                val colorSource = originalIcon ?: icon
+                colorSource.let { extractDominantColor(it) } ?: customColorFromHsb
+            } else customColorFromHsb
+
+            val bgColor = determineBgColor(style, isThemed, m3Colors?.first, finalCustomBg, customUseOriginalBg, useMonochrome, isIconPack)
+            val fgColor = determineFgColor(style, isThemed, m3Colors, customFgColor, customUseOriginal, useMonochrome, isIconPack)
 
             if (calendarDay != null) {
                 drawCalendarDate(canvas, sizePx, calendarDay, bgColor, fgColor)
@@ -171,13 +177,16 @@ class IconProcessor(private val context: Context) {
                 val filter = createColorFilter(fgColor)
                 var drawnMonochrome = false
 
-                if (filter != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && useMonochrome && !(style == IconStyle.CUSTOM && customUseOriginal)) {
-                    icon.monochrome?.let { mono ->
-                        mono.colorFilter = filter
-                        mono.setBounds(offset, offset, offset + scaledSize, offset + scaledSize)
-                        mono.draw(canvas)
-                        mono.colorFilter = null
-                        drawnMonochrome = true
+                if (filter != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && useMonochrome) {
+                    // 在單色模式下，優先使用單色層
+                    if (!(style == IconStyle.CUSTOM && customUseOriginal)) {
+                        icon.monochrome?.let { mono ->
+                            mono.colorFilter = filter
+                            mono.setBounds(offset, offset, offset + scaledSize, offset + scaledSize)
+                            mono.draw(canvas)
+                            mono.colorFilter = null
+                            drawnMonochrome = true
+                        }
                     }
                 }
 
@@ -252,8 +261,9 @@ class IconProcessor(private val context: Context) {
     private fun drawCalendarDate(canvas: Canvas, sizePx: Int, day: String, bgColor: Int?, fgColor: Int?) {
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
         val finalBg = bgColor ?: Color.WHITE
-        val finalFg = fgColor ?: Color.BLACK
-        val headerColor = if (fgColor != null) fgColor else Color.parseColor("#FF0000")
+        // 修正點：自定義背景時強制白色前景
+        val finalFg = if (bgColor != null && bgColor != Color.WHITE) Color.WHITE else (fgColor ?: Color.BLACK)
+        val headerColor = finalFg
         val weekTextColor = finalBg
         paint.color = finalBg
         canvas.drawRect(0f, 0f, sizePx.toFloat(), sizePx.toFloat(), paint)
@@ -286,7 +296,9 @@ class IconProcessor(private val context: Context) {
         val centerX = sizePx / 2f
         val centerY = sizePx / 2f
         val finalBg = bgColor ?: Color.parseColor("#003153")
-        val finalFg = fgColor ?: Color.WHITE
+        // 修正點：自定義背景時強制白色前景
+        val finalFg = if (bgColor != null && bgColor != Color.WHITE) Color.WHITE else (fgColor ?: Color.WHITE)
+
         paint.color = finalBg
         canvas.drawRect(0f, 0f, sizePx.toFloat(), sizePx.toFloat(), paint)
         paint.color = finalFg
@@ -358,9 +370,11 @@ class IconProcessor(private val context: Context) {
         } catch (e: Exception) {}
     }
 
-    private fun determineBgColor(style: IconStyle, isThemed: Boolean, m3Color: Int?, customBg: Int, customUseOrigBg: Boolean): Int? {
+    private fun determineBgColor(style: IconStyle, isThemed: Boolean, m3Color: Int?, customBg: Int, customUseOrigBg: Boolean, useMonochrome: Boolean, isIconPack: Boolean): Int? {
         if (style == IconStyle.CUSTOM) return if (customUseOrigBg) null else customBg
         if (isThemed && m3Color != null) {
+            // 對於圖標包，在 STANDARD 模式下保留原色
+            if (isIconPack && style == IconStyle.STANDARD) return null
             return when (style) {
                 IconStyle.STANDARD -> m3Color
                 IconStyle.BLACK -> ColorUtils.blendARGB(Color.BLACK, m3Color, 0.3f)
@@ -370,16 +384,20 @@ class IconProcessor(private val context: Context) {
             }
         }
         return when (style) {
+            IconStyle.STANDARD -> if (useMonochrome) Color.parseColor("#0061A4") else null
             IconStyle.BLACK -> Color.BLACK
             IconStyle.WHITE -> Color.WHITE
-            IconStyle.GLASS -> Color.argb(120, 255, 255, 255)
+            IconStyle.GLASS -> Color.argb(120, 255, 255, 255) // 半透明白
+            IconStyle.CUSTOM -> customBg
             else -> null
         }
     }
 
-    private fun determineFgColor(style: IconStyle, isThemed: Boolean, m3Colors: Pair<Int, Int>?, customFg: Int, customUseOrig: Boolean): Int? {
+    private fun determineFgColor(style: IconStyle, isThemed: Boolean, m3Colors: Pair<Int, Int>?, customFg: Int, customUseOrig: Boolean, useMonochrome: Boolean, isIconPack: Boolean): Int? {
         if (style == IconStyle.CUSTOM) return if (customUseOrig) null else customFg
         if (isThemed && m3Colors != null) {
+            // 對於圖標包，在 STANDARD 模式下保留原色
+            if (isIconPack && style == IconStyle.STANDARD) return null
             return when (style) {
                 IconStyle.STANDARD -> m3Colors.second
                 IconStyle.BLACK -> ColorUtils.blendARGB(Color.WHITE, m3Colors.first, 0.3f)
@@ -389,9 +407,11 @@ class IconProcessor(private val context: Context) {
             }
         }
         return when (style) {
+            IconStyle.STANDARD -> if (useMonochrome) Color.WHITE else null
             IconStyle.BLACK -> Color.WHITE
             IconStyle.WHITE -> Color.BLACK
-            IconStyle.GLASS -> Color.WHITE
+            IconStyle.GLASS -> Color.WHITE // 不透明白前景
+            IconStyle.CUSTOM -> customFg
             else -> null
         }
     }

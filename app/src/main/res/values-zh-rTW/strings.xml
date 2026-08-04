@@ -292,7 +292,8 @@
     <string name="clear_icon_cache_confirm_msg">這將刪除所有已處理的圖示預覽並重啟啟動器以重新生成。如果圖示模糊或不正確，請使用此功能。</string>
     <string name="style_compatibility_title">Iteration 風格相容性</string>
     <string name="got_it">知道了</string>
-    <string name="default_style_desc">預設（系統 + Iteration 風格）</string>
+    <string name="default_style_desc">預設（系統）</string>
+    <string name="icon_pack_system_monochrome">系統單色圖層 (Android 13+)</string>
 
     <!-- 設定 - 液態玻璃 -->
     <string name="liquid_glass_title">液態玻璃</string>
@@ -480,8 +481,6 @@
     <string name="search_hint_general">搜尋&#8230;</string>
     <string name="failed_to_load_image">圖片載入失敗</string>
 
-    <string name="use_monochrome_title">使用單色圖層</string>
-    <string name="use_monochrome_desc">對支援的圖示優先使用原生單色圖層（僅限 Android 13+）</string>
     <string name="settings_language">語言</string>
     <string name="language_english">英文 (English)</string>
     <string name="language_chinese_tw">中文 (繁體)</string>

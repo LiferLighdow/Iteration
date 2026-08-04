@@ -138,72 +138,77 @@ fun MainViewModel.setTwoFingerSwipeDownApp(packageName: String) {
 fun MainViewModel.setThemedIconsEnabled(enabled: Boolean) {
     _isThemedIconsEnabled.value = enabled
     prefs.edit().putBoolean("themed_icons", enabled).apply()
+    shouldRefreshIconsOnReturn = true
     loadApps()
 }
 
 fun MainViewModel.setIconStyle(style: IconStyle) {
     _iconStyle.value = style
     prefs.edit().putString("icon_style", style.name).apply()
+    shouldRefreshIconsOnReturn = true
     loadApps()
 }
 
 fun MainViewModel.setCustomIconBgColor(color: Int) {
     _customIconBgColor.value = color
     prefs.edit().putInt("custom_icon_bg_color", color).apply()
+    shouldRefreshIconsOnReturn = true
     loadApps()
 }
 
 fun MainViewModel.setCustomIconFgColor(color: Int) {
     _customIconFgColor.value = color
     prefs.edit().putInt("custom_icon_fg_color", color).apply()
+    shouldRefreshIconsOnReturn = true
     loadApps()
 }
 
 fun MainViewModel.setCustomIconUseOriginal(useOriginal: Boolean) {
     _customIconUseOriginal.value = useOriginal
     prefs.edit().putBoolean("custom_icon_use_original", useOriginal).apply()
+    shouldRefreshIconsOnReturn = true
     loadApps()
 }
 
 fun MainViewModel.setCustomIconUseOriginalBg(useOriginalBg: Boolean) {
     _customIconUseOriginalBg.value = useOriginalBg
     prefs.edit().putBoolean("custom_icon_use_original_bg", useOriginalBg).apply()
-    loadApps()
-}
-
-fun MainViewModel.setUseMonochrome(enabled: Boolean) {
-    _useMonochrome.value = enabled
-    prefs.edit().putBoolean("use_monochrome", enabled).apply()
+    shouldRefreshIconsOnReturn = true
     loadApps()
 }
 
 fun MainViewModel.setCustomIconHue(hue: Float) {
     _customIconHue.value = hue
     prefs.edit().putFloat("custom_icon_hue", hue).apply()
+    shouldRefreshIconsOnReturn = true
     loadApps()
 }
 
 fun MainViewModel.setCustomIconSaturation(saturation: Float) {
     _customIconSaturation.value = saturation
     prefs.edit().putFloat("custom_icon_saturation", saturation).apply()
+    shouldRefreshIconsOnReturn = true
     loadApps()
 }
 
 fun MainViewModel.setCustomIconBrightness(brightness: Float) {
     _customIconBrightness.value = brightness
     prefs.edit().putFloat("custom_icon_brightness", brightness).apply()
+    shouldRefreshIconsOnReturn = true
     loadApps()
 }
 
 fun MainViewModel.setCustomIconUseDominantColor(enabled: Boolean) {
     _customIconUseDominantColor.value = enabled
     prefs.edit().putBoolean("custom_icon_use_dominant_color", enabled).apply()
+    shouldRefreshIconsOnReturn = true
     loadApps()
 }
 
 fun MainViewModel.setCustomIconPackPackage(packageName: String) {
     _customIconPackPackage.value = packageName
     prefs.edit().putString("custom_icon_pack_package", packageName).apply()
+    shouldRefreshIconsOnReturn = true
     iconCache.evictAll()
     loadApps()
 }
@@ -211,6 +216,7 @@ fun MainViewModel.setCustomIconPackPackage(packageName: String) {
 fun MainViewModel.setIconShape(shape: IconShape) {
     _iconShape.value = shape
     prefs.edit().putString("icon_shape", shape.name).apply()
+    shouldRefreshIconsOnReturn = true
     loadApps()
 }
 
@@ -226,6 +232,7 @@ fun MainViewModel.setIconPack(packageName: String) {
     }
     _iconPackPackage.value = packageName
     prefs.edit().putString("icon_pack_package", packageName).apply()
+    shouldRefreshIconsOnReturn = true
     iconCache.evictAll()
     loadApps()
 }
@@ -585,6 +592,7 @@ fun MainViewModel.resetPagerAnimationSettings() {
 fun MainViewModel.setBuiltinIconSelectedPackages(packages: Set<String>) {
     _builtinIconSelectedPackages.value = packages
     prefs.edit().putStringSet("builtin_icon_selected_packages", packages).apply()
+    shouldRefreshIconsOnReturn = true
     iconCache.evictAll()
     loadApps()
 }

@@ -252,7 +252,7 @@
     <string name="clear_icon_cache_confirm_msg">主人～這個功能會把之前的圖示預覽都清除掉並重啟核心，再重新幫您生成新的呢♡ 如果圖示變得模糊或是不太對勁，還請主人溫柔地再使用一次這個功能喔～</string>
     <string name="style_compatibility_title">進化的風格相容性</string>
     <string name="got_it">朕知道了</string>
-    <string name="default_style_desc">預設（系統 + 進化造型）</string>
+    <string name="default_style_desc">預設（系統默認風格）</string>
     <string name="liquid_glass_title">即時動態液態玻璃</string>
     <string name="liquid_glass_workshop_title">工作坊</string>
     <string name="liquid_glass_workshop_unavailable">工作坊目前不可用喔~</string>
@@ -446,8 +446,6 @@
     <string name="manual_desktop_gestures">桌面 &amp; 手勢</string>
     <string name="coming_soon">即將推出#8230;</string>
     <string name="failed_to_load_image">圖片載入失敗嗚嗚</string>
-    <string name="use_monochrome_title">使用單色圖層</string>
-    <string name="use_monochrome_desc">對支援的圖標優先使用原生單色圖層（僅限 Android 13+）</string>
     <string name="settings_language">語言設定</string>
     <string name="language_english">英文</string>
     <string name="language_chinese_tw">繁體中文</string>

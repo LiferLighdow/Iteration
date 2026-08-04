@@ -532,19 +532,20 @@ fun MainViewModel.processNewIcon(
     } catch (e: Exception) { null }
 
     val isExcluded = _excludedThemedPackages.value.contains(app.packageName)
-    val useMonochrome = _useMonochrome.value
+    val useMonochrome = currentIconPack == "system_monochrome"
     val customHue = _customIconHue.value
     val customSaturation = _customIconSaturation.value
     val customBrightness = _customIconBrightness.value
 
     if (isExcluded) {
-        return iconProcessor.processIcon(finalRawIcon, false, null, IconStyle.STANDARD, currentShape, sizePx, customBgColor = 0, customFgColor = 0, customUseOriginal = true, customUseOriginalBg = true, customUseDominantColor = false, useMonochrome = useMonochrome, customHue = customHue, customSaturation = customSaturation, customBrightness = customBrightness, originalIcon = null, userId = app.userId, calendarDay = calendarDay, clockTime = clockTime)
+        return iconProcessor.processIcon(finalRawIcon, false, null, IconStyle.STANDARD, currentShape, sizePx, customBgColor = 0, customFgColor = 0, customUseOriginal = true, customUseOriginalBg = true, customUseDominantColor = false, useMonochrome = false, customHue = customHue, customSaturation = customSaturation, customBrightness = customBrightness, originalIcon = null, userId = app.userId, calendarDay = calendarDay, clockTime = clockTime)
     }
 
     val builtinSelected = _builtinIconSelectedPackages.value
 
     // 優先順序：全域圖標包 > 自定義樣式圖標包 > 原始圖標
     val sourceIcon = when {
+        currentIconPack == "system_monochrome" -> finalRawIcon
         currentIconPack.isNotEmpty() -> iconPackManager.getIcon(app.packageName, app.uniqueId, builtinSelected) ?: finalRawIcon
         customIconPack.isNotEmpty() -> iconPackManager.getIcon(app.packageName, app.uniqueId, builtinSelected) ?: finalRawIcon
         else -> finalRawIcon
@@ -556,7 +557,7 @@ fun MainViewModel.processNewIcon(
         sourceIcon,
         isThemed,
         themeColors,
-        if (currentIconPack.isNotEmpty() && useMonochrome) IconStyle.STANDARD else currentStyle,
+        currentStyle,
         currentShape,
         sizePx,
         isIconPack = isFromIconPack,
@@ -836,6 +837,8 @@ fun MainViewModel.loadApps() {
         // 合併 PWA 應用程式
         val appsToProcess = rawApps + _pwaApps.value
 
+        val useMonochromePack = currentIconPack == "system_monochrome"
+
         val isDark = when (_themeMode.value) {
             ThemeMode.LIGHT -> false
             ThemeMode.DARK -> true
@@ -845,7 +848,7 @@ fun MainViewModel.loadApps() {
             }
         }
 
-        val themeColors = if (isThemed) {
+        val themeColors = if (isThemed || useMonochromePack) {
             DynamicColorGenerator.getColorScheme(
                 getApplication(),
                 _isMaterialYouEnabled.value,
@@ -867,8 +870,11 @@ fun MainViewModel.loadApps() {
         val customOriginal = _customIconUseOriginal.value
         val customOriginalBg = _customIconUseOriginalBg.value
         val customUseDominantColor = _customIconUseDominantColor.value
+        val customHue = _customIconHue.value
+        val customSaturation = _customIconSaturation.value
+        val customBrightness = _customIconBrightness.value
         val customKey = if (currentStyle == IconStyle.CUSTOM) {
-            "C_${customBg.toString(16)}_${customFg.toString(16)}_${if (customOriginal) "O" else "M"}_${if (customOriginalBg) "OB" else "CB"}_${if (customUseDominantColor) "D" else "S"}_${customIconPack.hashCode()}"
+            "C_${customBg.toString(16)}_${customFg.toString(16)}_${if (customOriginal) "O" else "M"}_${if (customOriginalBg) "OB" else "CB"}_${if (customUseDominantColor) "D" else "S"}_${customIconPack.hashCode()}_H${customHue.toInt()}S${(customSaturation * 100).toInt()}B${(customBrightness * 100).toInt()}"
         } else "N"
 
         // 根據拉條設定決定渲染解析度 (畫質)

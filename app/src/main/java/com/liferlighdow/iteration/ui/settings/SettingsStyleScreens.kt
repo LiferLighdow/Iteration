@@ -59,7 +59,8 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
     val currentIconPack by viewModel.iconPackPackage.collectAsState()
     val isDynamicCalendarEnabled by viewModel.isDynamicCalendarEnabled.collectAsState()
     val isDynamicClockEnabled by viewModel.isDynamicClockEnabled.collectAsState()
-    val useMonochrome by viewModel.useMonochrome.collectAsState()
+
+    val isSystemMonochrome = currentIconPack == "system_monochrome"
 
     var showIconPackPicker by remember { mutableStateOf(false) }
     var showStyleInfoDialog by remember { mutableStateOf(false) }
@@ -143,10 +144,14 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
                     }
 
                     val defaultPackLabel = stringResource(R.string.shape_default)
+                    val monochromeLabel = stringResource(R.string.icon_pack_system_monochrome)
                     val unknownLabel = stringResource(R.string.unknown)
                     val currentPackName = remember(currentIconPack, iconPacks) {
-                        if (currentIconPack.isEmpty()) defaultPackLabel
-                        else iconPacks.find { it.packageName == currentIconPack }?.label ?: unknownLabel
+                        when (currentIconPack) {
+                            "" -> defaultPackLabel
+                            "system_monochrome" -> monochromeLabel
+                            else -> iconPacks.find { it.packageName == currentIconPack }?.label ?: unknownLabel
+                        }
                     }
 
                     ListItem(
@@ -163,10 +168,10 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
                         title = stringResource(R.string.themed_icons_m3_title),
                         supportingText = stringResource(R.string.themed_icons_m3_desc),
                         checked = isThemedIconsEnabled,
-                        onCheckedChange = { if (currentIconPack.isEmpty() || !useMonochrome) viewModel.setThemedIconsEnabled(it) }
+                        onCheckedChange = { viewModel.setThemedIconsEnabled(it) }
                     )
                     
-                    if (currentIconPack.isNotEmpty() && useMonochrome) {
+                    if (currentIconPack.isNotEmpty() && isSystemMonochrome && Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
                         Text(
                             text = stringResource(R.string.icon_pack_disabled_note),
                             style = MaterialTheme.typography.bodySmall,
@@ -196,14 +201,7 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
                     )
 
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        val useMonochrome by viewModel.useMonochrome.collectAsState()
-                        SettingSwitchItem(
-                            icon = Icons.Default.FilterBAndW,
-                            title = stringResource(R.string.use_monochrome_title),
-                            supportingText = stringResource(R.string.use_monochrome_desc),
-                            checked = useMonochrome,
-                            onCheckedChange = { viewModel.setUseMonochrome(it) }
-                        )
+                        // 移除 useMonochrome 開關
                     }
 
                     ListItem(
@@ -235,20 +233,19 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
                             headlineContent = { Text(label) },
                             trailingContent = {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    if (style == IconStyle.CUSTOM && currentStyle == IconStyle.CUSTOM && (currentIconPack.isEmpty() || !useMonochrome)) {
+                                    if (style == IconStyle.CUSTOM && currentStyle == IconStyle.CUSTOM) {
                                         IconButton(onClick = { showCustomPicker = true }) {
                                             Icon(Icons.Default.ColorLens, null, tint = MaterialTheme.colorScheme.primary)
                                         }
                                     }
                                     RadioButton(
-                                        enabled = currentIconPack.isEmpty() || !useMonochrome,
-                                        selected = currentStyle == style && (currentIconPack.isEmpty() || !useMonochrome),
+                                        selected = currentStyle == style,
                                         onClick = { viewModel.setIconStyle(style) }
                                     )
                                 }
                             },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                            modifier = Modifier.clickable(enabled = currentIconPack.isEmpty() || !useMonochrome) {
+                            modifier = Modifier.clickable {
                                 viewModel.setIconStyle(style) 
                                 if (style == IconStyle.CUSTOM) showCustomPicker = true
                             }
@@ -432,6 +429,18 @@ fun IconPackPickerDialog(
                             modifier = Modifier.clickable { onPackSelected("") }
                         )
                     }
+                    
+                    // 新增：系統單色圖層選項 (僅 Android 13+)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !onlyLines) {
+                        item {
+                            ListItem(
+                                headlineContent = { Text(stringResource(R.string.icon_pack_system_monochrome)) },
+                                supportingContent = { Text(stringResource(R.string.precision_perfect_desc)) },
+                                leadingContent = { Icon(Icons.Default.FilterBAndW, null, tint = MaterialTheme.colorScheme.primary) },
+                                modifier = Modifier.clickable { onPackSelected("system_monochrome") }
+                            )
+                        }
+                    }
                     if (onlyLines && iconPacks.isEmpty()) {
                         item {
                             Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
@@ -592,7 +601,8 @@ fun CustomIconStylePickerDialog(
     val useDominantColor by viewModel.customIconUseDominantColor.collectAsState()
     val customIconPack by viewModel.customIconPackPackage.collectAsState()
     val iconShape by viewModel.iconShape.collectAsState()
-    val useMonochrome by viewModel.useMonochrome.collectAsState()
+    val globalIconPack by viewModel.iconPackPackage.collectAsState()
+    val isSystemMonochrome = globalIconPack == "system_monochrome"
 
     val hue by viewModel.customIconHue.collectAsState()
     val saturation by viewModel.customIconSaturation.collectAsState()
@@ -605,7 +615,7 @@ fun CustomIconStylePickerDialog(
     // 優化點：將耗時的圖標處理移至後台線程，避免阻塞 UI 滑動
     val previewBitmap by produceState<androidx.compose.ui.graphics.ImageBitmap?>(
         initialValue = null, 
-        bgColor, fgColor, useOriginal, useOriginalBg, useDominantColor, iconShape, customIconPack, useMonochrome, hue, saturation, brightness
+        bgColor, fgColor, useOriginal, useOriginalBg, useDominantColor, iconShape, customIconPack, isSystemMonochrome, hue, saturation, brightness
     ) {
         value = withContext(Dispatchers.Default) {
             val processor = IconProcessor(context)
@@ -629,7 +639,7 @@ fun CustomIconStylePickerDialog(
                 customUseOriginal = useOriginal,
                 customUseOriginalBg = useOriginalBg,
                 customUseDominantColor = useDominantColor,
-                useMonochrome = useMonochrome,
+                useMonochrome = isSystemMonochrome,
                 customHue = hue,
                 customSaturation = saturation,
                 customBrightness = brightness,
@@ -674,7 +684,7 @@ fun CustomIconStylePickerDialog(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    if (useMonochrome) {
+                    if (isSystemMonochrome) {
                         // 圖標包選擇 (僅在開啟 Monochrome 時顯示)
                         var showCustomIconPackPicker by remember { mutableStateOf(false) }
                         val iconPacks by produceState<List<IconPackInfo>>(initialValue = emptyList()) {

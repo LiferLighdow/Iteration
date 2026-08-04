@@ -204,6 +204,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     internal val _isDesktopLocked = MutableStateFlow(prefs.getBoolean("is_desktop_locked", false))
     val isDesktopLocked = _isDesktopLocked.asStateFlow()
 
+    var shouldRefreshIconsOnReturn = false
+
     internal val _isDynamicCalendarEnabled = MutableStateFlow(prefs.getBoolean("dynamic_calendar_enabled", false))
     val isDynamicCalendarEnabled = _isDynamicCalendarEnabled.asStateFlow()
 
@@ -448,10 +450,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     internal val _customIconUseOriginalBg =
         MutableStateFlow(prefs.getBoolean("custom_icon_use_original_bg", false))
     val customIconUseOriginalBg = _customIconUseOriginalBg.asStateFlow()
-
-    internal val _useMonochrome =
-        MutableStateFlow(prefs.getBoolean("use_monochrome", true))
-    val useMonochrome = _useMonochrome.asStateFlow()
 
     internal val _customIconHue =
         MutableStateFlow(prefs.getFloat("custom_icon_hue", 210f))

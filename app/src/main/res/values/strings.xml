@@ -289,7 +289,8 @@
     <string name="clear_icon_cache_confirm_msg">This will delete all processed icon previews and restart the launcher to re-generate them. Use this if icons are blurry or incorrect.</string>
     <string name="style_compatibility_title">Iteration Style Compatibility</string>
     <string name="got_it">Got it</string>
-    <string name="default_style_desc">Default (System + Iteration Style)</string>
+    <string name="default_style_desc">Default (System)</string>
+    <string name="icon_pack_system_monochrome">System Monochrome (Android 13+)</string>
 
     <!-- Settings - Liquid Glass -->
     <string name="liquid_glass_title">Liquid Glass</string>
@@ -477,8 +478,6 @@
     <string name="search_hint_general">Search&#8230;</string>
     <string name="failed_to_load_image">Failed to load image</string>
 
-    <string name="use_monochrome_title">Use Monochrome Layer</string>
-    <string name="use_monochrome_desc">Prefer the native monochrome layer for supported icons (Android 13+ only)</string>
     <string name="settings_language">Language</string>
     <string name="language_english">English</string>
     <string name="language_chinese_tw">Chinese (Traditional)</string>
