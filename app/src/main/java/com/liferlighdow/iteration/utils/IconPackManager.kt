@@ -106,12 +106,12 @@ class IconPackManager(private val context: Context) {
                     val xpp = factory.newPullParser()
                     xpp.setInput(inputStream, "UTF-8")
 
-                    parseAppFilter(xpp)
+                    parseAppFilter(xpp, packageName)
                     inputStream.close()
                 } else {
                     // 傳統圖標包維持原樣解析
                     val xpp = res.getXml(resId)
-                    parseAppFilter(xpp)
+                    parseAppFilter(xpp, packageName)
                 }
                 Log.d(TAG, "Successfully loaded mappings for $packageName. ${iconMapping.size} icons mapped.")
             } else {
@@ -122,7 +122,7 @@ class IconPackManager(private val context: Context) {
         }
     }
 
-    private fun parseAppFilter(xpp: XmlPullParser) {
+    private fun parseAppFilter(xpp: XmlPullParser, packageName: String) {
         var eventType = xpp.eventType
         while (eventType != XmlPullParser.END_DOCUMENT) {
             if (eventType == XmlPullParser.START_TAG && xpp.name.equals("item", ignoreCase = true)) {
@@ -145,14 +145,34 @@ class IconPackManager(private val context: Context) {
                         cleanComponent = cleanComponent.substring(14, cleanComponent.length - 1)
                     }
                     
-                    // 儲存完整組件名稱
-                    iconMapping[cleanComponent] = drawable
-                    
-                    // 如果包含 /，也額外儲存一份純包名的對應，增加匹配成功率
-                    if (cleanComponent.contains("/")) {
-                        val pkgOnly = cleanComponent.substringBefore("/")
-                        if (!iconMapping.containsKey(pkgOnly)) {
-                            iconMapping[pkgOnly] = drawable
+                    // 核心修正：針對內建圖示包，允許一個組件對應多個圖示樣式 (用 | 分隔)
+                    if (packageName == BUILTIN_PACKAGE_NAME) {
+                        val existing = iconMapping[cleanComponent]
+                        if (existing == null) {
+                            iconMapping[cleanComponent] = drawable
+                        } else if (!existing.split("|").contains(drawable)) {
+                            iconMapping[cleanComponent] = "$existing|$drawable"
+                        }
+                        
+                        if (cleanComponent.contains("/")) {
+                            val pkgOnly = cleanComponent.substringBefore("/")
+                            val existingPkg = iconMapping[pkgOnly]
+                            if (existingPkg == null) {
+                                iconMapping[pkgOnly] = drawable
+                            } else if (!existingPkg.split("|").contains(drawable)) {
+                                iconMapping[pkgOnly] = "$existingPkg|$drawable"
+                            }
+                        }
+                    } else {
+                        // 儲存完整組件名稱
+                        iconMapping[cleanComponent] = drawable
+                        
+                        // 如果包含 /，也額外儲存一份純包名的對應，增加匹配成功率
+                        if (cleanComponent.contains("/")) {
+                            val pkgOnly = cleanComponent.substringBefore("/")
+                            if (!iconMapping.containsKey(pkgOnly)) {
+                                iconMapping[pkgOnly] = drawable
+                            }
                         }
                     }
                 }
@@ -195,7 +215,7 @@ class IconPackManager(private val context: Context) {
     }
 
     fun getMappedPackagesFor(drawableName: String): List<String> {
-        return iconMapping.filterValues { it == drawableName }.keys.map { 
+        return iconMapping.filterValues { it.split("|").contains(drawableName) }.keys.map { 
             if (it.contains("/")) it.substringBefore("/") else it
         }.distinct()
     }
@@ -223,6 +243,14 @@ class IconPackManager(private val context: Context) {
         if (drawableName == null) {
             val pkgFromId = if (cleanId.contains("/")) cleanId.substringBefore("/") else cleanId
             drawableName = iconMapping[pkgFromId] ?: iconMapping[packageName]
+        }
+        
+        // 核心修正：針對內建圖示包的變體處理
+        if (drawableName != null && drawableName.contains("|") && iconPkg == BUILTIN_PACKAGE_NAME) {
+            val variants = drawableName.split("|")
+            drawableName = variants.find { v -> 
+                builtinSelectedPackages.contains("$v:$packageName") 
+            } ?: variants[0]
         }
 
         // --- 核心修正：針對 Music/Note/Store/Store2/Calculator/Files 的手動複選過濾 ---

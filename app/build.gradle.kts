@@ -12,8 +12,8 @@ android {
         applicationId = "com.liferlighdow.iteration"
         minSdk = 23
         targetSdk = 37
-        versionCode = 79
-        versionName = "5.4.1"
+        versionCode = 80
+        versionName = "5.4.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

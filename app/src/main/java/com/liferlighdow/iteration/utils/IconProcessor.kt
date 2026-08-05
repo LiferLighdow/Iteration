@@ -261,10 +261,13 @@ class IconProcessor(private val context: Context) {
     private fun drawCalendarDate(canvas: Canvas, sizePx: Int, day: String, bgColor: Int?, fgColor: Int?) {
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
         val finalBg = bgColor ?: Color.WHITE
-        // 修正點：自定義背景時強制白色前景
-        val finalFg = if (bgColor != null && bgColor != Color.WHITE) Color.WHITE else (fgColor ?: Color.BLACK)
-        val headerColor = finalFg
-        val weekTextColor = finalBg
+        
+        // 判定是否為自定義或主題模式 (背景非純白)
+        val isEnhancedMode = bgColor != null && bgColor != Color.WHITE
+        
+        val finalFg = if (isEnhancedMode) Color.WHITE else (fgColor ?: Color.BLACK)
+        val headerColor = if (isEnhancedMode) Color.WHITE else Color.parseColor("#FF0000") // 預設模式恢復紅色
+        val weekTextColor = finalBg // 星期文字與背景同色，產生鏤空感
         paint.color = finalBg
         canvas.drawRect(0f, 0f, sizePx.toFloat(), sizePx.toFloat(), paint)
         val headerHeight = sizePx * 0.28f
