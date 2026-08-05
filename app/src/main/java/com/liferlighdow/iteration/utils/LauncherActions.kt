@@ -42,6 +42,9 @@ fun performGestureAction(
                 ActionMode.SHIZUKU -> {
                     executeShizukuCommand(arrayOf("input", "keyevent", "26"), context)
                 }
+                ActionMode.DHIZUKU -> {
+                    executeDhizukuCommand(arrayOf("input", "keyevent", "26"), context)
+                }
             }
         }
         GestureAction.LAUNCHER_SETTINGS -> onSettingsClick()
@@ -77,6 +80,9 @@ fun performGestureAction(
                 }
                 ActionMode.SHIZUKU -> {
                     executeShizukuCommand(arrayOf("cmd", "statusbar", "expand-notifications"), context)
+                }
+                ActionMode.DHIZUKU -> {
+                    executeDhizukuCommand(arrayOf("cmd", "statusbar", "expand-notifications"), context)
                 }
             }
         }
@@ -119,6 +125,26 @@ internal fun executeShizukuCommand(command: Array<String>, context: Context) {
         } catch (e: Exception) {
             Log.e("Iteration", "Shizuku error", e)
             handler.post { Toast.makeText(context, "Shizuku Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show() }
+        }
+    }
+}
+
+internal fun executeDhizukuCommand(command: Array<String>, context: Context) {
+    val handler = Handler(Looper.getMainLooper())
+    thread {
+        try {
+            if (com.rosan.dhizuku.api.Dhizuku.isPermissionGranted()) {
+                val process = com.rosan.dhizuku.api.Dhizuku.newProcess(command, null, null)
+                val exitCode = process.waitFor()
+                if (exitCode != 0) {
+                    Log.e("Iteration", "Dhizuku command failed with code $exitCode")
+                }
+            } else {
+                handler.post { Toast.makeText(context, "Dhizuku permission denied", Toast.LENGTH_SHORT).show() }
+            }
+        } catch (e: Exception) {
+            Log.e("Iteration", "Dhizuku error", e)
+            handler.post { Toast.makeText(context, "Dhizuku Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show() }
         }
     }
 }

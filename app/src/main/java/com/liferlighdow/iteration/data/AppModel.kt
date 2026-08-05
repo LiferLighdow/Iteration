@@ -21,7 +21,8 @@ data class AppModel(
     @SerialName("pbc") val pwaBgColor: Int = 0xFF2196F3.toInt(),
     @SerialName("if") val isFrozen: Boolean = false,
     @SerialName("ip") val isPrivate: Boolean = false,
-    @SerialName("il") val isLocked: Boolean = false
+    @SerialName("il") val isLocked: Boolean = false,
+    @SerialName("ir") val isRestricted: Boolean = false
 ) {
     val isWidget: Boolean get() = widget != null
     val isShortcut: Boolean get() = shortcutId != null

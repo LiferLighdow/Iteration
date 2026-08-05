@@ -42,6 +42,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.liferlighdow.iteration.ui.search.*
 import com.liferlighdow.iteration.utils.IconShape
 import com.liferlighdow.iteration.viewmodel.MainViewModel
+import com.liferlighdow.iteration.utils.ActionMode
 import com.liferlighdow.iteration.viewmodel.getIcon
 import com.liferlighdow.iteration.viewmodel.toggleFreezeApp
 import com.liferlighdow.iteration.viewmodel.loadContacts
@@ -199,7 +200,9 @@ fun GlobalSearchOverlay(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // 1. 特殊指令 (#frozen, #private)
-                if (query.trim().lowercase() == "#frozen") {
+                val isAdvancedMode = viewModel.actionMode.value != ActionMode.ACCESSIBILITY
+
+                if (query.trim().lowercase() == "#frozen" && isAdvancedMode) {
                     item { SpecialActionCard(stringResource(R.string.frozen_apps_title), Icons.Default.AcUnit, Color.Cyan) { showFrozenManager = true } }
                 }
                 if (query.trim().lowercase() == "#private" && android.os.Build.VERSION.SDK_INT >= 35) {

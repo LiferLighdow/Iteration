@@ -99,6 +99,8 @@
     <string name="vnavi_install_url">https://github.com/LiferLighdow/vNavi/releases</string>
     <string name="settings_hide_apps">Hide Apps</string>
     <string name="settings_hide_apps_desc">Manage hidden applications and security</string>
+    <string name="settings_greenify_title">Greenify</string>
+    <string name="greenify_desc">Prevent selected apps from running in the background to save resources.</string>
     <string name="settings_rename_apps">Rename Apps</string>
     <string name="settings_rename_apps_desc">Customize app labels on home screen</string>
     <string name="settings_change_icon">Change Apps Icon</string>
@@ -227,6 +229,7 @@
     <string name="settings_action_mode">Action Mode</string>
     <string name="action_mode_accessibility">Accessibility (Standard)</string>
     <string name="action_mode_shizuku">Shizuku / Sui</string>
+    <string name="action_mode_dhizuku">Dhizuku (Device Owner)</string>
     <string name="action_mode_root">ROOT</string>
     <string name="action_mode_desc">Choose the technology used to perform system actions like locking the screen or expanding notifications.</string>
     <string name="permission_contacts">Contacts Access</string>
@@ -353,6 +356,8 @@
     <string name="all_label">All</string>
     <string name="hidden_label">Hidden</string>
     <string name="visible_label">Visible</string>
+    <string name="blacklist_label">Blacklist</string>
+    <string name="whitelist_label">Whitelist</string>
     <string name="change">Change</string>
     <string name="manage">Manage</string>
     <string name="new_name_label">New Name</string>

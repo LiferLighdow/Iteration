@@ -76,6 +76,8 @@
     <string name="password_hint">請輸入通行暗號</string>
     <string name="settings_hide_apps">隱藏應用程式</string>
     <string name="settings_hide_apps_desc">管理已隱藏的應用程式</string>
+    <string name="settings_greenify_title">綠化守護</string>
+    <string name="greenify_desc">限制所選眷屬在背景淘氣，保護主人的系統資源不被揮霍喔♡</string>
     <string name="settings_rename_apps">重新命名應用</string>
     <string name="settings_rename_apps_desc">自訂主畫面上的應用名稱</string>
     <string name="settings_change_icon">改變應用圖示</string>
@@ -192,6 +194,7 @@
     <string name="settings_action_mode">交互執行模式</string>
     <string name="action_mode_accessibility">無障礙模式 (Accessibility)</string>
     <string name="action_mode_shizuku">Shizuku / Sui 模式</string>
+    <string name="action_mode_dhizuku">Dhizuku (裝置管理員權限分享)</string>
     <string name="action_mode_root">ROOT 模式</string>
     <string name="action_mode_desc">選擇執行鎖屏、展開通知等系統交互操作的底層手段。</string>
     <string name="permission_contacts">聯絡之權限</string>
@@ -307,6 +310,8 @@
     <string name="all_label">全部</string>
     <string name="hidden_label">已經被隱藏的</string>
     <string name="visible_label">可見的</string>
+    <string name="blacklist_label">黑名單</string>
+    <string name="whitelist_label">白名單</string>
     <string name="change">改變</string>
     <string name="manage">管理</string>
     <string name="new_name_label">新名稱</string>

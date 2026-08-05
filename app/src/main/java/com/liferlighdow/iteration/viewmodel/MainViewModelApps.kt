@@ -180,6 +180,12 @@ fun MainViewModel.loadHiddenPackages() {
     hiddenPackages.addAll(saved)
 }
 
+fun MainViewModel.loadRestrictedPackages() {
+    val saved = prefs.getStringSet("restricted_apps", emptySet()) ?: emptySet()
+    restrictedPackages.clear()
+    restrictedPackages.addAll(saved)
+}
+
 fun MainViewModel.loadFrozenPackages() {
     val saved = prefs.getStringSet("frozen_apps", emptySet()) ?: emptySet()
     frozenPackages.clear()
@@ -271,6 +277,45 @@ fun MainViewModel.toggleHiddenApp(packageName: String) {
     loadApps()
 }
 
+fun MainViewModel.toggleRestrictedApp(packageName: String) {
+    if (restrictedPackages.contains(packageName)) {
+        restrictedPackages.remove(packageName)
+    } else {
+        restrictedPackages.add(packageName)
+    }
+    prefs.edit().putStringSet("restricted_apps", restrictedPackages).apply()
+    loadApps()
+}
+
+/**
+ * 執行綠化清理：強制停止所有黑名單中的應用
+ */
+fun MainViewModel.performGreenifyCleanup() {
+    val packagesToStop = restrictedPackages.toSet()
+    if (packagesToStop.isEmpty()) return
+
+    val mode = _actionMode.value
+    if (mode != ActionMode.SHIZUKU && mode != ActionMode.ROOT && mode != ActionMode.DHIZUKU) return
+
+    viewModelScope.launch(Dispatchers.IO) {
+        packagesToStop.forEach { pkg ->
+            when (mode) {
+                ActionMode.SHIZUKU -> {
+                    // 使用 am force-stop 強制停止進程
+                    executeShizukuCommandSilent(arrayOf("am", "force-stop", pkg))
+                }
+                ActionMode.DHIZUKU -> {
+                    executeDhizukuCommandSilent(arrayOf("am", "force-stop", pkg))
+                }
+                ActionMode.ROOT -> {
+                    executeCommandSilent(arrayOf("su", "-c", "am force-stop $pkg"))
+                }
+                else -> {}
+            }
+        }
+    }
+}
+
 fun MainViewModel.toggleFreezeApp(app: AppModel, context: Context) {
     val pkg = app.packageName
     val userId = app.userId
@@ -285,6 +330,9 @@ fun MainViewModel.toggleFreezeApp(app: AppModel, context: Context) {
                     ActionMode.SHIZUKU -> {
                         executeShizukuCommandSilent(arrayOf("pm", "enable", "--user", userId.toString(), pkg))
                     }
+                    ActionMode.DHIZUKU -> {
+                        executeDhizukuCommandSilent(arrayOf("pm", "enable", "--user", userId.toString(), pkg))
+                    }
                     ActionMode.ROOT -> {
                         executeCommandSilent(arrayOf("su", "-c", "pm enable --user $userId $pkg"))
                     }
@@ -295,6 +343,9 @@ fun MainViewModel.toggleFreezeApp(app: AppModel, context: Context) {
                 when (mode) {
                     ActionMode.SHIZUKU -> {
                         executeShizukuCommandSilent(arrayOf("pm", "disable-user", "--user", userId.toString(), pkg))
+                    }
+                    ActionMode.DHIZUKU -> {
+                        executeDhizukuCommandSilent(arrayOf("pm", "disable-user", "--user", userId.toString(), pkg))
                     }
                     ActionMode.ROOT -> {
                         executeCommandSilent(arrayOf("su", "-c", "pm disable-user --user $userId $pkg"))
@@ -322,6 +373,15 @@ fun MainViewModel.toggleFreezeApp(app: AppModel, context: Context) {
             }
         }
     }
+}
+
+private fun executeDhizukuCommandSilent(command: Array<String>): Boolean {
+    return try {
+        if (com.rosan.dhizuku.api.Dhizuku.isPermissionGranted()) {
+            val process = com.rosan.dhizuku.api.Dhizuku.newProcess(command, null, null)
+            process.waitFor() == 0
+        } else false
+    } catch (e: Exception) { false }
 }
 
 private fun executeShizukuCommandSilent(command: Array<String>): Boolean {
@@ -589,6 +649,7 @@ fun MainViewModel.saveIconToDisk(bitmap: ImageBitmap, file: File) {
 
 fun MainViewModel.loadSettings() {
     loadHiddenPackages()
+    loadRestrictedPackages()
     loadFrozenPackages()
     loadCustomLabels()
     loadUserCategories()
@@ -991,6 +1052,7 @@ fun MainViewModel.loadApps() {
                             app.copy(
                                 label = finalLabel,
                                 isHidden = hiddenPackages.contains(app.packageName) || hiddenPackages.contains(app.uniqueId),
+                                isRestricted = restrictedPackages.contains(app.packageName) || restrictedPackages.contains(app.uniqueId),
                                 displayCategory = when {
                                     app.isPWA -> "PWA Apps"
                                     else -> displayCategory

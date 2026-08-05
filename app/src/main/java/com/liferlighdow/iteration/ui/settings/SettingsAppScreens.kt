@@ -573,3 +573,140 @@ fun HideAppsScreen(onBack: () -> Unit) {
         }
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun GreenifyScreen(onBack: () -> Unit) {
+    val viewModel: MainViewModel = viewModel()
+    val allApps by viewModel.allApps.collectAsState()
+    val iconShape by viewModel.iconShape.collectAsState()
+    val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(12.dp)
+    var searchQuery by remember { mutableStateOf("") }
+    var appFilter by remember { mutableStateOf(AppFilter.ALL) }
+
+    val filteredApps = remember(allApps, searchQuery, appFilter) {
+        allApps.filter { app ->
+            if (app.isFrozen || app.isPrivate) return@filter false
+            val matchesSearch = if (searchQuery.isEmpty()) true else app.label.contains(searchQuery, ignoreCase = true)
+            val matchesFilter = when (appFilter) {
+                AppFilter.ALL -> true
+                AppFilter.HIDDEN -> app.isRestricted // "Blacklist"
+                AppFilter.VISIBLE -> !app.isRestricted // "Whitelist"
+            }
+            matchesSearch && matchesFilter
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.settings_greenify_title)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        LazyColumn(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+                .padding(horizontal = 16.dp)
+        ) {
+            item { Spacer(modifier = Modifier.height(16.dp)) }
+
+            item {
+                Text(
+                    stringResource(R.string.greenify_desc),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+
+            item {
+                Column {
+                    IterationSearchBar(query = searchQuery, onQueryChange = { searchQuery = it })
+                    
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = appFilter == AppFilter.ALL,
+                            onClick = { appFilter = AppFilter.ALL },
+                            label = { Text(stringResource(R.string.all_label)) }
+                        )
+                        FilterChip(
+                            selected = appFilter == AppFilter.HIDDEN,
+                            onClick = { appFilter = AppFilter.HIDDEN },
+                            label = { Text(stringResource(R.string.blacklist_label)) },
+                            leadingIcon = {
+                                if (appFilter == AppFilter.HIDDEN) {
+                                    Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp))
+                                }
+                            }
+                        )
+                        FilterChip(
+                            selected = appFilter == AppFilter.VISIBLE,
+                            onClick = { appFilter = AppFilter.VISIBLE },
+                            label = { Text(stringResource(R.string.whitelist_label)) },
+                            leadingIcon = {
+                                if (appFilter == AppFilter.VISIBLE) {
+                                    Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp))
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+
+            item {
+                SettingsGroup {
+                    if (filteredApps.isEmpty()) {
+                        Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                            Text(stringResource(R.string.no_apps_found), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    } else {
+                        filteredApps.forEachIndexed { index, app ->
+                            val appIcon = viewModel.getIcon(app.uniqueId)
+                            SettingSwitchItem(
+                                title = app.label,
+                                supportingText = app.packageName,
+                                leadingContent = {
+                                    if (appIcon != null) {
+                                        Image(
+                                            bitmap = appIcon,
+                                            contentDescription = null,
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .clip(shape)
+                                                .background(Color.White.copy(alpha = 0.1f))
+                                        )
+                                    } else {
+                                        Box(Modifier.size(40.dp).background(MaterialTheme.colorScheme.surfaceVariant, shape))
+                                    }
+                                },
+                                checked = app.isRestricted,
+                                onCheckedChange = { viewModel.toggleRestrictedApp(app.packageName) }
+                            )
+                            if (index < filteredApps.size - 1) {
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                    thickness = 0.5.dp,
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            
+            item { Spacer(modifier = Modifier.height(32.dp)) }
+        }
+    }
+}

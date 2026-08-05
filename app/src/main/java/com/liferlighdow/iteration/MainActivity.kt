@@ -46,6 +46,8 @@ class MainActivity : AppCompatActivity() {
             viewModel.shouldRefreshIconsOnReturn = false
             viewModel.clearIconCache()
         }
+        // 回到 Launcher 時執行綠化清理
+        viewModel.performGreenifyCleanup()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

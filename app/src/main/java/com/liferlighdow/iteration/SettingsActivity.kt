@@ -82,9 +82,11 @@ fun SettingsNavigation() {
             onNavigateToLanguage = { currentPage = SettingsPage.LANGUAGE },
             onNavigateToAdvanced = { currentPage = SettingsPage.ADVANCED },
             onNavigateToPwaMaker = { currentPage = SettingsPage.PWA_MANAGE },
-            onNavigateToWidgetMaker = { currentPage = SettingsPage.WIDGET_MAKER }
+            onNavigateToWidgetMaker = { currentPage = SettingsPage.WIDGET_MAKER },
+            onNavigateToGreenify = { currentPage = SettingsPage.GREENIFY }
         )
         SettingsPage.HIDE_APPS -> HideAppsScreen(onBack = { currentPage = SettingsPage.MAIN })
+        SettingsPage.GREENIFY -> GreenifyScreen(onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.RENAME_APPS -> RenameAppsScreen(onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.CHANGE_ICON -> ChangeIconScreen(onBack = { currentPage = SettingsPage.ICON_THEME })
         SettingsPage.APP_LIBRARY -> AppLibrarySettingsScreen(onBack = { currentPage = SettingsPage.MAIN })

@@ -89,6 +89,8 @@
     <!-- 设置主页 -->
     <string name="settings_hide_apps">隐藏应用</string>
     <string name="settings_hide_apps_desc">管理隐藏的应用与安全性</string>
+    <string name="settings_greenify_title">绿色守护</string>
+    <string name="greenify_desc">限制所选应用在后台运行，以节省系统资源。</string>
     <string name="settings_rename_apps">重命名应用</string>
     <string name="settings_rename_apps_desc">自定义主屏幕上的应用标签</string>
     <string name="settings_change_icon">更改应用图标</string>
@@ -224,6 +226,7 @@
     <string name="settings_action_mode">操作模式</string>
     <string name="action_mode_accessibility">无障碍服务（标准）</string>
     <string name="action_mode_shizuku">Shizuku / Sui</string>
+    <string name="action_mode_dhizuku">Dhizuku (设备管理员)</string>
     <string name="action_mode_root">ROOT</string>
     <string name="action_mode_desc">选择用于执行锁定屏幕或展开通知等系统操作的技术。</string>
     <string name="permission_contacts">联系人访问</string>
@@ -349,6 +352,8 @@
     <string name="all_label">全部</string>
     <string name="hidden_label">隐藏</string>
     <string name="visible_label">可见</string>
+    <string name="blacklist_label">黑名单</string>
+    <string name="whitelist_label">白名单</string>
     <string name="change">更改</string>
     <string name="manage">管理</string>
     <string name="new_name_label">新名称</string>

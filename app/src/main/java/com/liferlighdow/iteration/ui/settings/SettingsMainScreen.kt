@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.viewmodel.MainViewModel
+import com.liferlighdow.iteration.utils.ActionMode
 import com.liferlighdow.iteration.viewmodel.exportConfig
 import com.liferlighdow.iteration.viewmodel.importConfig
 
@@ -45,10 +46,13 @@ fun SettingsMainScreen(
     onNavigateToLanguage: () -> Unit,
     onNavigateToAdvanced: () -> Unit,
     onNavigateToPwaMaker: () -> Unit,
-    onNavigateToWidgetMaker: () -> Unit
+    onNavigateToWidgetMaker: () -> Unit,
+    onNavigateToGreenify: () -> Unit
 ) {
     val viewModel: MainViewModel = viewModel()
     val context = LocalContext.current
+    val actionMode by viewModel.actionMode.collectAsState()
+    val isAdvancedMode = actionMode != ActionMode.ACCESSIBILITY
     var searchQuery by remember { mutableStateOf("") }
 
     var showRestartDialog by remember { mutableStateOf(false) }
@@ -102,6 +106,7 @@ fun SettingsMainScreen(
             SettingsMetadata(context.getString(R.string.settings_hide_apps), context.getString(R.string.settings_hide_apps_desc), Icons.Default.VisibilityOff, Color(0xFF795548), {
                 if (viewModel.getPassword().isNullOrEmpty()) onNavigateToHideApps() else {} // 觸發 PasswordGate
             }, isHideApps = true),
+            SettingsMetadata(context.getString(R.string.settings_greenify_title), context.getString(R.string.greenify_desc), Icons.Default.Eco, Color(0xFF4CAF50), onNavigateToGreenify),
             SettingsMetadata(context.getString(R.string.settings_export), context.getString(R.string.settings_backup_restore_desc), Icons.Default.Backup, Color(0xFF4CAF50), { /* Launcher Logic */ }, isExport = true),
             SettingsMetadata(context.getString(R.string.settings_import), context.getString(R.string.import_from_backup), Icons.Default.Restore, Color(0xFF03A9F4), { /* Launcher Logic */ }, isImport = true),
             SettingsMetadata(context.getString(R.string.settings_restart_launcher), context.getString(R.string.settings_restart_desc), Icons.Default.RestartAlt, Color.Red, { /* Launcher Logic */ }, isRestart = true),
@@ -111,11 +116,12 @@ fun SettingsMainScreen(
         )
     }
 
-    val filteredItems = remember(searchQuery) {
+    val filteredItems = remember(searchQuery, isAdvancedMode) {
         if (searchQuery.isBlank()) emptyList()
         else allSettingsItems.filter { 
-            it.label.contains(searchQuery, ignoreCase = true) || 
-            it.supporting.contains(searchQuery, ignoreCase = true) 
+            (it.label.contains(searchQuery, ignoreCase = true) || 
+            it.supporting.contains(searchQuery, ignoreCase = true)) &&
+            (if (it.label == context.getString(R.string.settings_greenify_title)) isAdvancedMode else true)
         }
     }
 
@@ -372,6 +378,8 @@ fun SettingsMainScreen(
                     }
                 }
 
+                val isAdvancedMode = viewModel.actionMode.value != ActionMode.ACCESSIBILITY
+
                 item {
                     Text(
                         stringResource(R.string.security_section),
@@ -392,6 +400,20 @@ fun SettingsMainScreen(
                                 else showPasswordGate = true
                             }
                         )
+                        if (isAdvancedMode) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                thickness = 0.5.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            )
+                            SettingsItem(
+                                headline = stringResource(R.string.settings_greenify_title),
+                                supporting = stringResource(R.string.greenify_desc),
+                                icon = Icons.Default.Eco,
+                                iconColor = Color(0xFF4CAF50),
+                                onClick = onNavigateToGreenify
+                            )
+                        }
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                         SettingsItem(
                             headline = stringResource(R.string.settings_permissions),

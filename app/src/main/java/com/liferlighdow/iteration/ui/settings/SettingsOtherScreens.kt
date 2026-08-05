@@ -259,6 +259,7 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
                             if (android.os.Build.VERSION.SDK_INT >= 24) {
                                 add(ActionMode.SHIZUKU to context.getString(R.string.action_mode_shizuku))
                             }
+                            add(ActionMode.DHIZUKU to context.getString(R.string.action_mode_dhizuku))
                             add(ActionMode.ROOT to context.getString(R.string.action_mode_root))
                         }
                     }
@@ -316,6 +317,23 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
                                                             }
                                                         } else {
                                                             Toast.makeText(context, context.getString(R.string.shizuku_not_running), Toast.LENGTH_LONG).show()
+                                                        }
+                                                    }
+                                                    ActionMode.DHIZUKU -> {
+                                                        try {
+                                                            if (com.rosan.dhizuku.api.Dhizuku.isPermissionGranted()) {
+                                                                viewModel.setActionMode(mode)
+                                                            } else {
+                                                                com.rosan.dhizuku.api.Dhizuku.requestPermission(object : com.rosan.dhizuku.api.DhizukuRequestPermissionListener() {
+                                                                    override fun onRequestPermission(grantResult: Int) {
+                                                                        if (grantResult == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                                                            viewModel.setActionMode(ActionMode.DHIZUKU)
+                                                                        }
+                                                                    }
+                                                                })
+                                                            }
+                                                        } catch (e: Exception) {
+                                                            Toast.makeText(context, "Dhizuku error: ${e.message}", Toast.LENGTH_LONG).show()
                                                         }
                                                     }
                                                     else -> {

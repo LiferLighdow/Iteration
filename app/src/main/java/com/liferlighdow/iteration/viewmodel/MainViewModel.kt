@@ -539,6 +539,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     internal val frozenPackages = mutableSetOf<String>()
     internal val hiddenPackages = mutableSetOf<String>()
+    internal val restrictedPackages = mutableSetOf<String>()
     internal val customLabels = mutableMapOf<String, String>()
     internal val customCategories = mutableMapOf<String, String>()
     internal val categoryRenames = mutableMapOf<String, String>()
@@ -758,6 +759,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 Intent.ACTION_MANAGED_PROFILE_UNAVAILABLE,
                 "android.intent.action.PROFILE_ACCESSIBLE",
                 "android.intent.action.PROFILE_INACCESSIBLE" -> refreshApps()
+                Intent.ACTION_SCREEN_OFF -> performGreenifyCleanup()
                 Intent.ACTION_TIME_TICK -> {
                     if (_isDynamicClockEnabled.value) {
                         loadApps() // 每分鐘重整
@@ -914,6 +916,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 loadHiddenPackages()
                 loadApps()
             }
+            "restricted_apps" -> {
+                loadRestrictedPackages()
+                loadApps()
+            }
             "favorite_packages" -> {
                 val current = sharedPreferences.getStringSet(key, emptySet()) ?: emptySet()
                 _favoritePackages.value = current
@@ -968,6 +974,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             addAction(Intent.ACTION_DATE_CHANGED)
             addAction(Intent.ACTION_TIME_CHANGED)
             addAction(Intent.ACTION_TIME_TICK)
+            addAction(Intent.ACTION_SCREEN_OFF)
             if (Build.VERSION.SDK_INT >= 35) {
                 // Android 15 私密空間專用廣播
                 addAction("android.intent.action.PROFILE_ACCESSIBLE")

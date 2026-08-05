@@ -12,8 +12,8 @@ android {
         applicationId = "com.liferlighdow.iteration"
         minSdk = 23
         targetSdk = 37
-        versionCode = 80
-        versionName = "5.4.2"
+        versionCode = 81
+        versionName = "5.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -79,6 +79,7 @@ dependencies {
     implementation(libs.materialColorUtils)
     implementation(libs.shizuku.api)
     implementation(libs.shizuku.provider)
+    implementation(libs.dhizuku.api)
     implementation(libs.backdrop)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.work.runtime)

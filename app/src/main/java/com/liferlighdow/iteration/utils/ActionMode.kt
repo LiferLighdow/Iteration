@@ -4,5 +4,5 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 enum class ActionMode {
-    ACCESSIBILITY, SHIZUKU, ROOT
+    ACCESSIBILITY, SHIZUKU, ROOT, DHIZUKU
 }
