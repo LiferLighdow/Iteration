@@ -5,7 +5,7 @@
     android:viewportWidth="1000"
     android:viewportHeight="1000">
 
-    <!-- 1. 背景：明亮的淺色漸層 (類 Aurora 風格) -->
+    <!-- 1. 背景 -->
     <path
         android:pathData="M0,0 h1000 v1000 h-1000 z">
         <aapt:attr name="android:fillColor">

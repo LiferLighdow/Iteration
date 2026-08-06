@@ -340,6 +340,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val savedMode = ActionMode.valueOf(prefs.getString("action_mode", "ACCESSIBILITY") ?: "ACCESSIBILITY")
             if (android.os.Build.VERSION.SDK_INT < 24 && savedMode == ActionMode.SHIZUKU) {
                 ActionMode.ACCESSIBILITY
+            } else if (android.os.Build.VERSION.SDK_INT < 26 && savedMode == ActionMode.DHIZUKU) {
+                ActionMode.ACCESSIBILITY
             } else {
                 savedMode
             }

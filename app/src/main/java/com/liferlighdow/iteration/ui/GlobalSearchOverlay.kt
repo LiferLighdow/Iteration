@@ -132,8 +132,8 @@ fun GlobalSearchOverlay(
 
     val effectiveProgress = progress.value
 
-    LaunchedEffect(effectiveProgress >= 0.01f, isVisible) {
-        if (isVisible && effectiveProgress >= 0.01f) {
+    LaunchedEffect(effectiveProgress >= 0.1f, isVisible) {
+        if (isVisible && effectiveProgress >= 0.1f) {
             focusRequester.requestFocus()
             keyboardController?.show()
         }
@@ -144,12 +144,19 @@ fun GlobalSearchOverlay(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .graphicsLayer { alpha = effectiveProgress; translationY = (effectiveProgress - 1f) * 200f }
             .background(Color.Black.copy(alpha = 0.4f * effectiveProgress))
             .clickable { onDismiss() }
-            .statusBarsPadding()
     ) {
-        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .padding(horizontal = 20.dp)
+                .graphicsLayer {
+                    alpha = effectiveProgress
+                    translationY = (effectiveProgress - 1f) * 200f
+                }
+        ) {
             IterationSearchBar(
                 query = query,
                 onQueryChange = { searchViewModel.setQuery(it) },

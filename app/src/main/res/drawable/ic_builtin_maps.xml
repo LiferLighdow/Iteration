@@ -1,68 +1,55 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="512dp"
     android:height="512dp"
-    android:viewportWidth="1000"
-    android:viewportHeight="1000">
+    android:viewportWidth="100"
+    android:viewportHeight="100">
 
-    <!-- 1. 底層背景 (道路與空隙顏色) -->
-    <path
-        android:fillColor="#f2f1f6"
-        android:pathData="M0,0 L1000,0 L1000,1000 L0,1000 Z" />
+    <!-- 1. 直角底座 (填滿整個背景) -->
+    <path android:pathData="M0,0 h100 v100 h-100 z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:startX="0" android:startY="0" android:endX="100" android:endY="100" android:type="linear">
+                <item android:offset="0.0" android:color="#A7F3D0" />
+                <item android:offset="1.0" android:color="#34D399" />
 
-    <!-- 2. 左上區塊 - 柔和綠 -->
-    <path
-        android:fillColor="#75ea79"
-        android:pathData="M0,0 L350,0 L350,380 L0,380 Z" />
+            </gradient>
+        </aapt:attr>
+    </path>
 
-    <!-- 3. 左下區塊 - 馬卡龍粉 -->
-    <path
-        android:fillColor="#f082ca"
-        android:pathData="M0,450 L350,450 L350,1000 L0,1000 Z" />
+    <!-- 2. 左上綠地公園 (延伸至邊界，直角化) -->
+    <path android:pathData="M0,0 h50 v45 h-50 z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:startX="0" android:startY="0" android:endX="50" android:endY="45" android:type="linear">
+                <item android:offset="0.0" android:color="#e6ed97" />
+                <item android:offset="1.0" android:color="#fbed3b" />
+            </gradient>
+        </aapt:attr>
+    </path>
 
-    <!-- 4. 導航路線 -->
-    <path
-        android:fillColor="#0483fb"
-        android:pathData="M430,0 L570,0 L570,600 L430,600 Z" />
+    <!-- 3. 主幹道路 (延伸至左右邊緣) -->
+    <path android:pathData="M0,65 Q35,65 45,45 T100,25 V38 Q55,55 45,75 L0,75 Z" android:fillColor="#FFFFFF" />
 
-    <!-- 5. 右上區塊 - 嫩綠色 -->
-    <path
-        android:fillColor="#50dc67"
-        android:pathData="M650,0 L1000,0 L1000,600 L650,600 Z" />
+    <!-- 4. 水域/河流 (延伸至右下邊界，直角化) -->
+    <path android:pathData="M50,100 C70,100 80,75 100,60 V100 H50 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:startX="50" android:startY="60" android:endX="100" android:endY="100" android:type="linear">
+                <item android:offset="0.0" android:color="#38BDF8" />
+                <item android:offset="1.0" android:color="#0284C7" />
+            </gradient>
+        </aapt:attr>
+    </path>
 
-    <!-- 6. 右下區塊 - 溫暖黃 -->
-    <path
-        android:fillColor="#ffcc00"
-        android:pathData="M650,650 L1000,650 L1000,1000 L650,1000 Z" />
+    <!-- 5. 立體地標定位標針 (保持比例但位置微調) -->
+    <path android:pathData="M48,22 C41.37,22 36,27.37 36,34 C36,44 48,56 48,56 C48,56 60,44 60,34 C60,27.37 54.63,22 48,22 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:startX="36" android:startY="22" android:endX="60" android:endY="56" android:type="linear">
+                <item android:offset="0.0" android:color="#FF3E5F" />
+                <item android:offset="1.0" android:color="#FEB47B" />
+            </gradient>
+        </aapt:attr>
+    </path>
 
-    <!-- 7. 輔助斜向灰色塊 -->
-    <path
-        android:fillColor="#f2f1f6"
-        android:pathData="M650,250 L1000,600 L1000,800 L650,450 Z" />
-
-    <path
-        android:fillColor="#d2d1d6"
-        android:pathData="M650,300 L1000,650 L1000,750 L650,400 Z" />
-
-    <!-- 8 & 9. 導航指示器組合 -->
-    <group
-        android:pivotX="500"
-        android:pivotY="300"
-        android:scaleX="1.5"
-        android:scaleY="1.5">
-        <!-- 8-1. 白色外框 -->
-        <path
-            android:fillColor="#FFF"
-            android:pathData="M 500, 500 m -145, 0 a 145,145 0 1,0 290,0 a 145,145 0 1,0 -290,0" />
-
-        <!-- 8. 中央導航指示器容器 - 藍色圓形 -->
-        <path
-            android:fillColor="#0687ff"
-            android:pathData="M 500, 500 m -125, 0 a 125,125 0 1,0 250,0 a 125,125 0 1,0 -250,0" />
-
-        <!-- 9. 導航箭頭 (白色) -->
-        <path
-            android:fillColor="#FFF"
-            android:pathData="M500,420 L560,560 L500,530 L440,560 Z" />
-    </group>
+    <!-- 6. 地標內圈白點 -->
+    <path android:pathData="M48,34m-4,0a4,4 0 1,0 8,0a4,4 0 1,0 -8,0" android:fillColor="#FFFFFF" />
 
 </vector>

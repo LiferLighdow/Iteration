@@ -259,7 +259,9 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
                             if (android.os.Build.VERSION.SDK_INT >= 24) {
                                 add(ActionMode.SHIZUKU to context.getString(R.string.action_mode_shizuku))
                             }
-                            add(ActionMode.DHIZUKU to context.getString(R.string.action_mode_dhizuku))
+                            if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                add(ActionMode.DHIZUKU to context.getString(R.string.action_mode_dhizuku))
+                            }
                             add(ActionMode.ROOT to context.getString(R.string.action_mode_root))
                         }
                     }

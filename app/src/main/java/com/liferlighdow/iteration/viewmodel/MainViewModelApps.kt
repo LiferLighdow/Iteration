@@ -363,6 +363,7 @@ fun MainViewModel.toggleFreezeApp(app: AppModel, context: Context) {
                 removeAppFromHomeByPackageWithAnimation(pkg)
             }
             prefs.edit().putStringSet("frozen_apps", frozenPackages).apply()
+            cachedRawApps = null // 確保重新載入時抓取最新系統狀態
             withContext(Dispatchers.Main) {
                 Toast.makeText(context, if (isFrozen) R.string.unfreeze_success else R.string.freeze_success, Toast.LENGTH_SHORT).show()
                 loadApps()

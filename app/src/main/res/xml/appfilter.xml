@@ -65,7 +65,7 @@
     <item component="io.github.muntashirakon.music" drawable="ic_builtin_music" />
     <item component="code.name.gumdrop.retromusic" drawable="ic_builtin_music" />
     <item component="com.piyush.music" drawable="ic_builtin_music" />
-    <item component="org.lineageos.twelve" drawable="ic_builtin_music" />
+    <item component="org.lineageos.eleven" drawable="ic_builtin_music" />
     <item component="com.msob7y.namida" drawable="ic_builtin_music" />
 
     <!-- Calculator -->

@@ -29,16 +29,16 @@
         <!-- 信封主體 (白色) -->
         <path
             android:fillColor="#FFFFFF"
-            android:pathData="M10,25h80v50h-80z" />
+            android:pathData="M15,25 h70 a5,5 0 0,1 5,5 v40 a5,5 0 0,1 -5,5 h-70 a5,5 0 0,1 -5,-5 v-40 a5,5 0 0,1 5,-5 z" />
 
         <!-- 信封摺痕 (淺灰色) -->
         <!-- 上方大 V 摺痕 -->
         <path
             android:strokeColor="#DDD"
-            android:strokeWidth="2.5"
+            android:strokeWidth="2.4"
             android:strokeLineJoin="round"
             android:strokeLineCap="round"
-            android:pathData="M11,26l39,30l39,-30" />
+            android:pathData="M11,30l39,30l39,-30" />
 
         <!-- 兩側下方的小斜線 -->
         <path
@@ -46,6 +46,6 @@
             android:strokeWidth="1.2"
             android:strokeLineJoin="round"
             android:strokeLineCap="round"
-            android:pathData="M11,74l25,-20 M89,74l-25,-20" />
+            android:pathData="M14,74l22,-20 M86,74l-22,-20" />
     </group>
 </vector>

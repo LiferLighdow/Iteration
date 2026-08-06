@@ -32,6 +32,8 @@ fun MainViewModel.setActionMode(mode: ActionMode) {
     var finalMode = mode
     if (android.os.Build.VERSION.SDK_INT < 24 && mode == ActionMode.SHIZUKU) {
         finalMode = ActionMode.ACCESSIBILITY
+    } else if (android.os.Build.VERSION.SDK_INT < 26 && mode == ActionMode.DHIZUKU) {
+        finalMode = ActionMode.ACCESSIBILITY
     }
     _actionMode.value = finalMode
     prefs.edit().putString("action_mode", finalMode.name).apply()
