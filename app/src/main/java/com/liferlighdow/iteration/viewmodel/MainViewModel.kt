@@ -38,10 +38,12 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.json.JSONArray
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.encodeToString
 import org.json.JSONObject
 import java.io.File
 
-class MainViewModel(application: Application) : AndroidViewModel(application) {
+class MainViewModel(application: Application) : AndroidViewModel(application), SharedPreferences.OnSharedPreferenceChangeListener {
     internal val repository = AppRepository(application)
     internal val weatherRepository = WeatherRepository(application)
     internal val currencyRepository = CurrencyRepository(application)
@@ -204,6 +206,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     internal val _isDesktopLocked = MutableStateFlow(prefs.getBoolean("is_desktop_locked", false))
     val isDesktopLocked = _isDesktopLocked.asStateFlow()
 
+    internal val _password = MutableStateFlow(prefs.getString("password", null))
+    val password = _password.asStateFlow()
+
     var shouldRefreshIconsOnReturn = false
 
     internal val _isDynamicCalendarEnabled = MutableStateFlow(prefs.getBoolean("dynamic_calendar_enabled", false))
@@ -267,6 +272,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val useVNaviForPwa = _useVNaviForPwa.asStateFlow()
 
     init {
+        prefs?.registerOnSharedPreferenceChangeListener(this)
+
         // 初始桌布與顏色提取
         updateBlurredWallpaper()
 
@@ -309,6 +316,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     internal val _liquidGlassChromaticAberration =
         MutableStateFlow(prefs.getBoolean("liquid_glass_chromatic_aberration", true))
     val liquidGlassChromaticAberration = _liquidGlassChromaticAberration.asStateFlow()
+
+    internal val _liquidGlassColorAdjustmentEnabled =
+        MutableStateFlow(prefs.getBoolean("liquid_glass_color_adjustment_enabled", false))
+    val liquidGlassColorAdjustmentEnabled = _liquidGlassColorAdjustmentEnabled.asStateFlow()
+
+    internal val _liquidGlassHue = MutableStateFlow(prefs.getFloat("liquid_glass_hue", 0f))
+    val liquidGlassHue = _liquidGlassHue.asStateFlow()
+
+    internal val _liquidGlassSaturation = MutableStateFlow(prefs.getFloat("liquid_glass_saturation", 1f))
+    val liquidGlassSaturation = _liquidGlassSaturation.asStateFlow()
+
+    internal val _liquidGlassBrightness = MutableStateFlow(prefs.getFloat("liquid_glass_brightness", 1f))
+    val liquidGlassBrightness = _liquidGlassBrightness.asStateFlow()
+
+    internal val _liquidGlassAlpha = MutableStateFlow(prefs.getFloat("liquid_glass_alpha", 0.3f))
+    val liquidGlassAlpha = _liquidGlassAlpha.asStateFlow()
+
+    internal val _liquidGlassComponentConfigs = MutableStateFlow<Map<String, LiquidGlassColorConfig>>(
+        try {
+            val saved = prefs.getString("liquid_glass_component_configs", null)
+            if (saved != null) Json.decodeFromString(saved) else emptyMap()
+        } catch (e: Exception) {
+            emptyMap()
+        }
+    )
+    val liquidGlassComponentConfigs = _liquidGlassComponentConfigs.asStateFlow()
 
     internal val _homeMenuOptions = MutableStateFlow(
         prefs.getStringSet("home_menu_options", setOf("delete_home", "uninstall", "shortcuts", "freeze"))
@@ -926,6 +959,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val current = sharedPreferences.getStringSet(key, emptySet()) ?: emptySet()
                 _favoritePackages.value = current
             }
+            "password" -> {
+                _password.value = sharedPreferences.getString(key, null)
+            }
             "new_version_available" -> _newVersionAvailable.value = sharedPreferences.getString(key, null)
             "new_version_download_url" -> _newVersionDownloadUrl.value = sharedPreferences.getString(key, null)
             "icon_cache_size" -> {
@@ -999,11 +1035,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     override fun onCleared() {
         super.onCleared()
-        prefs.unregisterOnSharedPreferenceChangeListener(prefsListener)
+        prefs?.unregisterOnSharedPreferenceChangeListener(this)
         // 取消註冊，避免內存洩漏
         launcherApps.unregisterCallback(packageCallback)
         getApplication<Application>().unregisterReceiver(refreshReceiver)
         getApplication<Application>().unregisterReceiver(packageReceiver)
+    }
+
+    override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
+        val p = sharedPreferences ?: return
+        when (key) {
+            "liquid_glass_blur" -> _liquidGlassBlur.value = p.getFloat(key, 0f)
+            "liquid_glass_refraction_height" -> _liquidGlassRefractionHeight.value = p.getFloat(key, 24f)
+            "liquid_glass_refraction_amount" -> _liquidGlassRefractionAmount.value = p.getFloat(key, 48f)
+            "liquid_glass_chromatic_aberration" -> _liquidGlassChromaticAberration.value = p.getBoolean(key, true)
+            "liquid_glass_color_adjustment_enabled" -> _liquidGlassColorAdjustmentEnabled.value = p.getBoolean(key, false)
+            "liquid_glass_hue" -> _liquidGlassHue.value = p.getFloat(key, 0f)
+            "liquid_glass_saturation" -> _liquidGlassSaturation.value = p.getFloat(key, 1f)
+            "liquid_glass_brightness" -> _liquidGlassBrightness.value = p.getFloat(key, 1f)
+            "liquid_glass_alpha" -> _liquidGlassAlpha.value = p.getFloat(key, 0.3f)
+            "liquid_glass_component_configs" -> {
+                val saved = p.getString(key, null)
+                _liquidGlassComponentConfigs.value = if (saved != null) try { Json.decodeFromString(saved) } catch (e: Exception) { emptyMap() } else emptyMap()
+            }
+        }
     }
 
     internal var lastBlurredSignal = -1L
@@ -1032,10 +1087,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         prefs.edit().putString("launcher_layout_v3", layoutArray.toString()).apply()
     }
 
-    fun getPassword(): String? = prefs.getString("password", null)
+    fun getPassword(): String? = _password.value
 
     fun setPassword(password: String?) {
         prefs.edit().putString("password", password).apply()
+        _password.value = password
+    }
+
+    fun refreshPassword() {
+        _password.value = prefs.getString("password", null)
+    }
+
+    fun refreshAllSettings() {
+        refreshPassword()
+        loadSettings()
+        loadApps()
     }
 
     fun setIconScale(scale: Float) {
@@ -1140,4 +1206,5 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+
 }

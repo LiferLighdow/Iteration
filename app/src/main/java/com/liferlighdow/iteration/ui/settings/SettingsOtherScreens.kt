@@ -57,7 +57,7 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
     val isNetworkEnabled by viewModel.isNetworkAccessEnabled.collectAsState()
     val isSystemNetworkEnabled by viewModel.isSystemNetworkEnabled.collectAsState()
     val actionMode by viewModel.actionMode.collectAsState()
-    
+
     // 聯絡人權限狀態
     var hasContactsPermission by remember {
         mutableStateOf(

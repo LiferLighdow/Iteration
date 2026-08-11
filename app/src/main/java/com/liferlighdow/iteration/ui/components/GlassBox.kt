@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kyant.backdrop.Backdrop
+import com.liferlighdow.iteration.data.*
 import com.liferlighdow.iteration.ui.glassFallbackColor
 import com.liferlighdow.iteration.ui.liquidGlass
 import com.liferlighdow.iteration.viewmodel.MainViewModel
@@ -27,6 +28,7 @@ fun GlassBox(
     backdrop: Backdrop? = null,
     cornerRadius: Dp = 24.dp,
     fallbackAlpha: Float = 0.2f,
+    component: LiquidGlassComponent = LiquidGlassComponent.WIDGET,
     content: @Composable BoxScope.() -> Unit
 ) {
     val viewModel: MainViewModel = viewModel()
@@ -35,6 +37,11 @@ fun GlassBox(
     val refractionHeight by viewModel.liquidGlassRefractionHeight.collectAsState()
     val refractionAmount by viewModel.liquidGlassRefractionAmount.collectAsState()
     val chromaticAberration by viewModel.liquidGlassChromaticAberration.collectAsState()
+    val colorAdjustmentEnabled by viewModel.liquidGlassColorAdjustmentEnabled.collectAsState()
+    val hue by viewModel.liquidGlassHue.collectAsState()
+    val saturation by viewModel.liquidGlassSaturation.collectAsState()
+    val brightness by viewModel.liquidGlassBrightness.collectAsState()
+    val alpha by viewModel.liquidGlassAlpha.collectAsState()
 
     val useLiquid = enabled && isLiquidGlassEnabled && backdrop != null
 
@@ -48,7 +55,13 @@ fun GlassBox(
                     blurRadius = blurRadius,
                     refractionHeight = refractionHeight,
                     refractionAmount = refractionAmount,
-                    chromaticAberration = chromaticAberration
+                    chromaticAberration = chromaticAberration,
+                    colorAdjustmentEnabled = colorAdjustmentEnabled,
+                    hue = hue,
+                    saturation = saturation,
+                    brightness = brightness,
+                    alpha = alpha,
+                    component = component
                 )
             } else {
                 Modifier

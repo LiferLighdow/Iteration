@@ -388,7 +388,7 @@ private fun executeDhizukuCommandSilent(command: Array<String>): Boolean {
 private fun executeShizukuCommandSilent(command: Array<String>): Boolean {
     if (!rikka.shizuku.Shizuku.pingBinder()) return false
     return try {
-        val method = rikka.shizuku.Shizuku::class.java.declaredMethods.find { 
+        val method = rikka.shizuku.Shizuku::class.java.declaredMethods.find {
             it.name == "newProcess" && it.parameterTypes.size == 3 && it.parameterTypes[0].isArray
         }
         if (method != null) {

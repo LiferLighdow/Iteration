@@ -21,6 +21,15 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import kotlinx.coroutines.flow.MutableStateFlow
+import com.liferlighdow.iteration.viewmodel.MainViewModel
+import com.liferlighdow.iteration.data.*
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
@@ -48,25 +57,97 @@ fun TextStyle.withGlassShadow(enabled: Boolean = true): TextStyle {
 }
 
 /**
+ * 內部使用的顏色參數決策邏輯
+ */
+@Composable
+private fun resolveLiquidGlassParams(
+    viewModel: MainViewModel,
+    component: LiquidGlassComponent?,
+    // 手動傳入優先
+    blur: Float?,
+    refractionHeight: Float?,
+    refractionAmount: Float?,
+    chromaticAberration: Boolean?,
+    colorAdjustmentEnabled: Boolean?,
+    hue: Float?,
+    saturation: Float?,
+    brightness: Float?,
+    alpha: Float?
+): ResolvedParams {
+    val configs by viewModel.liquidGlassComponentConfigs.collectAsState()
+    val compCfg = component?.let { configs[it.key] }
+
+    val gBlur by viewModel.liquidGlassBlur.collectAsState()
+    val gReH by viewModel.liquidGlassRefractionHeight.collectAsState()
+    val gReA by viewModel.liquidGlassRefractionAmount.collectAsState()
+    val gChA by viewModel.liquidGlassChromaticAberration.collectAsState()
+    val gAdj by viewModel.liquidGlassColorAdjustmentEnabled.collectAsState()
+    val gH by viewModel.liquidGlassHue.collectAsState()
+    val gS by viewModel.liquidGlassSaturation.collectAsState()
+    val gB by viewModel.liquidGlassBrightness.collectAsState()
+    val gA by viewModel.liquidGlassAlpha.collectAsState()
+
+    // 物理參數邏輯：如果組件有自定義(非null)，則無視全域直接採用。
+    // 注意：這裡不應受 compCfg.enabled 的影響。
+    return ResolvedParams(
+        blur = compCfg?.blur ?: blur ?: gBlur,
+        refractionHeight = compCfg?.refractionHeight ?: refractionHeight ?: gReH,
+        refractionAmount = compCfg?.refractionAmount ?: refractionAmount ?: gReA,
+        chromaticAberration = compCfg?.chromaticAberration ?: chromaticAberration ?: gChA,
+        
+        // 顏色參數邏輯：只有當 enabled 為 true 時才採用組件顏色，否則回退。
+        adjEnabled = colorAdjustmentEnabled ?: compCfg?.enabled ?: gAdj,
+        h = (if (compCfg?.enabled == true) compCfg.hue else null) ?: hue ?: gH,
+        s = (if (compCfg?.enabled == true) compCfg.saturation else null) ?: saturation ?: gS,
+        b = (if (compCfg?.enabled == true) compCfg.brightness else null) ?: brightness ?: gB,
+        a = (if (compCfg?.enabled == true) compCfg.alpha else null) ?: alpha ?: gA
+    )
+}
+
+private data class ResolvedParams(
+    val blur: Float,
+    val refractionHeight: Float,
+    val refractionAmount: Float,
+    val chromaticAberration: Boolean,
+    val adjEnabled: Boolean,
+    val h: Float,
+    val s: Float,
+    val b: Float,
+    val a: Float
+)
+
+/**
  * 滿血版 Liquid Glass 實現，支持物理形變與高級混合模式
  */
 fun Modifier.liquidGlass(
     enabled: Boolean,
     backdrop: Backdrop?,
     cornerRadius: Dp,
-    blurRadius: Float = 0f,
-    refractionHeight: Float = 24f,
-    refractionAmount: Float = 48f,
-    chromaticAberration: Boolean = true
+    blurRadius: Float? = null,
+    refractionHeight: Float? = null,
+    refractionAmount: Float? = null,
+    chromaticAberration: Boolean? = null,
+    colorAdjustmentEnabled: Boolean? = null,
+    hue: Float? = null,
+    saturation: Float? = null,
+    brightness: Float? = null,
+    alpha: Float? = null,
+    component: LiquidGlassComponent? = null
 ): Modifier = composed {
+    val viewModel: MainViewModel = viewModel()
+    val p = resolveLiquidGlassParams(viewModel, component, blurRadius, refractionHeight, refractionAmount, chromaticAberration, colorAdjustmentEnabled, hue, saturation, brightness, alpha)
+    
     val fallbackColor = glassFallbackColor()
 
     if (!enabled || backdrop == null) {
         this.drawBehind {
             val cr = cornerRadius.toPx()
-            // 降低降級方案的感官
             drawRoundRect(
-                color = fallbackColor,
+                color = if (p.adjEnabled) {
+                    Color.hsv(p.h, p.s.coerceIn(0f, 1f), p.b.coerceIn(0f, 1f), p.a)
+                } else {
+                    fallbackColor
+                },
                 cornerRadius = CornerRadius(cr, cr)
             )
         }
@@ -75,29 +156,26 @@ fun Modifier.liquidGlass(
             backdrop = backdrop,
             shape = { RoundedCornerShape(cornerRadius) },
             effects = {
-                // 1. 磨砂感 (Blur) - 僅在有數值時執行
-                if (blurRadius > 0f) {
-                    blur(radius = blurRadius.dp.toPx())
-                }
-
-                // 2. 物理透鏡折射 (Lens Distortion) - 僅在高度或強度大於 0 時執行
-                // 這是最耗能的部分，跳過它可以大幅減輕 GPU 負擔
-                if (refractionHeight > 0f || refractionAmount > 0f) {
+                if (p.blur > 0f) blur(radius = p.blur.dp.toPx())
+                if (p.refractionHeight > 0f || p.refractionAmount > 0f) {
                     lens(
-                        refractionHeight = refractionHeight.dp.toPx(),
-                        refractionAmount = refractionAmount.dp.toPx(),
+                        refractionHeight = p.refractionHeight.dp.toPx(),
+                        refractionAmount = p.refractionAmount.dp.toPx(),
                         depthEffect = false,
-                        chromaticAberration = chromaticAberration
+                        chromaticAberration = p.chromaticAberration
                     )
                 }
-
-                // 3. 增加震盪感 - 只有在開啟折射時才需要，或可視需求關閉以節能
-                if (refractionHeight > 0f || refractionAmount > 0f) {
-                    vibrancy()
-                }
+                if (p.refractionHeight > 0f || p.refractionAmount > 0f) vibrancy()
             },
             onDrawSurface = {
-                // 這裡保持完全清空，不添加任何流光、邊框或色塊填充
+                if (p.adjEnabled) {
+                    if (p.s < 1f) drawRect(color = Color.Gray.copy(alpha = 1f - p.s), blendMode = BlendMode.Color)
+                    if (p.h != 0f) drawRect(color = Color.hsv(p.h, 1f, 1f), blendMode = BlendMode.Hue)
+                    drawRect(color = Color.hsv(p.h, p.s, p.b).copy(alpha = p.a), blendMode = BlendMode.SrcOver)
+                    if (p.b > 0.8f && p.s < 0.2f) {
+                        drawRect(color = Color.White.copy(alpha = (p.b - 0.8f) * p.a), blendMode = BlendMode.Screen)
+                    }
+                }
             }
         )
     }
@@ -121,78 +199,38 @@ fun Modifier.liquidGlassDock(
     backdrop: Backdrop,
     dockStyle: DockStyle = DockStyle.MODERN,
     cornerRadius: Dp = 42.dp,
-    blurRadius: Float = 0f,
-    refractionHeight: Float = 24f,
-    refractionAmount: Float = 48f,
-    chromaticAberration: Boolean = true
+    blurRadius: Float? = null,
+    refractionHeight: Float? = null,
+    refractionAmount: Float? = null,
+    chromaticAberration: Boolean? = null,
+    colorAdjustmentEnabled: Boolean? = null,
+    hue: Float? = null,
+    saturation: Float? = null,
+    brightness: Float? = null,
+    alpha: Float? = null
 ): Modifier = composed {
-    val fallbackColor = glassFallbackColor()
-    
-    val shape = remember(dockStyle, cornerRadius) {
-        when (dockStyle) {
-            DockStyle.CLASSIC -> RoundedCornerShape(0.dp)
-            DockStyle.MODERN, DockStyle.LITE -> RoundedCornerShape(cornerRadius)
-            DockStyle.PLATFORM -> PlatformDockShape()
+    this.liquidGlass(
+        enabled = isLiquidGlass,
+        backdrop = backdrop,
+        cornerRadius = cornerRadius,
+        blurRadius = blurRadius,
+        refractionHeight = refractionHeight,
+        refractionAmount = refractionAmount,
+        chromaticAberration = chromaticAberration,
+        colorAdjustmentEnabled = colorAdjustmentEnabled,
+        hue = hue,
+        saturation = saturation,
+        brightness = brightness,
+        alpha = alpha,
+        component = LiquidGlassComponent.DOCK
+    ).drawBehind {
+        if (dockStyle == DockStyle.PLATFORM) {
+            drawLine(
+                color = Color.White.copy(alpha = 0.5f),
+                start = Offset(size.width * 0.06f, 0f),
+                end = Offset(size.width * 0.94f, 0f),
+                strokeWidth = 2f
+            )
         }
-    }
-
-    if (dockStyle == DockStyle.LITE) {
-        // LITE style doesn't draw any background or glass effect
-        return@composed this
-    }
-
-    if (!isLiquidGlass || (dockStyle != DockStyle.PLATFORM && backdrop == null)) {
-        this.drawBehind {
-            if (dockStyle == DockStyle.PLATFORM) {
-                val path = Path().apply {
-                    moveTo(size.width * 0.06f, 0f)
-                    lineTo(size.width * 0.94f, 0f)
-                    lineTo(size.width, size.height)
-                    lineTo(0f, size.height)
-                    close()
-                }
-                drawPath(path, Color.White.copy(alpha = 0.2f))
-            } else {
-                val cr = if (dockStyle == DockStyle.CLASSIC) 0f else cornerRadius.toPx()
-                drawRoundRect(
-                    color = fallbackColor,
-                    cornerRadius = CornerRadius(cr, cr)
-                )
-            }
-        }
-    } else {
-        this.drawBackdrop(
-            backdrop = backdrop,
-            shape = { shape },
-            effects = {
-                if (blurRadius > 0f) {
-                    blur(radius = blurRadius.dp.toPx())
-                }
-                // 修正：lens 效果不支持自定義 Path 形狀 (PlatformDockShape)，會導致閃退
-                // 因此在 PLATFORM 樣式下跳過 lens 效果
-                if (dockStyle != DockStyle.PLATFORM && (refractionHeight > 0f || refractionAmount > 0f)) {
-                    lens(
-                        refractionHeight = refractionHeight.dp.toPx(),
-                        refractionAmount = refractionAmount.dp.toPx(),
-                        depthEffect = false,
-                        chromaticAberration = chromaticAberration
-                    )
-                }
-                if (refractionHeight > 0f || refractionAmount > 0f) {
-                    vibrancy()
-                }
-            },
-            onDrawSurface = {
-                // Platform style adds a highlight line at the top
-                if (dockStyle == DockStyle.PLATFORM) {
-                    drawLine(
-                        color = Color.White.copy(alpha = 0.5f),
-                        start = Offset(size.width * 0.06f, 0f),
-                        end = Offset(size.width * 0.94f, 0f),
-                        strokeWidth = 2f
-                    )
-                }
-            }
-        )
     }
 }

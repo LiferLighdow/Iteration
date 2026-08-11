@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import androidx.compose.ui.zIndex
 import com.kyant.backdrop.Backdrop
+import com.liferlighdow.iteration.data.*
 import com.liferlighdow.iteration.viewmodel.MainViewModel
 import com.liferlighdow.iteration.viewmodel.*
 import com.liferlighdow.iteration.service.NotificationService
@@ -181,7 +182,8 @@ fun MinusOnePage(
                                 blurRadius = blurRadius,
                                 refractionHeight = refractionHeight,
                                 refractionAmount = refractionAmount,
-                                chromaticAberration = chromaticAberration
+                                chromaticAberration = chromaticAberration,
+                                component = LiquidGlassComponent.BUTTON
                             ),
                             shape = RoundedCornerShape(12.dp),
                             colors = IconButtonDefaults.filledTonalIconButtonColors(
@@ -208,7 +210,8 @@ fun MinusOnePage(
                             blurRadius = blurRadius,
                             refractionHeight = refractionHeight,
                             refractionAmount = refractionAmount,
-                            chromaticAberration = chromaticAberration
+                            chromaticAberration = chromaticAberration,
+                            component = LiquidGlassComponent.BUTTON
                         ),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
@@ -243,7 +246,8 @@ fun MinusOnePage(
                         blurRadius = blurRadius,
                         refractionHeight = refractionHeight,
                         refractionAmount = refractionAmount,
-                        chromaticAberration = chromaticAberration
+                        chromaticAberration = chromaticAberration,
+                        component = LiquidGlassComponent.SEARCH
                     ),
                     placeholder = { 
                         Text(
@@ -595,7 +599,8 @@ fun MinusOnePage(
                                         blurRadius = blurRadius,
                                         refractionHeight = refractionHeight,
                                         refractionAmount = refractionAmount,
-                                        chromaticAberration = chromaticAberration
+                                        chromaticAberration = chromaticAberration,
+                                        component = LiquidGlassComponent.BUTTON
                                     ),
                                     shape = RoundedCornerShape(20.dp),
                                     color = Color.Transparent,

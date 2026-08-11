@@ -87,7 +87,8 @@ fun IterationSearchBar(
             modifier = modifier.height(56.dp),
             backdrop = backdrop,
             cornerRadius = 28.dp,
-            fallbackAlpha = 0.2f
+            fallbackAlpha = 0.2f,
+            component = com.liferlighdow.iteration.data.LiquidGlassComponent.SEARCH
         ) {
             content()
         }

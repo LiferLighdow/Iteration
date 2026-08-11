@@ -10,6 +10,9 @@ import com.liferlighdow.iteration.utils.IconShape
 import com.liferlighdow.iteration.utils.IconStyle
 import com.liferlighdow.iteration.ui.DockStyle
 import com.liferlighdow.iteration.ui.ThemeMode
+import com.liferlighdow.iteration.data.*
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import com.liferlighdow.iteration.service.UpdateCheckWorker
 import androidx.work.*
 import java.util.concurrent.TimeUnit
@@ -379,6 +382,38 @@ fun MainViewModel.setLiquidGlassChromaticAberration(enabled: Boolean) {
     prefs.edit().putBoolean("liquid_glass_chromatic_aberration", enabled).apply()
 }
 
+fun MainViewModel.setLiquidGlassColorAdjustmentEnabled(enabled: Boolean) {
+    _liquidGlassColorAdjustmentEnabled.value = enabled
+    prefs.edit().putBoolean("liquid_glass_color_adjustment_enabled", enabled).apply()
+}
+
+fun MainViewModel.setLiquidGlassHue(hue: Float) {
+    _liquidGlassHue.value = hue
+    prefs.edit().putFloat("liquid_glass_hue", hue).apply()
+}
+
+fun MainViewModel.setLiquidGlassSaturation(saturation: Float) {
+    _liquidGlassSaturation.value = saturation
+    prefs.edit().putFloat("liquid_glass_saturation", saturation).apply()
+}
+
+fun MainViewModel.setLiquidGlassBrightness(brightness: Float) {
+    _liquidGlassBrightness.value = brightness
+    prefs.edit().putFloat("liquid_glass_brightness", brightness).apply()
+}
+
+fun MainViewModel.setLiquidGlassAlpha(alpha: Float) {
+    _liquidGlassAlpha.value = alpha
+    prefs.edit().putFloat("liquid_glass_alpha", alpha).apply()
+}
+
+fun MainViewModel.setLiquidGlassComponentConfig(component: LiquidGlassComponent, config: LiquidGlassColorConfig) {
+    val current = _liquidGlassComponentConfigs.value.toMutableMap()
+    current[component.key] = config
+    _liquidGlassComponentConfigs.value = current
+    prefs.edit().putString("liquid_glass_component_configs", Json.encodeToString(current)).apply()
+}
+
 fun MainViewModel.setDesktopRows(rows: Int) {
     _desktopRows.value = rows
     prefs.edit().putInt("desktop_rows", rows).apply()
@@ -564,6 +599,11 @@ fun MainViewModel.resetLiquidGlassParams() {
     setLiquidGlassRefractionHeight(24f)
     setLiquidGlassRefractionAmount(48f)
     setLiquidGlassChromaticAberration(true)
+    setLiquidGlassColorAdjustmentEnabled(false)
+    setLiquidGlassHue(0f)
+    setLiquidGlassSaturation(1f)
+    setLiquidGlassBrightness(1f)
+    setLiquidGlassAlpha(0.3f)
 }
 
 fun MainViewModel.setMaterialYouEnabled(enabled: Boolean) {

@@ -31,6 +31,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.drawable.toBitmap
+import com.liferlighdow.iteration.data.*
 import com.liferlighdow.iteration.viewmodel.*
 import androidx.compose.foundation.Image
 import androidx.compose.ui.unit.dp
@@ -200,7 +201,8 @@ fun FolderOverlay(
                                 blurRadius = blurRadius,
                                 refractionHeight = refractionHeight,
                                 refractionAmount = refractionAmount,
-                                chromaticAberration = chromaticAberration
+                                chromaticAberration = chromaticAberration,
+                                component = LiquidGlassComponent.FOLDER
                             )
                             .padding(16.dp),
                         contentAlignment = Alignment.TopCenter

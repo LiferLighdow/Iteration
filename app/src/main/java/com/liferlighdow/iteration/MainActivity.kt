@@ -42,6 +42,7 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         val viewModel = androidx.lifecycle.ViewModelProvider(this)[MainViewModel::class.java]
+        viewModel.refreshPassword()
         if (viewModel.shouldRefreshIconsOnReturn) {
             viewModel.shouldRefreshIconsOnReturn = false
             viewModel.clearIconCache()

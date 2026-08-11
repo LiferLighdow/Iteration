@@ -69,6 +69,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kyant.backdrop.Backdrop
 import com.liferlighdow.iteration.utils.IconShape
 import com.liferlighdow.iteration.viewmodel.MainViewModel
+import com.liferlighdow.iteration.data.*
 import com.liferlighdow.iteration.viewmodel.*
 import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.viewmodel.addAppToHome
@@ -102,6 +103,7 @@ fun AppLibraryPage(
     val isSearchFocused by viewModel.isLibrarySearchFocused.collectAsState()
     val filteredApps by viewModel.filteredLibraryApps.collectAsState()
     val menuOptions by viewModel.homeMenuOptions.collectAsState()
+    val password by viewModel.password.collectAsState()
 
     var isHiddenUnlocked by remember { mutableStateOf(false) }
     var showPasswordDialog by remember { mutableStateOf(false) }
@@ -142,7 +144,7 @@ fun AppLibraryPage(
     }
     
     val hiddenAppsCount = remember(allApps) { allApps.count { it.isHidden && !it.isFrozen && !it.isPrivate } }
-    val showHiddenFolder = hiddenAppsCount > 0 && searchQuery.isBlank() && (selectedCategory == null || selectedCategory == "All")
+    val showHiddenFolder = hiddenAppsCount > 0 && searchQuery.isBlank() && (selectedCategory == null || selectedCategory == "All") && !password.isNullOrEmpty()
     
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = horizontalPadding)) {
         // 搜尋欄：縮減垂直 padding 以平衡視覺
@@ -173,7 +175,8 @@ fun AppLibraryPage(
                         blurRadius = blurRadius,
                         refractionHeight = refractionHeight,
                         refractionAmount = refractionAmount,
-                        chromaticAberration = chromaticAberration
+                        chromaticAberration = chromaticAberration,
+                        component = LiquidGlassComponent.SEARCH
                     ),
                 placeholder = {
                     Text(
@@ -583,7 +586,8 @@ fun AppLibraryFolder(
                         blurRadius = blurRadius,
                         refractionHeight = refractionHeight,
                         refractionAmount = refractionAmount,
-                        chromaticAberration = chromaticAberration
+                        chromaticAberration = chromaticAberration,
+                        component = LiquidGlassComponent.FOLDER
                     )
             )
             

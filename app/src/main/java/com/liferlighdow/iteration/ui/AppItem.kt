@@ -45,7 +45,7 @@ import com.liferlighdow.iteration.ui.components.getAppIconShape
 import com.liferlighdow.iteration.utils.IconShape
 import com.liferlighdow.iteration.viewmodel.MainViewModel
 import com.liferlighdow.iteration.service.NotificationService
-import com.liferlighdow.iteration.data.AppModel
+import com.liferlighdow.iteration.data.*
 import com.liferlighdow.iteration.R
 
 import androidx.compose.ui.graphics.asComposeRenderEffect
@@ -76,6 +76,7 @@ fun AppItem(
     onAppClick: (() -> Unit)? = null,
     onDeleteClick: (() -> Unit)? = null,
     notificationCountProvider: (() -> Int)? = null,
+    component: LiquidGlassComponent? = null,
     getIcon: @Composable (String) -> ImageBitmap? = { null }
 ) {
     val viewModel: MainViewModel = viewModel()
@@ -395,7 +396,8 @@ fun FolderIconContent(
                 blurRadius = blurRadius,
                 refractionHeight = refractionHeight,
                 refractionAmount = refractionAmount,
-                chromaticAberration = chromaticAberration
+                chromaticAberration = chromaticAberration,
+                component = LiquidGlassComponent.FOLDER
             )
             .padding(4.dp),
         contentAlignment = Alignment.Center
