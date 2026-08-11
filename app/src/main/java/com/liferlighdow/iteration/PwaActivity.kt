@@ -27,6 +27,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -86,6 +92,34 @@ class PwaActivity : ComponentActivity() {
             val isAmoledBlack by viewModel.isAmoledBlack.collectAsState()
             val isMaterialYouEnabled by viewModel.isMaterialYouEnabled.collectAsState()
             val seedColor by viewModel.seedColor.collectAsState()
+            val showStatusBar by viewModel.showStatusBar.collectAsState()
+            val showNavigationBar by viewModel.showNavigationBar.collectAsState()
+            val isLightWallpaper by viewModel.isLightWallpaper.collectAsState()
+            val window = (LocalContext.current as? AppCompatActivity)?.window ?: (LocalContext.current as? android.app.Activity)?.window
+
+            LaunchedEffect(showStatusBar, showNavigationBar, isLightWallpaper) {
+                window?.let { win ->
+                    val windowInsetsController = WindowCompat.getInsetsController(win, win.decorView)
+                    
+                    // 根據桌布明暗設置狀態欄與導覽列圖示顏色
+                    windowInsetsController.isAppearanceLightStatusBars = isLightWallpaper
+                    windowInsetsController.isAppearanceLightNavigationBars = isLightWallpaper
+
+                    if (showStatusBar) {
+                        windowInsetsController.show(WindowInsetsCompat.Type.statusBars())
+                    } else {
+                        windowInsetsController.hide(WindowInsetsCompat.Type.statusBars())
+                    }
+
+                    if (showNavigationBar) {
+                        windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
+                        windowInsetsController.show(WindowInsetsCompat.Type.navigationBars())
+                    } else {
+                        windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                        windowInsetsController.hide(WindowInsetsCompat.Type.navigationBars())
+                    }
+                }
+            }
 
             IterationTheme(
                 themeMode = themeMode,

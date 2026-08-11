@@ -376,7 +376,7 @@ fun MainViewModel.toggleFreezeApp(app: AppModel, context: Context) {
     }
 }
 
-private fun executeDhizukuCommandSilent(command: Array<String>): Boolean {
+internal fun executeDhizukuCommandSilent(command: Array<String>): Boolean {
     return try {
         if (com.rosan.dhizuku.api.Dhizuku.isPermissionGranted()) {
             val process = com.rosan.dhizuku.api.Dhizuku.newProcess(command, null, null)
@@ -385,7 +385,7 @@ private fun executeDhizukuCommandSilent(command: Array<String>): Boolean {
     } catch (e: Exception) { false }
 }
 
-private fun executeShizukuCommandSilent(command: Array<String>): Boolean {
+internal fun executeShizukuCommandSilent(command: Array<String>): Boolean {
     if (!rikka.shizuku.Shizuku.pingBinder()) return false
     return try {
         val method = rikka.shizuku.Shizuku::class.java.declaredMethods.find {
@@ -399,7 +399,7 @@ private fun executeShizukuCommandSilent(command: Array<String>): Boolean {
     } catch (e: Exception) { false }
 }
 
-private fun executeCommandSilent(command: Array<String>): Boolean {
+internal fun executeCommandSilent(command: Array<String>): Boolean {
     return try {
         Runtime.getRuntime().exec(command).waitFor() == 0
     } catch (e: Exception) { false }

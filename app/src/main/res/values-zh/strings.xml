@@ -313,6 +313,7 @@
     <string name="dock_style">Dock欄風格</string>
     <string name="dock_style_current">目前：%1$s</string>
     <string name="dock_radius_label">Dock欄的圓角半徑：%1$d</string>
+    <string name="dock_offset_label">把 Dock 欄抬高一點：%1$d</string>
     <string name="compat_warning_title">相容性上的小小警告~</string>
     <string name="compat_warning_msg">主人～人家要偷偷提醒您喔♡ 這個 Liquid Glass 特效是依賴 Android 12（API 31）裡面新增的系統 API呢～不過主人現在的裝置（API %1$d）可能會有一點點小小的效能問題，或者是出現些許視覺上的小瑕疵…嗚嗚，人家最擔心主人會覺得不完美了～</string>
     <string name="understand">朕知道了</string>

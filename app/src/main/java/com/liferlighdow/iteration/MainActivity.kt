@@ -31,7 +31,16 @@ import androidx.compose.ui.res.stringResource
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.liferlighdow.iteration.ui.IterationTheme
 import com.liferlighdow.iteration.ui.LauncherScreen
 import com.liferlighdow.iteration.ui.ThemeMode
@@ -79,7 +88,12 @@ class MainActivity : AppCompatActivity() {
         )
 
         window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER)
-        enableEdgeToEdge()
+        enableEdgeToEdge(
+            navigationBarStyle = androidx.activity.SystemBarStyle.auto(
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Color.TRANSPARENT
+            )
+        )
         setContent {
             val viewModel: MainViewModel = viewModel()
             val themeMode by viewModel.themeMode.collectAsState()
@@ -87,17 +101,24 @@ class MainActivity : AppCompatActivity() {
             val showStatusBar by viewModel.showStatusBar.collectAsState()
             val showNavigationBar by viewModel.showNavigationBar.collectAsState()
             val isLightWallpaper by viewModel.isLightWallpaper.collectAsState()
+            val density = LocalDensity.current
+            val imeBottom = WindowInsets.ime.getBottom(density)
+            val isImeVisible = imeBottom > 0
             val isMaterialYouEnabled by viewModel.isMaterialYouEnabled.collectAsState()
             val seedColor by viewModel.seedColor.collectAsState()
             val newVersion by viewModel.newVersionAvailable.collectAsState()
             val downloadUrl by viewModel.newVersionDownloadUrl.collectAsState()
+            val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+            val lifecycleState by lifecycleOwner.lifecycle.currentStateFlow.collectAsStateWithLifecycle()
 
-            LaunchedEffect(showStatusBar, showNavigationBar, isLightWallpaper) {
-                val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
-                windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            LaunchedEffect(showStatusBar, showNavigationBar, isLightWallpaper, lifecycleState, imeBottom) {
+                if (lifecycleState != Lifecycle.State.RESUMED) return@LaunchedEffect
                 
-                // 根據桌布明暗設置狀態欄圖示顏色 (淺色桌布使用深色圖示，反之亦然)
+                val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+                
+                // 根據桌布明暗設置狀態欄與導覽列圖示顏色
                 windowInsetsController.isAppearanceLightStatusBars = isLightWallpaper
+                windowInsetsController.isAppearanceLightNavigationBars = isLightWallpaper
 
                 if (showStatusBar) {
                     windowInsetsController.show(WindowInsetsCompat.Type.statusBars())
@@ -106,9 +127,15 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 if (showNavigationBar) {
+                    windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
                     windowInsetsController.show(WindowInsetsCompat.Type.navigationBars())
                 } else {
+                    // 對於無障礙模式，使用最穩定的黏性沉浸模式
+                    windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
                     windowInsetsController.hide(WindowInsetsCompat.Type.navigationBars())
+                    
+                    // 如果進階權限可用且非無障礙模式，LaunchEffect 就只作為 UI 同步。
+                    // 核心隱藏由 setShowNavigationBar 中的 Shell 指令處理。
                 }
             }
 

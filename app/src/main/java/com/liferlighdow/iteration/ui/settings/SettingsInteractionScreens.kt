@@ -51,30 +51,9 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
     val autoAddAppsToHome by viewModel.autoAddAppsToHome.collectAsState()
     val showStatusBar by viewModel.showStatusBar.collectAsState()
     val showNavigationBar by viewModel.showNavigationBar.collectAsState()
+    val dockOffset by viewModel.dockOffset.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
     val isAmoledBlack by viewModel.isAmoledBlack.collectAsState()
-
-    val context = LocalContext.current
-    val window = (context as? AppCompatActivity)?.window
-
-    LaunchedEffect(showStatusBar, showNavigationBar) {
-        window?.let { win ->
-            val windowInsetsController = WindowCompat.getInsetsController(win, win.decorView)
-            windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            
-            if (showStatusBar) {
-                windowInsetsController.show(WindowInsetsCompat.Type.statusBars())
-            } else {
-                windowInsetsController.hide(WindowInsetsCompat.Type.statusBars())
-            }
-
-            if (showNavigationBar) {
-                windowInsetsController.show(WindowInsetsCompat.Type.navigationBars())
-            } else {
-                windowInsetsController.hide(WindowInsetsCompat.Type.navigationBars())
-            }
-        }
-    }
 
     Scaffold(
         topBar = {
@@ -147,6 +126,30 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
                         checked = showNavigationBar,
                         onCheckedChange = { viewModel.setShowNavigationBar(it) }
                     )
+
+                    if (!showNavigationBar) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.VerticalAlignTop, null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(stringResource(R.string.dock_offset_label, dockOffset.toInt()), style = MaterialTheme.typography.bodyMedium)
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(onClick = { viewModel.setDockOffset((dockOffset - 1f).coerceAtLeast(0f)) }) {
+                                    Icon(Icons.Default.Remove, contentDescription = null)
+                                }
+                                Slider(
+                                    value = dockOffset,
+                                    onValueChange = { viewModel.setDockOffset(it) },
+                                    valueRange = 0f..20f,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                IconButton(onClick = { viewModel.setDockOffset((dockOffset + 1f).coerceAtMost(20f)) }) {
+                                    Icon(Icons.Default.Add, contentDescription = null)
+                                }
+                            }
+                        }
+                    }
                 }
             }
 

@@ -430,6 +430,11 @@ fun MainViewModel.setDockCornerRadius(radius: Float) {
     prefs.edit().putFloat("dock_corner_radius", radius).apply()
 }
 
+fun MainViewModel.setDockOffset(offset: Float) {
+    _dockOffset.value = offset
+    prefs.edit().putFloat("dock_offset", offset).apply()
+}
+
 fun MainViewModel.setSearchEngineUrl(url: String) {
     _searchEngineUrl.value = url
     prefs.edit().putString("search_engine_url", url).apply()
@@ -519,6 +524,30 @@ fun MainViewModel.setShowStatusBar(enabled: Boolean) {
 fun MainViewModel.setShowNavigationBar(enabled: Boolean) {
     _showNavigationBar.value = enabled
     prefs.edit().putBoolean("show_navigation_bar", enabled).apply()
+    syncNavigationBarHardHide(enabled)
+}
+
+fun MainViewModel.syncNavigationBarHardHide(enabled: Boolean) {
+    // 針對進階模式 (Shizuku/Dhizuku/ROOT)，使用指令強制執行沉浸模式
+    val mode = _actionMode.value
+    if (mode == ActionMode.SHIZUKU || mode == ActionMode.DHIZUKU || mode == ActionMode.ROOT) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val command = if (!enabled) {
+                // 強制全局隱藏導覽列 (沉浸模式)
+                "settings put global policy_control immersive.navigation=*"
+            } else {
+                // 恢復預設
+                "settings put global policy_control null"
+            }
+            
+            when (mode) {
+                ActionMode.SHIZUKU -> executeShizukuCommandSilent(command.split(" ").toTypedArray())
+                ActionMode.DHIZUKU -> executeDhizukuCommandSilent(command.split(" ").toTypedArray())
+                ActionMode.ROOT -> executeCommandSilent(arrayOf("su", "-c", command))
+                else -> {}
+            }
+        }
+    }
 }
 
 fun MainViewModel.setIconCacheSize(size: Int) {

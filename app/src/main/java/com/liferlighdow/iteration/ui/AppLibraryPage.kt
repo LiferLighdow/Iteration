@@ -38,7 +38,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.foundation.focusable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -48,6 +51,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.hapticfeedback.HapticFeedback
@@ -108,7 +112,22 @@ fun AppLibraryPage(
     var isHiddenUnlocked by remember { mutableStateOf(false) }
     var showPasswordDialog by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
+    val density = LocalDensity.current
+    val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    val dummyFocusRequester = remember { FocusRequester() }
     val mContext = LocalContext.current
+
+    // 自動清除焦點邏輯：當鍵盤放下時，強制將焦點轉移到 dummy 組件
+    val isKeyboardVisible = WindowInsets.ime.getBottom(density) > 0
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(isKeyboardVisible) {
+        if (!isKeyboardVisible && isSearchFocused) {
+            kotlinx.coroutines.delay(100)
+            try { dummyFocusRequester.requestFocus() } catch (e: Exception) { focusManager.clearFocus(force = true) }
+            viewModel.setLibrarySearchFocused(false)
+        }
+    }
 
     val suggestedApps by viewModel.suggestedApps.collectAsState()
     val userCategories by viewModel.userCategories.collectAsState()
@@ -147,6 +166,9 @@ fun AppLibraryPage(
     val showHiddenFolder = hiddenAppsCount > 0 && searchQuery.isBlank() && (selectedCategory == null || selectedCategory == "All") && !password.isNullOrEmpty()
     
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = horizontalPadding)) {
+        // Dummy focus collector to steal focus from TextField
+        Box(Modifier.size(0.dp).focusRequester(dummyFocusRequester).focusable())
+
         // 搜尋欄：縮減垂直 padding 以平衡視覺
         Row(
             modifier = Modifier
@@ -212,8 +234,13 @@ fun AppLibraryPage(
 
             if (isSearchFocused || searchQuery.isNotEmpty()) {
                 TextButton(onClick = {
+                    // 1. 先隱藏鍵盤
+                    keyboardController?.hide()
+                    // 2. 強制將焦點奪走到 dummy collector，徹底殺死 TextField 游標
+                    try { dummyFocusRequester.requestFocus() } catch (e: Exception) { focusManager.clearFocus(force = true) }
+                    
+                    // 3. 同步重置狀態
                     viewModel.setSearchQuery("")
-                    focusManager.clearFocus()
                     viewModel.setLibrarySearchFocused(false)
                 }) {
                     Text(stringResource(R.string.cancel), color = Color.White)

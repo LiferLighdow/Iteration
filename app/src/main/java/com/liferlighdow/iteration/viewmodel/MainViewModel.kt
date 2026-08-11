@@ -530,6 +530,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
     internal val _dockCornerRadius = MutableStateFlow(prefs.getFloat("dock_corner_radius", 42f))
     val dockCornerRadius = _dockCornerRadius.asStateFlow()
 
+    internal val _dockOffset = MutableStateFlow(prefs.getFloat("dock_offset", 0f))
+    val dockOffset = _dockOffset.asStateFlow()
+
     internal val _searchEngineUrl = MutableStateFlow(
         prefs.getString("search_engine_url", "https://www.google.com/search?q=")
             ?: "https://www.google.com/search?q="
@@ -867,6 +870,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
             "dock_corner_radius" -> {
                 _dockCornerRadius.value = sharedPreferences.getFloat(key, 42f)
             }
+            "dock_offset" -> {
+                _dockOffset.value = sharedPreferences.getFloat(key, 0f)
+            }
             "liquid_glass_blur" -> _liquidGlassBlur.value = sharedPreferences.getFloat(key, 0f)
             "liquid_glass_refraction_height" -> _liquidGlassRefractionHeight.value = sharedPreferences.getFloat(key, 24f)
             "liquid_glass_refraction_amount" -> _liquidGlassRefractionAmount.value = sharedPreferences.getFloat(key, 48f)
@@ -998,6 +1004,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
             loadCalendarEvents()
             loadFiles()
             checkSystemNetworkStatus()
+            
+            // 啟動時根據權限狀態與設定，同步沉浸模式
+            if (!_showNavigationBar.value) {
+                syncNavigationBarHardHide(false)
+            }
         }
 
         // 註冊監聽

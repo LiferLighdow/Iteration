@@ -130,7 +130,6 @@ class IconProcessor(private val context: Context) {
             paint.colorFilter = createUnifiedTintFilter(tintColor)
             canvas.drawBitmap(tempBitmap, 0f, 0f, paint)
             paint.colorFilter = null
-            tempBitmap.recycle()
         } else {
             // --- 原始的分層處理邏輯 ---
             val m3Colors = if (isThemed && themeColors != null) {

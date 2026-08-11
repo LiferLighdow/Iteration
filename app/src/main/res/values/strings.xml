@@ -357,6 +357,7 @@
     <string name="dock_style">Dock Style</string>
     <string name="dock_style_current">Current: %1$s</string>
     <string name="dock_radius_label">Dock Corner Radius: %1$d</string>
+    <string name="dock_offset_label">Raise Dock: %1$d</string>
 
     <!-- Settings - Misc -->
     <string name="compat_warning_title">Compatibility Warning</string>

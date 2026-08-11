@@ -360,6 +360,7 @@
     <string name="dock_style">Dock 風格</string>
     <string name="dock_style_current">目前：%1$s</string>
     <string name="dock_radius_label">Dock 圓角半徑：%1$d</string>
+    <string name="dock_offset_label">抬高 Dock：%1$d</string>
 
     <!-- 設定 - 雜項 -->
     <string name="compat_warning_title">相容性警告</string>

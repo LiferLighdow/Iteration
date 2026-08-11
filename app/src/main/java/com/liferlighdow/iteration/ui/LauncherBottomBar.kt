@@ -41,6 +41,8 @@ fun LauncherBottomBar(
     horizontalPadding: Dp = 16.dp,
     desktopPageCount: Int,
     currentPage: Int,
+    dockOffset: Float = 0f,
+    showNavigationBar: Boolean = true,
     // App 數據
     dockApps: List<AppModel>,
     isEditMode: Boolean,
@@ -148,6 +150,10 @@ fun LauncherBottomBar(
 
                 if (dockStyle == DockStyle.MODERN || dockStyle == DockStyle.LITE) {
                     Spacer(modifier = Modifier.height(2.dp))
+                }
+
+                if (!showNavigationBar && dockOffset > 0f) {
+                    Spacer(modifier = Modifier.height(dockOffset.dp))
                 }
             }
         }

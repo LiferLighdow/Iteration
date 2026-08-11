@@ -25,6 +25,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -80,6 +81,7 @@ fun GlobalSearchOverlay(
 
     val mContext = LocalContext.current
     val focusManager = LocalFocusManager.current
+    val density = LocalDensity.current
     val clipboardManager = LocalClipboardManager.current
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -103,6 +105,14 @@ fun GlobalSearchOverlay(
     var showFrozenManager by remember { mutableStateOf(false) }
     var showPrivateManager by remember { mutableStateOf(false) }
     var appToUnfreeze by remember { mutableStateOf<AppModel?>(null) }
+
+    // 自動清除焦點邏輯：當鍵盤放下時，主動清除搜尋框焦點
+    val isKeyboardVisible = WindowInsets.ime.getBottom(density) > 0
+    LaunchedEffect(isKeyboardVisible) {
+        if (!isKeyboardVisible && isVisible) {
+            focusManager.clearFocus()
+        }
+    }
 
     LaunchedEffect(isVisible) {
         if (!isVisible) {

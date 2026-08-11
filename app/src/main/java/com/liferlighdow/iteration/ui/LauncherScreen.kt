@@ -116,6 +116,8 @@ fun LauncherScreen(
     val twoFingerSwipeDownApp by viewModel.twoFingerSwipeDownApp.collectAsState()
     val dockStyle by viewModel.dockStyle.collectAsState()
     val dockCornerRadius by viewModel.dockCornerRadius.collectAsState()
+    val dockOffset by viewModel.dockOffset.collectAsState()
+    val showNavigationBar by viewModel.showNavigationBar.collectAsState()
     val showMinusOnePage by viewModel.showMinusOnePage.collectAsState()
     val showAppLibrary by viewModel.showAppLibrary.collectAsState()
     val isApplyingWallpaper by viewModel.isApplyingWallpaper.collectAsState()
@@ -844,6 +846,8 @@ fun LauncherScreen(
                         chromaticAberration = chromaticAberration,
                         desktopPageCount = desktopPageCount,
                         currentPage = pagerState.currentPage - desktopStartIndex,
+                        dockOffset = dockOffset,
+                        showNavigationBar = showNavigationBar,
                         dockApps = dockApps,
                         isEditMode = isEditMode,
                         myPackageName = myPackageName,

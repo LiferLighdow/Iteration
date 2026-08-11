@@ -84,16 +84,8 @@ class WallpaperProcessor(private val context: Application) {
         val cropH = if (wallpaperAspectRatio > screenAspectRatio) rawBitmap.height else (rawBitmap.width / screenAspectRatio).toInt()
 
         val cropped = Bitmap.createBitmap(rawBitmap, (rawBitmap.width - cropW) / 2, (rawBitmap.height - cropH) / 2, cropW, cropH)
-        // 如果產生了新的裁切圖，且不是原圖，則原圖可以回收（因為在我們的使用場景中原圖是剛 decode 出來的）
-        if (cropped != rawBitmap) {
-            rawBitmap.recycle()
-        }
-
+        
         val scaled = Bitmap.createScaledBitmap(cropped, screenW, screenH, true)
-        // 如果縮放後產生了新圖，回收裁切圖
-        if (scaled != cropped) {
-            cropped.recycle()
-        }
 
         // 計算頂部區域亮度 (Status Bar 所在位置)
         val isLight = systemSuggestedLight ?: calculateIsLight(scaled)
