@@ -1,5 +1,7 @@
 package com.liferlighdow.iteration
 
+import android.content.pm.ActivityInfo
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -33,6 +35,7 @@ import com.liferlighdow.iteration.viewmodel.MainViewModel
 class SettingsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
         enableEdgeToEdge()
         setContent {
             val viewModel: MainViewModel = viewModel()

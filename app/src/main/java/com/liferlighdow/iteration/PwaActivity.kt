@@ -46,6 +46,7 @@ class PwaActivity : ComponentActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
         enableEdgeToEdge()
         
         val url = intent.getStringExtra("url") ?: "https://www.google.com"
