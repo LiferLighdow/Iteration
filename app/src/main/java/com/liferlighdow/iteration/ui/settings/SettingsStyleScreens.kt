@@ -55,7 +55,7 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
     val viewModel: MainViewModel = viewModel()
     val isThemedIconsEnabled by viewModel.isThemedIconsEnabled.collectAsState()
     val currentStyle by viewModel.iconStyle.collectAsState()
-    val currentShape by viewModel.iconShape.collectAsState()
+    val iconCornerRadius by viewModel.iconCornerRadius.collectAsState()
     val currentIconPack by viewModel.iconPackPackage.collectAsState()
     val isDynamicCalendarEnabled by viewModel.isDynamicCalendarEnabled.collectAsState()
     val isDynamicClockEnabled by viewModel.isDynamicClockEnabled.collectAsState()
@@ -106,30 +106,47 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
                         modifier = Modifier.clickable { onNavigateToChangeIcon() }
                     )
 
-                    var expandedShape by remember { mutableStateOf(false) }
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.change_icon_shape)) },
-                        supportingContent = { Text(if (currentShape == IconShape.CIRCLE) stringResource(R.string.shape_circle) else stringResource(R.string.shape_default)) },
-                        leadingContent = { Icon(Icons.Default.Category, null, tint = MaterialTheme.colorScheme.primary) },
-                        trailingContent = {
-                            Box {
-                                IconButton(onClick = { expandedShape = true }) {
-                                    Icon(Icons.Default.ArrowDropDown, null)
-                                }
-                                DropdownMenu(expanded = expandedShape, onDismissRequest = { expandedShape = false }) {
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.shape_default)) },
-                                        onClick = { viewModel.setIconShape(IconShape.DEFAULT); expandedShape = false }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.shape_circle)) },
-                                        onClick = { viewModel.setIconShape(IconShape.CIRCLE); expandedShape = false }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            val previewIcons = listOf(Icons.Default.Call, Icons.Default.Chat, Icons.Default.CameraAlt, Icons.Default.Settings)
+                            previewIcons.forEach { icon ->
+                                Box(
+                                    modifier = Modifier
+                                        .size(56.dp)
+                                        .clip(RoundedCornerShape(56.dp * iconCornerRadius))
+                                        .background(MaterialTheme.colorScheme.primaryContainer)
+                                        .border(
+                                            0.5.dp, 
+                                            MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), 
+                                            RoundedCornerShape(56.dp * iconCornerRadius)
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = icon,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        modifier = Modifier.size(28.dp)
                                     )
                                 }
                             }
-                        },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        modifier = Modifier.clickable { expandedShape = true }
+                        }
+                    }
+
+                    SettingSliderItem(
+                        label = stringResource(R.string.change_icon_shape) + ": ${(iconCornerRadius * 100).toInt()}%",
+                        value = iconCornerRadius * 100f,
+                        onValueChange = { viewModel.setIconCornerRadius(it / 100f) },
+                        valueRange = 0f..50f,
+                        steps = 0,
+                        onIncrement = { viewModel.setIconCornerRadius((iconCornerRadius + 0.01f).coerceAtMost(0.5f)) },
+                        onDecrement = { viewModel.setIconCornerRadius((iconCornerRadius - 0.01f).coerceAtLeast(0f)) }
                     )
                 }
             }
@@ -383,8 +400,8 @@ fun IconPackPickerDialog(
             all
         }
     }
-    val currentShape by viewModel.iconShape.collectAsState()
-    val shape = if (currentShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp)
+    val iconCornerRadius by viewModel.iconCornerRadius.collectAsState()
+    val shape = RoundedCornerShape(40.dp * iconCornerRadius)
 
     var showBuiltinSetup by remember { mutableStateOf(false) }
 
@@ -600,7 +617,7 @@ fun CustomIconStylePickerDialog(
     val useOriginalBg by viewModel.customIconUseOriginalBg.collectAsState()
     val useDominantColor by viewModel.customIconUseDominantColor.collectAsState()
     val customIconPack by viewModel.customIconPackPackage.collectAsState()
-    val iconShape by viewModel.iconShape.collectAsState()
+    val iconCornerRadius by viewModel.iconCornerRadius.collectAsState()
     val globalIconPack by viewModel.iconPackPackage.collectAsState()
     val isSystemMonochrome = globalIconPack == "system_monochrome"
 
@@ -615,7 +632,7 @@ fun CustomIconStylePickerDialog(
     // 優化點：將耗時的圖標處理移至後台線程，避免阻塞 UI 滑動
     val previewBitmap by produceState<androidx.compose.ui.graphics.ImageBitmap?>(
         initialValue = null, 
-        bgColor, fgColor, useOriginal, useOriginalBg, useDominantColor, iconShape, customIconPack, isSystemMonochrome, hue, saturation, brightness
+        bgColor, fgColor, useOriginal, useOriginalBg, useDominantColor, iconCornerRadius, customIconPack, isSystemMonochrome, hue, saturation, brightness
     ) {
         value = withContext(Dispatchers.Default) {
             val processor = IconProcessor(context)
@@ -631,7 +648,7 @@ fun CustomIconStylePickerDialog(
                 isThemed = false,
                 themeColors = null,
                 style = IconStyle.CUSTOM,
-                shape = iconShape,
+                cornerRadiusPercent = iconCornerRadius,
                 sizePx = (64 * density).toInt(),
                 isIconPack = customIconPack.isNotEmpty() && sourceIcon != previewIcon,
                 customBgColor = bgColor,
@@ -657,10 +674,10 @@ fun CustomIconStylePickerDialog(
                     Image(
                         bitmap = previewBitmap!!,
                         contentDescription = null,
-                        modifier = Modifier.size(48.dp).clip(if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(12.dp)).background(Color.White.copy(alpha = 0.1f))
+                        modifier = Modifier.size(48.dp).clip(RoundedCornerShape(48.dp * iconCornerRadius)).background(Color.White.copy(alpha = 0.1f))
                     )
                 } else {
-                    Box(modifier = Modifier.size(48.dp).background(Color.Gray.copy(alpha = 0.1f), if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(12.dp)))
+                    Box(modifier = Modifier.size(48.dp).background(Color.Gray.copy(alpha = 0.1f), RoundedCornerShape(48.dp * iconCornerRadius)))
                 }
             }
         },
@@ -791,12 +808,11 @@ fun ChangeIconScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val viewModel: MainViewModel = viewModel()
     val allApps by viewModel.allApps.collectAsState()
-    val iconShape by viewModel.iconShape.collectAsState()
+    val iconCornerRadius by viewModel.iconCornerRadius.collectAsState()
 
     // 與 IconProcessor 邏輯保持一致的 UI 形狀
-    val shape = remember(iconShape) {
-        if (iconShape == IconShape.CIRCLE) CircleShape
-        else RoundedCornerShape(10.dp) // 40dp * 0.238 ≈ 10dp
+    val shape = remember(iconCornerRadius) {
+        RoundedCornerShape(40.dp * iconCornerRadius)
     }
 
     var searchQuery by remember { mutableStateOf("") }
@@ -957,7 +973,7 @@ fun ChangeIconScreen(onBack: () -> Unit) {
                                             canvas.drawBitmap(rawBitmap, offset, offset, paint)
 
                                             // 3. 套用遮罩進行裁切
-                                            val mask = viewModel.iconProcessor.getOrCreateMask(iconShape, size)
+                                            val mask = viewModel.iconProcessor.getOrCreateMask(iconCornerRadius, size)
                                             paint.xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.DST_IN)
                                             canvas.drawBitmap(mask, 0f, 0f, paint)
 
@@ -990,7 +1006,7 @@ fun ChangeIconScreen(onBack: () -> Unit) {
 
                     canvas.drawBitmap(croppedBitmap, 0f, 0f, paint)
 
-                    val mask = viewModel.iconProcessor.getOrCreateMask(iconShape, size)
+                    val mask = viewModel.iconProcessor.getOrCreateMask(iconCornerRadius, size)
                     paint.xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.DST_IN)
                     canvas.drawBitmap(mask, 0f, 0f, paint)
 

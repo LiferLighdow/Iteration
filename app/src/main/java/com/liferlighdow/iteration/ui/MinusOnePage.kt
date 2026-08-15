@@ -519,6 +519,7 @@ fun MinusOnePage(
                                         onClick = {
                                             onUpdateWidgetMode(widget.id, if (widget.displayMode == WidgetDisplayMode.COLOR) WidgetDisplayMode.GLASS else WidgetDisplayMode.COLOR)
                                             showContextMenu = false
+                                            viewModel.setActiveContextMenuId(null)
                                         }
                                     )
                                 }
@@ -530,13 +531,18 @@ fun MinusOnePage(
                                             photoToPick = widget
                                             photoPickerLauncher.launch("image/*")
                                             showContextMenu = false
+                                            viewModel.setActiveContextMenuId(null)
                                         }
                                     )
                                     if ((widget.type as WidgetType.Photo).uri != null) {
                                         DropdownMenuItem(
                                             text = { Text(stringResource(R.string.adjust_position)) },
                                             leadingIcon = { Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary) },
-                                            onClick = { photoToAdjust = widget; showContextMenu = false }
+                                            onClick = { 
+                                                photoToAdjust = widget
+                                                showContextMenu = false
+                                                viewModel.setActiveContextMenuId(null)
+                                            }
                                         )
                                     }
                                 }
@@ -544,42 +550,66 @@ fun MinusOnePage(
                                     DropdownMenuItem(
                                         text = { Text(stringResource(R.string.menu_choose_widgets)) },
                                         leadingIcon = { Icon(Icons.Default.Settings, null) },
-                                        onClick = { stackToEdit = widget; showContextMenu = false }
+                                        onClick = { 
+                                            stackToEdit = widget
+                                            showContextMenu = false
+                                            viewModel.setActiveContextMenuId(null)
+                                        }
                                     )
                                 }
                                 if (widget.type is WidgetType.Note) {
                                     DropdownMenuItem(
                                         text = { Text(stringResource(R.string.edit_note)) },
                                         leadingIcon = { Icon(Icons.Default.Edit, null) },
-                                        onClick = { noteToEdit = widget; showContextMenu = false }
+                                        onClick = { 
+                                            noteToEdit = widget
+                                            showContextMenu = false
+                                            viewModel.setActiveContextMenuId(null)
+                                        }
                                     )
                                 }
                                 if (widget.type is WidgetType.ToDoList) {
                                     DropdownMenuItem(
                                         text = { Text(stringResource(R.string.edit_todo)) },
                                         leadingIcon = { Icon(Icons.Default.PlaylistAddCheck, null) },
-                                        onClick = { todoToEdit = widget; showContextMenu = false }
+                                        onClick = { 
+                                            todoToEdit = widget
+                                            showContextMenu = false
+                                            viewModel.setActiveContextMenuId(null)
+                                        }
                                     )
                                 }
                                 if (widget.type is WidgetType.Weather) {
                                     DropdownMenuItem(
                                         text = { Text(stringResource(R.string.choose_location)) },
                                         leadingIcon = { Icon(Icons.Default.LocationOn, null) },
-                                        onClick = { weatherToEdit = widget; showContextMenu = false }
+                                        onClick = { 
+                                            weatherToEdit = widget
+                                            showContextMenu = false
+                                            viewModel.setActiveContextMenuId(null)
+                                        }
                                     )
                                 }
                                 if (widget.type is WidgetType.RSS) {
                                     DropdownMenuItem(
                                         text = { Text(stringResource(R.string.edit_rss)) },
                                         leadingIcon = { Icon(Icons.Default.RssFeed, null) },
-                                        onClick = { rssToEdit = widget; showContextMenu = false }
+                                        onClick = { 
+                                            rssToEdit = widget
+                                            showContextMenu = false
+                                            viewModel.setActiveContextMenuId(null)
+                                        }
                                     )
                                 }
                                 if (widget.type is WidgetType.Countdown) {
                                     DropdownMenuItem(
                                         text = { Text(stringResource(R.string.edit_countdown)) },
                                         leadingIcon = { Icon(Icons.Default.Edit, null) },
-                                        onClick = { countdownToEdit = widget; showContextMenu = false }
+                                        onClick = { 
+                                            countdownToEdit = widget
+                                            showContextMenu = false
+                                            viewModel.setActiveContextMenuId(null)
+                                        }
                                     )
                                 }
                             }
@@ -623,7 +653,7 @@ fun MinusOnePage(
             ) {
                 val allApps by viewModel.allApps.collectAsState()
                 val contacts by viewModel.contacts.collectAsState()
-                val iconShape by viewModel.iconShape.collectAsState()
+                val iconCornerRadius by viewModel.iconCornerRadius.collectAsState()
 
                 val filteredApps = remember(searchQuery, allApps) {
                     if (searchQuery.isBlank()) emptyList()
@@ -661,7 +691,7 @@ fun MinusOnePage(
                                         headlineContent = { Text(app.label, color = contentColor) },
                                         leadingContent = {
                                             if (appIcon != null) {
-                                                val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(48.dp * 0.238f)
+                                                val shape = RoundedCornerShape(48.dp * iconCornerRadius)
                                                 Image(
                                                     bitmap = appIcon,
                                                     contentDescription = null,

@@ -52,7 +52,7 @@ fun FrozenAppsManagerDialog(
     onUnfreezeClick: (AppModel) -> Unit
 ) {
     val viewModel: MainViewModel = viewModel()
-    val iconShape by viewModel.iconShape.collectAsState()
+    val iconCornerRadius by viewModel.iconCornerRadius.collectAsState()
     
     val frozenApps = remember(allApps) { 
         allApps.filter { it.isFrozen }
@@ -75,7 +75,7 @@ fun FrozenAppsManagerDialog(
                             leadingContent = {
                                 val icon = viewModel.getIcon(app.uniqueId)
                                 if (icon != null) {
-                                    val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(40.dp * 0.238f)
+                                    val shape = RoundedCornerShape(40.dp * iconCornerRadius)
                                     val colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
                                     Image(
                                         bitmap = icon, 
@@ -125,7 +125,7 @@ fun PrivateSpaceManagerDialog(
     val mContext = LocalContext.current
     val privateApps = remember(allApps) { allApps.filter { it.isPrivate && !it.uniqueId.startsWith("private_seed") } }
     val isLocked by viewModel.isPrivateSpaceLocked.collectAsState()
-    val iconShape by viewModel.iconShape.collectAsState()
+    val iconCornerRadius by viewModel.iconCornerRadius.collectAsState()
     
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -172,7 +172,7 @@ fun PrivateSpaceManagerDialog(
                                     leadingContent = {
                                         val icon = viewModel.getIcon(app.uniqueId)
                                         if (icon != null) {
-                                            val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(40.dp * 0.238f)
+                                            val shape = RoundedCornerShape(40.dp * iconCornerRadius)
                                             Image(
                                                 bitmap = icon, 
                                                 contentDescription = null, 

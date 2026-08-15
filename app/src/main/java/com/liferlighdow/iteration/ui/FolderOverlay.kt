@@ -55,7 +55,7 @@ fun FolderOverlay(
     isEditMode: Boolean,
     viewModel: MainViewModel,
     backdrop: Backdrop?,
-    iconShape: IconShape,
+    iconCornerRadius: Float,
     blurRadius: Float,
     refractionHeight: Float,
     refractionAmount: Float,
@@ -244,7 +244,8 @@ fun FolderOverlay(
                                                     iconSize = 64.dp * iconScaleFactor,
                                                     isLiquidGlass = isLiquidGlassEnabled && isLiquidGlassHomeFolderEnabled,
                                                     backdrop = backdrop,
-                                                    iconShape = iconShape,
+                                                    iconCornerRadius = iconCornerRadius,
+                                                    libraryCornerRadius = iconCornerRadius,
                                                     blurRadius = blurRadius,
                                                     refractionHeight = refractionHeight,
                                                     refractionAmount = refractionAmount,
@@ -441,7 +442,7 @@ fun FolderOverlay(
             if (showAppPicker) {
                 MultiAppPickerDialog(
                     allApps = allAppsFlat,
-                    iconShape = iconShape,
+                    iconCornerRadius = iconCornerRadius,
                     viewModel = viewModel,
                     initialSelectedIds = currentFolder.folderItems.map { it.uniqueId },
                     onDismiss = { showAppPicker = false },

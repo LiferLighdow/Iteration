@@ -221,13 +221,31 @@ fun MainViewModel.setCustomIconPackPackage(packageName: String) {
 fun MainViewModel.setIconShape(shape: IconShape) {
     _iconShape.value = shape
     prefs.edit().putString("icon_shape", shape.name).apply()
+    val radius = if (shape == IconShape.CIRCLE) 0.5f else 0.25f
+    _iconCornerRadius.value = radius
+    prefs.edit().putFloat("icon_corner_radius", radius).apply()
     shouldRefreshIconsOnReturn = true
     loadApps()
+}
+
+fun MainViewModel.setIconCornerRadius(value: Float) {
+    _iconCornerRadius.value = value
+    prefs.edit().putFloat("icon_corner_radius", value).apply()
+    _iconShape.value = if (value >= 0.49f) IconShape.CIRCLE else IconShape.DEFAULT
 }
 
 fun MainViewModel.setLibraryShape(shape: IconShape) {
     _libraryShape.value = shape
     prefs.edit().putString("library_shape", shape.name).apply()
+    val radius = if (shape == IconShape.CIRCLE) 0.5f else 0.25f
+    _libraryCornerRadius.value = radius
+    prefs.edit().putFloat("library_corner_radius", radius).apply()
+}
+
+fun MainViewModel.setLibraryCornerRadius(value: Float) {
+    _libraryCornerRadius.value = value
+    prefs.edit().putFloat("library_corner_radius", value).apply()
+    _libraryShape.value = if (value >= 0.49f) IconShape.CIRCLE else IconShape.DEFAULT
 }
 
 fun MainViewModel.setIconPack(packageName: String) {

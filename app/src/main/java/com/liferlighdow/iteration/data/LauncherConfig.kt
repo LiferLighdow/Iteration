@@ -47,6 +47,8 @@ data class LauncherSettings(
     val iconStyle: IconStyle = IconStyle.STANDARD,
     val iconShape: IconShape = IconShape.DEFAULT,
     val libraryShape: IconShape = IconShape.DEFAULT,
+    val iconCornerRadius: Float = 0.25f,
+    val libraryCornerRadius: Float = 0.25f,
     val searchEngineUrl: String = "https://www.google.com/search?q=",
     val searchKeywordsEnabled: Boolean = true,
     val searchCalculatorEnabled: Boolean = true,

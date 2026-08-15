@@ -29,7 +29,7 @@ fun LauncherBottomBar(
     isLiquidGlassDockEnabled: Boolean,
     backdrop: LayerBackdrop,
     iconSize: Dp,
-    iconShape: IconShape,
+    iconCornerRadius: Float,
     dockStyle: DockStyle,
     dockCornerRadius: Float,
     // 模糊與效果參數 (注意型別與子組件一致)
@@ -132,7 +132,7 @@ fun LauncherBottomBar(
                         backdrop = backdrop,
                         dockStyle = dockStyle,
                         dockCornerRadius = dockCornerRadius,
-                        iconShape = iconShape,
+                        iconCornerRadius = iconCornerRadius,
                         blurRadius = blurRadius,
                         refractionHeight = refractionHeight,
                         refractionAmount = refractionAmount,

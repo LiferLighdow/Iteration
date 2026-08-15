@@ -96,8 +96,8 @@ fun LauncherScreen(
     val isLiquidGlassGlobalSearchEnabled by viewModel.isLiquidGlassGlobalSearchEnabled.collectAsState()
     val isLiquidGlassAppLibrarySearchEnabled by viewModel.isLiquidGlassAppLibrarySearchEnabled.collectAsState()
 
-    val iconShape by viewModel.iconShape.collectAsState()
-    val libraryShape by viewModel.libraryShape.collectAsState()
+    val iconCornerRadius by viewModel.iconCornerRadius.collectAsState()
+    val libraryCornerRadius by viewModel.libraryCornerRadius.collectAsState()
     val blurRadius by viewModel.liquidGlassBlur.collectAsState()
     val refractionHeight by viewModel.liquidGlassRefractionHeight.collectAsState()
     val refractionAmount by viewModel.liquidGlassRefractionAmount.collectAsState()
@@ -557,7 +557,7 @@ fun LauncherScreen(
                                 pageOffsetProvider = pageOffsetProvider,
                                 isLiquidGlass = isLiquidGlassEnabled && isLiquidGlassHomeFolderEnabled,
                                 backdrop = backdrop,
-                                iconShape = iconShape,
+                                iconCornerRadius = iconCornerRadius,
                                 blurRadius = blurRadius,
                                 refractionHeight = refractionHeight,
                                 refractionAmount = refractionAmount,
@@ -744,8 +744,8 @@ fun LauncherScreen(
                                 isLiquidGlass = isLiquidGlassEnabled && isLiquidGlassAppLibraryFolderEnabled,
                                 isSearchLiquidGlass = isLiquidGlassEnabled && isLiquidGlassAppLibrarySearchEnabled,
                                 backdrop = backdrop,
-                                iconShape = iconShape,
-                                libraryShape = libraryShape,
+                                iconCornerRadius = iconCornerRadius,
+                                libraryCornerRadius = libraryCornerRadius,
                                 blurRadius = blurRadius,
                                 refractionHeight = refractionHeight,
                                 refractionAmount = refractionAmount,
@@ -837,7 +837,7 @@ fun LauncherScreen(
                         backdrop = backdrop,
                         iconSize = iconSize,
                         horizontalPadding = horizontalPadding,
-                        iconShape = iconShape,
+                        iconCornerRadius = iconCornerRadius,
                         dockStyle = dockStyle,
                         dockCornerRadius = dockCornerRadius,
                         blurRadius = blurRadius,
@@ -969,7 +969,8 @@ fun LauncherScreen(
                         app = app,
                         iconSize = iconSize,
                         showLabel = false,
-                        iconShape = iconShape,
+                        iconCornerRadius = iconCornerRadius,
+                        libraryCornerRadius = iconCornerRadius,
                         isLiquidGlass = isLiquidGlassEnabled,
                         backdrop = backdrop,
                         blurRadius = blurRadius,
@@ -987,6 +988,7 @@ fun LauncherScreen(
             onDismiss = { showGlobalSearch = false },
             allApps = allAppsFlat,
             suggestedApps = viewModel.suggestedApps.collectAsState().value,
+            iconCornerRadius = iconCornerRadius,
             onAppClick = { app, pos ->
                 if (app.isFrozen) appToUnfreeze = app
                 else {
@@ -1001,7 +1003,6 @@ fun LauncherScreen(
                     viewModel.launchApp(app, rect)
                 }
             },
-            iconShape = iconShape,
             isLiquidGlassEnabled = isLiquidGlassEnabled,
             isLiquidGlassGlobalSearchEnabled = isLiquidGlassGlobalSearchEnabled,
             backdrop = backdrop,
@@ -1076,7 +1077,7 @@ fun LauncherScreen(
         allAppsFlat = allAppsFlat,
         isDefaultLauncher = isDefaultLauncher,
         isEditMode = isEditMode,
-        iconShape = iconShape,
+        iconCornerRadius = iconCornerRadius,
         backdrop = backdrop,
         blurRadius = blurRadius,
         refractionHeight = refractionHeight,

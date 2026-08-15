@@ -558,7 +558,7 @@ fun MainViewModel.processNewIcon(
     isExcluded: Boolean,
     themeColors: ColorScheme?,
     currentStyle: IconStyle,
-    currentShape: IconShape,
+    iconCornerRadius: Float,
     sizePx: Int,
     customBg: Int,
     customFg: Int,
@@ -599,7 +599,7 @@ fun MainViewModel.processNewIcon(
     val customBrightness = _customIconBrightness.value
 
     if (isExcluded) {
-        return iconProcessor.processIcon(finalRawIcon, false, null, IconStyle.STANDARD, currentShape, sizePx, customBgColor = 0, customFgColor = 0, customUseOriginal = true, customUseOriginalBg = true, customUseDominantColor = false, useMonochrome = false, customHue = customHue, customSaturation = customSaturation, customBrightness = customBrightness, originalIcon = null, userId = app.userId, calendarDay = calendarDay, clockTime = clockTime)
+        return iconProcessor.processIcon(finalRawIcon, false, null, IconStyle.STANDARD, iconCornerRadius, sizePx, customBgColor = 0, customFgColor = 0, customUseOriginal = true, customUseOriginalBg = true, customUseDominantColor = false, useMonochrome = false, customHue = customHue, customSaturation = customSaturation, customBrightness = customBrightness, originalIcon = null, userId = app.userId, calendarDay = calendarDay, clockTime = clockTime)
     }
 
     val builtinSelected = _builtinIconSelectedPackages.value
@@ -619,7 +619,7 @@ fun MainViewModel.processNewIcon(
         isThemed,
         themeColors,
         currentStyle,
-        currentShape,
+        iconCornerRadius,
         sizePx,
         isIconPack = isFromIconPack,
         customBgColor = customBg,
@@ -873,6 +873,7 @@ fun MainViewModel.loadApps() {
         val isThemed = _isThemedIconsEnabled.value
         val currentStyle = _iconStyle.value
         val currentShape = _iconShape.value
+        val currentIconCornerRadius = _iconCornerRadius.value
         val currentIconPack = _iconPackPackage.value
         val customIconPack = _customIconPackPackage.value
         
@@ -951,9 +952,9 @@ fun MainViewModel.loadApps() {
         }
 
         val newStyleSuffix = if (currentIconPack.isNotEmpty()) {
-            "IP_V13_${currentIconPack.hashCode()}_${currentShape.name}_${currentStyle.name}_${if (isThemed) "T_$colorKey" else "N"}_${customKey}_Q$renderingSizePx"
+            "IP_V15_${currentIconPack.hashCode()}_${currentStyle.name}_${if (isThemed) "T_$colorKey" else "N"}_${customKey}_Q$renderingSizePx"
         } else {
-            "V13_${currentStyle.name}_${currentShape.name}_${if (isThemed) "T_$colorKey" else "N"}_${customKey}_Q$renderingSizePx"
+            "V15_${currentStyle.name}_${if (isThemed) "T_$colorKey" else "N"}_${customKey}_Q$renderingSizePx"
         }
 
         if (currentStyleSuffix != newStyleSuffix) {
@@ -1017,7 +1018,7 @@ fun MainViewModel.loadApps() {
                                     val processed = if (app.isPWA) {
                                         generatePwaIcon(app, renderingSizePx)?.asImageBitmap()
                                     } else {
-                                        processNewIcon(app, currentIconPack, isThemed, isExcluded, themeColors, currentStyle, currentShape, renderingSizePx, customBg, customFg, customOriginal, customOriginalBg, customUseDominantColor, customIconPack, activityInfoCache, calendarDayToPass, clockTimeToPass)
+                                        processNewIcon(app, currentIconPack, isThemed, isExcluded, themeColors, currentStyle, currentIconCornerRadius, renderingSizePx, customBg, customFg, customOriginal, customOriginalBg, customUseDominantColor, customIconPack, activityInfoCache, calendarDayToPass, clockTimeToPass)
                                     }
                                     
                                     processed?.let {
@@ -1571,10 +1572,9 @@ private suspend fun MainViewModel.generatePwaIcon(app: AppModel, sizePx: Int): B
     val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     
     // 繪製背景
-    val shape = _iconShape.value
-    val mask = iconProcessor.getOrCreateMask(shape, sizePx)
+    // 直接繪製背景矩形，圓角交由 UI 層裁切
     paint.color = app.pwaBgColor
-    canvas.drawBitmap(mask, 0f, 0f, paint)
+    canvas.drawRect(0f, 0f, sizePx.toFloat(), sizePx.toFloat(), paint)
     
     // 繪製前景 (Favicon)
     if (result != null) {

@@ -67,7 +67,7 @@ fun LauncherOverlays(
     allAppsFlat: List<AppModel>,
     isDefaultLauncher: Boolean,
     isEditMode: Boolean,
-    iconShape: IconShape,
+    iconCornerRadius: Float,
     backdrop: LayerBackdrop,
     blurRadius: Float,
     refractionHeight: Float,
@@ -230,7 +230,7 @@ fun LauncherOverlays(
     if (showDockPicker != null) {
         AppPickerDialog(
             allApps = allAppsFlat.filter { !it.isHidden },
-            iconShape = iconShape,
+            iconCornerRadius = iconCornerRadius,
             viewModel = viewModel,
             onDismiss = onDismissDockPicker,
             onAppSelected = { app: AppModel -> 
@@ -269,7 +269,7 @@ fun LauncherOverlays(
         isEditMode = isEditMode,
         viewModel = viewModel,
         backdrop = backdrop,
-        iconShape = iconShape,
+        iconCornerRadius = iconCornerRadius,
         blurRadius = blurRadius,
         refractionHeight = refractionHeight,
         refractionAmount = refractionAmount,
@@ -289,7 +289,7 @@ fun LauncherOverlays(
 @Composable
 fun AppPickerDialog(
     allApps: List<AppModel>,
-    iconShape: IconShape = IconShape.DEFAULT,
+    iconCornerRadius: Float = 0.25f,
     viewModel: MainViewModel,
     onDismiss: () -> Unit,
     onAppSelected: (AppModel) -> Unit
@@ -331,7 +331,7 @@ fun AppPickerDialog(
                             leadingContent = {
                                 val appIcon = viewModel.getIcon(app.uniqueId)
                                 if (appIcon != null) {
-                                    val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp)
+                                    val shape = RoundedCornerShape(40.dp * iconCornerRadius)
                                     Image(bitmap = appIcon, contentDescription = null, modifier = Modifier.size(40.dp).clip(shape))
                                 }
                             },
@@ -404,7 +404,7 @@ fun QuickEditDialog(
 @Composable
 fun MultiAppPickerDialog(
     allApps: List<AppModel>,
-    iconShape: IconShape = IconShape.DEFAULT,
+    iconCornerRadius: Float = 0.25f,
     viewModel: MainViewModel,
     initialSelectedIds: List<String>,
     onDismiss: () -> Unit,
@@ -443,7 +443,7 @@ fun MultiAppPickerDialog(
                             leadingContent = {
                                 val appIcon = viewModel.getIcon(app.uniqueId)
                                 if (appIcon != null) {
-                                    val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp)
+                                    val shape = RoundedCornerShape(40.dp * iconCornerRadius)
                                     Image(bitmap = appIcon, contentDescription = null, modifier = Modifier.size(40.dp).clip(shape))
                                 }
                             },

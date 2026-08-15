@@ -29,6 +29,8 @@ fun MainViewModel.exportConfig(): String {
             iconStyle = _iconStyle.value,
             iconShape = _iconShape.value,
             libraryShape = _libraryShape.value,
+            iconCornerRadius = _iconCornerRadius.value,
+            libraryCornerRadius = _libraryCornerRadius.value,
             searchEngineUrl = _searchEngineUrl.value,
             searchKeywordsEnabled = _searchKeywordsEnabled.value,
             searchCalculatorEnabled = _searchCalculatorEnabled.value,
@@ -192,6 +194,8 @@ fun MainViewModel.applyConfig(config: LauncherConfig) {
         putString("icon_style", settings.iconStyle.name)
         putString("icon_shape", settings.iconShape.name)
         putString("library_shape", settings.libraryShape.name)
+        putFloat("icon_corner_radius", settings.iconCornerRadius)
+        putFloat("library_corner_radius", settings.libraryCornerRadius)
         putString("search_engine_url", settings.searchEngineUrl)
         putInt("page_size", settings.pageSize)
         putString("password", settings.password)
@@ -241,6 +245,8 @@ fun MainViewModel.applyConfig(config: LauncherConfig) {
     _iconStyle.value = settings.iconStyle
     _iconShape.value = settings.iconShape
     _libraryShape.value = settings.libraryShape
+    _iconCornerRadius.value = settings.iconCornerRadius
+    _libraryCornerRadius.value = settings.libraryCornerRadius
     _searchEngineUrl.value = settings.searchEngineUrl
     pageSize = settings.pageSize
     _themeMode.value = settings.themeMode

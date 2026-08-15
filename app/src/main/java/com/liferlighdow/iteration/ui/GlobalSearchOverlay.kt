@@ -62,7 +62,7 @@ fun GlobalSearchOverlay(
     allApps: List<AppModel>,
     suggestedApps: List<AppModel>,
     onAppClick: (AppModel, Offset) -> Unit,
-    iconShape: IconShape,
+    iconCornerRadius: Float,
     isLiquidGlassEnabled: Boolean,
     isLiquidGlassGlobalSearchEnabled: Boolean,
     backdrop: Backdrop?,
@@ -240,7 +240,7 @@ fun GlobalSearchOverlay(
                         item { TranslationResultCard(translationResult, isTranslating, clipboardManager, mContext) }
                     }
 
-                    if (filteredResults.isNotEmpty()) item { AppResultSection(filteredResults, iconShape, { viewModel.getIcon(it) }, { app, pos -> onAppClick(app, pos); onDismiss() }) }
+                    if (filteredResults.isNotEmpty()) item { AppResultSection(filteredResults, iconCornerRadius, { viewModel.getIcon(it) }, { app, pos -> onAppClick(app, pos); onDismiss() }) }
 
                     val filteredContacts = contacts.filter { it.name.contains(query, ignoreCase = true) || it.phoneNumber.contains(query) }
                     if (filteredContacts.isNotEmpty()) item { ContactResultSection(filteredContacts, mContext, onDismiss) }
@@ -344,7 +344,7 @@ private fun SearchStartPage(
     val allApps by viewModel.allApps.collectAsState()
     val suggestedApps by viewModel.suggestedApps.collectAsState()
     val iconScaleFactor by viewModel.iconScale.collectAsState()
-    val iconShape by viewModel.iconShape.collectAsState()
+    val iconCornerRadius by viewModel.iconCornerRadius.collectAsState()
     val clipboardText = clipboard.getText()?.text
 
     Column {
@@ -371,7 +371,7 @@ private fun SearchStartPage(
         val favoriteApps = allApps.filter { favoritePackages.contains(it.packageName) && !it.isHidden && !it.isFrozen && !it.isPrivate }.take(8)
         if (favoriteApps.isNotEmpty()) {
             Text(stringResource(R.string.favorites), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 12.dp, bottom = 12.dp))
-            AppGrid(favoriteApps, iconScaleFactor, iconShape, viewModel) { app, pos -> onAppClick(app, pos); onDismiss() }
+            AppGrid(favoriteApps, iconScaleFactor, iconCornerRadius, viewModel) { app, pos -> onAppClick(app, pos); onDismiss() }
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = glassFallbackColor(0.15f))
         }
 
@@ -379,12 +379,12 @@ private fun SearchStartPage(
         else allApps.filter { !it.isHidden && !it.isFrozen && !it.isPrivate }.take(8)
         
         Text(stringResource(R.string.app_suggestions), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 12.dp, bottom = 12.dp))
-        AppGrid(suggestions, iconScaleFactor, iconShape, viewModel) { app, pos -> onAppClick(app, pos); onDismiss() }
+        AppGrid(suggestions, iconScaleFactor, iconCornerRadius, viewModel) { app, pos -> onAppClick(app, pos); onDismiss() }
     }
 }
 
 @Composable
-private fun AppGrid(apps: List<AppModel>, scale: Float, shape: IconShape, viewModel: MainViewModel, onClick: (AppModel, Offset) -> Unit) {
+private fun AppGrid(apps: List<AppModel>, scale: Float, cornerRadius: Float, viewModel: MainViewModel, onClick: (AppModel, Offset) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
         apps.chunked(4).forEach { rowApps ->
             Row(modifier = Modifier.fillMaxWidth()) {
@@ -396,7 +396,8 @@ private fun AppGrid(apps: List<AppModel>, scale: Float, shape: IconShape, viewMo
                             .weight(1f)
                             .onGloballyPositioned { itemPosition = it.positionInRoot() },
                         iconSize = 56.dp * scale,
-                        iconShape = shape,
+                        iconCornerRadius = cornerRadius,
+                        libraryCornerRadius = cornerRadius,
                         getIcon = { viewModel.getIcon(it) },
                         onAppClick = { onClick(app, itemPosition) }
                     )

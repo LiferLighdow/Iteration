@@ -342,7 +342,7 @@ fun GesturesSettingsScreen(onBack: () -> Unit) {
     val twoFingerSwipeUpApp by viewModel.twoFingerSwipeUpApp.collectAsState()
     val twoFingerSwipeDownApp by viewModel.twoFingerSwipeDownApp.collectAsState()
     val allApps by viewModel.allApps.collectAsState()
-    val iconShape by viewModel.iconShape.collectAsState()
+    val iconCornerRadius by viewModel.iconCornerRadius.collectAsState()
 
     var showDoubleTapDialog by remember { mutableStateOf(false) }
     var showSwipeUpDialog by remember { mutableStateOf(false) }
@@ -529,7 +529,7 @@ fun GesturesSettingsScreen(onBack: () -> Unit) {
     if (showAppPickerForDoubleTap) {
         AppPickerDialog(
             allApps.filter { !it.isHidden },
-            iconShape,
+            iconCornerRadius,
             viewModel,
             onDismiss = { showAppPickerForDoubleTap = false },
             onAppSelected = { viewModel.setDoubleTapApp(it.packageName); showAppPickerForDoubleTap = false })
@@ -537,7 +537,7 @@ fun GesturesSettingsScreen(onBack: () -> Unit) {
     if (showAppPickerForSwipeUp) {
         AppPickerDialog(
             allApps.filter { !it.isHidden },
-            iconShape,
+            iconCornerRadius,
             viewModel,
             onDismiss = { showAppPickerForSwipeUp = false },
             onAppSelected = { viewModel.setSwipeUpApp(it.packageName); showAppPickerForSwipeUp = false })
@@ -545,7 +545,7 @@ fun GesturesSettingsScreen(onBack: () -> Unit) {
     if (showAppPickerForSwipeDown) {
         AppPickerDialog(
             allApps.filter { !it.isHidden },
-            iconShape,
+            iconCornerRadius,
             viewModel,
             onDismiss = { showAppPickerForSwipeDown = false },
             onAppSelected = { viewModel.setSwipeDownApp(it.packageName); showAppPickerForSwipeDown = false })
@@ -553,7 +553,7 @@ fun GesturesSettingsScreen(onBack: () -> Unit) {
     if (showAppPickerForLongPress) {
         AppPickerDialog(
             allApps.filter { !it.isHidden },
-            iconShape,
+            iconCornerRadius,
             viewModel,
             onDismiss = { showAppPickerForLongPress = false },
             onAppSelected = { viewModel.setLongPressApp(it.packageName); showAppPickerForLongPress = false })
@@ -561,7 +561,7 @@ fun GesturesSettingsScreen(onBack: () -> Unit) {
     if (showAppPickerForTwoFingerSwipeUp) {
         AppPickerDialog(
             allApps.filter { !it.isHidden },
-            iconShape,
+            iconCornerRadius,
             viewModel,
             onDismiss = { showAppPickerForTwoFingerSwipeUp = false },
             onAppSelected = {
@@ -571,7 +571,7 @@ fun GesturesSettingsScreen(onBack: () -> Unit) {
     if (showAppPickerForTwoFingerSwipeDown) {
         AppPickerDialog(
             allApps.filter { !it.isHidden },
-            iconShape,
+            iconCornerRadius,
             viewModel,
             onDismiss = { showAppPickerForTwoFingerSwipeDown = false },
             onAppSelected = {

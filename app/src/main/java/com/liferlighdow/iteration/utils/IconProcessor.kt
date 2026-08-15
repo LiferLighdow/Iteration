@@ -45,19 +45,15 @@ class IconProcessor(private val context: Context) {
         maskCache.clear()
     }
 
-    fun getOrCreateMask(shape: IconShape, size: Int): Bitmap {
-        val key = "${shape.name}_$size"
+    fun getOrCreateMask(cornerRadiusPercent: Float, size: Int): Bitmap {
+        val key = "${cornerRadiusPercent}_$size"
         return maskCache.getOrPut(key) {
             val mask = Bitmap.createBitmap(size, size, Bitmap.Config.ALPHA_8)
             val canvas = Canvas(mask)
             val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.BLACK }
 
-            if (shape == IconShape.CIRCLE) {
-                canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint)
-            } else {
-                val cornerRadius = size * 0.238f
-                canvas.drawRoundRect(0f, 0f, size.toFloat(), size.toFloat(), cornerRadius, cornerRadius, paint)
-            }
+            val cornerRadius = size * cornerRadiusPercent
+            canvas.drawRoundRect(0f, 0f, size.toFloat(), size.toFloat(), cornerRadius, cornerRadius, paint)
             mask
         }
     }
@@ -67,7 +63,7 @@ class IconProcessor(private val context: Context) {
         isThemed: Boolean,
         themeColors: ColorScheme?,
         style: IconStyle,
-        shape: IconShape,
+        cornerRadiusPercent: Float,
         sizePx: Int,
         isIconPack: Boolean = false,
         customBgColor: Int = 0,
@@ -217,10 +213,12 @@ class IconProcessor(private val context: Context) {
             }
         }
 
-        val mask = getOrCreateMask(shape, sizePx)
+        /*
+        val mask = getOrCreateMask(cornerRadiusPercent, sizePx)
         paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
         canvas.drawBitmap(mask, 0f, 0f, paint)
         paint.xfermode = null
+        */
 
         if (isPrivate) {
             drawPrivateBadge(canvas, sizePx)

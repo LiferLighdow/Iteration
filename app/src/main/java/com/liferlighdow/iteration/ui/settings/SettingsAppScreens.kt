@@ -36,9 +36,9 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
     val viewModel: MainViewModel = viewModel()
     val allApps by viewModel.allApps.collectAsState()
     val userCategories by viewModel.userCategories.collectAsState()
-    val iconShape by viewModel.iconShape.collectAsState()
-    val libraryShape by viewModel.libraryShape.collectAsState()
-    val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp)
+    val iconCornerRadius by viewModel.iconCornerRadius.collectAsState()
+    val libraryCornerRadius by viewModel.libraryCornerRadius.collectAsState()
+    val shape = RoundedCornerShape(8.dp * iconCornerRadius / 0.25f) // Scale 8.dp according to corner radius
     var searchQuery by remember { mutableStateOf("") }
 
     // 動態計算所有當前存在但未排序的類別
@@ -85,28 +85,46 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
                 )
             }
             item {
-                var expanded by remember { mutableStateOf(false) }
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.folder_shape)) },
-                    supportingContent = { Text(if (libraryShape == IconShape.CIRCLE) stringResource(R.string.shape_circle) else stringResource(R.string.shape_default)) },
-                    trailingContent = {
-                        Box {
-                            IconButton(onClick = { expanded = true }) {
-                                Icon(Icons.Default.MoreVert, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    val folderSize = 80.dp
+                    val iconSize = 24.dp
+                    val shape = RoundedCornerShape(folderSize * libraryCornerRadius)
+                    
+                    Box(
+                        modifier = Modifier
+                            .size(folderSize)
+                            .clip(shape)
+                            .background(MaterialTheme.colorScheme.primaryContainer)
+                            .border(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), shape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                repeat(2) {
+                                    Box(modifier = Modifier.size(iconSize).background(MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f), CircleShape))
+                                }
                             }
-                            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.shape_default)) },
-                                    onClick = { viewModel.setLibraryShape(IconShape.DEFAULT); expanded = false }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.shape_circle)) },
-                                    onClick = { viewModel.setLibraryShape(IconShape.CIRCLE); expanded = false }
-                                )
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                repeat(2) {
+                                    Box(modifier = Modifier.size(iconSize).background(MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f), CircleShape))
+                                }
                             }
                         }
-                    },
-                    modifier = Modifier.clickable { expanded = true }
+                    }
+                }
+                SettingSliderItem(
+                    label = stringResource(R.string.folder_shape) + ": ${(libraryCornerRadius * 100).toInt()}%",
+                    value = libraryCornerRadius * 100f,
+                    onValueChange = { viewModel.setLibraryCornerRadius(it / 100f) },
+                    valueRange = 0f..50f,
+                    steps = 0,
+                    onIncrement = { viewModel.setLibraryCornerRadius((libraryCornerRadius + 0.01f).coerceAtMost(0.5f)) },
+                    onDecrement = { viewModel.setLibraryCornerRadius((libraryCornerRadius - 0.01f).coerceAtLeast(0f)) }
                 )
             }
 
@@ -318,8 +336,8 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
 fun RenameAppsScreen(onBack: () -> Unit) {
     val viewModel: MainViewModel = viewModel()
     val allApps by viewModel.allApps.collectAsState()
-    val iconShape by viewModel.iconShape.collectAsState()
-    val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp)
+    val iconCornerRadius by viewModel.iconCornerRadius.collectAsState()
+    val shape = RoundedCornerShape(40.dp * iconCornerRadius)
     var searchQuery by remember { mutableStateOf("") }
 
     val filteredApps = remember(allApps, searchQuery) {
@@ -406,8 +424,8 @@ enum class AppFilter { ALL, HIDDEN, VISIBLE }
 fun HideAppsScreen(onBack: () -> Unit) {
     val viewModel: MainViewModel = viewModel()
     val allApps by viewModel.allApps.collectAsState()
-    val iconShape by viewModel.iconShape.collectAsState()
-    val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(12.dp)
+    val iconCornerRadius by viewModel.iconCornerRadius.collectAsState()
+    val shape = RoundedCornerShape(48.dp * iconCornerRadius)
     var searchQuery by remember { mutableStateOf("") }
     var appFilter by remember { mutableStateOf(AppFilter.ALL) }
 
@@ -579,8 +597,8 @@ fun HideAppsScreen(onBack: () -> Unit) {
 fun GreenifyScreen(onBack: () -> Unit) {
     val viewModel: MainViewModel = viewModel()
     val allApps by viewModel.allApps.collectAsState()
-    val iconShape by viewModel.iconShape.collectAsState()
-    val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(12.dp)
+    val iconCornerRadius by viewModel.iconCornerRadius.collectAsState()
+    val shape = RoundedCornerShape(48.dp * iconCornerRadius)
     var searchQuery by remember { mutableStateOf("") }
     var appFilter by remember { mutableStateOf(AppFilter.ALL) }
 

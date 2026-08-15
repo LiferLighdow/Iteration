@@ -18,8 +18,8 @@ import com.liferlighdow.iteration.utils.IconShape
  * 根據設定獲取統一的圖示形狀
  */
 @Composable
-fun getAppIconShape(iconShape: IconShape, size: Dp): Shape {
-    return if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(size * 0.238f)
+fun getAppIconShape(cornerRadiusPercent: Float, size: Dp): Shape {
+    return RoundedCornerShape(size * cornerRadiusPercent)
 }
 
 /**

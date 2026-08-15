@@ -39,7 +39,7 @@ fun ShortcutPickerDialog(
 ) {
     var selectedApp by remember { mutableStateOf<AppModel?>(null) }
     val allApps by viewModel.allApps.collectAsState()
-    val iconShape by viewModel.iconShape.collectAsState()
+    val iconCornerRadius by viewModel.iconCornerRadius.collectAsState()
 
     // 篩選出含有快捷方式的 App 列表
     val appsWithShortcuts by produceState<List<AppModel>>(initialValue = emptyList(), allApps) {
@@ -96,7 +96,7 @@ fun ShortcutPickerDialog(
                                 leadingContent = {
                                     val icon = viewModel.getIcon(app.uniqueId)
                                     if (icon != null) {
-                                        val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp)
+                                        val shape = RoundedCornerShape(40.dp * iconCornerRadius)
                                         Image(
                                             bitmap = icon,
                                             contentDescription = null,

@@ -64,8 +64,8 @@ fun AppItem(
     iconSize: Dp = 62.dp,
     isLiquidGlass: Boolean = false,
     backdrop: Backdrop? = null,
-    iconShape: IconShape = IconShape.DEFAULT,
-    libraryShape: IconShape = IconShape.DEFAULT,
+    iconCornerRadius: Float = 0.25f,
+    libraryCornerRadius: Float = 0.25f,
     blurRadius: Float = 0f,
     refractionHeight: Float = 24f,
     refractionAmount: Float = 48f,
@@ -100,7 +100,7 @@ fun AppItem(
     // 改由外部 Provider 傳入具體數字，避免集體重組
     val count = notificationCountProvider?.invoke() ?: 0
 
-    val currentShape = getAppIconShape(iconShape, iconSize)
+    val currentShape = getAppIconShape(iconCornerRadius, iconSize)
 
     val colorFilter = remember(app.isFrozen) {
         if (app.isFrozen) {
@@ -227,8 +227,8 @@ fun AppItem(
                         iconSize = iconSize,
                         isLiquidGlass = isLiquidGlass,
                         backdrop = backdrop,
-                        iconShape = iconShape,
-                        libraryShape = libraryShape,
+                        iconCornerRadius = iconCornerRadius,
+                        libraryCornerRadius = libraryCornerRadius,
                         blurRadius = blurRadius,
                         refractionHeight = refractionHeight,
                         refractionAmount = refractionAmount,
@@ -283,8 +283,8 @@ fun AppItem(
                             iconSize = iconSize,
                             isLiquidGlass = isLiquidGlass,
                             backdrop = backdrop,
-                            iconShape = iconShape,
-                            libraryShape = libraryShape,
+                            iconCornerRadius = iconCornerRadius,
+                            libraryCornerRadius = libraryCornerRadius,
                             blurRadius = blurRadius,
                             refractionHeight = refractionHeight,
                             refractionAmount = refractionAmount,
@@ -377,8 +377,8 @@ fun FolderIconContent(
     iconSize: Dp,
     isLiquidGlass: Boolean,
     backdrop: Backdrop?,
-    iconShape: IconShape,
-    libraryShape: IconShape,
+    iconCornerRadius: Float,
+    libraryCornerRadius: Float,
     blurRadius: Float,
     refractionHeight: Float,
     refractionAmount: Float,
@@ -392,7 +392,7 @@ fun FolderIconContent(
             .liquidGlass(
                 enabled = isLiquidGlass,
                 backdrop = backdrop,
-                cornerRadius = if (libraryShape == IconShape.CIRCLE) iconSize / 2f else iconSize * 0.238f,
+                cornerRadius = iconSize * libraryCornerRadius,
                 blurRadius = blurRadius,
                 refractionHeight = refractionHeight,
                 refractionAmount = refractionAmount,
@@ -404,12 +404,12 @@ fun FolderIconContent(
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                FolderPreviewIcon(app.folderItems.getOrNull(0), iconSize / 2.5f, iconShape, getIcon)
-                FolderPreviewIcon(app.folderItems.getOrNull(1), iconSize / 2.5f, iconShape, getIcon)
+                FolderPreviewIcon(app.folderItems.getOrNull(0), iconSize / 2.5f, iconCornerRadius, getIcon)
+                FolderPreviewIcon(app.folderItems.getOrNull(1), iconSize / 2.5f, iconCornerRadius, getIcon)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                FolderPreviewIcon(app.folderItems.getOrNull(2), iconSize / 2.5f, iconShape, getIcon)
-                FolderPreviewIcon(app.folderItems.getOrNull(3), iconSize / 2.5f, iconShape, getIcon)
+                FolderPreviewIcon(app.folderItems.getOrNull(2), iconSize / 2.5f, iconCornerRadius, getIcon)
+                FolderPreviewIcon(app.folderItems.getOrNull(3), iconSize / 2.5f, iconCornerRadius, getIcon)
             }
         }
     }
@@ -419,13 +419,13 @@ fun FolderIconContent(
 fun FolderPreviewIcon(
     app: AppModel?,
     size: Dp,
-    iconShape: IconShape = IconShape.DEFAULT,
+    iconCornerRadius: Float = 0.25f,
     getIcon: @Composable (String) -> ImageBitmap?
 ) {
     val viewModel: MainViewModel = viewModel()
     val iconSignal by viewModel.iconUpdateSignal.collectAsState()
     
-    val currentShape = getAppIconShape(iconShape, size)
+    val currentShape = getAppIconShape(iconCornerRadius, size)
     val appIcon = app?.let { if (!it.isFolder) {
         remember(it.uniqueId, iconSignal) { viewModel.getIcon(it.uniqueId) } ?: getIcon(it.uniqueId)
     } else null }

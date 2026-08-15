@@ -87,8 +87,8 @@ fun AppLibraryPage(
     isLiquidGlass: Boolean = false,
     isSearchLiquidGlass: Boolean = false,
     backdrop: Backdrop? = null,
-    iconShape: IconShape = IconShape.DEFAULT,
-    libraryShape: IconShape = IconShape.DEFAULT,
+    iconCornerRadius: Float = 0.25f,
+    libraryCornerRadius: Float = 0.25f,
     blurRadius: Float = 0f,
     refractionHeight: Float = 24f,
     refractionAmount: Float = 48f,
@@ -336,7 +336,7 @@ fun AppLibraryPage(
                                             val appIcon = viewModel.getIcon(app.uniqueId)
                                             if (appIcon != null) {
                                                 val listIconSize = 40.dp
-                                                val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(listIconSize * 0.238f)
+                                                val shape = RoundedCornerShape(listIconSize * iconCornerRadius)
                                                 val colorFilter = remember(app.isFrozen) {
                                                     if (app.isFrozen) {
                                                         androidx.compose.ui.graphics.ColorFilter.colorMatrix(androidx.compose.ui.graphics.ColorMatrix().apply { setToSaturation(0f) })
@@ -514,8 +514,8 @@ fun AppLibraryPage(
                             apps = apps,
                             isLiquidGlass = isLiquidGlass,
                             backdrop = backdrop,
-                            iconShape = iconShape,
-                            libraryShape = libraryShape,
+                            iconCornerRadius = iconCornerRadius,
+                            libraryCornerRadius = libraryCornerRadius,
                             blurRadius = blurRadius,
                             refractionHeight = refractionHeight,
                             refractionAmount = refractionAmount,
@@ -572,8 +572,8 @@ fun AppLibraryFolder(
     apps: List<AppModel>,
     isLiquidGlass: Boolean = false,
     backdrop: Backdrop? = null,
-    iconShape: IconShape = IconShape.DEFAULT,
-    libraryShape: IconShape = IconShape.DEFAULT,
+    iconCornerRadius: Float = 0.25f,
+    libraryCornerRadius: Float = 0.25f,
     blurRadius: Float = 0f,
     refractionHeight: Float = 24f,
     refractionAmount: Float = 48f,
@@ -590,8 +590,9 @@ fun AppLibraryFolder(
     val viewModel: MainViewModel = viewModel()
 
     // 根據形狀決定裁切方式：只有圓形才強制裁切（防止脫框），Default 則不裁切（確保圖示角角完整）
-    val folderShape = if (libraryShape == IconShape.CIRCLE) CircleShape else null
-    val folderPadding = if (libraryShape == IconShape.CIRCLE) (iconSize * 0.27f) else (iconSize * 0.16f)
+    val isCircle = libraryCornerRadius >= 0.49f
+    val folderShape = if (isCircle) CircleShape else null
+    val folderPadding = if (isCircle) (iconSize * 0.27f) else (iconSize * 0.16f)
     val internalIconSize = iconSize // 直接使用傳入的大小，或者是比例換算
 
     val showLock = isLocked
@@ -609,7 +610,7 @@ fun AppLibraryFolder(
                     .liquidGlass(
                         enabled = isLiquidGlass,
                         backdrop = backdrop,
-                        cornerRadius = if (libraryShape == IconShape.CIRCLE) 80.dp else 24.dp,
+                        cornerRadius = iconSize * libraryCornerRadius,
                         blurRadius = blurRadius,
                         refractionHeight = refractionHeight,
                         refractionAmount = refractionAmount,
@@ -627,7 +628,7 @@ fun AppLibraryFolder(
             ) {
                 Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        val lockShape = if (libraryShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(15.1.dp)
+                        val lockShape = if (isCircle) CircleShape else RoundedCornerShape(internalIconSize * libraryCornerRadius)
                         val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
                         val lockColor = if (isDark) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
                         if (showLock) {
@@ -642,11 +643,11 @@ fun AppLibraryFolder(
                             }
                         }
                         else apps.getOrNull(0)?.let { app ->
-                            LibraryItemWithMenu(app, name, iconShape, internalIconSize, onAppClick)
+                            LibraryItemWithMenu(app, name, iconCornerRadius, internalIconSize, onAppClick)
                         }
                     }
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        val lockShape = if (libraryShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(15.1.dp)
+                        val lockShape = if (isCircle) CircleShape else RoundedCornerShape(internalIconSize * libraryCornerRadius)
                         val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
                         val lockColor = if (isDark) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
                         if (showLock) {
@@ -661,13 +662,13 @@ fun AppLibraryFolder(
                             }
                         }
                         else apps.getOrNull(1)?.let { app ->
-                            LibraryItemWithMenu(app, name, iconShape, internalIconSize, onAppClick)
+                            LibraryItemWithMenu(app, name, iconCornerRadius, internalIconSize, onAppClick)
                         }
                     }
                 }
                 Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        val lockShape = if (libraryShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(15.1.dp)
+                        val lockShape = if (isCircle) CircleShape else RoundedCornerShape(internalIconSize * libraryCornerRadius)
                         val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
                         val lockColor = if (isDark) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
                         if (showLock) {
@@ -682,11 +683,11 @@ fun AppLibraryFolder(
                             }
                         }
                         else apps.getOrNull(2)?.let { app ->
-                            LibraryItemWithMenu(app, name, iconShape, internalIconSize, onAppClick)
+                            LibraryItemWithMenu(app, name, iconCornerRadius, internalIconSize, onAppClick)
                         }
                     }
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        val lockShape = if (libraryShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(15.1.dp)
+                        val lockShape = if (isCircle) CircleShape else RoundedCornerShape(internalIconSize * libraryCornerRadius)
                         val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
                         val lockColor = if (isDark) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
                         if (showLock) {
@@ -702,7 +703,7 @@ fun AppLibraryFolder(
                         }
                         else if (apps.size > 4) Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.2f), lockShape).clickable { onMoreClick() }, contentAlignment = Alignment.Center) { Text(stringResource(R.string.plus_more, apps.size - 3), color = Color.White, style = MaterialTheme.typography.headlineSmall) }
                         else apps.getOrNull(3)?.let { app ->
-                            LibraryItemWithMenu(app, name, iconShape, internalIconSize, onAppClick)
+                            LibraryItemWithMenu(app, name, iconCornerRadius, internalIconSize, onAppClick)
                         }
                     }
                 }
@@ -730,7 +731,7 @@ fun AppLibraryFolder(
 fun LibraryItemWithMenu(
     app: AppModel,
     folderName: String,
-    iconShape: IconShape = IconShape.DEFAULT,
+    iconCornerRadius: Float = 0.25f,
     iconSize: Dp = 72.dp,
     onAppClick: (AppModel, Offset) -> Unit
 ) {
@@ -757,7 +758,7 @@ fun LibraryItemWithMenu(
             app = app,
             showLabel = false,
             iconSize = iconSize,
-            iconShape = iconShape,
+            iconCornerRadius = iconCornerRadius,
             getIcon = { pkg -> viewModel.getIcon(pkg) },
             modifier = Modifier.pointerInput(app.uniqueId) {
                 detectTapGestures(

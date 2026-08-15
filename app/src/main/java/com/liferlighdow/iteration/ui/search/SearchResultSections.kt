@@ -109,7 +109,7 @@ fun CalculatorResultSection(
 @Composable
 fun AppResultSection(
     apps: List<AppModel>,
-    iconShape: IconShape,
+    iconCornerRadius: Float,
     getIcon: (String) -> androidx.compose.ui.graphics.ImageBitmap?,
     onAppClick: (AppModel, Offset) -> Unit
 ) {
@@ -128,7 +128,7 @@ fun AppResultSection(
                     headlineContent = { Text(app.label, color = Color.White) },
                     leadingContent = {
                         getIcon(app.uniqueId)?.let { appIcon ->
-                            val shape = if (iconShape == IconShape.CIRCLE) CircleShape else RoundedCornerShape(48.dp * 0.238f)
+                            val shape = RoundedCornerShape(48.dp * iconCornerRadius)
                             Image(
                                 bitmap = appIcon,
                                 contentDescription = null,

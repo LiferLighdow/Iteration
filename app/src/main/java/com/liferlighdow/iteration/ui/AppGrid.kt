@@ -112,7 +112,7 @@ fun AppGrid(
     pageOffsetProvider: () -> Float = { 0f },
     isLiquidGlass: Boolean = false,
     backdrop: Backdrop? = null,
-    iconShape: IconShape = IconShape.DEFAULT,
+    iconCornerRadius: Float = 0.25f,
     blurRadius: Float = 0f,
     refractionHeight: Float = 24f,
     refractionAmount: Float = 48f,
@@ -456,7 +456,10 @@ fun AppGrid(
                                     onUpdateCountdownToEdit = { countdownToEdit = it },
                                     onUpdatePhotoToAdjust = { photoToAdjust = it },
                                     onUpdatePhotoToPick = { photoToPick = it },
-                                    onShowContextMenu = { showContextMenu = true },
+                                    onShowContextMenu = { 
+                                        viewModel.setActiveContextMenuId(app.uniqueId)
+                                        showContextMenu = true 
+                                    },
                                     photoPickerLauncher = photoPickerLauncher
                                 )
                             } else {
@@ -465,7 +468,7 @@ fun AppGrid(
                                     iconSize = iconSize,
                                     isLiquidGlass = isLiquidGlass,
                                     backdrop = backdrop,
-                                    iconShape = iconShape,
+                                    iconCornerRadius = iconCornerRadius,
                                     blurRadius = blurRadius,
                                     refractionHeight = refractionHeight,
                                     refractionAmount = refractionAmount,
@@ -1054,7 +1057,7 @@ private fun AppGridItem(
     iconSize: Dp,
     isLiquidGlass: Boolean,
     backdrop: Backdrop?,
-    iconShape: IconShape,
+    iconCornerRadius: Float,
     blurRadius: Float,
     refractionHeight: Float,
     refractionAmount: Float,
@@ -1114,7 +1117,8 @@ private fun AppGridItem(
             iconSize = iconSize,
             isLiquidGlass = isLiquidGlass,
             backdrop = backdrop,
-            iconShape = iconShape,
+            iconCornerRadius = iconCornerRadius,
+            libraryCornerRadius = iconCornerRadius,
             blurRadius = blurRadius,
             refractionHeight = refractionHeight,
             refractionAmount = refractionAmount,

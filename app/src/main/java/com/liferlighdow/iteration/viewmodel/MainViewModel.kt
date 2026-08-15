@@ -515,6 +515,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
     )
     val iconShape = _iconShape.asStateFlow()
 
+    internal val _iconCornerRadius = MutableStateFlow(
+        if (prefs.contains("icon_corner_radius")) {
+            prefs.getFloat("icon_corner_radius", 0.25f)
+        } else {
+            if (_iconShape.value == IconShape.CIRCLE) 0.5f else 0.25f
+        }
+    )
+    val iconCornerRadius = _iconCornerRadius.asStateFlow()
+
     internal val _desktopRows = MutableStateFlow(prefs.getInt("desktop_rows", 0)) // 0 means auto
     val desktopRows = _desktopRows.asStateFlow()
 
@@ -574,6 +583,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
         }
     )
     val libraryShape = _libraryShape.asStateFlow()
+
+    internal val _libraryCornerRadius = MutableStateFlow(
+        if (prefs?.contains("library_corner_radius") == true) {
+            prefs?.getFloat("library_corner_radius", 0.25f) ?: 0.25f
+        } else {
+            if (_libraryShape.value == IconShape.CIRCLE) 0.5f else 0.25f
+        }
+    )
+    val libraryCornerRadius = _libraryCornerRadius.asStateFlow()
 
     internal val frozenPackages = mutableSetOf<String>()
     internal val hiddenPackages = mutableSetOf<String>()
@@ -1056,6 +1074,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
     override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
         val p = sharedPreferences ?: return
         when (key) {
+            "icon_corner_radius" -> _iconCornerRadius.value = p.getFloat(key, 0.25f)
+            "library_corner_radius" -> _libraryCornerRadius.value = p.getFloat(key, 0.25f)
+            "icon_shape" -> {
+                _iconShape.value = try {
+                    IconShape.valueOf(p.getString(key, "DEFAULT") ?: "DEFAULT")
+                } catch (e: Exception) { IconShape.DEFAULT }
+            }
+            "library_shape" -> {
+                _libraryShape.value = try {
+                    IconShape.valueOf(p.getString(key, "DEFAULT") ?: "DEFAULT")
+                } catch (e: Exception) { IconShape.DEFAULT }
+            }
             "liquid_glass_blur" -> _liquidGlassBlur.value = p.getFloat(key, 0f)
             "liquid_glass_refraction_height" -> _liquidGlassRefractionHeight.value = p.getFloat(key, 24f)
             "liquid_glass_refraction_amount" -> _liquidGlassRefractionAmount.value = p.getFloat(key, 48f)
