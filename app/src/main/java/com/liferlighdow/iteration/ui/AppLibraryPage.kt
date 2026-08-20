@@ -99,7 +99,8 @@ fun AppLibraryPage(
     onAppClick: (AppModel, Offset) -> Unit,
     onDragStart: (AppModel, Offset) -> Unit,
     onDrag: (Offset) -> Unit,
-    onDragEnd: () -> Unit
+    onDragEnd: () -> Unit,
+    isPageVisible: Boolean = true
 ) {
     val viewModel: MainViewModel = viewModel()
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -120,6 +121,13 @@ fun AppLibraryPage(
     // 自動清除焦點邏輯：當鍵盤放下時，強制將焦點轉移到 dummy 組件
     val isKeyboardVisible = WindowInsets.ime.getBottom(density) > 0
     val scope = rememberCoroutineScope()
+
+    LaunchedEffect(isPageVisible) {
+        if (!isPageVisible) {
+            focusManager.clearFocus(force = true)
+            viewModel.setLibrarySearchFocused(false)
+        }
+    }
 
     LaunchedEffect(isKeyboardVisible) {
         if (!isKeyboardVisible && isSearchFocused) {
@@ -187,6 +195,7 @@ fun AppLibraryPage(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { viewModel.setSearchQuery(it) },
+                enabled = isPageVisible,
                 modifier = Modifier
                     .weight(1f)
                     .onFocusChanged { viewModel.setLibrarySearchFocused(it.isFocused) }
@@ -224,10 +233,16 @@ fun AppLibraryPage(
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = Color.White,
                     unfocusedTextColor = Color.White,
+                    disabledTextColor = Color.White,
                     focusedContainerColor = Color.Transparent,
                     unfocusedContainerColor = Color.Transparent,
+                    disabledContainerColor = Color.Transparent,
                     focusedBorderColor = Color.Transparent,
-                    unfocusedBorderColor = Color.Transparent
+                    unfocusedBorderColor = Color.Transparent,
+                    disabledBorderColor = Color.Transparent,
+                    disabledLeadingIconColor = Color.White,
+                    disabledTrailingIconColor = Color.White,
+                    disabledPlaceholderColor = Color.White.copy(alpha = 0.6f)
                 ),
                 singleLine = true
             )

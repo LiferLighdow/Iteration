@@ -544,7 +544,8 @@ fun LauncherScreen(
                                         mode
                                     )
                                 },
-                                onAppClick = onAppClick
+                                onAppClick = onAppClick,
+                                isPageVisible = pagerState.currentPage == pageIndex && !showGlobalSearch
                             )
                         }
                         isDesktop -> {
@@ -799,7 +800,8 @@ fun LauncherScreen(
                                     )
                                     draggingApp = null; rawHoveredKey = null; confirmedHoveredKey =
                                     null
-                                }
+                                },
+                                isPageVisible = pagerState.currentPage == pageIndex && !showGlobalSearch
                             )
                         }
                     }

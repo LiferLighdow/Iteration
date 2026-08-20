@@ -74,7 +74,8 @@ fun MinusOnePage(
     onAddClick: () -> Unit,
     onRemoveWidget: (String) -> Unit,
     onUpdateWidgetMode: (String, WidgetDisplayMode) -> Unit,
-    onAppClick: (AppModel) -> Unit
+    onAppClick: (AppModel) -> Unit,
+    isPageVisible: Boolean = true
 ) {
     var isReorderMode by remember { mutableStateOf(false) }
     val effectiveEditMode = isEditMode || isReorderMode
@@ -103,6 +104,15 @@ fun MinusOnePage(
 
     // 主題偵測與顏色設定
     val isDarkTheme = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+
+    LaunchedEffect(isPageVisible) {
+        if (!isPageVisible) {
+            focusManager.clearFocus(force = true)
+            isSearching = false
+            searchQuery = ""
+        }
+    }
+
     val baseColor = if (isDarkTheme) Color.Black else Color.White
     val contentColor = if (isDarkTheme) Color.White else Color.Black
 
@@ -239,6 +249,7 @@ fun MinusOnePage(
                         searchQuery = it 
                         isSearching = it.isNotEmpty() || isSearching
                     },
+                    enabled = isPageVisible,
                     modifier = Modifier.fillMaxWidth().liquidGlass(
                         enabled = isLiquidGlassEnabled && isMinusOneSearchGlassEnabled,
                         backdrop = backdrop,
