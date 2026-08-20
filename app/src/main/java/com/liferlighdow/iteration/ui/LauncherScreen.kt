@@ -78,7 +78,7 @@ fun LauncherScreen(
 
     // 唯一的採樣器，確保座標對齊
     val backdrop = rememberLayerBackdrop()
-    
+
     // 當訊號改變時，強制重新加載
     LaunchedEffect(wallpaperSignal) {
         if (wallpaperSignal > 0) {
@@ -107,6 +107,11 @@ fun LauncherScreen(
     val doubleTapApp by viewModel.doubleTapApp.collectAsState()
     val swipeUpApp by viewModel.swipeUpApp.collectAsState()
     val swipeDownAction by viewModel.swipeDownAction.collectAsState()
+    val isSwipeDownSplit by viewModel.isSwipeDownSplit.collectAsState()
+    val swipeDownLeftAction by viewModel.swipeDownLeftAction.collectAsState()
+    val swipeDownRightAction by viewModel.swipeDownRightAction.collectAsState()
+    val swipeDownLeftApp by viewModel.swipeDownLeftApp.collectAsState()
+    val swipeDownRightApp by viewModel.swipeDownRightApp.collectAsState()
     val longPressAction by viewModel.longPressAction.collectAsState()
     val swipeDownApp by viewModel.swipeDownApp.collectAsState()
     val longPressApp by viewModel.longPressApp.collectAsState()
@@ -134,11 +139,6 @@ fun LauncherScreen(
     var showDesktopMenu by remember { mutableStateOf(false) }
     var showGlobalSearch by remember { mutableStateOf(false) }
     var searchDragOffset by remember { mutableStateOf(0f) }
-    var pickedWallpaperUri by remember { mutableStateOf<Uri?>(null) }
-    var showWallpaperTypeDialog by remember { mutableStateOf(false) }
-    var showColorPickerByWallpaper by remember { mutableStateOf(false) }
-    data class EmojiSelectionData(val color: Int, val emojiText: String)
-    var showEmojiModeSelection by remember { mutableStateOf<EmojiSelectionData?>(null) }
 
     val mContext = LocalContext.current
     val actionMode by viewModel.actionMode.collectAsState()
@@ -338,6 +338,7 @@ fun LauncherScreen(
     // 效能優化：統一收集通知狀態，避免 AppItem 集體重組
     val notificationCounts by NotificationService.notifications.collectAsState()
     val emojiWallpaperText by viewModel.emojiWallpaperText.collectAsState()
+    val emojiPatternStyle by viewModel.emojiPatternStyle.collectAsState()
 
     // 檢查 App Library 是否處於搜尋模式
     val librarySearchQuery by viewModel.searchQuery.collectAsState()
@@ -353,15 +354,15 @@ fun LauncherScreen(
 
         // --- 修正後的拖拽邊緣切頁邏輯 ---
         var lastEdgeTriggerTime by remember { mutableLongStateOf(0L) }
-        
+
         LaunchedEffect(draggingApp != null) {
             if (draggingApp == null) return@LaunchedEffect
-            
+
             while (true) {
                 val currentX = touchPosition.x + dragOffset.x
                 val isAtRightEdge = currentX > screenWidthPx - edgeThresholdPx
                 val isAtLeftEdge = currentX < edgeThresholdPx
-                
+
                 if (isAtRightEdge || isAtLeftEdge) {
                     if (lastEdgeTriggerTime == 0L) {
                         lastEdgeTriggerTime = System.currentTimeMillis()
@@ -392,16 +393,16 @@ fun LauncherScreen(
         }
 
         val screenRatio = maxHeight / maxWidth
-        
+
         val rows = if (isBalanced) 6 else if (userRows > 0) userRows else (if (screenRatio < 2.0f) 5 else 6)
-        
+
         val showWidgetLabel = if (rows >= 7) screenRatio >= 2.22f else true
 
         // 畫質調整不會影響這個顯示尺寸
         val labelFontSize = if (isBalanced) 11.8.sp else 12.sp
         val iconSizePx = with(density) { iconSize.toPx() }
         val columns = 4
-        
+
         val horizontalPadding = if (isBalanced) 18.dp else 16.dp
 
         LaunchedEffect(columns, rows) { viewModel.setPageSize(columns * rows) }
@@ -411,7 +412,7 @@ fun LauncherScreen(
             while (true) {
                 val finalX = touchPosition.x + dragOffset.x
                 val edgeWidth = with(density) { 45.dp.toPx() }
-                
+
                 if (finalX < edgeWidth && pagerState.currentPage > desktopStartIndex) {
                     pagerState.animateScrollToPage(pagerState.currentPage - 1)
                     delay(800)
@@ -463,13 +464,14 @@ fun LauncherScreen(
                                 drawContext.canvas.nativeCanvas,
                                 emojis,
                                 size.width.toInt(),
-                                size.height.toInt()
+                                size.height.toInt(),
+                                emojiPatternStyle
                             )
                         }
                     }
                 }
             }
-            
+
             // 獨立的模糊處理層 (Android 12 以下)
             Box(modifier = Modifier.fillMaxSize()) {
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
@@ -706,8 +708,17 @@ fun LauncherScreen(
                                 onBackgroundSwipeUp = {
                                     performGestureAction(swipeUpAction, swipeUpApp)
                                 },
-                                onBackgroundSwipeDown = {
-                                    performGestureAction(swipeDownAction, swipeDownApp)
+                                onBackgroundSwipeDown = { x ->
+                                    if (isSwipeDownSplit) {
+                                        val isLeft = x < screenWidthPx / 2
+                                        if (isLeft) {
+                                            performGestureAction(swipeDownLeftAction, swipeDownLeftApp)
+                                        } else {
+                                            performGestureAction(swipeDownRightAction, swipeDownRightApp)
+                                        }
+                                    } else {
+                                        performGestureAction(swipeDownAction, swipeDownApp)
+                                    }
                                 },
                                 onBackgroundTwoFingerSwipeUp = {
                                     performGestureAction(
@@ -1013,23 +1024,6 @@ fun LauncherScreen(
         )
     }
 
-    val wallpaperLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        pickedWallpaperUri = uri
-    }
-
-    if (pickedWallpaperUri != null) {
-        WallpaperCropDialog(
-            uri = pickedWallpaperUri!!,
-            onDismiss = { pickedWallpaperUri = null },
-            onConfirm = { croppedBitmap ->
-                viewModel.setCustomWallpaperColor(0) // 清除純色記錄，標記為圖片桌布
-                viewModel.setEmojiWallpaperText("") // 清除 Emoji
-                viewModel.setCustomWallpaper(croppedBitmap)
-                pickedWallpaperUri = null
-            }
-        )
-    }
-
     LauncherOverlays(
         viewModel = viewModel,
         showDesktopMenu = showDesktopMenu,
@@ -1090,7 +1084,12 @@ fun LauncherScreen(
             showWidgetPicker = true
         },
         onAddShortcutClick = { showShortcutPicker = true },
-        onWallpaperClick = { showWallpaperTypeDialog = true },
+        onWallpaperClick = { 
+            val intent = Intent(mContext, com.liferlighdow.iteration.SettingsActivity::class.java).apply {
+                putExtra("start_page", "WALLPAPER")
+            }
+            mContext.startActivity(intent)
+        },
         onSettingsClick = onSettingsClick,
         onAppClick = { app, pos ->
             if (app.isFrozen) appToUnfreeze = app
@@ -1107,184 +1106,6 @@ fun LauncherScreen(
             }
         }
     )
-
-    if (showWallpaperTypeDialog) {
-        AlertDialog(
-            onDismissRequest = { showWallpaperTypeDialog = false },
-            title = { Text(stringResource(R.string.menu_wallpaper)) },
-            text = {
-                Column {
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.wallpaper_default)) },
-                        supportingContent = { Text(stringResource(R.string.iteration_style)) },
-                        leadingContent = { Icon(Icons.Default.AutoAwesome, null, tint = MaterialTheme.colorScheme.primary) },
-                        modifier = Modifier.clickable {
-                            showWallpaperTypeDialog = false
-                            val dm = mContext.resources.displayMetrics
-                            val drawable = ContextCompat.getDrawable(mContext, R.drawable.ic_builtin_wallpaper)
-                            if (drawable != null) {
-                                val bitmap = Bitmap.createBitmap(dm.widthPixels, dm.heightPixels, Bitmap.Config.ARGB_8888)
-                                val canvas = Canvas(bitmap)
-                                drawable.setBounds(0, 0, dm.widthPixels, dm.heightPixels)
-                                drawable.draw(canvas)
-                                viewModel.setCustomWallpaperColor(0)
-                                viewModel.setEmojiWallpaperText("")
-                                viewModel.setCustomWallpaper(bitmap)
-                            }
-                        }
-                    )
-
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.widget_photo)) },
-                        supportingContent = { Text(stringResource(R.string.select_wallpaper_type_desc)) },
-                        leadingContent = { Icon(Icons.Default.Image, null, tint = MaterialTheme.colorScheme.primary) },
-                        modifier = Modifier.clickable {
-                            showWallpaperTypeDialog = false
-                            wallpaperLauncher.launch("image/*")
-                        }
-                    )
-
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.style_custom)) },
-                        supportingContent = { Text(stringResource(R.string.emoji_hint)) },
-                        leadingContent = { Icon(Icons.Default.Palette, null, tint = MaterialTheme.colorScheme.primary) },
-                        modifier = Modifier.clickable {
-                            showWallpaperTypeDialog = false
-                            showColorPickerByWallpaper = true
-                        }
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showWallpaperTypeDialog = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            }
-        )
-    }
-
-    if (showColorPickerByWallpaper) {
-        var selectedColor by remember { mutableIntStateOf(0xFF2196F3.toInt()) }
-        var emojiText by remember { mutableStateOf("") }
-        val favorites by viewModel.favoriteWallpaperColors.collectAsState()
-        
-        AlertDialog(
-            onDismissRequest = { showColorPickerByWallpaper = false },
-            title = { Text(stringResource(R.string.custom_style_title)) },
-            text = {
-                ColorPickerInternal(
-                    initialColor = selectedColor,
-                    onColorChanged = { selectedColor = it },
-                    emojiText = emojiText,
-                    onEmojiChanged = { emojiText = it },
-                    favorites = favorites,
-                    onAddFavorite = { viewModel.addFavoriteWallpaperColor(it) },
-                    onRemoveFavorite = { viewModel.removeFavoriteWallpaperColor(it) }
-                )
-            },
-            confirmButton = {
-                Button(onClick = {
-                    if (emojiText.isBlank()) {
-                        // 優化：如果沒有 Emoji，生成 1x1 的純色 Bitmap
-                        val bitmap = android.graphics.Bitmap.createBitmap(1, 1, android.graphics.Bitmap.Config.ARGB_8888).apply {
-                            eraseColor(selectedColor)
-                        }
-                        viewModel.setCustomWallpaperColor(selectedColor)
-                        viewModel.setEmojiWallpaperText("") // 清除 Lite 模式 Emoji
-                        viewModel.setCustomWallpaper(bitmap)
-                        showColorPickerByWallpaper = false
-                    } else {
-                        // 如果有 Emoji，先彈出模式選擇對話框
-                        showEmojiModeSelection = EmojiSelectionData(selectedColor, emojiText)
-                        showColorPickerByWallpaper = false
-                    }
-                }) {
-                    Text(stringResource(R.string.apply))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showColorPickerByWallpaper = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            }
-        )
-    }
-
-    if (showEmojiModeSelection != null) {
-        val data = showEmojiModeSelection!!
-        AlertDialog(
-            onDismissRequest = { showEmojiModeSelection = null },
-            title = { Text(stringResource(R.string.wallpaper_mode_title)) },
-            text = {
-                Column {
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.wallpaper_mode_lite)) },
-                        supportingContent = { Text(stringResource(R.string.wallpaper_mode_lite_desc)) },
-                        leadingContent = { Icon(Icons.Default.Bolt, null, tint = MaterialTheme.colorScheme.primary) },
-                        modifier = Modifier.clickable {
-                            val bitmap = android.graphics.Bitmap.createBitmap(1, 1, android.graphics.Bitmap.Config.ARGB_8888).apply {
-                                eraseColor(data.color)
-                            }
-                            viewModel.setCustomWallpaperColor(data.color)
-                            viewModel.setEmojiWallpaperText(data.emojiText)
-                            viewModel.setCustomWallpaper(bitmap)
-                            showEmojiModeSelection = null
-                        }
-                    )
-                    
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.wallpaper_mode_balance)) },
-                        supportingContent = { Text(stringResource(R.string.wallpaper_mode_balance_desc)) },
-                        leadingContent = { Icon(Icons.Default.Balance, null, tint = MaterialTheme.colorScheme.primary) },
-                        modifier = Modifier.clickable {
-                            // 1. 生成 Lite Bitmap (1x1)
-                            val liteBitmap = android.graphics.Bitmap.createBitmap(1, 1, android.graphics.Bitmap.Config.ARGB_8888).apply {
-                                eraseColor(data.color)
-                            }
-                            
-                            // 2. 生成 Full Bitmap (全螢幕)
-                            val dm = mContext.resources.displayMetrics
-                            val fullBitmap = android.graphics.Bitmap.createBitmap(dm.widthPixels, dm.heightPixels, android.graphics.Bitmap.Config.ARGB_8888)
-                            val canvas = android.graphics.Canvas(fullBitmap)
-                            canvas.drawColor(data.color)
-                            
-                            val emojis = parseEmojis(data.emojiText)
-                            if (emojis.isNotEmpty()) {
-                                drawEmojiPattern(canvas, emojis, dm.widthPixels, dm.heightPixels)
-                            }
-                            
-                            viewModel.setCustomWallpaperColor(data.color)
-                            viewModel.setEmojiWallpaperText(data.emojiText) // 啟動器層需要繪製
-                            viewModel.setBalanceWallpaper(fullBitmap, liteBitmap)
-                            showEmojiModeSelection = null
-                        }
-                    )
-
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.wallpaper_mode_full)) },
-                        supportingContent = { Text(stringResource(R.string.wallpaper_mode_full_desc)) },
-                        leadingContent = { Icon(Icons.Default.HighQuality, null, tint = MaterialTheme.colorScheme.primary) },
-                        modifier = Modifier.clickable {
-                            val dm = mContext.resources.displayMetrics
-                            val b = android.graphics.Bitmap.createBitmap(dm.widthPixels, dm.heightPixels, android.graphics.Bitmap.Config.ARGB_8888)
-                            val canvas = android.graphics.Canvas(b)
-                            canvas.drawColor(data.color)
-                            
-                            val emojis = parseEmojis(data.emojiText)
-                            if (emojis.isNotEmpty()) {
-                                drawEmojiPattern(canvas, emojis, dm.widthPixels, dm.heightPixels)
-                            }
-                            viewModel.setCustomWallpaperColor(data.color)
-                            viewModel.setEmojiWallpaperText("") // Full 模式不需要啟動器層 Emoji
-                            viewModel.setCustomWallpaper(b)
-                            showEmojiModeSelection = null
-                        }
-                    )
-                }
-            },
-            confirmButton = {}
-        )
-    }
 
     if (isApplyingWallpaper) {
         Dialog(
@@ -1502,7 +1323,7 @@ fun ColorPickerInternal(
     }
 }
 
-private fun parseEmojis(text: String): List<String> {
+fun parseEmojis(text: String): List<String> {
     val list = mutableListOf<String>()
     val it = java.text.BreakIterator.getCharacterInstance()
     it.setText(text)
@@ -1516,23 +1337,86 @@ private fun parseEmojis(text: String): List<String> {
     return list
 }
 
-private fun drawEmojiPattern(canvas: android.graphics.Canvas, emojis: List<String>, width: Int, height: Int) {
-    val columns = 5
-    val itemWidth = width / columns.toFloat()
-    val itemHeight = itemWidth * 1.2f
-    val rows = (height / itemHeight).toInt() + 2
-    
+fun drawEmojiPattern(
+    canvas: android.graphics.Canvas,
+    emojis: List<String>,
+    width: Int,
+    height: Int,
+    style: com.liferlighdow.iteration.data.EmojiPatternStyle = com.liferlighdow.iteration.data.EmojiPatternStyle.MEDIUM_GRID
+) {
     val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-        textSize = itemWidth * 0.6f
         textAlign = android.graphics.Paint.Align.CENTER
     }
 
-    for (row in 0 until rows) {
-        for (col in 0 until columns) {
-            val emojiIndex = (row + col) % emojis.size
-            val x = col * itemWidth + itemWidth / 2f
-            val y = row * itemHeight + itemHeight / 2f - ((paint.descent() + paint.ascent()) / 2f)
-            canvas.drawText(emojis[emojiIndex], x, y, paint)
+    when (style) {
+        com.liferlighdow.iteration.data.EmojiPatternStyle.SMALL_GRID,
+        com.liferlighdow.iteration.data.EmojiPatternStyle.MEDIUM_GRID,
+        com.liferlighdow.iteration.data.EmojiPatternStyle.LARGE_GRID -> {
+            val columns = when (style) {
+                com.liferlighdow.iteration.data.EmojiPatternStyle.SMALL_GRID -> 8
+                com.liferlighdow.iteration.data.EmojiPatternStyle.LARGE_GRID -> 3
+                else -> 5
+            }
+            val itemWidth = width / columns.toFloat()
+            val itemHeight = itemWidth * 1.3f
+            val rows = (height / itemHeight).toInt() + 2
+            paint.textSize = itemWidth * 0.6f
+
+            for (row in 0 until rows) {
+                for (col in 0 until columns) {
+                    val emojiIndex = (row + col) % emojis.size
+                    val x = col * itemWidth + itemWidth / 2f
+                    // 加入交錯偏移，讓佈局更有序但不死板
+                    val offsetX = if (row % 2 == 1) itemWidth / 4f else -itemWidth / 4f
+                    val y = row * itemHeight + itemHeight / 2f - ((paint.descent() + paint.ascent()) / 2f)
+                    canvas.drawText(emojis[emojiIndex], x + offsetX, y, paint)
+                }
+            }
+        }
+
+        com.liferlighdow.iteration.data.EmojiPatternStyle.RINGS -> {
+            val centerX = width / 2f
+            val centerY = height / 2f
+            val maxRadius = Math.sqrt((width * width + height * height).toDouble()).toFloat() / 1.8f
+            val ringSpacing = width / 5f
+            paint.textSize = width / 10f
+
+            var ring = 0
+            var radius = ringSpacing / 2f
+            while (radius < maxRadius) {
+                val count = (2 * Math.PI * radius / (paint.textSize * 1.2)).toInt().coerceAtLeast(1)
+                for (i in 0 until count) {
+                    val angle = (2 * Math.PI * i / count) + (ring * 0.5) // 每圈旋轉一點
+                    val x = centerX + (radius * Math.cos(angle)).toFloat()
+                    val y = centerY + (radius * Math.sin(angle)).toFloat() - ((paint.descent() + paint.ascent()) / 2f)
+                    canvas.drawText(emojis[i % emojis.size], x, y, paint)
+                }
+                radius += ringSpacing
+                ring++
+            }
+        }
+
+        com.liferlighdow.iteration.data.EmojiPatternStyle.SPIRAL -> {
+            val centerX = width / 2f
+            val centerY = height / 2f
+            paint.textSize = width / 10f
+            
+            var angle = 0.0
+            var radius = 0.0
+            val growth = paint.textSize * 0.5 // 螺旋增長速度
+            
+            for (i in 0 until 100) { // 繪製 100 個 Emoji 構成螺旋
+                val x = centerX + (radius * Math.cos(angle)).toFloat()
+                val y = centerY + (radius * Math.sin(angle)).toFloat() - ((paint.descent() + paint.ascent()) / 2f)
+                
+                if (x < -100 || x > width + 100 || y < -100 || y > height + 100) break
+                
+                canvas.drawText(emojis[i % emojis.size], x, y, paint)
+                
+                // 阿基米德螺旋方程微調
+                angle += 0.6 // 旋轉角度增加
+                radius += growth * 0.15 // 半徑增加
+            }
         }
     }
 }

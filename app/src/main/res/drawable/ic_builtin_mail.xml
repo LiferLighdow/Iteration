@@ -21,7 +21,7 @@
     </path>
     <!-- 郵件組：易於調整位置與大小 -->
     <group
-        android:pivotX="-26"
+        android:pivotX="-26.5"
         android:pivotY="-6"
         android:scaleX="7"
         android:scaleY="9.2">

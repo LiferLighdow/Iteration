@@ -410,6 +410,33 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
     )
     val swipeDownAction = _swipeDownAction.asStateFlow()
 
+    internal val _isSwipeDownSplit = MutableStateFlow(prefs.getBoolean("is_swipe_down_split", false))
+    val isSwipeDownSplit = _isSwipeDownSplit.asStateFlow()
+
+    internal val _swipeDownLeftAction = MutableStateFlow(
+        try {
+            GestureAction.valueOf(prefs.getString("swipe_down_left_action", "NONE") ?: "NONE")
+        } catch (e: Exception) {
+            GestureAction.NONE
+        }
+    )
+    val swipeDownLeftAction = _swipeDownLeftAction.asStateFlow()
+
+    internal val _swipeDownRightAction = MutableStateFlow(
+        try {
+            GestureAction.valueOf(prefs.getString("swipe_down_right_action", "NONE") ?: "NONE")
+        } catch (e: Exception) {
+            GestureAction.NONE
+        }
+    )
+    val swipeDownRightAction = _swipeDownRightAction.asStateFlow()
+
+    internal val _swipeDownLeftApp = MutableStateFlow(prefs.getString("swipe_down_left_app", "") ?: "")
+    val swipeDownLeftApp = _swipeDownLeftApp.asStateFlow()
+
+    internal val _swipeDownRightApp = MutableStateFlow(prefs.getString("swipe_down_right_app", "") ?: "")
+    val swipeDownRightApp = _swipeDownRightApp.asStateFlow()
+
     internal val _longPressAction = MutableStateFlow(
         try {
             GestureAction.valueOf(
@@ -612,8 +639,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
     internal val _isApplyingWallpaper = MutableStateFlow(false)
     val isApplyingWallpaper = _isApplyingWallpaper.asStateFlow()
 
+    internal val _wallpaperPresets = MutableStateFlow<List<WallpaperPreset>>(emptyList())
+    val wallpaperPresets = _wallpaperPresets.asStateFlow()
+
+    internal val _currentWallpaperPresetName = MutableStateFlow(prefs.getString("current_wallpaper_preset", "") ?: "")
+    val currentWallpaperPresetName = _currentWallpaperPresetName.asStateFlow()
+
     internal val _emojiWallpaperText = MutableStateFlow(prefs.getString("emoji_wallpaper_text", "") ?: "")
     val emojiWallpaperText = _emojiWallpaperText.asStateFlow()
+
+    internal val _emojiPatternStyle = MutableStateFlow(
+        try {
+            EmojiPatternStyle.valueOf(prefs.getString("emoji_pattern_style", "MEDIUM_GRID") ?: "MEDIUM_GRID")
+        } catch (e: Exception) {
+            EmojiPatternStyle.MEDIUM_GRID
+        }
+    )
+    val emojiPatternStyle = _emojiPatternStyle.asStateFlow()
 
     internal val _customWallpaperColor = MutableStateFlow(prefs.getInt("custom_wallpaper_color", 0))
     val customWallpaperColor = _customWallpaperColor.asStateFlow()
@@ -644,6 +686,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
     fun setEmojiWallpaperText(text: String) {
         _emojiWallpaperText.value = text
         prefs.edit().putString("emoji_wallpaper_text", text).apply()
+    }
+
+    fun setEmojiPatternStyle(style: EmojiPatternStyle) {
+        _emojiPatternStyle.value = style
+        prefs.edit().putString("emoji_pattern_style", style.name).apply()
     }
 
     fun setCustomWallpaperColor(color: Int) {
@@ -810,6 +857,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
                 "com.liferlighdow.iteration.ACTION_REFRESH_APPS",
+                "com.liferlighdow.iteration.ACTION_REFRESH_WALLPAPER",
                 Intent.ACTION_MANAGED_PROFILE_UNLOCKED,
                 Intent.ACTION_MANAGED_PROFILE_AVAILABLE,
                 Intent.ACTION_MANAGED_PROFILE_UNAVAILABLE,
@@ -1022,6 +1070,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
             loadCalendarEvents()
             loadFiles()
             checkSystemNetworkStatus()
+            ensureIterationDirectoryExists()
             
             // 啟動時根據權限狀態與設定，同步沉浸模式
             if (!_showNavigationBar.value) {
@@ -1034,6 +1083,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
         
         val filter = IntentFilter().apply {
             addAction("com.liferlighdow.iteration.ACTION_REFRESH_APPS")
+            addAction("com.liferlighdow.iteration.ACTION_REFRESH_WALLPAPER")
             addAction("com.liferlighdow.iteration.ACTION_PIN_SHORTCUT")
             addAction(Intent.ACTION_MANAGED_PROFILE_UNLOCKED)
             addAction(Intent.ACTION_MANAGED_PROFILE_AVAILABLE)
@@ -1244,6 +1294,37 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
                         e.printStackTrace()
                     }
                 }
+            }
+        }
+    }
+
+    /**
+     * 在 Documents 目錄下確保 Iteration 資料夾及其子目錄 (Wallpaper, Backup) 存在
+     */
+    fun ensureIterationDirectoryExists() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val documentsDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOCUMENTS)
+                val iterationDir = File(documentsDir, "Iteration")
+                
+                // 檢查權限：Android 11+ 需要 isExternalStorageManager，以下需要 READ/WRITE
+                val hasPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    android.os.Environment.isExternalStorageManager()
+                } else {
+                    documentsDir.canWrite()
+                }
+
+                if (hasPermission) {
+                    if (!iterationDir.exists()) iterationDir.mkdirs()
+                    
+                    val wallpaperDir = File(iterationDir, "Wallpaper")
+                    if (!wallpaperDir.exists()) wallpaperDir.mkdirs()
+                    
+                    val backupDir = File(iterationDir, "Backup")
+                    if (!backupDir.exists()) backupDir.mkdirs()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }

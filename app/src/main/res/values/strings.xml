@@ -360,8 +360,8 @@
     <string name="dock_offset_label">Raise Dock: %1$d</string>
 
     <!-- Settings - Misc -->
-    <string name="compat_warning_title">Compatibility Warning</string>
-    <string name="compat_warning_msg">Liquid Glass effects rely on system APIs introduced in Android 12 (API 31).  Your current device (API %1$d) may experience performance issues or visual artifacts.</string>
+    <string name="compat_warning_title">Unsupported Version</string>
+    <string name="compat_warning_msg">Liquid Glass effects require Android 12 (API 31) or higher. Your current device (API %1$d) cannot enable this feature.</string>
     <string name="understand">I Understand</string>
     <string name="network_access_usage">Network Access &amp; Usage</string>
     <string name="internal_network_toggle">Internal Network Toggle</string>
@@ -613,6 +613,8 @@
     <string name="applying_wallpaper_desc">Optimizing colors and generating effects for your new look.</string>
     <string name="select_wallpaper_type_desc">Would you like to use a photo from your gallery or create a solid color wallpaper?</string>
     <string name="wallpaper_default">Default</string>
+    <string name="wallpaper_sync_system">Sync System Wallpaper</string>
+    <string name="wallpaper_sync_system_desc">Extract current system wallpaper and update effects</string>
     <string name="emoji_label">Emoji</string>
     <string name="emoji_hint">Enter one or more emojis</string>
     <string name="wallpaper_mode_title">Rendering Mode</string>
@@ -697,4 +699,10 @@
     <string name="event_name_hint">Event Name</string>
     <string name="target_date">Target Date</string>
     <string name="target_time">Target Time</string>
+    <string name="gesture_swipe_down_split_title">Split Swipe Down</string>
+    <string name="gesture_swipe_down_split_desc">Split swipe down gesture into left and right sides</string>
+    <string name="gesture_swipe_down_left_title">Swipe Down (Left)</string>
+    <string name="gesture_swipe_down_right_title">Swipe Down (Right)</string>
+    <string name="gesture_swipe_down_left_dialog_title">Select Swipe Down (Left) Action</string>
+    <string name="gesture_swipe_down_right_dialog_title">Select Swipe Down (Right) Action</string>
 </resources>

@@ -414,6 +414,7 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
                 viewModel.loadContacts()
                 viewModel.loadCalendarEvents()
                 viewModel.loadFiles()
+                viewModel.ensureIterationDirectoryExists()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)

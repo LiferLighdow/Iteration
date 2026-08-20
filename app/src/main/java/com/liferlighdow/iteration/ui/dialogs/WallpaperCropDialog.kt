@@ -37,13 +37,21 @@ import com.liferlighdow.iteration.R
 import kotlin.math.roundToInt
 
 @Composable
-fun WallpaperCropDialog(uri: Uri, onDismiss: () -> Unit, onConfirm: (Bitmap) -> Unit) {
+fun WallpaperCropDialog(
+    uri: Uri? = null,
+    bitmap: Bitmap? = null,
+    onDismiss: () -> Unit,
+    onConfirm: (cropped: Bitmap, original: Bitmap) -> Unit
+) {
     val mContext = LocalContext.current
-    val originalBitmap = remember(uri) {
-        try {
-            mContext.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
-        } catch (e: Exception) {
-            null
+    val originalBitmap = remember(uri, bitmap) {
+        if (bitmap != null) return@remember bitmap
+        uri?.let {
+            try {
+                mContext.contentResolver.openInputStream(it)?.use { BitmapFactory.decodeStream(it) }
+            } catch (e: Exception) {
+                null
+            }
         }
     }
 
@@ -146,7 +154,7 @@ fun WallpaperCropDialog(uri: Uri, onDismiss: () -> Unit, onConfirm: (Bitmap) -> 
                     }
                     Button(onClick = {
                         val cropped = cropWallpaperBitmap(originalBitmap, scale, offset, containerSize, mContext)
-                        onConfirm(cropped)
+                        onConfirm(cropped, originalBitmap)
                     }) {
                         Text(stringResource(R.string.done))
                     }

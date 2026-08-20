@@ -37,6 +37,7 @@ fun SettingsMainScreen(
     onNavigateToRenameApps: () -> Unit,
     onNavigateToAppLibrary: () -> Unit,
     onNavigateToIconTheme: () -> Unit,
+    onNavigateToWallpaper: () -> Unit,
     onNavigateToDock: () -> Unit,
     onNavigateToLiquidGlass: () -> Unit,
     onNavigateToGestures: () -> Unit,
@@ -64,6 +65,7 @@ fun SettingsMainScreen(
         listOf(
             // --- 核心類別 ---
             SettingsMetadata(context.getString(R.string.icon_theme_title), context.getString(R.string.settings_icon_theme_desc), Icons.Default.Palette, Color(0xFF4285F4), onNavigateToIconTheme),
+            SettingsMetadata(context.getString(R.string.menu_wallpaper), "", Icons.Default.Image, Color(0xFFE91E63), onNavigateToWallpaper),
             SettingsMetadata(context.getString(R.string.pwa_manage_title), context.getString(R.string.pwa_manage_desc), Icons.Default.Public, Color(0xFF009688), onNavigateToPwaMaker),
             SettingsMetadata(context.getString(R.string.widget_maker_title), context.getString(R.string.widget_maker_desc), Icons.Default.Widgets, Color(0xFF673AB7), onNavigateToWidgetMaker),
             SettingsMetadata(context.getString(R.string.liquid_glass_title), context.getString(R.string.settings_liquid_glass_desc), Icons.Default.BlurOn, Color(0xFF34A853), onNavigateToLiquidGlass, isLiquidGlass = true),
@@ -261,6 +263,14 @@ fun SettingsMainScreen(
                             icon = Icons.Default.Edit,
                             iconColor = Color(0xFF673AB7),
                             onClick = onNavigateToRenameApps
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        SettingsItem(
+                            headline = stringResource(R.string.menu_wallpaper),
+                            supporting = "",
+                            icon = Icons.Default.Image,
+                            iconColor = Color(0xFFE91E63),
+                            onClick = onNavigateToWallpaper
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                         SettingsItem(
@@ -501,14 +511,8 @@ fun SettingsMainScreen(
             confirmButton = {
                 TextButton(onClick = { 
                     showApiWarningDialog = false 
-                    onNavigateToLiquidGlass()
                 }) {
-                    Text(stringResource(R.string.understand))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showApiWarningDialog = false }) {
-                    Text(stringResource(R.string.cancel))
+                    Text(stringResource(R.string.got_it))
                 }
             }
         )

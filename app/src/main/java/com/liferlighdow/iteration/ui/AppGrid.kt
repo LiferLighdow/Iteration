@@ -128,7 +128,7 @@ fun AppGrid(
     onBackgroundClick: () -> Unit = {},
     onBackgroundDoubleTap: () -> Unit = {},
     onBackgroundSwipeUp: () -> Unit = {},
-    onBackgroundSwipeDown: () -> Unit = {},
+    onBackgroundSwipeDown: (x: Float) -> Unit = {},
     onBackgroundTwoFingerSwipeUp: () -> Unit = {},
     onBackgroundTwoFingerSwipeDown: () -> Unit = {},
     onBackgroundDragY: (Float) -> Unit = {},
@@ -317,7 +317,7 @@ fun AppGrid(
                                         onBackgroundDragY(totalDragY)
                                         if (!hasTriggered) {
                                             if (totalDragY > 80f) { // 下滑搜尋保持 80px 靈敏度
-                                                onBackgroundSwipeDown(); hasTriggered = true
+                                                onBackgroundSwipeDown(dragEvent.position.x); hasTriggered = true
                                             } else if (totalDragY < -180f) { // 上滑門檻調高至 180px 以徹底防止誤觸
                                                 onBackgroundSwipeUp(); hasTriggered = true
                                             }

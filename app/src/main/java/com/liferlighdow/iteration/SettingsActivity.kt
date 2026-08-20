@@ -92,9 +92,16 @@ class SettingsActivity : AppCompatActivity() {
 
 @Composable
 fun SettingsNavigation() {
-    var currentPage by remember { mutableStateOf(SettingsPage.MAIN) }
-    var workshopWidgetId by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
+    val intent = (context as? AppCompatActivity)?.intent
+    val startPage = intent?.getStringExtra("start_page")
+    
+    var currentPage by remember { 
+        mutableStateOf(
+            if (startPage == "WALLPAPER") SettingsPage.WALLPAPER else SettingsPage.MAIN 
+        ) 
+    }
+    var workshopWidgetId by remember { mutableStateOf<String?>(null) }
     
     BackHandler(enabled = currentPage != SettingsPage.MAIN) {
         when (currentPage) {
@@ -115,6 +122,7 @@ fun SettingsNavigation() {
             onNavigateToRenameApps = { currentPage = SettingsPage.RENAME_APPS },
             onNavigateToAppLibrary = { currentPage = SettingsPage.APP_LIBRARY },
             onNavigateToIconTheme = { currentPage = SettingsPage.ICON_THEME },
+            onNavigateToWallpaper = { currentPage = SettingsPage.WALLPAPER },
             onNavigateToDock = { currentPage = SettingsPage.DOCK },
             onNavigateToLiquidGlass = { currentPage = SettingsPage.LIQUID_GLASS },
             onNavigateToGestures = { currentPage = SettingsPage.GESTURES },
@@ -127,6 +135,7 @@ fun SettingsNavigation() {
             onNavigateToWidgetMaker = { currentPage = SettingsPage.WIDGET_MAKER },
             onNavigateToGreenify = { currentPage = SettingsPage.GREENIFY }
         )
+        SettingsPage.WALLPAPER -> SettingsWallpaperScreen(onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.HIDE_APPS -> HideAppsScreen(onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.GREENIFY -> GreenifyScreen(onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.RENAME_APPS -> RenameAppsScreen(onBack = { currentPage = SettingsPage.MAIN })

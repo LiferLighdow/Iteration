@@ -332,12 +332,17 @@ fun GesturesSettingsScreen(onBack: () -> Unit) {
     val doubleTapAction by viewModel.doubleTapAction.collectAsState()
     val swipeUpAction by viewModel.swipeUpAction.collectAsState()
     val swipeDownAction by viewModel.swipeDownAction.collectAsState()
+    val isSwipeDownSplit by viewModel.isSwipeDownSplit.collectAsState()
+    val swipeDownLeftAction by viewModel.swipeDownLeftAction.collectAsState()
+    val swipeDownRightAction by viewModel.swipeDownRightAction.collectAsState()
     val longPressAction by viewModel.longPressAction.collectAsState()
     val twoFingerSwipeUpAction by viewModel.twoFingerSwipeUpAction.collectAsState()
     val twoFingerSwipeDownAction by viewModel.twoFingerSwipeDownAction.collectAsState()
     val doubleTapApp by viewModel.doubleTapApp.collectAsState()
     val swipeUpApp by viewModel.swipeUpApp.collectAsState()
     val swipeDownApp by viewModel.swipeDownApp.collectAsState()
+    val swipeDownLeftApp by viewModel.swipeDownLeftApp.collectAsState()
+    val swipeDownRightApp by viewModel.swipeDownRightApp.collectAsState()
     val longPressApp by viewModel.longPressApp.collectAsState()
     val twoFingerSwipeUpApp by viewModel.twoFingerSwipeUpApp.collectAsState()
     val twoFingerSwipeDownApp by viewModel.twoFingerSwipeDownApp.collectAsState()
@@ -347,6 +352,8 @@ fun GesturesSettingsScreen(onBack: () -> Unit) {
     var showDoubleTapDialog by remember { mutableStateOf(false) }
     var showSwipeUpDialog by remember { mutableStateOf(false) }
     var showSwipeDownDialog by remember { mutableStateOf(false) }
+    var showSwipeDownLeftDialog by remember { mutableStateOf(false) }
+    var showSwipeDownRightDialog by remember { mutableStateOf(false) }
     var showLongPressDialog by remember { mutableStateOf(false) }
     var showTwoFingerSwipeUpDialog by remember { mutableStateOf(false) }
     var showTwoFingerSwipeDownDialog by remember { mutableStateOf(false) }
@@ -354,6 +361,8 @@ fun GesturesSettingsScreen(onBack: () -> Unit) {
     var showAppPickerForDoubleTap by remember { mutableStateOf(false) }
     var showAppPickerForSwipeUp by remember { mutableStateOf(false) }
     var showAppPickerForSwipeDown by remember { mutableStateOf(false) }
+    var showAppPickerForSwipeDownLeft by remember { mutableStateOf(false) }
+    var showAppPickerForSwipeDownRight by remember { mutableStateOf(false) }
     var showAppPickerForLongPress by remember { mutableStateOf(false) }
     var showAppPickerForTwoFingerSwipeUp by remember { mutableStateOf(false) }
     var showAppPickerForTwoFingerSwipeDown by remember { mutableStateOf(false) }
@@ -404,14 +413,42 @@ fun GesturesSettingsScreen(onBack: () -> Unit) {
                         allApps = allApps,
                         onClick = { showSwipeUpDialog = true }
                     )
-                    GestureItem(
-                        icon = Icons.Default.VerticalAlignBottom,
-                        title = stringResource(R.string.gesture_swipe_down),
-                        action = swipeDownAction,
-                        packageName = swipeDownApp,
-                        allApps = allApps,
-                        onClick = { showSwipeDownDialog = true }
+
+                    SettingSwitchItem(
+                        title = stringResource(R.string.gesture_swipe_down_split_title),
+                        supportingText = stringResource(R.string.gesture_swipe_down_split_desc),
+                        checked = isSwipeDownSplit,
+                        onCheckedChange = { viewModel.setIsSwipeDownSplit(it) }
                     )
+
+                    if (isSwipeDownSplit) {
+                        GestureItem(
+                            icon = Icons.Default.VerticalAlignBottom,
+                            title = stringResource(R.string.gesture_swipe_down_left_title),
+                            action = swipeDownLeftAction,
+                            packageName = swipeDownLeftApp,
+                            allApps = allApps,
+                            onClick = { showSwipeDownLeftDialog = true }
+                        )
+                        GestureItem(
+                            icon = Icons.Default.VerticalAlignBottom,
+                            title = stringResource(R.string.gesture_swipe_down_right_title),
+                            action = swipeDownRightAction,
+                            packageName = swipeDownRightApp,
+                            allApps = allApps,
+                            onClick = { showSwipeDownRightDialog = true }
+                        )
+                    } else {
+                        GestureItem(
+                            icon = Icons.Default.VerticalAlignBottom,
+                            title = stringResource(R.string.gesture_swipe_down),
+                            action = swipeDownAction,
+                            packageName = swipeDownApp,
+                            allApps = allApps,
+                            onClick = { showSwipeDownDialog = true }
+                        )
+                    }
+
                     GestureItem(
                         icon = Icons.Default.Fingerprint,
                         title = stringResource(R.string.gesture_long_press),
@@ -487,6 +524,32 @@ fun GesturesSettingsScreen(onBack: () -> Unit) {
         )
     }
 
+    if (showSwipeDownLeftDialog) {
+        GestureActionPicker(
+            title = stringResource(R.string.gesture_swipe_down_left_dialog_title),
+            currentAction = swipeDownLeftAction,
+            onDismiss = { showSwipeDownLeftDialog = false },
+            onActionSelected = { action ->
+                viewModel.setSwipeDownLeftAction(action)
+                if (action == GestureAction.LAUNCH_APP) showAppPickerForSwipeDownLeft = true
+                showSwipeDownLeftDialog = false
+            }
+        )
+    }
+
+    if (showSwipeDownRightDialog) {
+        GestureActionPicker(
+            title = stringResource(R.string.gesture_swipe_down_right_dialog_title),
+            currentAction = swipeDownRightAction,
+            onDismiss = { showSwipeDownRightDialog = false },
+            onActionSelected = { action ->
+                viewModel.setSwipeDownRightAction(action)
+                if (action == GestureAction.LAUNCH_APP) showAppPickerForSwipeDownRight = true
+                showSwipeDownRightDialog = false
+            }
+        )
+    }
+
     if (showLongPressDialog) {
         GestureActionPicker(
             title = stringResource(R.string.gesture_long_press_dialog_title),
@@ -549,6 +612,22 @@ fun GesturesSettingsScreen(onBack: () -> Unit) {
             viewModel,
             onDismiss = { showAppPickerForSwipeDown = false },
             onAppSelected = { viewModel.setSwipeDownApp(it.packageName); showAppPickerForSwipeDown = false })
+    }
+    if (showAppPickerForSwipeDownLeft) {
+        AppPickerDialog(
+            allApps.filter { !it.isHidden },
+            iconCornerRadius,
+            viewModel,
+            onDismiss = { showAppPickerForSwipeDownLeft = false },
+            onAppSelected = { viewModel.setSwipeDownLeftApp(it.packageName); showAppPickerForSwipeDownLeft = false })
+    }
+    if (showAppPickerForSwipeDownRight) {
+        AppPickerDialog(
+            allApps.filter { !it.isHidden },
+            iconCornerRadius,
+            viewModel,
+            onDismiss = { showAppPickerForSwipeDownRight = false },
+            onAppSelected = { viewModel.setSwipeDownRightApp(it.packageName); showAppPickerForSwipeDownRight = false })
     }
     if (showAppPickerForLongPress) {
         AppPickerDialog(

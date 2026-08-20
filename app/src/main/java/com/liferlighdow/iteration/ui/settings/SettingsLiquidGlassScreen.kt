@@ -62,13 +62,6 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
-                },
-                actions = {
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                        TextButton(onClick = { viewModel.resetLiquidGlassParams() }) {
-                            Text(stringResource(R.string.reset), color = MaterialTheme.colorScheme.primary)
-                        }
-                    }
                 }
             )
         }
@@ -238,6 +231,7 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
         LiquidGlassEditorDialog(
             title = stringResource(R.string.visual_effects),
             onDismiss = { showGlobalEditor = false },
+            onReset = { viewModel.resetLiquidGlassParams() },
             content = {
                 GlobalEffectEditorContent(viewModel)
             }
@@ -248,6 +242,7 @@ fun LiquidGlassSettingsScreen(onBack: () -> Unit) {
         LiquidGlassEditorDialog(
             title = label,
             onDismiss = { componentToEdit = null },
+            onReset = { viewModel.resetLiquidGlassComponentConfig(comp) },
             content = {
                 ComponentEffectEditorContent(comp, viewModel)
             }
@@ -290,6 +285,7 @@ fun ComponentConfigItem(
 fun LiquidGlassEditorDialog(
     title: String,
     onDismiss: () -> Unit,
+    onReset: () -> Unit,
     content: @Composable () -> Unit
 ) {
     Dialog(
@@ -309,6 +305,9 @@ fun LiquidGlassEditorDialog(
                         }
                     },
                     actions = {
+                        TextButton(onClick = onReset) {
+                            Text(stringResource(R.string.reset))
+                        }
                         TextButton(onClick = onDismiss) {
                             Text(stringResource(R.string.done))
                         }

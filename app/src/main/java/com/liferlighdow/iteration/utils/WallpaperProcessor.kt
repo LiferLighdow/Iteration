@@ -6,10 +6,15 @@ import android.app.WallpaperManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Build
+import android.os.Bundle
+import android.os.ParcelFileDescriptor
+import android.os.UserHandle
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.drawable.toBitmap
+import com.rosan.dhizuku.api.Dhizuku
 import java.io.File
+import java.io.InputStream
 
 /**
  * 專門負責桌布獲取、裁剪與模糊處理的處理器
@@ -27,6 +32,25 @@ class WallpaperProcessor(private val context: Application) {
      */
     @android.annotation.SuppressLint("MissingPermission")
     fun extractSystemWallpaper(): WallpaperResult? {
+        // 1. 優先嘗試特權獲取 (Android 13+ 繞過隱私限制)
+        val privilegedBitmap = extractWallpaperPrivileged()
+        
+        // 2. 如果特權獲取成功
+        if (privilegedBitmap != null) {
+            var isLight = false
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    val wm = WallpaperManager.getInstance(context)
+                    val colors = wm.getWallpaperColors(WallpaperManager.FLAG_SYSTEM)
+                    if (colors != null) {
+                        isLight = (colors.colorHints and WallpaperColors.HINT_SUPPORTS_DARK_TEXT) != 0
+                    }
+                }
+            } catch (e: Exception) {}
+            return processBitmap(privilegedBitmap, isLight)
+        }
+
+        // 3. 降級方案：使用傳統 WallpaperManager
         return try {
             val wm = WallpaperManager.getInstance(context)
             var isLight = false
@@ -37,7 +61,44 @@ class WallpaperProcessor(private val context: Application) {
                 }
             }
             val drawable = wm.drawable ?: return null
-            processBitmap(drawable.toBitmap(), if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) isLight else null)
+            processBitmap(drawable.toBitmap(), isLight)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    /**
+     * 透過 Dhizuku/Shizuku 特權身份直接讀取系統桌布檔案
+     * 路徑通常在 /data/system/users/0/wallpaper
+     */
+    private fun extractWallpaperPrivileged(): Bitmap? {
+        return try {
+            // 在絕大多數單用戶環境下，主用戶是 0。
+            // 嘗試讀取主用戶桌布
+            val path = "/data/system/users/0/wallpaper"
+            val command = arrayOf("cat", path)
+
+            val inputStream: InputStream? = when {
+                Dhizuku.isPermissionGranted() -> {
+                    Dhizuku.newProcess(command, null, null).inputStream
+                }
+                rikka.shizuku.Shizuku.pingBinder() && rikka.shizuku.Shizuku.checkSelfPermission() == android.content.pm.PackageManager.PERMISSION_GRANTED -> {
+                    // 使用反射呼叫 Shizuku.newProcess
+                    val method = rikka.shizuku.Shizuku::class.java.declaredMethods.find { 
+                        it.name == "newProcess" && it.parameterTypes.size == 3 
+                    }
+                    method?.isAccessible = true
+                    val process = method?.invoke(null, command, null, null) as? Process
+                    process?.inputStream
+                }
+                else -> null
+            }
+
+            inputStream?.use {
+                return BitmapFactory.decodeStream(it)
+            }
+            null
         } catch (e: Exception) {
             e.printStackTrace()
             null

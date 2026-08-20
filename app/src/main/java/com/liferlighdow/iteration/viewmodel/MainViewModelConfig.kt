@@ -77,6 +77,11 @@ fun MainViewModel.exportConfig(): String {
                 swipeUpApp = _swipeUpApp.value,
                 swipeDownAction = _swipeDownAction.value,
                 swipeDownApp = _swipeDownApp.value,
+                isSwipeDownSplit = _isSwipeDownSplit.value,
+                swipeDownLeftAction = _swipeDownLeftAction.value,
+                swipeDownLeftApp = _swipeDownLeftApp.value,
+                swipeDownRightAction = _swipeDownRightAction.value,
+                swipeDownRightApp = _swipeDownRightApp.value,
                 longPressAction = _longPressAction.value,
                 longPressApp = _longPressApp.value,
                 twoFingerSwipeUpAction = _twoFingerSwipeUpAction.value,
@@ -208,6 +213,9 @@ fun MainViewModel.applyConfig(config: LauncherConfig) {
         putString("double_tap_action", settings.gestures.doubleTapAction.name)
         putString("swipe_up_action", settings.gestures.swipeUpAction.name)
         putString("swipe_down_action", settings.gestures.swipeDownAction.name)
+        putBoolean("is_swipe_down_split", settings.gestures.isSwipeDownSplit)
+        putString("swipe_down_left_action", settings.gestures.swipeDownLeftAction.name)
+        putString("swipe_down_right_action", settings.gestures.swipeDownRightAction.name)
         putString("long_press_action", settings.gestures.longPressAction.name)
         putString("two_finger_swipe_up_action", settings.gestures.twoFingerSwipeUpAction.name)
         putString("two_finger_swipe_down_action", settings.gestures.twoFingerSwipeDownAction.name)
@@ -215,6 +223,8 @@ fun MainViewModel.applyConfig(config: LauncherConfig) {
         putString("double_tap_app", settings.gestures.doubleTapApp)
         putString("swipe_up_app", settings.gestures.swipeUpApp)
         putString("swipe_down_app", settings.gestures.swipeDownApp)
+        putString("swipe_down_left_app", settings.gestures.swipeDownLeftApp)
+        putString("swipe_down_right_app", settings.gestures.swipeDownRightApp)
         putString("long_press_app", settings.gestures.longPressApp)
         putString("two_finger_swipe_up_app", settings.gestures.twoFingerSwipeUpApp)
         putString("two_finger_swipe_down_app", settings.gestures.twoFingerSwipeDownApp)
@@ -275,6 +285,9 @@ fun MainViewModel.applyConfig(config: LauncherConfig) {
     _doubleTapAction.value = settings.gestures.doubleTapAction
     _swipeUpAction.value = settings.gestures.swipeUpAction
     _swipeDownAction.value = settings.gestures.swipeDownAction
+    _isSwipeDownSplit.value = settings.gestures.isSwipeDownSplit
+    _swipeDownLeftAction.value = settings.gestures.swipeDownLeftAction
+    _swipeDownRightAction.value = settings.gestures.swipeDownRightAction
     _longPressAction.value = settings.gestures.longPressAction
     _twoFingerSwipeUpAction.value = settings.gestures.twoFingerSwipeUpAction
     _twoFingerSwipeDownAction.value = settings.gestures.twoFingerSwipeDownAction
@@ -282,6 +295,8 @@ fun MainViewModel.applyConfig(config: LauncherConfig) {
     _doubleTapApp.value = settings.gestures.doubleTapApp
     _swipeUpApp.value = settings.gestures.swipeUpApp
     _swipeDownApp.value = settings.gestures.swipeDownApp
+    _swipeDownLeftApp.value = settings.gestures.swipeDownLeftApp
+    _swipeDownRightApp.value = settings.gestures.swipeDownRightApp
     _longPressApp.value = settings.gestures.longPressApp
     _twoFingerSwipeUpApp.value = settings.gestures.twoFingerSwipeUpApp
     _twoFingerSwipeDownApp.value = settings.gestures.twoFingerSwipeDownApp

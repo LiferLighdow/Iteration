@@ -97,6 +97,31 @@ fun MainViewModel.setSwipeDownApp(packageName: String) {
     prefs.edit().putString("swipe_down_app", packageName).apply()
 }
 
+fun MainViewModel.setIsSwipeDownSplit(split: Boolean) {
+    _isSwipeDownSplit.value = split
+    prefs.edit().putBoolean("is_swipe_down_split", split).apply()
+}
+
+fun MainViewModel.setSwipeDownLeftAction(action: GestureAction) {
+    _swipeDownLeftAction.value = action
+    prefs.edit().putString("swipe_down_left_action", action.name).apply()
+}
+
+fun MainViewModel.setSwipeDownRightAction(action: GestureAction) {
+    _swipeDownRightAction.value = action
+    prefs.edit().putString("swipe_down_right_action", action.name).apply()
+}
+
+fun MainViewModel.setSwipeDownLeftApp(packageName: String) {
+    _swipeDownLeftApp.value = packageName
+    prefs.edit().putString("swipe_down_left_app", packageName).apply()
+}
+
+fun MainViewModel.setSwipeDownRightApp(packageName: String) {
+    _swipeDownRightApp.value = packageName
+    prefs.edit().putString("swipe_down_right_app", packageName).apply()
+}
+
 fun MainViewModel.setLongPressApp(packageName: String) {
     _longPressApp.value = packageName
     prefs.edit().putString("long_press_app", packageName).apply()
@@ -542,6 +567,9 @@ fun MainViewModel.setShowStatusBar(enabled: Boolean) {
 fun MainViewModel.setShowNavigationBar(enabled: Boolean) {
     _showNavigationBar.value = enabled
     prefs.edit().putBoolean("show_navigation_bar", enabled).apply()
+    if (enabled) {
+        setDockOffset(0f)
+    }
     syncNavigationBarHardHide(enabled)
 }
 
@@ -651,6 +679,13 @@ fun MainViewModel.resetLiquidGlassParams() {
     setLiquidGlassSaturation(1f)
     setLiquidGlassBrightness(1f)
     setLiquidGlassAlpha(0.3f)
+}
+
+fun MainViewModel.resetLiquidGlassComponentConfig(component: LiquidGlassComponent) {
+    val current = _liquidGlassComponentConfigs.value.toMutableMap()
+    current.remove(component.key)
+    _liquidGlassComponentConfigs.value = current
+    prefs.edit().putString("liquid_glass_component_configs", Json.encodeToString(current)).apply()
 }
 
 fun MainViewModel.setMaterialYouEnabled(enabled: Boolean) {

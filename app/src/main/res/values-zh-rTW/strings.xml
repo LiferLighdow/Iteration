@@ -294,7 +294,7 @@
     <string name="clear_icon_cache_confirm_title">清除圖示快取？</string>
     <string name="clear_icon_cache_confirm_msg">這將刪除所有已處理的圖示預覽並重啟啟動器以重新生成。如果圖示模糊或不正確，請使用此功能。</string>
     <string name="style_compatibility_title">Iteration 風格相容性</string>
-    <string name="got_it">知道了</string>
+    <string name="got_it">我知道了</string>
     <string name="default_style_desc">預設（系統）</string>
     <string name="icon_pack_system_monochrome">系統單色圖層 (Android 13+)</string>
 
@@ -363,9 +363,9 @@
     <string name="dock_offset_label">抬高 Dock：%1$d</string>
 
     <!-- 設定 - 雜項 -->
-    <string name="compat_warning_title">相容性警告</string>
-    <string name="compat_warning_msg">液態玻璃效果依賴 Android 12 (API 31) 引入的系統 API。您目前的裝置 (API %1$d) 可能會遇到效能問題或視覺異常。</string>
-    <string name="understand">我明白</string>
+    <string name="compat_warning_title">版本不支援</string>
+    <string name="compat_warning_msg">液態玻璃效果僅支援 Android 12 (API 31) 或更高版本的裝置。您目前的裝置版本 (API %1$d) 無法開啟此功能。</string>
+    <string name="understand">我知道了</string>
     <string name="network_access_usage">網路存取與使用</string>
     <string name="internal_network_toggle">內部網路開關</string>
     <string name="internal_network_desc">允許 Iteration 執行背景網路任務</string>
@@ -689,4 +689,10 @@
     <string name="event_name_hint">事件名稱</string>
     <string name="target_date">目標日期</string>
     <string name="target_time">目標時間</string>
+    <string name="gesture_swipe_down_split_title">分區向下滑動</string>
+    <string name="gesture_swipe_down_split_desc">將向下滑動手勢分為左側與右側</string>
+    <string name="gesture_swipe_down_left_title">向下滑動 (左側)</string>
+    <string name="gesture_swipe_down_right_title">向下滑動 (右側)</string>
+    <string name="gesture_swipe_down_left_dialog_title">選擇向下滑動 (左側) 手勢</string>
+    <string name="gesture_swipe_down_right_dialog_title">選擇向下滑動 (右側) 手勢</string>
 </resources>
