@@ -247,6 +247,8 @@
     <string name="current_pack">目前的圖標包</string>
     <string name="themed_icons_m3_title">主題圖標（M3風格）</string>
     <string name="themed_icons_m3_desc">將桌布的動態顏色套用到圖示上</string>
+    <string name="legacy_icon_uniform_title">統一舊版眷屬樣貌</string>
+    <string name="legacy_icon_uniform_desc">為那些沒有「適應性」的眷屬加上正方形底座，讓桌面看起來整整齊齊的喔♡</string>
     <string name="custom_exclusions">自訂排除的應用</string>
     <string name="custom_exclusions_desc">%1$d 應用程式永遠不會套用樣式或圖示包。</string>
     <string name="clear_icon_cache_title">清除圖示快取資料</string>

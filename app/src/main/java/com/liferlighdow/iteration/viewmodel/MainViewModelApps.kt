@@ -568,7 +568,8 @@ fun MainViewModel.processNewIcon(
     customIconPack: String,
     activityInfoCache: Map<UserHandle, List<LauncherActivityInfo>>,
     calendarDay: String? = null,
-    clockTime: Pair<Int, Int>? = null
+    clockTime: Pair<Int, Int>? = null,
+    useLegacyUniformSquare: Boolean = false
 ): ImageBitmap {
     val userManager = getApplication<Application>().getSystemService(Context.USER_SERVICE) as UserManager
     val userHandle = userManager.userProfiles.find { 
@@ -599,7 +600,7 @@ fun MainViewModel.processNewIcon(
     val customBrightness = _customIconBrightness.value
 
     if (isExcluded) {
-        return iconProcessor.processIcon(finalRawIcon, false, null, IconStyle.STANDARD, iconCornerRadius, sizePx, customBgColor = 0, customFgColor = 0, customUseOriginal = true, customUseOriginalBg = true, customUseDominantColor = false, useMonochrome = false, customHue = customHue, customSaturation = customSaturation, customBrightness = customBrightness, originalIcon = null, userId = app.userId, calendarDay = calendarDay, clockTime = clockTime)
+        return iconProcessor.processIcon(finalRawIcon, false, null, IconStyle.STANDARD, iconCornerRadius, sizePx, customBgColor = 0, customFgColor = 0, customUseOriginal = true, customUseOriginalBg = true, customUseDominantColor = false, useMonochrome = false, customHue = customHue, customSaturation = customSaturation, customBrightness = customBrightness, originalIcon = null, userId = app.userId, calendarDay = calendarDay, clockTime = clockTime, useLegacyUniformSquare = useLegacyUniformSquare)
     }
 
     val builtinSelected = _builtinIconSelectedPackages.value
@@ -635,7 +636,8 @@ fun MainViewModel.processNewIcon(
         userId = app.userId,
         isPrivate = app.isPrivate,
         calendarDay = calendarDay,
-        clockTime = clockTime
+        clockTime = clockTime,
+        useLegacyUniformSquare = useLegacyUniformSquare
     )
 }
 
@@ -701,8 +703,9 @@ fun MainViewModel.loadSettings() {
     }
     val newAmoled = prefs.getBoolean("amoled_black", false)
     val newIconSize = prefs.getInt("icon_size_px", -1)
+    val newLegacyUniform = prefs.getBoolean("legacy_icon_uniform", false)
 
-    if (_iconStyle.value != newStyle || _isThemedIconsEnabled.value != newThemed || _iconPackPackage.value != newIconPackPackage || _iconShape.value != newShape || _libraryShape.value != newLibShape || _excludedThemedPackages.value != newExcluded || _desktopRows.value != newRows || _dockStyle.value != newDockStyle || _iconSizePx.value != newIconSize) {
+    if (_iconStyle.value != newStyle || _isThemedIconsEnabled.value != newThemed || _iconPackPackage.value != newIconPackPackage || _iconShape.value != newShape || _libraryShape.value != newLibShape || _excludedThemedPackages.value != newExcluded || _desktopRows.value != newRows || _dockStyle.value != newDockStyle || _iconSizePx.value != newIconSize || _isLegacyIconUniformEnabled.value != newLegacyUniform) {
         _iconStyle.value = newStyle
         _iconShape.value = newShape
         _libraryShape.value = newLibShape
@@ -712,6 +715,7 @@ fun MainViewModel.loadSettings() {
         _desktopRows.value = newRows
         _dockStyle.value = newDockStyle
         _iconSizePx.value = newIconSize
+        _isLegacyIconUniformEnabled.value = newLegacyUniform
     }
 
     _searchEngineUrl.value = newSearchEngine
@@ -936,6 +940,8 @@ fun MainViewModel.loadApps() {
         val customHue = _customIconHue.value
         val customSaturation = _customIconSaturation.value
         val customBrightness = _customIconBrightness.value
+        val useLegacyUniformSquare = _isLegacyIconUniformEnabled.value
+
         val customKey = if (currentStyle == IconStyle.CUSTOM) {
             "C_${customBg.toString(16)}_${customFg.toString(16)}_${if (customOriginal) "O" else "M"}_${if (customOriginalBg) "OB" else "CB"}_${if (customUseDominantColor) "D" else "S"}_${customIconPack.hashCode()}_H${customHue.toInt()}S${(customSaturation * 100).toInt()}B${(customBrightness * 100).toInt()}"
         } else "N"
@@ -952,9 +958,9 @@ fun MainViewModel.loadApps() {
         }
 
         val newStyleSuffix = if (currentIconPack.isNotEmpty()) {
-            "IP_V15_${currentIconPack.hashCode()}_${currentStyle.name}_${if (isThemed) "T_$colorKey" else "N"}_${customKey}_Q$renderingSizePx"
+            "IP_V16_${currentIconPack.hashCode()}_${currentStyle.name}_${if (isThemed) "T_$colorKey" else "N"}_${customKey}_Q$renderingSizePx${if (useLegacyUniformSquare) "_U" else ""}"
         } else {
-            "V15_${currentStyle.name}_${if (isThemed) "T_$colorKey" else "N"}_${customKey}_Q$renderingSizePx"
+            "V16_${currentStyle.name}_${if (isThemed) "T_$colorKey" else "N"}_${customKey}_Q$renderingSizePx${if (useLegacyUniformSquare) "_U" else ""}"
         }
 
         if (currentStyleSuffix != newStyleSuffix) {
@@ -1018,7 +1024,7 @@ fun MainViewModel.loadApps() {
                                     val processed = if (app.isPWA) {
                                         generatePwaIcon(app, renderingSizePx)?.asImageBitmap()
                                     } else {
-                                        processNewIcon(app, currentIconPack, isThemed, isExcluded, themeColors, currentStyle, currentIconCornerRadius, renderingSizePx, customBg, customFg, customOriginal, customOriginalBg, customUseDominantColor, customIconPack, activityInfoCache, calendarDayToPass, clockTimeToPass)
+                                        processNewIcon(app, currentIconPack, isThemed, isExcluded, themeColors, currentStyle, currentIconCornerRadius, renderingSizePx, customBg, customFg, customOriginal, customOriginalBg, customUseDominantColor, customIconPack, activityInfoCache, calendarDayToPass, clockTimeToPass, useLegacyUniformSquare)
                                     }
                                     
                                     processed?.let {

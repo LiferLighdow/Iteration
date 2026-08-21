@@ -287,6 +287,8 @@
     <string name="current_pack">目前圖示包</string>
     <string name="themed_icons_m3_title">主題圖示 (M3)</string>
     <string name="themed_icons_m3_desc">將桌布的動態顏色套用至圖示</string>
+    <string name="legacy_icon_uniform_title">統一舊版圖示</string>
+    <string name="legacy_icon_uniform_desc">為非適應性圖示加上正方形背景，以達成視覺統一。</string>
     <string name="custom_exclusions">自訂排除</string>
     <string name="custom_exclusions_desc">%1$d 個應用程式將永不套用樣式或圖示包</string>
     <string name="clear_icon_cache_title">清除圖示快取</string>

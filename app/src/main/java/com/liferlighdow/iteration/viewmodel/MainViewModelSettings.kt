@@ -172,6 +172,13 @@ fun MainViewModel.setThemedIconsEnabled(enabled: Boolean) {
     loadApps()
 }
 
+fun MainViewModel.setLegacyIconUniformEnabled(enabled: Boolean) {
+    _isLegacyIconUniformEnabled.value = enabled
+    prefs.edit().putBoolean("legacy_icon_uniform", enabled).apply()
+    shouldRefreshIconsOnReturn = true
+    loadApps()
+}
+
 fun MainViewModel.setIconStyle(style: IconStyle) {
     _iconStyle.value = style
     prefs.edit().putString("icon_style", style.name).apply()

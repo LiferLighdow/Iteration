@@ -79,7 +79,8 @@ class IconProcessor(private val context: Context) {
         userId: Long = 0,
         isPrivate: Boolean = false,
         calendarDay: String? = null,
-        clockTime: Pair<Int, Int>? = null
+        clockTime: Pair<Int, Int>? = null,
+        useLegacyUniformSquare: Boolean = false
     ): ImageBitmap {
         if (icon == null) {
             return Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888).asImageBitmap()
@@ -194,20 +195,44 @@ class IconProcessor(private val context: Context) {
                     }
                 }
             } else {
-                if (bgColor != null) {
-                    paint.color = bgColor
+                // --- Legacy Icon Handling with Optional Uniform Square ---
+                val finalBg = if (useLegacyUniformSquare && bgColor == null && !isIconPack) {
+                    extractDominantColor(originalIcon ?: icon) ?: Color.LTGRAY
+                } else {
+                    bgColor
+                }
+
+                if (finalBg != null) {
+                    paint.color = finalBg
                     paint.xfermode = null
                     canvas.drawRect(0f, 0f, sizePx.toFloat(), sizePx.toFloat(), paint)
-                }
-                if (fgColor != null) icon.setTint(fgColor)
-                if (isIconPack) {
-                    val iconScale = 1.15f
-                    val s = (sizePx * iconScale).toInt()
-                    val o = (sizePx - s) / 2
-                    icon.setBounds(o, o, o + s, o + s)
+                    
+                    // Scale down the icon if we added a square background
+                    if (bgColor == null && !isIconPack) {
+                        val iconScale = 0.72f // Leave some room for the background
+                        val s = (sizePx * iconScale).toInt()
+                        val o = (sizePx - s) / 2
+                        icon.setBounds(o, o, o + s, o + s)
+                    } else if (isIconPack) {
+                        val iconScale = 1.15f
+                        val s = (sizePx * iconScale).toInt()
+                        val o = (sizePx - s) / 2
+                        icon.setBounds(o, o, o + s, o + s)
+                    } else {
+                        icon.setBounds(0, 0, sizePx, sizePx)
+                    }
                 } else {
-                    icon.setBounds(0, 0, sizePx, sizePx)
+                    if (isIconPack) {
+                        val iconScale = 1.15f
+                        val s = (sizePx * iconScale).toInt()
+                        val o = (sizePx - s) / 2
+                        icon.setBounds(o, o, o + s, o + s)
+                    } else {
+                        icon.setBounds(0, 0, sizePx, sizePx)
+                    }
                 }
+                
+                if (fgColor != null) icon.setTint(fgColor)
                 icon.draw(canvas)
                 icon.setTintList(null)
             }

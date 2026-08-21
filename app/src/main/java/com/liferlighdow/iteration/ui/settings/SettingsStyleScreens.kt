@@ -54,6 +54,7 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
     val context = LocalContext.current
     val viewModel: MainViewModel = viewModel()
     val isThemedIconsEnabled by viewModel.isThemedIconsEnabled.collectAsState()
+    val isLegacyIconUniformEnabled by viewModel.isLegacyIconUniformEnabled.collectAsState()
     val currentStyle by viewModel.iconStyle.collectAsState()
     val iconCornerRadius by viewModel.iconCornerRadius.collectAsState()
     val currentIconPack by viewModel.iconPackPackage.collectAsState()
@@ -186,6 +187,14 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
                         supportingText = stringResource(R.string.themed_icons_m3_desc),
                         checked = isThemedIconsEnabled,
                         onCheckedChange = { viewModel.setThemedIconsEnabled(it) }
+                    )
+
+                    SettingSwitchItem(
+                        icon = Icons.Default.CropSquare,
+                        title = stringResource(R.string.legacy_icon_uniform_title),
+                        supportingText = stringResource(R.string.legacy_icon_uniform_desc),
+                        checked = isLegacyIconUniformEnabled,
+                        onCheckedChange = { viewModel.setLegacyIconUniformEnabled(it) }
                     )
                     
                     if (currentIconPack.isNotEmpty() && isSystemMonochrome && Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
@@ -621,6 +630,8 @@ fun CustomIconStylePickerDialog(
     val globalIconPack by viewModel.iconPackPackage.collectAsState()
     val isSystemMonochrome = globalIconPack == "system_monochrome"
 
+    val isLegacyIconUniformEnabled by viewModel.isLegacyIconUniformEnabled.collectAsState()
+
     val hue by viewModel.customIconHue.collectAsState()
     val saturation by viewModel.customIconSaturation.collectAsState()
     val brightness by viewModel.customIconBrightness.collectAsState()
@@ -632,7 +643,7 @@ fun CustomIconStylePickerDialog(
     // 優化點：將耗時的圖標處理移至後台線程，避免阻塞 UI 滑動
     val previewBitmap by produceState<androidx.compose.ui.graphics.ImageBitmap?>(
         initialValue = null, 
-        bgColor, fgColor, useOriginal, useOriginalBg, useDominantColor, iconCornerRadius, customIconPack, isSystemMonochrome, hue, saturation, brightness
+        bgColor, fgColor, useOriginal, useOriginalBg, useDominantColor, iconCornerRadius, customIconPack, isSystemMonochrome, hue, saturation, brightness, isLegacyIconUniformEnabled
     ) {
         value = withContext(Dispatchers.Default) {
             val processor = IconProcessor(context)
@@ -660,7 +671,8 @@ fun CustomIconStylePickerDialog(
                 customHue = hue,
                 customSaturation = saturation,
                 customBrightness = brightness,
-                originalIcon = previewIcon
+                originalIcon = previewIcon,
+                useLegacyUniformSquare = isLegacyIconUniformEnabled
             )
         }
     }

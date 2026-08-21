@@ -281,6 +281,8 @@
     <string name="current_pack">当前图标包</string>
     <string name="themed_icons_m3_title">主题图标 (M3)</string>
     <string name="themed_icons_m3_desc">将壁纸的动态颜色应用于图标</string>
+    <string name="legacy_icon_uniform_title">统一旧版图标</string>
+    <string name="legacy_icon_uniform_desc">为非适应性图标加上正方形背景，以达成视觉统一。</string>
     <string name="custom_exclusions">自定义排除</string>
     <string name="custom_exclusions_desc">%1$d 个应用将永不应用样式或图标包</string>
     <string name="clear_icon_cache_title">清除图标缓存</string>

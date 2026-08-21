@@ -97,6 +97,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
     internal val _isThemedIconsEnabled = MutableStateFlow(prefs.getBoolean("themed_icons", false))
     val isThemedIconsEnabled = _isThemedIconsEnabled.asStateFlow()
 
+    internal val _isLegacyIconUniformEnabled = MutableStateFlow(prefs.getBoolean("legacy_icon_uniform", false))
+    val isLegacyIconUniformEnabled = _isLegacyIconUniformEnabled.asStateFlow()
+
     internal val _isLiquidGlassEnabled =
         MutableStateFlow(prefs.getBoolean("liquid_glass_enabled", false))
     val isLiquidGlassEnabled = _isLiquidGlassEnabled.asStateFlow()
@@ -221,7 +224,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
         "com.google.android.calendar", "com.android.calendar", "com.samsung.android.calendar",
         "com.miui.calendar", "com.huawei.calendar", "com.oppo.calendar", "com.bbk.calendar",
         "com.sonymobile.calendar", "com.htc.calendar", "com.google.android.calendar.AllInOneActivity",
-        "org.lineageos.etar"
+        "org.lineageos.etar","ws.xsoh.etar"
     )
 
     val clockPackages = setOf(
@@ -947,6 +950,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
             "liquid_glass_minus_one_search" -> _isLiquidGlassMinusOneSearchEnabled.value = sharedPreferences.getBoolean(key, false)
             "liquid_glass_minus_one_button" -> _isLiquidGlassMinusOneButtonEnabled.value = sharedPreferences.getBoolean(key, false)
             "themed_icons" -> _isThemedIconsEnabled.value = sharedPreferences.getBoolean(key, false)
+            "legacy_icon_uniform" -> {
+                _isLegacyIconUniformEnabled.value = sharedPreferences.getBoolean(key, false)
+                iconCache.evictAll()
+                loadApps()
+            }
             "show_minus_one" -> _showMinusOnePage.value = sharedPreferences.getBoolean(key, true)
             "show_app_library" -> _showAppLibrary.value = sharedPreferences.getBoolean(key, true)
             "auto_add_apps_to_home" -> _autoAddAppsToHome.value = sharedPreferences.getBoolean(key, true)
@@ -1304,24 +1312,43 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
     fun ensureIterationDirectoryExists() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val documentsDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOCUMENTS)
-                val iterationDir = File(documentsDir, "Iteration")
+                // 確保外部儲存已掛載
+                if (android.os.Environment.getExternalStorageState() != android.os.Environment.MEDIA_MOUNTED) return@launch
+
+                // 優先使用系統標準 API 取得 Documents 目錄
+                var documentsDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOCUMENTS)
                 
-                // 檢查權限：Android 11+ 需要 isExternalStorageManager，以下需要 READ/WRITE
-                val hasPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    android.os.Environment.isExternalStorageManager()
-                } else {
-                    documentsDir.canWrite()
+                // 1. 確保 Documents 資料夾存在
+                if (!documentsDir.exists()) {
+                    val success = documentsDir.mkdirs()
+                    // 如果標準路徑建立失敗，嘗試從外部儲存根目錄手動拼接
+                    if (!success || !documentsDir.exists()) {
+                        val root = android.os.Environment.getExternalStorageDirectory()
+                        documentsDir = File(root, "Documents")
+                        if (!documentsDir.exists()) {
+                            documentsDir.mkdirs()
+                        }
+                    }
                 }
 
-                if (hasPermission) {
-                    if (!iterationDir.exists()) iterationDir.mkdirs()
+                // 2. 在 Documents 下建立 Iteration 及其子目錄
+                if (documentsDir.exists()) {
+                    val iterationDir = File(documentsDir, "Iteration")
+                    if (!iterationDir.exists()) {
+                        iterationDir.mkdirs()
+                    }
                     
-                    val wallpaperDir = File(iterationDir, "Wallpaper")
-                    if (!wallpaperDir.exists()) wallpaperDir.mkdirs()
-                    
-                    val backupDir = File(iterationDir, "Backup")
-                    if (!backupDir.exists()) backupDir.mkdirs()
+                    if (iterationDir.exists()) {
+                        val wallpaperDir = File(iterationDir, "Wallpaper")
+                        if (!wallpaperDir.exists()) {
+                            wallpaperDir.mkdirs()
+                        }
+                        
+                        val backupDir = File(iterationDir, "Backup")
+                        if (!backupDir.exists()) {
+                            backupDir.mkdirs()
+                        }
+                    }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()

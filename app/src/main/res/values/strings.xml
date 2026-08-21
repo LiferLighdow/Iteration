@@ -284,6 +284,8 @@
     <string name="current_pack">Current Pack</string>
     <string name="themed_icons_m3_title">Themed Icons (M3)</string>
     <string name="themed_icons_m3_desc">Apply dynamic colors from your wallpaper to icons</string>
+    <string name="legacy_icon_uniform_title">Uniform Legacy Icons</string>
+    <string name="legacy_icon_uniform_desc">Add a square background to non-adaptive icons for uniformity.</string>
     <string name="custom_exclusions">Custom Exclusions</string>
     <string name="custom_exclusions_desc">%1$d apps will never apply styles or icon packs</string>
     <string name="clear_icon_cache_title">Clear Icon Cache</string>
