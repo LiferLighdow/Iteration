@@ -122,7 +122,8 @@ private data class ResolvedParams(
 fun Modifier.liquidGlass(
     enabled: Boolean,
     backdrop: Backdrop?,
-    cornerRadius: Dp,
+    cornerRadius: Dp = 0.dp,
+    shape: Shape? = null,
     blurRadius: Float? = null,
     refractionHeight: Float? = null,
     refractionAmount: Float? = null,
@@ -138,23 +139,43 @@ fun Modifier.liquidGlass(
     val p = resolveLiquidGlassParams(viewModel, component, blurRadius, refractionHeight, refractionAmount, chromaticAberration, colorAdjustmentEnabled, hue, saturation, brightness, alpha)
     
     val fallbackColor = glassFallbackColor()
+    val finalShape = shape ?: RoundedCornerShape(cornerRadius)
+    val isAndroid12 = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S
 
-    if (!enabled || backdrop == null) {
+    if (!enabled || backdrop == null || !isAndroid12) {
         this.drawBehind {
-            val cr = cornerRadius.toPx()
-            drawRoundRect(
-                color = if (p.adjEnabled) {
-                    Color.hsv(p.h, p.s.coerceIn(0f, 1f), p.b.coerceIn(0f, 1f), p.a)
-                } else {
-                    fallbackColor
-                },
-                cornerRadius = CornerRadius(cr, cr)
-            )
+            val color = if (p.adjEnabled) {
+                Color.hsv(p.h, p.s.coerceIn(0f, 1f), p.b.coerceIn(0f, 1f), p.a)
+            } else {
+                fallbackColor
+            }
+            if (shape != null) {
+                val outline = shape.createOutline(size, layoutDirection, this)
+                when (outline) {
+                    is Outline.Generic -> drawPath(outline.path, color = color)
+                    is Outline.Rectangle -> drawRect(color = color, topLeft = outline.rect.topLeft, size = outline.rect.size)
+                    is Outline.Rounded -> {
+                        val rr = outline.roundRect
+                        drawRoundRect(
+                            color = color,
+                            topLeft = Offset(rr.left, rr.top),
+                            size = Size(rr.width, rr.height),
+                            cornerRadius = CornerRadius(rr.bottomLeftCornerRadius.x, rr.bottomLeftCornerRadius.y)
+                        )
+                    }
+                }
+            } else {
+                val cr = cornerRadius.toPx()
+                drawRoundRect(
+                    color = color,
+                    cornerRadius = CornerRadius(cr, cr)
+                )
+            }
         }
     } else {
         this.drawBackdrop(
             backdrop = backdrop,
-            shape = { RoundedCornerShape(cornerRadius) },
+            shape = { finalShape },
             effects = {
                 if (p.blur > 0f) blur(radius = p.blur.dp.toPx())
                 if (p.refractionHeight > 0f || p.refractionAmount > 0f) {
@@ -209,10 +230,14 @@ fun Modifier.liquidGlassDock(
     brightness: Float? = null,
     alpha: Float? = null
 ): Modifier = composed {
+    val finalShape = if (dockStyle == DockStyle.PLATFORM) PlatformDockShape() else null
+    val finalCornerRadius = if (dockStyle == DockStyle.CLASSIC) 0.dp else cornerRadius
+
     this.liquidGlass(
         enabled = isLiquidGlass,
         backdrop = backdrop,
-        cornerRadius = cornerRadius,
+        cornerRadius = finalCornerRadius,
+        shape = finalShape,
         blurRadius = blurRadius,
         refractionHeight = refractionHeight,
         refractionAmount = refractionAmount,
@@ -234,3 +259,4 @@ fun Modifier.liquidGlassDock(
         }
     }
 }
+

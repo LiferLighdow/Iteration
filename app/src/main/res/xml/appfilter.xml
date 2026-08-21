@@ -67,6 +67,7 @@
     <item component="com.piyush.music" drawable="ic_builtin_music" />
     <item component="org.lineageos.eleven" drawable="ic_builtin_music" />
     <item component="com.msob7y.namida" drawable="ic_builtin_music" />
+    <item component="io.github.muntashirakon.Music" drawable="ic_builtin_music" />
 
     <!-- Calculator -->
     <item component="com.android.calculator2" drawable="ic_builtin_calculator" />
@@ -158,6 +159,7 @@
     <item component="com.qihoo.appstore" drawable="ic_builtin_store" />
     <item component="com.baidu.appsearch" drawable="ic_builtin_store" />
     <item component="foundation.e.apps" drawable="ic_builtin_store" />
+    <item component="com.machiav3lli.fdroid" drawable="ic_builtin_store" />
 
     <!-- Store 2 -->
     <item component="com.android.vending" drawable="ic_builtin_store2" />
@@ -174,6 +176,7 @@
     <item component="com.qihoo.appstore" drawable="ic_builtin_store2" />
     <item component="com.baidu.appsearch" drawable="ic_builtin_store2" />
     <item component="foundation.e.apps" drawable="ic_builtin_store2" />
+    <item component="com.machiav3lli.fdroid" drawable="ic_builtin_store2" />
 
 
     <!-- SU -->

@@ -51,6 +51,8 @@ import com.liferlighdow.iteration.viewmodel.loadCalendarEvents
 import com.liferlighdow.iteration.viewmodel.loadFiles
 import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.ui.settings.IterationSearchBar
+import com.liferlighdow.iteration.ui.liquidGlass
+import com.liferlighdow.iteration.data.LiquidGlassComponent
 import com.liferlighdow.iteration.utils.CommandProcessor
 import com.liferlighdow.iteration.data.AppModel
 
@@ -154,7 +156,13 @@ fun GlobalSearchOverlay(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.4f * effectiveProgress))
+            .liquidGlass(
+                enabled = isLiquidGlassEnabled && isLiquidGlassGlobalSearchEnabled,
+                backdrop = backdrop,
+                component = LiquidGlassComponent.SEARCH,
+                alpha = 0.45f * effectiveProgress
+            )
+            .background(Color.Black.copy(alpha = (if (isLiquidGlassEnabled && isLiquidGlassGlobalSearchEnabled) 0.1f else 0.45f) * effectiveProgress))
             .clickable { onDismiss() }
     ) {
         Column(

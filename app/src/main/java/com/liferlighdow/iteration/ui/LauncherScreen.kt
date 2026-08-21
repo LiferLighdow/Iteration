@@ -428,9 +428,6 @@ fun LauncherScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
-                    val combinedScale = launcherScale * enterScale
-                    scaleX = combinedScale
-                    scaleY = combinedScale
                     alpha = enterAlpha
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                         val blurPx = with(density) { (launcherBlur + enterBlur).toPx() }
@@ -494,6 +491,10 @@ fun LauncherScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer {
+                        // 修正：將縮放套用於內容層而非最外層，確保模糊效果（RenderEffect）始終覆蓋全螢幕
+                        scaleX = launcherScale * enterScale
+                        scaleY = launcherScale * enterScale
+                        // 全域搜尋時，桌面圖示完全消失
                         alpha = 1f - (launcherBlur.value / 20f).coerceIn(0f, 1f)
                     }
             ) {
@@ -837,7 +838,11 @@ fun LauncherScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .graphicsLayer {
-                            alpha = (1f - (launcherBlur.value / 20f).coerceIn(0f, 1f)) * dockVisibilityProgress
+                            scaleX = launcherScale * enterScale
+                            scaleY = launcherScale * enterScale
+                            // 全域搜尋時，底欄完全消失
+                            val fade = 1f - (launcherBlur.value / 20f).coerceIn(0f, 1f)
+                            alpha = fade * dockVisibilityProgress
                         },
                     contentAlignment = Alignment.BottomCenter
                 ) {

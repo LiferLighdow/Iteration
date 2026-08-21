@@ -82,7 +82,11 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
         mutableStateOf(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 android.os.Environment.isExternalStorageManager()
-            } else true
+            } else {
+                androidx.core.content.ContextCompat.checkSelfPermission(
+                    context, android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            }
         )
     }
 
@@ -217,20 +221,22 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
                     modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
                 )
                 SettingsGroup {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                        SettingSwitchItem(
-                            icon = Icons.Default.Folder,
-                            title = stringResource(R.string.permission_files_manage),
-                            supportingText = stringResource(R.string.permission_files_manage_desc),
-                            checked = hasAllFilesPermission,
-                            onCheckedChange = {
+                    SettingSwitchItem(
+                        icon = Icons.Default.Folder,
+                        title = stringResource(R.string.permission_files_manage),
+                        supportingText = stringResource(R.string.permission_files_manage_desc),
+                        checked = hasAllFilesPermission,
+                        onCheckedChange = {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                                 val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
                                     data = Uri.fromParts("package", context.packageName, null)
                                 }
                                 context.startActivity(intent)
+                            } else {
+                                launcher.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
                             }
-                        )
-                    }
+                        }
+                    )
                     SettingSwitchItem(
                         icon = Icons.Default.Notifications,
                         title = stringResource(R.string.permission_notifications),
@@ -407,7 +413,11 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
                 ) == android.content.pm.PackageManager.PERMISSION_GRANTED
                 hasAllFilesPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                     android.os.Environment.isExternalStorageManager()
-                } else true
+                } else {
+                    androidx.core.content.ContextCompat.checkSelfPermission(
+                        context, android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                }
                 isNotificationEnabled = NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)
                 isServiceActive = isAccessibilityEnabled()
                 viewModel.checkSystemNetworkStatus()
