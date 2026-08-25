@@ -202,13 +202,22 @@ fun Modifier.liquidGlass(
     }
 }
 
-class PlatformDockShape : Shape {
+class PlatformDockShape(private val trapezoidHeightDp: Dp = 44.dp) : Shape {
     override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
+        val trapHeight = with(density) { trapezoidHeightDp.toPx() }
         val path = Path().apply {
+            // 頂部梯形部分
             moveTo(size.width * 0.06f, 0f)
             lineTo(size.width * 0.94f, 0f)
-            lineTo(size.width, size.height)
-            lineTo(0f, size.height)
+            lineTo(size.width, trapHeight.coerceAtMost(size.height))
+            
+            // 如果有剩餘高度（如 navPadding 或 dockOffset），向下延伸為矩形底座，防止變形
+            if (size.height > trapHeight) {
+                lineTo(size.width, size.height)
+                lineTo(0f, size.height)
+            }
+            
+            lineTo(0f, trapHeight.coerceAtMost(size.height))
             close()
         }
         return Outline.Generic(path)
@@ -230,7 +239,7 @@ fun Modifier.liquidGlassDock(
     brightness: Float? = null,
     alpha: Float? = null
 ): Modifier = composed {
-    val finalShape = if (dockStyle == DockStyle.PLATFORM) PlatformDockShape() else null
+    val finalShape = if (dockStyle == DockStyle.PLATFORM) PlatformDockShape(44.dp) else null
     val finalCornerRadius = if (dockStyle == DockStyle.CLASSIC) 0.dp else cornerRadius
 
     this.liquidGlass(

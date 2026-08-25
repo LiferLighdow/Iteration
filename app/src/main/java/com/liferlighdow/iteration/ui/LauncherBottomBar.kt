@@ -139,6 +139,8 @@ fun LauncherBottomBar(
                         chromaticAberration = chromaticAberration,
                         isEditMode = isEditMode,
                         notificationCounts = notificationCounts,
+                        dockOffset = dockOffset.dp,
+                        showNavigationBar = showNavigationBar,
                         onAppClick = { app, pos ->
                             if (app.packageName == context.packageName) onSettingsClick() else onAppClick(app, pos)
                         },
@@ -150,10 +152,6 @@ fun LauncherBottomBar(
 
                 if (dockStyle == DockStyle.MODERN || dockStyle == DockStyle.LITE) {
                     Spacer(modifier = Modifier.height(2.dp))
-                }
-
-                if (!showNavigationBar && dockOffset > 0f) {
-                    Spacer(modifier = Modifier.height(dockOffset.dp))
                 }
             }
         }

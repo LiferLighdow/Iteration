@@ -616,7 +616,7 @@ fun MainViewModel.setIconSizePx(size: Int) {
 
 fun MainViewModel.applyRecommendedIconSize() {
     val density = getApplication<android.app.Application>().resources.displayMetrics.density
-    val rawRecommended = 62 * density
+    val rawRecommended = 48 * density
     
     // 階梯式 Guard 邏輯：
     // 1. 將建議像素對齊到 16 的倍數，這對 GPU 紋理上傳與內存對齊最友好。

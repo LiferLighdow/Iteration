@@ -144,8 +144,8 @@ fun GlobalSearchOverlay(
 
     val effectiveProgress = progress.value
 
-    LaunchedEffect(effectiveProgress >= 0.1f, isVisible) {
-        if (isVisible && effectiveProgress >= 0.1f) {
+    LaunchedEffect(effectiveProgress >= 0.3f, isVisible) {
+        if (isVisible && effectiveProgress >= 0.3f) {
             focusRequester.requestFocus()
             keyboardController?.show()
         }
@@ -156,13 +156,7 @@ fun GlobalSearchOverlay(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .liquidGlass(
-                enabled = isLiquidGlassEnabled && isLiquidGlassGlobalSearchEnabled,
-                backdrop = backdrop,
-                component = LiquidGlassComponent.SEARCH,
-                alpha = 0.45f * effectiveProgress
-            )
-            .background(Color.Black.copy(alpha = (if (isLiquidGlassEnabled && isLiquidGlassGlobalSearchEnabled) 0.1f else 0.45f) * effectiveProgress))
+            .background(Color.Black.copy(alpha = 0.45f * effectiveProgress))
             .clickable { onDismiss() }
     ) {
         Column(

@@ -160,7 +160,7 @@ fun AppItem(
 
     Column(
         modifier = modifier
-            .padding(vertical = if (showLabel) 4.dp else 0.dp)
+            .padding(vertical = if (showLabel) 2.dp else 0.dp) // 縮減縱向間距以適配小螢幕或多列布局
             .graphicsLayer {
                 scaleX = animatedScale * focusScale
                 scaleY = animatedScale * focusScale
@@ -192,7 +192,8 @@ fun AppItem(
                     Modifier
                 }
             ),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
         Box(contentAlignment = Alignment.Center) {
             // Reflection
@@ -364,7 +365,7 @@ fun AppItem(
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 4.dp),
+                modifier = Modifier.padding(top = 2.dp),
                 color = Color.White
             )
         }

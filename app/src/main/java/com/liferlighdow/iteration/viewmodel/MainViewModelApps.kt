@@ -954,7 +954,7 @@ fun MainViewModel.loadApps() {
         val renderingSizePx = if (userIconSize > 0) {
             userIconSize 
         } else {
-            (Math.round(62 * density / 16f) * 16).toInt().coerceIn(32, 256)
+            (Math.round(48 * density / 16f) * 16).toInt().coerceIn(32, 256)
         }
 
         val newStyleSuffix = if (currentIconPack.isNotEmpty()) {
@@ -1548,7 +1548,7 @@ suspend fun MainViewModel.loadPwaIcon(app: AppModel) {
     val renderingSizePx = if (userIconSize > 0) {
         userIconSize 
     } else {
-        (Math.round(62 * density / 16f) * 16).toInt().coerceIn(32, 256)
+        (Math.round(48 * density / 16f) * 16).toInt().coerceIn(32, 256)
     }
     
     val bitmap = generatePwaIcon(app, renderingSizePx)

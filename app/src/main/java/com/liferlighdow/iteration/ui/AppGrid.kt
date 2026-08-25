@@ -429,8 +429,8 @@ fun AppGrid(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(if (app.isWidget) (cellWidth * w) else (cellWidth * 0.9f), if (app.isWidget) (cellHeight * h) else (iconSize + 40.dp)),
-                        contentAlignment = Alignment.TopCenter
+                            .size(if (app.isWidget) (cellWidth * w) else (cellWidth * 0.9f), cellHeight * h),
+                        contentAlignment = Alignment.Center
                     ) {
                         // 1. 內容層 (純渲染，不攔截手勢)
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -754,8 +754,8 @@ private fun WidgetGridItem(
         modifier = Modifier
             .fillMaxSize()
             .padding(
-                top = if (isWide) 0.dp else 8.dp, // Wide Widget 整體下移 8dp
-                bottom = if (isWide) 0.dp else 8.dp,
+                top = if (isWide) 0.dp else 4.dp, // 縮減縱向 Padding 以防標籤切掉
+                bottom = if (isWide) 0.dp else 4.dp,
                 start = 8.dp,
                 end = 8.dp
             )
@@ -781,7 +781,7 @@ private fun WidgetGridItem(
                 }
             }
     ) {
-        Box(modifier = Modifier.fillMaxWidth().fillMaxHeight(if (showLabel) 0.85f else 1f)) {
+        Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
             val widget = app.widget
             if (widget != null) {
                 when (val type = widget.type) {
@@ -906,7 +906,7 @@ private fun WidgetGridItem(
                 color = Color.White,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = if (isWide) 8.dp else 10.dp)
+                modifier = Modifier.padding(top = if (isWide) 4.dp else 6.dp)
             )
         }
 

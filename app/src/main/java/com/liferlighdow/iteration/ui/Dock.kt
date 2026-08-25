@@ -63,6 +63,8 @@ fun Dock(
     chromaticAberration: Boolean = true,
     isEditMode: Boolean = false,
     notificationCounts: Map<String, Int> = emptyMap(),
+    dockOffset: Dp = 0.dp,
+    showNavigationBar: Boolean = true,
     onAppClick: (AppModel, Offset) -> Unit,
     onLongClick: (Int) -> Unit,
     onReplaceClick: (Int) -> Unit,
@@ -78,12 +80,14 @@ fun Dock(
     )
 
     val navPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    // 總底部延伸空間：系統導覽列高度，或是在隱藏導覽列時的自定義抬高高度
+    val bottomExtension = if (showNavigationBar) navPadding else dockOffset
     
-    // 容器總高度
+    // 容器總高度，包含延伸到底部的背景
     val totalHeight = when (dockStyle) {
-        DockStyle.CLASSIC -> 94.dp + navPadding
-        DockStyle.PLATFORM -> 90.dp + navPadding
-        else -> 100.dp + navPadding // Modern 恢復 100dp
+        DockStyle.CLASSIC -> 94.dp + bottomExtension
+        DockStyle.PLATFORM -> 90.dp + bottomExtension
+        else -> 100.dp + bottomExtension
     }
 
     Box(
@@ -98,8 +102,8 @@ fun Dock(
                 Box(
                     modifier = Modifier
                         .padding(horizontal = 12.dp)
-                        .padding(bottom = navPadding)
-                        .fillMaxSize() // 讓 Modern 背景填滿容器（減去 padding）
+                        .padding(bottom = bottomExtension)
+                        .fillMaxSize()
                         .graphicsLayer { alpha = menuAlpha }
                         .liquidGlassDock(
                             isLiquidGlass = isLiquidGlass,
@@ -116,7 +120,7 @@ fun Dock(
             DockStyle.CLASSIC -> {
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
+                        .fillMaxSize() // Classic 填滿整個 totalHeight，延伸到底部
                         .graphicsLayer { alpha = menuAlpha }
                         .liquidGlassDock(
                             isLiquidGlass = isLiquidGlass,
@@ -133,7 +137,7 @@ fun Dock(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(44.dp + navPadding)
+                        .height(44.dp + bottomExtension) // 梯形平台及其垂直底座
                         .graphicsLayer { alpha = menuAlpha }
                         .liquidGlassDock(
                             isLiquidGlass = isLiquidGlass,
@@ -146,9 +150,7 @@ fun Dock(
                         )
                 )
             }
-            DockStyle.LITE -> {
-                // LITE style has no background decorations
-            }
+            DockStyle.LITE -> {}
         }
 
         // 2. 內容層 (App 圖示)
@@ -161,7 +163,7 @@ fun Dock(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = navPadding)
+                .padding(bottom = bottomExtension)
                 .height(dockContentHeight)
                 .padding(horizontal = horizontalPadding),
             horizontalArrangement = Arrangement.SpaceAround,

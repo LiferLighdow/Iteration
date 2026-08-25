@@ -755,7 +755,7 @@ fun AdvancedSettingsScreen(onBack: () -> Unit) {
     val density = LocalContext.current.resources.displayMetrics.density
     
     // 預設值同樣套用 16px 階梯對齊邏輯，確保 UI 顯示一致
-    val snappedDefault = (Math.round(62 * density / 16f) * 16).toInt().coerceIn(32, 256)
+    val snappedDefault = (Math.round(48 * density / 16f) * 16).toInt().coerceIn(32, 256)
     val effectiveIconSize = if (iconSize > 0) iconSize else snappedDefault
 
     Scaffold(
