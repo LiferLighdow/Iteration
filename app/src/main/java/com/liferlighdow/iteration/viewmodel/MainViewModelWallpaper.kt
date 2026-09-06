@@ -5,8 +5,11 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
+import android.os.Build
 import android.os.Environment
+import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.viewModelScope
+import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.data.EmojiPatternStyle
 import com.liferlighdow.iteration.data.EmojiRenderingMode
 import com.liferlighdow.iteration.data.WallpaperConfig
@@ -79,6 +82,17 @@ fun MainViewModel.loadWallpaperPresets() {
     viewModelScope.launch(Dispatchers.IO) {
         val documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
         val wallpaperDir = File(documentsDir, "Iteration/Wallpaper")
+        
+        // Auto-check and register builtin wallpapers if managed storage permission is granted
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (Environment.isExternalStorageManager()) {
+                ensureBuiltinWallpapersRegistered(wallpaperDir)
+            }
+        } else {
+            // Check for standard storage permissions on older devices - simplified for now
+            ensureBuiltinWallpapersRegistered(wallpaperDir)
+        }
+
         if (!wallpaperDir.exists()) return@launch
 
         val presets = wallpaperDir.listFiles()?.filter { it.isDirectory }?.mapNotNull { folder ->
@@ -307,4 +321,61 @@ fun MainViewModel.addNewEmojiWallpaperPreset(mode: EmojiRenderingMode, color: In
             newlyCreated?.let { applyWallpaperPreset(it) }
         }
     }
+}
+
+private fun MainViewModel.ensureBuiltinWallpapersRegistered(wallpaperDir: File) {
+    val context = getApplication<android.app.Application>()
+    val dm = context.resources.displayMetrics
+    val screenWidth = dm.widthPixels
+    val screenHeight = dm.heightPixels
+
+    val builtins = listOf(
+        "Builtin 1" to R.drawable.ic_builtin_wallpaper,
+        "Builtin 2" to R.drawable.ic_builtin_wallpaper2,
+        "Builtin 3" to R.drawable.ic_builtin_wallpaper3,
+        "Builtin 4" to R.drawable.ic_builtin_wallpaper4,
+        "Builtin 5" to R.drawable.ic_builtin_wallpaper5,
+        "Builtin 6" to R.drawable.ic_builtin_wallpaper6,
+        "Builtin 7" to R.drawable.ic_builtin_wallpaper7,
+        "Builtin 8" to R.drawable.ic_builtin_wallpaper8,
+        "Builtin 9" to R.drawable.ic_builtin_wallpaper9,
+        "Builtin 10" to R.drawable.ic_builtin_wallpaper10
+    )
+
+    builtins.forEach { (name, resId) ->
+        val folder = File(wallpaperDir, name)
+        if (!folder.exists()) {
+            val drawable = androidx.core.content.ContextCompat.getDrawable(context, resId)
+            if (drawable != null) {
+                try {
+                    val bitmap = drawable.toBitmap(screenWidth, screenHeight)
+                    saveWallpaperFolderInternal(folder, bitmap)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
+}
+
+private fun MainViewModel.saveWallpaperFolderInternal(folder: File, bitmap: Bitmap) {
+    if (!folder.exists()) folder.mkdirs()
+    
+    val wallpaperFile = File(folder, "wallpaper.png")
+    val previewFile = File(folder, "preview.jpg")
+    val configFile = File(folder, "config.json")
+    
+    FileOutputStream(wallpaperFile).use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+    
+    val previewBitmap = if (bitmap.width > 400) {
+        Bitmap.createScaledBitmap(bitmap, bitmap.width / 4, bitmap.height / 4, true)
+    } else bitmap
+    FileOutputStream(previewFile).use { previewBitmap.compress(Bitmap.CompressFormat.JPEG, 80, it) }
+    
+    val config = WallpaperConfig(
+        blur = _liquidGlassBlur.value,
+        themeMode = _themeMode.value.name,
+        isMaterialYou = _isMaterialYouEnabled.value
+    )
+    configFile.writeText(Json.encodeToString(config))
 }

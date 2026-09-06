@@ -47,6 +47,7 @@
     <string name="menu_add_favorite">添加至收藏</string>
     <string name="menu_remove_favorite">从收藏移除</string>
     <string name="menu_manage_apps">管理应用</string>
+    <string name="menu_freeze">冻结/解冻</string>
     <string name="menu_edit">编辑</string>
 
     <!-- 文件夹对话框 -->
@@ -122,6 +123,7 @@
     <string name="lock_desktop_desc">防止主屏幕布局被更改</string>
 
     <!-- 设置子页面 -->
+    <string name="dynamic_clock_desc">在时钟应用程式图标上显示即时指针时间（每分钟更新）</string>
     <string name="security_section">安全性</string>
     <string name="password_label">隐藏应用密码</string>
     <string name="password_description">设置密码以保护隐藏的应用</string>
@@ -294,6 +296,7 @@
     <string name="default_style_desc">默认（系统）</string>
 
     <!-- 设置 - 液态玻璃 -->
+    <string name="icon_pack_system_monochrome">系统单色图层 (Android 13+)</string>
     <string name="liquid_glass_title">液态玻璃</string>
     <string name="liquid_glass_workshop_title">工作坊</string>
     <string name="liquid_glass_workshop_unavailable">工作坊暂不可用</string>
@@ -301,7 +304,16 @@
     <string name="refraction_height_label">折射高度：%1$d</string>
     <string name="refraction_amount_label">折射量：%1$d</string>
     <string name="chromatic_aberration">色散</string>
+    <string name="component_configs_title">组件独立配置 (选填)</string>
     <string name="enable_liquid_glass_title">启用液态玻璃</string>
+    <string name="follow_global">跟随全域设定</string>
+    <string name="customized">已自定义</string>
+    <string name="component_dock">Dock 栏</string>
+    <string name="component_folder">资料夹</string>
+    <string name="component_search">搜寻框</string>
+    <string name="component_widget">小工具</string>
+    <string name="component_button">按钮</string>
+    <string name="component_icon">图标背景</string>
     <string name="enable_liquid_glass_desc">实时玻璃效果总开关</string>
     <string name="glass_dock">Dock</string>
     <string name="glass_dock_desc">为主屏幕 Dock 启用玻璃效果</string>
@@ -511,6 +523,7 @@
     <string name="clock_6">6</string>
     <string name="clock_9">9</string>
 
+    <string name="no_compatible_icon_packs">未找到相容的线条类图标包</string>
     <string name="calculator">计算器</string>
     <string name="unit_converter">单位换算</string>
     <string name="currency_converter">汇率换算</string>
@@ -536,6 +549,7 @@
     <string name="rename_app">重命名应用</string>
     <string name="manual_global_search">全局搜索</string>
     <string name="manual_global_search_desc">掌握一体化搜索强大功能</string>
+    <string name="manual_dock_style_desc">探索 Dock 的风格与起源</string>
     <string name="manual_icon_cache_engine">图标缓存引擎</string>
     <string name="manual_icon_cache_engine_desc">了解 Iteration 的视觉核心</string>
     <string name="manual_desktop_gestures">桌面与手势</string>
@@ -587,6 +601,7 @@
     <string name="applying_wallpaper">正在应用壁纸</string>
     <string name="applying_wallpaper_desc">正在优化颜色並生成效果。</string>
     <string name="select_wallpaper_type_desc">您要使用相册中的照片，还是创建纯色壁纸？</string>
+    <string name="wallpaper_sync_system_desc">提取当前系统桌布并更新视觉特效</string>
     <string name="emoji_label">表情符号</string>
     <string name="emoji_hint">输入一个或多个表情符号</string>
     <string name="wallpaper_mode_title">渲染模式</string>
@@ -634,7 +649,7 @@
     <string name="select_icon_source">选择图标来源</string>
     <string name="select_icon_source_desc">您想要使用内置的设计图标，还是从相册中选取自己的图片？</string>
     <string name="gallery_pick">相册选取</string>
-    <string name="builtin_icons">Iteration</string>
+    <string name="builtin_icons">进化</string>
     <string name="pick_builtin_icon">挑选内置图标</string>
     <string name="builtin_phone">电话</string>
     <string name="builtin_messages">信息</string>
@@ -647,6 +662,7 @@
     <string name="builtin_maps">地图</string>
     <string name="builtin_mail">电子邮件</string>
     <string name="builtin_music">音乐</string>
+    <string name="builtin_store2">应用商店 (极光)</string>
     <string name="builtin_calculator">计算器</string>
     <string name="builtin_recorder">录音机</string>
     <string name="builtin_pack_setup_title">Iteration 图标包设置</string>
@@ -674,4 +690,24 @@
     <string name="gesture_swipe_down_right_title">向下滑动 (右侧)</string>
     <string name="gesture_swipe_down_left_dialog_title">选择向下滑动 (左侧) 手势</string>
     <string name="gesture_swipe_down_right_dialog_title">选择向下滑动 (右侧) 手势</string>
+    <string name="menu_shortcuts">应用程式捷径</string>
+    <string name="dynamic_calendar">动态日历图标</string>
+    <string name="dynamic_calendar_desc">在日历应用程式图标上显示当前日期</string>
+    <string name="dynamic_clock">动态时钟图标</string>
+    <string name="liquid_glass_color_adjustment">颜色调整</string>
+    <string name="liquid_glass_color_adjustment_desc">调整玻璃的色调、饱和度与亮度</string>
+    <string name="visual_effects_desc">调整全域模糊、折射与基础颜色</string>
+    <string name="edit_component_config">编辑配置</string>
+    <string name="independent_adjustment">启用独立颜色调整</string>
+    <string name="use_icon_pack_foreground">使用图标包前景</string>
+    <string name="default_symbol">预设 (原始图示)</string>
+    <string name="custom_icon_pack_select">选择样式专用图标包</string>
+    <string name="use_dominant_bg_color">使用原色色彩</string>
+    <string name="dominant_bg_note">自动从原始图示背景中提取主导色彩。</string>
+    <string name="icon_pack_lines_only_desc">仅显示线条/无背景类型的图标包</string>
+    <string name="manual_dock_style">Dock 风格</string>
+    <string name="wallpaper_default">预设桌布</string>
+    <string name="wallpaper_sync_system">同步系统桌布</string>
+    <string name="builtin_note">记事本</string>
+    <string name="builtin_store">应用商店 (现代)</string>
 </resources>

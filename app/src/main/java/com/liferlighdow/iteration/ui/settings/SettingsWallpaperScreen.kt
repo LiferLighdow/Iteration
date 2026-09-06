@@ -185,21 +185,6 @@ fun SettingsWallpaperScreen(onBack: () -> Unit) {
             title = { Text(stringResource(R.string.menu_wallpaper)) },
             text = {
                 Column {
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.wallpaper_default)) },
-                        supportingContent = { Text(stringResource(R.string.iteration_style)) },
-                        leadingContent = { Icon(Icons.Default.AutoAwesome, null, tint = MaterialTheme.colorScheme.primary) },
-                        modifier = Modifier.clickable {
-                            showTypeDialog = false
-                            val dm = context.resources.displayMetrics
-                            val drawable = androidx.core.content.ContextCompat.getDrawable(context, R.drawable.ic_builtin_wallpaper)
-                            if (drawable != null) {
-                                val bitmap = drawable.toBitmap(dm.widthPixels, dm.heightPixels)
-                                viewModel.addNewWallpaperPreset(bitmap, "Default_${System.currentTimeMillis()}")
-                            }
-                        }
-                    )
-
                     if (actionMode != com.liferlighdow.iteration.utils.ActionMode.ACCESSIBILITY) {
                         ListItem(
                             headlineContent = { Text(stringResource(R.string.wallpaper_sync_system)) },

@@ -1,0 +1,66 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="90dp"
+    android:height="180dp"
+    android:viewportWidth="90"
+    android:viewportHeight="180">
+
+    <!-- Layer 1: Retro Synth Sunset Base -->
+    <path
+        android:pathData="M0,0h90v180h-90z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="45"
+                android:startY="0"
+                android:endX="45"
+                android:endY="180"
+                android:type="linear">
+                <item android:offset="0" android:color="#FF0080"/>
+                <item android:offset="0.6" android:color="#2E0854"/>
+                <item android:offset="1" android:color="#000000"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Layer 2: Glowing Sun (Segmented) -->
+    <path
+        android:pathData="M45,40 m-25,0 a25,25 0 1,1 50,0 a25,25 0 1,1 -50,0"
+        android:fillAlpha="0.9">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="45"
+                android:startY="15"
+                android:endX="45"
+                android:endY="65"
+                android:type="linear">
+                <item android:offset="0" android:color="#FFFF00"/>
+                <item android:offset="1" android:color="#FF0080"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Sun Horizontal Cuts -->
+    <path
+        android:pathData="M20.5,45h49v2h-49z M23.1,52h43.8v3h-43.8z M30,60h30v4h-30z"
+        android:fillColor="#2E0854"/>
+
+    <!-- Layer 3: Grid Floor -->
+    <path
+        android:strokeWidth="0.5"
+        android:pathData="M0,100 L90,100 M0,110 L90,110 M0,125 L90,125 M0,145 L90,145 M0,175 L90,175"
+        android:strokeColor="#8000FFFF"
+        android:fillColor="#00000000"/>
+
+    <path
+        android:strokeWidth="0.5"
+        android:pathData="M45,100 L0,180 M45,100 L25,180 M45,100 L45,180 M45,100 L65,180 M45,100 L90,180"
+        android:strokeColor="#8000FFFF"
+        android:fillColor="#00000000"/>
+
+    <!-- Layer 4: Distant Mountains -->
+    <path
+        android:pathData="M0,100 L20,80 L40,100 Z M50,100 L75,70 L100,100 Z"
+        android:fillAlpha="0.5"
+        android:fillColor="#000000"/>
+
+</vector>

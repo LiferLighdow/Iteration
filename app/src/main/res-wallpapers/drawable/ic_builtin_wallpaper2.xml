@@ -1,0 +1,110 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="90dp"
+    android:height="180dp"
+    android:viewportWidth="90"
+    android:viewportHeight="180">
+
+    <!-- Layer 1: Deep Cosmic Background -->
+    <path
+        android:pathData="M0,0h90v180h-90z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="45"
+                android:startY="0"
+                android:endX="45"
+                android:endY="180"
+                android:type="linear">
+                <item android:offset="0" android:color="#141E30"/>
+                <item android:offset="1" android:color="#243B55"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Layer 2: Ethereal Light Rays (Top Down) -->
+    <path
+        android:pathData="M0,0 L90,0 L70,80 L20,80 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="45"
+                android:startY="0"
+                android:endX="45"
+                android:endY="80"
+                android:type="linear">
+                <item android:offset="0" android:color="#33FFFFFF"/>
+                <item android:offset="1" android:color="#00FFFFFF"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Layer 3: Distant Evolution Peaks -->
+    <path
+        android:pathData="M0,180 L30,120 L60,180 Z"
+        android:fillAlpha="0.4">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="30"
+                android:startY="120"
+                android:endX="30"
+                android:endY="180"
+                android:type="linear">
+                <item android:offset="0" android:color="#00F260"/>
+                <item android:offset="1" android:color="#0575E6"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <path
+        android:pathData="M30,180 L65,100 L100,180 Z"
+        android:fillAlpha="0.6">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="65"
+                android:startY="100"
+                android:endX="65"
+                android:endY="180"
+                android:type="linear">
+                <item android:offset="0" android:color="#4facfe"/>
+                <item android:offset="1" android:color="#00f2fe"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Layer 4: The Core of Iteration (Glow) -->
+    <path
+        android:pathData="M45,70 L55,85 L45,100 L35,85 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="45"
+                android:startY="70"
+                android:endX="45"
+                android:endY="100"
+                android:type="linear">
+                <item android:offset="0" android:color="#FFFFFF"/>
+                <item android:offset="1" android:color="#80FFFFFF"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Layer 5: Decorative Data Particles -->
+    <path
+        android:pathData="M15,40h2v2h-2z M75,55h2v2h-2z M25,100h1v1h-1z M65,30h1v1h-1z"
+        android:fillColor="#80FFFFFF"/>
+
+    <!-- Layer 6: Bottom Horizon Glow -->
+    <path
+        android:pathData="M0,160h90v20h-90z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="45"
+                android:startY="160"
+                android:endX="45"
+                android:endY="180"
+                android:type="linear">
+                <item android:offset="0" android:color="#00000000"/>
+                <item android:offset="1" android:color="#4000F260"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+</vector>

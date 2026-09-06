@@ -1,0 +1,98 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="90dp"
+    android:height="180dp"
+    android:viewportWidth="90"
+    android:viewportHeight="180">
+
+    <!-- Layer 1: Dark Slate Prism Background -->
+    <path
+        android:pathData="M0,0h90v180h-90z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="0"
+                android:startY="0"
+                android:endX="90"
+                android:endY="180"
+                android:type="linear">
+                <item android:offset="0" android:color="#232526"/>
+                <item android:offset="1" android:color="#414345"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Layer 2: Main Angular Shard (Bottom-Left to Top-Right) -->
+    <path
+        android:pathData="M0,180 L90,60 L90,180 Z"
+        android:fillAlpha="0.15">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="0"
+                android:startY="180"
+                android:endX="90"
+                android:endY="60"
+                android:type="linear">
+                <item android:offset="0" android:color="#00DBDE"/>
+                <item android:offset="1" android:color="#FC00FF"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Layer 3: Top Angular Shard (Top-Right to Bottom-Left) -->
+    <path
+        android:pathData="M90,0 L0,120 L0,0 Z"
+        android:fillAlpha="0.1">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="90"
+                android:startY="0"
+                android:endX="0"
+                android:endY="120"
+                android:type="linear">
+                <item android:offset="0" android:color="#FC00FF"/>
+                <item android:offset="1" android:color="#00DBDE"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Layer 4: The Central Prism Core -->
+    <path
+        android:pathData="M45,60 L75,90 L45,120 L15,90 Z"
+        android:fillAlpha="0.8">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="45"
+                android:startY="60"
+                android:endX="45"
+                android:endY="120"
+                android:type="linear">
+                <item android:offset="0" android:color="#80FFFFFF"/>
+                <item android:offset="0.5" android:color="#CCFFFFFF"/>
+                <item android:offset="1" android:color="#80FFFFFF"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Layer 5: Neon Edge Accents -->
+    <path
+        android:strokeWidth="1.5"
+        android:pathData="M15,90 L45,60 L75,90"
+        android:strokeColor="#00DBDE"
+        android:fillColor="#00000000"/>
+
+    <path
+        android:strokeWidth="1.5"
+        android:pathData="M15,90 L45,120 L75,90"
+        android:strokeColor="#FC00FF"
+        android:fillColor="#00000000"/>
+
+    <!-- Layer 6: Floating Geometry Fragments -->
+    <path
+        android:pathData="M10,30 L20,25 L15,40 Z"
+        android:fillColor="#40FFFFFF"/>
+
+    <path
+        android:pathData="M70,150 L85,145 L80,160 Z"
+        android:fillColor="#40FFFFFF"/>
+
+</vector>

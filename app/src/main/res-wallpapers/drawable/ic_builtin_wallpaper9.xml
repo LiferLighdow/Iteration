@@ -1,0 +1,80 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="90dp"
+    android:height="180dp"
+    android:viewportWidth="90"
+    android:viewportHeight="180">
+
+    <!-- Layer 1: Volcanic Core Background -->
+    <path
+        android:pathData="M0,0h90v180h-90z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="45"
+                android:startY="0"
+                android:endX="45"
+                android:endY="180"
+                android:type="linear">
+                <item android:offset="0" android:color="#2b0000"/>
+                <item android:offset="1" android:color="#000000"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Layer 2: Lava Flow (Bottom Up) -->
+    <path
+        android:pathData="M0,180 Q20,140 45,160 Q70,180 90,150 V180 H0 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="45"
+                android:startY="140"
+                android:endX="45"
+                android:endY="180"
+                android:type="linear">
+                <item android:offset="0" android:color="#ff4b2b"/>
+                <item android:offset="1" android:color="#ff416c"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Layer 3: Rising Embers -->
+    <path
+        android:pathData="M20,120h2v2h-2z M60,100h1.5v1.5h-1.5z M40,140h1v1h-1z M75,80h2v2h-2z M15,90h1v1h-1z"
+        android:fillColor="#FFD700"
+        android:fillAlpha="0.6"/>
+
+    <!-- Layer 4: Distant Volcanic Smoke -->
+    <path
+        android:pathData="M0,0h90v60h-90z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="45"
+                android:startY="0"
+                android:endX="45"
+                android:endY="60"
+                android:type="linear">
+                <item android:offset="0" android:color="#404040"/>
+                <item android:offset="1" android:color="#00000000"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Layer 5: Central Heat Node -->
+    <path
+        android:pathData="M45,150 m-5,0 a5,5 0 1,1 10,0 a5,5 0 1,1 -10,0"
+        android:fillAlpha="0.4">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="45"
+                android:startY="145"
+                android:endX="45"
+                android:endY="155"
+                android:type="radial"
+                android:gradientRadius="5">
+                <item android:offset="0" android:color="#FFFFFF"/>
+                <item android:offset="1" android:color="#FF4B2B"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+</vector>

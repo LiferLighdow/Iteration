@@ -1,0 +1,59 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="90dp"
+    android:height="180dp"
+    android:viewportWidth="90"
+    android:viewportHeight="180">
+
+    <!-- Layer 1: Digital Forest Base -->
+    <path
+        android:pathData="M0,0h90v180h-90z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="45"
+                android:startY="0"
+                android:endX="45"
+                android:endY="180"
+                android:type="linear">
+                <item android:offset="0" android:color="#11998e"/>
+                <item android:offset="1" android:color="#38ef7d"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Layer 2: Abstract Tree Structures -->
+    <path
+        android:pathData="M15,180h10v-80h-10z"
+        android:fillAlpha="0.3"
+        android:fillColor="#000000"/>
+    <path
+        android:pathData="M35,180h15v-120h-15z"
+        android:fillAlpha="0.2"
+        android:fillColor="#FFFFFF"/>
+    <path
+        android:pathData="M65,180h8v-90h-8z"
+        android:fillAlpha="0.15"
+        android:fillColor="#000000"/>
+
+    <!-- Layer 3: Glowing Canopy Mist -->
+    <path
+        android:pathData="M0,0h90v80h-90z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="45"
+                android:startY="0"
+                android:endX="45"
+                android:endY="80"
+                android:type="linear">
+                <item android:offset="0" android:color="#BFFF00"/>
+                <item android:offset="1" android:color="#00000000"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Layer 4: Floating "Leaf" Pixels -->
+    <path
+        android:pathData="M20,60h2v2h-2z M60,40h3v3h-3z M40,90h2v2h-2z M75,70h1v1h-1z M10,110h2v2h-2z"
+        android:fillColor="#80FFFFFF"/>
+
+</vector>

@@ -698,7 +698,7 @@ fun LanguageSettingsScreen(onBack: () -> Unit) {
     val langOptions = listOf(
         "" to stringResource(R.string.language_system_default),
         "en" to stringResource(R.string.language_english),
-        "zh" to stringResource(R.string.language_chinese_special),
+        "zh-Hant" to stringResource(R.string.language_chinese_special),
         "zh-TW" to stringResource(R.string.language_chinese_tw),
         "zh-CN" to stringResource(R.string.language_chinese_cn)
     )

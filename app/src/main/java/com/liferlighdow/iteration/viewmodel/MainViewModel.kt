@@ -287,7 +287,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
 
         // Apply saved language on startup - move to non-blocking scope to avoid IllegalStateException in some contexts
         viewModelScope.launch(Dispatchers.Main) {
-            val savedLang = _appLanguage.value
+            var savedLang = _appLanguage.value
+            // Migration: zh -> zh-Hant to fix Simplified Chinese labels in other apps
+            if (savedLang == "zh" || savedLang == "zh-HK") {
+                savedLang = "zh-Hant"
+                _appLanguage.value = savedLang
+                prefs.edit().putString("app_language", savedLang).apply()
+            }
+            
             if (savedLang.isNotEmpty()) {
                 try {
                     val appLocale = LocaleListCompat.forLanguageTags(savedLang)

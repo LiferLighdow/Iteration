@@ -139,11 +139,12 @@ fun AnalogClockWidget(
                     radius = radius
                 )
 
-                // 12 Ticks
+                // 12 Ticks (Skip where numbers are)
                 for (i in 0 until 12) {
+                    if (i % 3 == 0) continue
                     val angle = i * 30f
                     rotate(angle) {
-                        val tickLength = if (i % 3 == 0) 12.dp.toPx() else 8.dp.toPx()
+                        val tickLength = 8.dp.toPx()
                         drawLine(
                             color = contentColor.copy(alpha = 0.6f),
                             start = Offset(center.x, 0f),

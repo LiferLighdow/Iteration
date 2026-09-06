@@ -12,12 +12,22 @@ android {
         applicationId = "com.liferlighdow.iteration"
         minSdk = 23
         targetSdk = 37
-        versionCode = 89
-        versionName = "5.8.2"
+        versionCode = 90
+        versionName = "5.8.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
+        }
+    }
+
+    sourceSets {
+        getByName("main") {
+            res.srcDirs(
+                "src/main/res",
+                "src/main/res-icons",
+                "src/main/res-wallpapers"
+            )
         }
     }
 

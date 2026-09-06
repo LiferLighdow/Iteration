@@ -1,0 +1,74 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="90dp"
+    android:height="180dp"
+    android:viewportWidth="90"
+    android:viewportHeight="180">
+
+    <!-- Layer 1: Deep Space Nebula -->
+    <path
+        android:pathData="M0,0h90v180h-90z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="45"
+                android:startY="0"
+                android:endX="45"
+                android:endY="180"
+                android:type="linear">
+                <item android:offset="0" android:color="#000428"/>
+                <item android:offset="1" android:color="#004e92"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Layer 2: Soft Nebulous Clouds -->
+    <path
+        android:pathData="M0,40 Q45,20 90,40 L90,100 Q45,120 0,100 Z"
+        android:fillAlpha="0.2">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="45"
+                android:startY="30"
+                android:endX="45"
+                android:endY="110"
+                android:type="radial"
+                android:gradientRadius="60">
+                <item android:offset="0" android:color="#6a11cb"/>
+                <item android:offset="1" android:color="#00000000"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Layer 3: Distant Star Points -->
+    <path
+        android:pathData="M15,25h1v1h-1z M75,45h1v1h-1z M25,85h1.5v1.5h-1.5z M65,115h1v1h-1z M40,150h1v1h-1z M80,10h1v1h-1z M10,140h1v1h-1z"
+        android:fillColor="#CCFFFFFF"/>
+
+    <!-- Layer 4: Floating Geometric Shards (Stardust) -->
+    <path
+        android:pathData="M30,70 L35,65 L40,70 L35,75 Z"
+        android:fillAlpha="0.5"
+        android:fillColor="#00D2FF"/>
+    <path
+        android:pathData="M55,95 L62,88 L69,95 L62,102 Z"
+        android:fillAlpha="0.4"
+        android:fillColor="#92FE9D"/>
+
+    <!-- Layer 5: Vertical Cosmic Ray -->
+    <path
+        android:pathData="M44,0h2v180h-2z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="44"
+                android:startY="0"
+                android:endX="46"
+                android:endY="0"
+                android:type="linear">
+                <item android:offset="0" android:color="#00FFFFFF"/>
+                <item android:offset="0.5" android:color="#40FFFFFF"/>
+                <item android:offset="1" android:color="#00FFFFFF"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+</vector>

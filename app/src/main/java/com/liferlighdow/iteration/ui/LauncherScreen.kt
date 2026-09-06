@@ -694,6 +694,7 @@ fun LauncherScreen(
                                     null
                                 },
                                 onBackgroundLongPress = {
+                                    if (pageIndex != pagerState.currentPage) return@AppGrid
                                     if (!isEditMode) {
                                         if (isDesktopLocked) {
                                             showDesktopMenu = true
@@ -703,17 +704,24 @@ fun LauncherScreen(
                                     }
                                 },
                                 onBackgroundClick = {
+                                    if (pageIndex != pagerState.currentPage) return@AppGrid
                                     if (isEditMode) viewModel.setEditMode(false)
                                 },
                                 onBackgroundDoubleTap = {
+                                    if (pageIndex != pagerState.currentPage) return@AppGrid
                                     performGestureAction(doubleTapAction, doubleTapApp)
                                 },
                                 onBackgroundSwipeUp = {
+                                    if (pageIndex != pagerState.currentPage) return@AppGrid
                                     performGestureAction(swipeUpAction, swipeUpApp)
                                 },
                                 onBackgroundSwipeDown = { x ->
+                                    if (pageIndex != pagerState.currentPage) return@AppGrid
                                     if (isSwipeDownSplit) {
-                                        val isLeft = x < screenWidthPx / 2
+                                        // 考慮到 padding，我們將 x 座標補償回絕對座標以進行公平的中線判定
+                                        val horizontalPaddingPx = with(density) { horizontalPadding.toPx() }
+                                        val absoluteX = x + horizontalPaddingPx
+                                        val isLeft = absoluteX < screenWidthPx / 2
                                         if (isLeft) {
                                             performGestureAction(swipeDownLeftAction, swipeDownLeftApp)
                                         } else {
@@ -724,23 +732,27 @@ fun LauncherScreen(
                                     }
                                 },
                                 onBackgroundTwoFingerSwipeUp = {
+                                    if (pageIndex != pagerState.currentPage) return@AppGrid
                                     performGestureAction(
                                         twoFingerSwipeUpAction,
                                         twoFingerSwipeUpApp
                                     )
                                 },
                                 onBackgroundTwoFingerSwipeDown = {
+                                    if (pageIndex != pagerState.currentPage) return@AppGrid
                                     performGestureAction(
                                         twoFingerSwipeDownAction,
                                         twoFingerSwipeDownApp
                                     )
                                 },
                                 onBackgroundDragY = { offset ->
+                                    if (pageIndex != pagerState.currentPage) return@AppGrid
                                     if (!isEditMode && swipeDownAction == GestureAction.OPEN_GLOBAL_SEARCH) {
                                         if (offset > 0) searchDragOffset = offset
                                     }
                                 },
                                 onBackgroundDragEnd = { finalOffset ->
+                                    if (pageIndex != pagerState.currentPage) return@AppGrid
                                     if (!isEditMode && swipeDownAction == GestureAction.OPEN_GLOBAL_SEARCH) {
                                         if (finalOffset > 80f) {
                                             showGlobalSearch = true

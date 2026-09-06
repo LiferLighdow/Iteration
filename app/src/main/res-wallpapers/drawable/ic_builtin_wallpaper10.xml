@@ -1,0 +1,73 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="90dp"
+    android:height="180dp"
+    android:viewportWidth="90"
+    android:viewportHeight="180">
+
+    <!-- Layer 1: Arctic Frost Background -->
+    <path
+        android:pathData="M0,0h90v180h-90z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="0"
+                android:startY="0"
+                android:endX="90"
+                android:endY="180"
+                android:type="linear">
+                <item android:offset="0" android:color="#E0EAFC"/>
+                <item android:offset="1" android:color="#CFDEF3"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Layer 2: Ice Shards (Angular) -->
+    <path
+        android:pathData="M0,180 L30,140 L60,180 Z"
+        android:fillAlpha="0.4"
+        android:fillColor="#ffffff"/>
+    <path
+        android:pathData="M40,180 L70,110 L100,180 Z"
+        android:fillAlpha="0.3"
+        android:fillColor="#ffffff"/>
+
+    <!-- Layer 3: Frozen Aurora (Top) -->
+    <path
+        android:pathData="M0,0 C20,30 70,-10 90,20 V0 H0 Z"
+        android:fillAlpha="0.5">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="45"
+                android:startY="0"
+                android:endX="45"
+                android:endY="30"
+                android:type="linear">
+                <item android:offset="0" android:color="#80D0FF"/>
+                <item android:offset="1" android:color="#00FFFFFF"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Layer 4: Snowflakes / Crystal Dust -->
+    <path
+        android:pathData="M20,40h1.5v1.5h-1.5z M70,60h1v1h-1z M45,90h2v2h-2z M10,120h1v1h-1z M80,30h1.5v1.5h-1.5z"
+        android:fillColor="#FFFFFF"/>
+
+    <!-- Layer 5: Vertical Ice Core -->
+    <path
+        android:pathData="M44,0h2v180h-2z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="44"
+                android:startY="0"
+                android:endX="46"
+                android:endY="0"
+                android:type="linear">
+                <item android:offset="0" android:color="#00FFFFFF"/>
+                <item android:offset="0.5" android:color="#60FFFFFF"/>
+                <item android:offset="1" android:color="#00FFFFFF"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+</vector>

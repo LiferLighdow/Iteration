@@ -1,0 +1,81 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="90dp"
+    android:height="180dp"
+    android:viewportWidth="90"
+    android:viewportHeight="180">
+
+    <!-- Layer 1: Dark Tech Background -->
+    <path
+        android:pathData="M0,0h90v180h-90z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="0"
+                android:startY="0"
+                android:endX="90"
+                android:endY="180"
+                android:type="linear">
+                <item android:offset="0" android:color="#0F2027"/>
+                <item android:offset="0.5" android:color="#203A43"/>
+                <item android:offset="1" android:color="#2C5364"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Layer 2: Perspective Grid Lines -->
+    <path
+        android:strokeWidth="0.2"
+        android:pathData="M0,120 L90,120 M0,130 L90,130 M0,145 L90,145 M0,165 L90,165 M0,180 L90,180"
+        android:strokeColor="#4000FFCC"/>
+
+    <path
+        android:strokeWidth="0.2"
+        android:pathData="M45,110 L0,180 M45,110 L25,180 M45,110 L45,180 M45,110 L65,180 M45,110 L90,180"
+        android:strokeColor="#4000FFCC"/>
+
+    <!-- Layer 3: Neon Horizon Glow -->
+    <path
+        android:pathData="M0,110h90v2h-90z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="0"
+                android:startY="110"
+                android:endX="90"
+                android:endY="110"
+                android:type="linear">
+                <item android:offset="0" android:color="#0000FFCC"/>
+                <item android:offset="0.5" android:color="#FF00FFCC"/>
+                <item android:offset="1" android:color="#0000FFCC"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Layer 4: Floating Tech Cubes (Geometric Evolution) -->
+    <path
+        android:pathData="M20,40 L30,35 L40,40 L30,45 Z"
+        android:fillAlpha="0.6"
+        android:fillColor="#00FFCC"/>
+
+    <path
+        android:pathData="M60,70 L75,65 L90,70 L75,75 Z"
+        android:fillAlpha="0.4"
+        android:fillColor="#00FFCC"/>
+
+    <!-- Layer 5: Vertical Scanning Beam -->
+    <path
+        android:pathData="M40,0h10v180h-10z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="40"
+                android:startY="0"
+                android:endX="50"
+                android:endY="0"
+                android:type="linear">
+                <item android:offset="0" android:color="#0000FFCC"/>
+                <item android:offset="0.5" android:color="#1A00FFCC"/>
+                <item android:offset="1" android:color="#0000FFCC"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+</vector>
