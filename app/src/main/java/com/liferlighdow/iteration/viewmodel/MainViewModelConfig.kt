@@ -8,6 +8,73 @@ import com.liferlighdow.iteration.data.LauncherConfig
 import com.liferlighdow.iteration.data.LauncherSettings
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
+import java.io.FileOutputStream
+import android.os.Environment
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+fun MainViewModel.exportConfigToFile(customName: String? = null, onResult: (Boolean, String?) -> Unit) {
+    viewModelScope.launch(Dispatchers.IO) {
+        try {
+            val jsonString = exportConfig()
+            val documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+            val backupDir = File(documentsDir, "Iteration/Backup")
+            if (!backupDir.exists()) backupDir.mkdirs()
+            
+            val fileName = if (customName.isNullOrBlank()) {
+                "backup_${System.currentTimeMillis()}.json"
+            } else {
+                if (customName.endsWith(".json")) customName else "$customName.json"
+            }
+            
+            val file = File(backupDir, fileName)
+            if (file.exists()) {
+                withContext(Dispatchers.Main) {
+                    onResult(false, "EXISTS")
+                }
+                return@launch
+            }
+            
+            FileOutputStream(file).use { it.write(jsonString.toByteArray()) }
+            
+            withContext(Dispatchers.Main) {
+                onResult(true, file.absolutePath)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            withContext(Dispatchers.Main) {
+                onResult(false, e.message)
+            }
+        }
+    }
+}
+
+fun MainViewModel.deleteBackupFile(file: File, onResult: (Boolean) -> Unit) {
+    viewModelScope.launch(Dispatchers.IO) {
+        val deleted = try { file.delete() } catch (e: Exception) { false }
+        withContext(Dispatchers.Main) { onResult(deleted) }
+    }
+}
+
+fun MainViewModel.renameBackupFile(file: File, newName: String, onResult: (Boolean, String?) -> Unit) {
+    viewModelScope.launch(Dispatchers.IO) {
+        try {
+            val name = if (newName.endsWith(".json")) newName else "$newName.json"
+            val newFile = File(file.parentFile, name)
+            if (newFile.exists()) {
+                withContext(Dispatchers.Main) { onResult(false, "EXISTS") }
+                return@launch
+            }
+            val renamed = file.renameTo(newFile)
+            withContext(Dispatchers.Main) { onResult(renamed, if (renamed) null else "FAILED") }
+        } catch (e: Exception) {
+            withContext(Dispatchers.Main) { onResult(false, e.message) }
+        }
+    }
+}
 
 fun MainViewModel.exportConfig(): String {
     val config = LauncherConfig(

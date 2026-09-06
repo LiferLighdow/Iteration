@@ -710,4 +710,10 @@
     <string name="wallpaper_sync_system">同步系统桌布</string>
     <string name="builtin_note">记事本</string>
     <string name="builtin_store">应用商店 (现代)</string>
+    <string name="export_name_title">导出配置</string>
+    <string name="export_name_hint">输入备份名称（留空则自动命名）</string>
+    <string name="backup_name_exists">哎呀，这个名称已经存在了喔！</string>
+    <string name="delete_backup_confirm">您确定要永久删除此备份吗？</string>
+    <string name="rename_backup_title">重命名备份</string>
+    <string name="no_backups_found">在 Iteration/Backup 中找不到任何备份。</string>
 </resources>

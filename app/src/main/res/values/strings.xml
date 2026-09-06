@@ -707,4 +707,10 @@
     <string name="gesture_swipe_down_right_title">Swipe Down (Right)</string>
     <string name="gesture_swipe_down_left_dialog_title">Select Swipe Down (Left) Action</string>
     <string name="gesture_swipe_down_right_dialog_title">Select Swipe Down (Right) Action</string>
+    <string name="export_name_title">Export Configuration</string>
+    <string name="export_name_hint">Enter backup name (auto-named if empty)</string>
+    <string name="backup_name_exists">Oops, this name already exists!</string>
+    <string name="delete_backup_confirm">Are you sure you want to delete this backup forever?</string>
+    <string name="rename_backup_title">Rename Backup</string>
+    <string name="no_backups_found">No backups found in Iteration/Backup</string>
 </resources>

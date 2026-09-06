@@ -2,10 +2,14 @@ package com.liferlighdow.iteration.ui.settings
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -19,17 +23,28 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.viewmodel.MainViewModel
 import com.liferlighdow.iteration.utils.ActionMode
-import com.liferlighdow.iteration.viewmodel.exportConfig
+import com.liferlighdow.iteration.viewmodel.exportConfigToFile
+import com.liferlighdow.iteration.viewmodel.hasStoragePermission
+import com.liferlighdow.iteration.viewmodel.requestStoragePermission
 import com.liferlighdow.iteration.viewmodel.importConfig
+import com.liferlighdow.iteration.viewmodel.deleteBackupFile
+import com.liferlighdow.iteration.viewmodel.renameBackupFile
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import androidx.core.os.ConfigurationCompat
+import androidx.compose.ui.platform.LocalConfiguration
 
 @SuppressLint("LocalContextGetResourceValueCall")
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun SettingsMainScreen(
     onBack: () -> Unit,
@@ -59,6 +74,21 @@ fun SettingsMainScreen(
     var showRestartDialog by remember { mutableStateOf(false) }
     var showPasswordGate by remember { mutableStateOf(false) }
     var showApiWarningDialog by remember { mutableStateOf(false) }
+    var showBackupFilesDialog by remember { mutableStateOf(false) }
+    var showExportNameDialog by remember { mutableStateOf(false) }
+    
+    var backupToManage by remember { mutableStateOf<File?>(null) }
+    var showDeleteBackupConfirm by remember { mutableStateOf<File?>(null) }
+    var showRenameBackupDialog by remember { mutableStateOf<File?>(null) }
+    var showBackupNameConflict by remember { mutableStateOf<String?>(null) }
+    
+    fun runWithStoragePermission(action: () -> Unit) {
+        if (viewModel.hasStoragePermission(context)) {
+            action()
+        } else {
+            viewModel.requestStoragePermission(context)
+        }
+    }
 
     // 定義所有設定項的元數據，以便進行搜尋
     val allSettingsItems = remember {
@@ -106,12 +136,12 @@ fun SettingsMainScreen(
             
             // --- 安全與備份 ---
             SettingsMetadata(context.getString(R.string.settings_hide_apps), context.getString(R.string.settings_hide_apps_desc), Icons.Default.VisibilityOff, Color(0xFF795548), {
-                if (viewModel.getPassword().isNullOrEmpty()) onNavigateToHideApps() else {} // 觸發 PasswordGate
+                if (viewModel.getPassword().isNullOrEmpty()) onNavigateToHideApps() else {} 
             }, isHideApps = true),
             SettingsMetadata(context.getString(R.string.settings_greenify_title), context.getString(R.string.greenify_desc), Icons.Default.Eco, Color(0xFF4CAF50), onNavigateToGreenify),
-            SettingsMetadata(context.getString(R.string.settings_export), context.getString(R.string.settings_backup_restore_desc), Icons.Default.Backup, Color(0xFF4CAF50), { /* Launcher Logic */ }, isExport = true),
-            SettingsMetadata(context.getString(R.string.settings_import), context.getString(R.string.import_from_backup), Icons.Default.Restore, Color(0xFF03A9F4), { /* Launcher Logic */ }, isImport = true),
-            SettingsMetadata(context.getString(R.string.settings_restart_launcher), context.getString(R.string.settings_restart_desc), Icons.Default.RestartAlt, Color.Red, { /* Launcher Logic */ }, isRestart = true),
+            SettingsMetadata(context.getString(R.string.settings_export), context.getString(R.string.settings_backup_restore_desc), Icons.Default.Backup, Color(0xFF4CAF50), { }, isExport = true),
+            SettingsMetadata(context.getString(R.string.settings_import), context.getString(R.string.import_from_backup), Icons.Default.Restore, Color(0xFF03A9F4), { }, isImport = true),
+            SettingsMetadata(context.getString(R.string.settings_restart_launcher), context.getString(R.string.settings_restart_desc), Icons.Default.RestartAlt, Color.Red, { }, isRestart = true),
             
             // --- 其他 ---
             SettingsMetadata(context.getString(R.string.user_manual_title), context.getString(R.string.user_manual_desc), Icons.AutoMirrored.Filled.MenuBook, Color(0xFFFF9800), onNavigateToManuals)
@@ -124,40 +154,6 @@ fun SettingsMainScreen(
             (it.label.contains(searchQuery, ignoreCase = true) || 
             it.supporting.contains(searchQuery, ignoreCase = true)) &&
             (if (it.label == context.getString(R.string.settings_greenify_title)) isAdvancedMode else true)
-        }
-    }
-
-    val exportLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/json")
-    ) { uri ->
-        uri?.let {
-            try {
-                context.contentResolver.openOutputStream(it)?.use { out ->
-                    out.write(viewModel.exportConfig().toByteArray())
-                }
-                Toast.makeText(context, context.getString(R.string.export_success), Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) {
-                Toast.makeText(context, context.getString(R.string.export_failed, e.message), Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    val importLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetContent()
-    ) { uri ->
-        uri?.let {
-            try {
-                context.contentResolver.openInputStream(it)?.use { input ->
-                    val content = input.bufferedReader().readText()
-                    if (viewModel.importConfig(content)) {
-                        Toast.makeText(context, context.getString(R.string.import_success), Toast.LENGTH_LONG).show()
-                    } else {
-                        Toast.makeText(context, context.getString(R.string.import_failed), Toast.LENGTH_SHORT).show()
-                    }
-                }
-            } catch (e: Exception) {
-                Toast.makeText(context, context.getString(R.string.import_failed_msg, e.message), Toast.LENGTH_SHORT).show()
-            }
         }
     }
 
@@ -194,7 +190,7 @@ fun SettingsMainScreen(
             contentPadding = PaddingValues(bottom = 32.dp)
         ) {
             if (searchQuery.isNotBlank()) {
-                // --- 搜尋模式：顯示過濾後的列表 ---
+                // --- 搜尋模式 ---
                 if (filteredItems.isEmpty()) {
                     item {
                         Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
@@ -223,9 +219,12 @@ fun SettingsMainScreen(
                                                 if (viewModel.getPassword().isNullOrEmpty()) onNavigateToHideApps()
                                                 else showPasswordGate = true
                                             }
-                                            item.isExport -> exportLauncher.launch("iteration_backup.json")
-                                            item.isImport -> importLauncher.launch("application/json")
+                                            item.isExport -> runWithStoragePermission { showExportNameDialog = true }
+                                            item.isImport -> runWithStoragePermission { showBackupFilesDialog = true }
                                             item.isRestart -> showRestartDialog = true
+                                            item.label == context.getString(R.string.menu_wallpaper) -> {
+                                                runWithStoragePermission { item.action() }
+                                            }
                                             else -> item.action()
                                         }
                                     }
@@ -238,7 +237,7 @@ fun SettingsMainScreen(
                     }
                 }
             } else {
-                // --- 標準模式：原有的卡片佈局 ---
+                // --- 標準模式 ---
                 item {
                     Text(
                         stringResource(R.string.customization),
@@ -270,7 +269,7 @@ fun SettingsMainScreen(
                             supporting = "",
                             icon = Icons.Default.Image,
                             iconColor = Color(0xFFE91E63),
-                            onClick = onNavigateToWallpaper
+                            onClick = { runWithStoragePermission { onNavigateToWallpaper() } }
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                         SettingsItem(
@@ -388,7 +387,7 @@ fun SettingsMainScreen(
                     }
                 }
 
-                val isAdvancedMode = viewModel.actionMode.value != ActionMode.ACCESSIBILITY
+                val isAdvancedModeLocal = viewModel.actionMode.value != ActionMode.ACCESSIBILITY
 
                 item {
                     Text(
@@ -410,7 +409,7 @@ fun SettingsMainScreen(
                                 else showPasswordGate = true
                             }
                         )
-                        if (isAdvancedMode) {
+                        if (isAdvancedModeLocal) {
                             HorizontalDivider(
                                 modifier = Modifier.padding(horizontal = 16.dp),
                                 thickness = 0.5.dp,
@@ -435,14 +434,6 @@ fun SettingsMainScreen(
                     }
                 }
 
-                item {
-                    Text(
-                        stringResource(R.string.user_manual_title),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(start = 32.dp, top = 16.dp, bottom = 8.dp)
-                    )
-                }
                 item {
                     SettingsGroup {
                         SettingsItem(
@@ -476,7 +467,7 @@ fun SettingsMainScreen(
                             supporting = stringResource(R.string.settings_backup_restore_desc),
                             icon = Icons.Default.Backup,
                             iconColor = Color(0xFF4CAF50),
-                            onClick = { exportLauncher.launch("iteration_backup.json") }
+                            onClick = { runWithStoragePermission { showExportNameDialog = true } }
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                         SettingsItem(
@@ -484,7 +475,7 @@ fun SettingsMainScreen(
                             supporting = stringResource(R.string.import_from_backup),
                             icon = Icons.Default.Restore,
                             iconColor = MaterialTheme.colorScheme.primary,
-                            onClick = { importLauncher.launch("application/json") }
+                            onClick = { runWithStoragePermission { showBackupFilesDialog = true } }
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                         SettingsItem(
@@ -505,16 +496,8 @@ fun SettingsMainScreen(
             onDismissRequest = { showApiWarningDialog = false },
             icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
             title = { Text(stringResource(R.string.compat_warning_title)) },
-            text = { 
-                Text(stringResource(R.string.compat_warning_msg, android.os.Build.VERSION.SDK_INT)) 
-            },
-            confirmButton = {
-                TextButton(onClick = { 
-                    showApiWarningDialog = false 
-                }) {
-                    Text(stringResource(R.string.got_it))
-                }
-            }
+            text = { Text(stringResource(R.string.compat_warning_msg, android.os.Build.VERSION.SDK_INT)) },
+            confirmButton = { TextButton(onClick = { showApiWarningDialog = false }) { Text(stringResource(R.string.got_it)) } }
         )
     }
 
@@ -527,72 +510,174 @@ fun SettingsMainScreen(
                 Button(
                     onClick = {
                         val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-                        val componentName = intent?.component
-                        val mainIntent = Intent.makeRestartActivityTask(componentName)
-                        context.startActivity(mainIntent)
-                        Runtime.getRuntime().exit(0)
+                        val mainIntent = Intent.makeRestartActivityTask(intent?.component)
+                        context.startActivity(mainIntent); Runtime.getRuntime().exit(0)
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text(stringResource(R.string.restart))
-                }
+                ) { Text(stringResource(R.string.restart)) }
             },
-            dismissButton = {
-                TextButton(onClick = { showRestartDialog = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            }
+            dismissButton = { TextButton(onClick = { showRestartDialog = false }) { Text(stringResource(R.string.cancel)) } }
         )
     }
 
     if (showPasswordGate) {
-        var input by remember { mutableStateOf("") }
-        var isError by remember { mutableStateOf(false) }
-
+        var input by remember { mutableStateOf("") }; var isError by remember { mutableStateOf(false) }
         AlertDialog(
             onDismissRequest = { showPasswordGate = false },
             title = { Text(stringResource(R.string.security_section)) },
             text = {
                 Column {
                     Text(stringResource(R.string.password_label))
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = input,
-                        onValueChange = {
-                            input = it
-                            isError = false
-                        },
-                        isError = isError,
-                        visualTransformation = PasswordVisualTransformation(),
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    if (isError) {
-                        Text(
-                            text = stringResource(R.string.incorrect_password),
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(value = input, onValueChange = { input = it; isError = false }, isError = isError, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
+                    if (isError) Text(stringResource(R.string.incorrect_password), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                Button(onClick = { if (input == viewModel.getPassword()) { showPasswordGate = false; onNavigateToHideApps() } else isError = true }) { Text(stringResource(R.string.confirm)) }
+            },
+            dismissButton = { TextButton(onClick = { showPasswordGate = false }) { Text(stringResource(R.string.cancel)) } }
+        )
+    }
+
+    if (showExportNameDialog) {
+        var name by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showExportNameDialog = false },
+            title = { Text(stringResource(R.string.export_name_title)) },
+            text = { OutlinedTextField(value = name, onValueChange = { name = it }, placeholder = { Text(stringResource(R.string.export_name_hint)) }, singleLine = true, modifier = Modifier.fillMaxWidth()) },
+            confirmButton = {
+                Button(onClick = {
+                    viewModel.exportConfigToFile(name) { success, path ->
+                        if (success) {
+                            showExportNameDialog = false
+                            Toast.makeText(context, context.getString(R.string.export_success) + "\n" + path, Toast.LENGTH_LONG).show()
+                        } else if (path == "EXISTS") {
+                            showBackupNameConflict = if (name.isBlank()) "Default" else name
+                        } else {
+                            Toast.makeText(context, context.getString(R.string.export_failed, path), Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }) { Text(stringResource(R.string.confirm)) }
+            },
+            dismissButton = { TextButton(onClick = { showExportNameDialog = false }) { Text(stringResource(R.string.cancel)) } }
+        )
+    }
+
+    if (showBackupNameConflict != null) {
+        AlertDialog(
+            onDismissRequest = { showBackupNameConflict = null },
+            title = { Text(stringResource(R.string.error_format, "")) },
+            text = { Text(stringResource(R.string.backup_name_exists)) },
+            confirmButton = { TextButton(onClick = { showBackupNameConflict = null }) { Text(stringResource(R.string.got_it)) } }
+        )
+    }
+
+    if (showBackupFilesDialog) {
+        val documentsDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOCUMENTS)
+        val backupDir = File(documentsDir, "Iteration/Backup")
+        val configLayout = LocalConfiguration.current
+        var files by remember { mutableStateOf(backupDir.listFiles { f -> f.extension == "json" }?.sortedByDescending { it.lastModified() } ?: emptyList()) }
+
+        fun refreshFiles() {
+            files = backupDir.listFiles { f -> f.extension == "json" }?.sortedByDescending { it.lastModified() } ?: emptyList()
+        }
+
+        AlertDialog(
+            onDismissRequest = { showBackupFilesDialog = false },
+            title = { Text(stringResource(R.string.settings_import)) },
+            text = {
+                if (files.isEmpty()) Text(stringResource(R.string.no_backups_found))
+                else LazyColumn(Modifier.heightIn(max = 400.dp)) {
+                    items(files.size) { index ->
+                        val file = files[index]
+                        ListItem(
+                            headlineContent = { Text(file.name) },
+                            supportingContent = { 
+                                val locale = ConfigurationCompat.getLocales(configLayout).get(0) ?: Locale.US
+                                val date = SimpleDateFormat("yyyy-MM-dd HH:mm", locale).format(Date(file.lastModified()))
+                                Text(date) 
+                            },
+                            modifier = Modifier.combinedClickable(
+                                onClick = {
+                                    showBackupFilesDialog = false
+                                    try {
+                                        if (viewModel.importConfig(file.readText())) Toast.makeText(context, context.getString(R.string.import_success), Toast.LENGTH_LONG).show()
+                                        else Toast.makeText(context, context.getString(R.string.import_failed), Toast.LENGTH_SHORT).show()
+                                    } catch (e: Exception) { Toast.makeText(context, context.getString(R.string.import_failed_msg, e.message), Toast.LENGTH_SHORT).show() }
+                                },
+                                onLongClick = { backupToManage = file }
+                            )
                         )
                     }
                 }
             },
-            confirmButton = {
-                Button(onClick = {
-                    if (input == viewModel.getPassword()) {
-                        showPasswordGate = false
-                        onNavigateToHideApps()
-                    } else {
-                        isError = true
-                    }
-                }) {
-                    Text(stringResource(R.string.confirm))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showPasswordGate = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            }
+            confirmButton = { TextButton(onClick = { showBackupFilesDialog = false }) { Text(stringResource(R.string.cancel)) } }
         )
+        
+        if (backupToManage != null) {
+            AlertDialog(
+                onDismissRequest = { backupToManage = null },
+                title = { Text(backupToManage!!.name) },
+                text = {
+                    Column {
+                        ListItem(
+                            headlineContent = { Text(stringResource(R.string.rename)) }, 
+                            leadingContent = { Icon(Icons.Default.Edit, null) }, 
+                            modifier = Modifier.clickable { showRenameBackupDialog = backupToManage; backupToManage = null }
+                        )
+                        ListItem(
+                            headlineContent = { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) }, 
+                            leadingContent = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) }, 
+                            modifier = Modifier.clickable { showDeleteBackupConfirm = backupToManage; backupToManage = null }
+                        )
+                    }
+                },
+                confirmButton = { }
+            )
+        }
+
+        if (showDeleteBackupConfirm != null) {
+            AlertDialog(
+                onDismissRequest = { showDeleteBackupConfirm = null },
+                title = { Text(stringResource(R.string.delete)) },
+                text = { Text(stringResource(R.string.delete_backup_confirm)) },
+                confirmButton = {
+                    Button(onClick = {
+                        viewModel.deleteBackupFile(showDeleteBackupConfirm!!) { success ->
+                            if (success) {
+                                Toast.makeText(context, context.getString(R.string.done), Toast.LENGTH_SHORT).show()
+                                refreshFiles()
+                            }
+                            showDeleteBackupConfirm = null
+                        }
+                    }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text(stringResource(R.string.delete)) }
+                },
+                dismissButton = { TextButton(onClick = { showDeleteBackupConfirm = null }) { Text(stringResource(R.string.cancel)) } }
+            )
+        }
+
+        if (showRenameBackupDialog != null) {
+            var newName by remember { mutableStateOf(showRenameBackupDialog!!.name.substringBeforeLast(".")) }
+            AlertDialog(
+                onDismissRequest = { showRenameBackupDialog = null },
+                title = { Text(stringResource(R.string.rename_backup_title)) },
+                text = { OutlinedTextField(value = newName, onValueChange = { newName = it }, singleLine = true, modifier = Modifier.fillMaxWidth()) },
+                confirmButton = {
+                    Button(onClick = {
+                        viewModel.renameBackupFile(showRenameBackupDialog!!, newName) { success, msg ->
+                            if (success) { 
+                                showRenameBackupDialog = null
+                                Toast.makeText(context, context.getString(R.string.done), Toast.LENGTH_SHORT).show()
+                                refreshFiles()
+                            }
+                            else if (msg == "EXISTS") showBackupNameConflict = newName
+                            else Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                        }
+                    }) { Text(stringResource(R.string.save)) }
+                },
+                dismissButton = { TextButton(onClick = { showRenameBackupDialog = null }) { Text(stringResource(R.string.cancel)) } }
+            )
+        }
     }
 }

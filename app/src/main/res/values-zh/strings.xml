@@ -662,7 +662,12 @@
     <string name="dock_add_title">新增至 Dock</string>
     <string name="manual_dock_style">Dock 風格</string>
     <string name="update_download_title">Iteration 更新 %1$s</string>
-    <string name="update_download_description">正在下載最新版本&#8230;</string>
+    <string name="export_name_title">匯出配置</string>
+    <string name="export_name_hint">輸入備份名稱（留空則自動命名）</string>
+    <string name="backup_name_exists">哎呀，這個名稱已經存在了喔～</string>
+    <string name="delete_backup_confirm">主人確定要永遠抹除這個備份嗎？</string>
+    <string name="rename_backup_title">重命名備份</string>
+    <string name="no_backups_found">在 Iteration/Backup 沒發現任何大作呢～</string>
     <string name="pwa_uninstall_title">%1$s</string>
     <string name="pwa_uninstall_message">您要遣散此眷屬嗎？</string>
 </resources>
