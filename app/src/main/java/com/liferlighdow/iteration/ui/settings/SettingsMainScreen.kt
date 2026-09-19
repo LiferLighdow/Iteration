@@ -95,7 +95,7 @@ fun SettingsMainScreen(
         listOf(
             // --- 核心類別 ---
             SettingsMetadata(context.getString(R.string.icon_theme_title), context.getString(R.string.settings_icon_theme_desc), Icons.Default.Palette, Color(0xFF4285F4), onNavigateToIconTheme),
-            SettingsMetadata(context.getString(R.string.menu_wallpaper), "", Icons.Default.Image, Color(0xFFE91E63), onNavigateToWallpaper),
+            SettingsMetadata(context.getString(R.string.menu_wallpaper), context.getString(R.string.settings_wallpaper_desc), Icons.Default.Image, Color(0xFFE91E63), onNavigateToWallpaper),
             SettingsMetadata(context.getString(R.string.pwa_manage_title), context.getString(R.string.pwa_manage_desc), Icons.Default.Public, Color(0xFF009688), onNavigateToPwaMaker),
             SettingsMetadata(context.getString(R.string.widget_maker_title), context.getString(R.string.widget_maker_desc), Icons.Default.Widgets, Color(0xFF673AB7), onNavigateToWidgetMaker),
             SettingsMetadata(context.getString(R.string.liquid_glass_title), context.getString(R.string.settings_liquid_glass_desc), Icons.Default.BlurOn, Color(0xFF34A853), onNavigateToLiquidGlass, isLiquidGlass = true),
@@ -266,7 +266,7 @@ fun SettingsMainScreen(
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                         SettingsItem(
                             headline = stringResource(R.string.menu_wallpaper),
-                            supporting = "",
+                            supporting = stringResource(R.string.settings_wallpaper_desc),
                             icon = Icons.Default.Image,
                             iconColor = Color(0xFFE91E63),
                             onClick = { runWithStoragePermission { onNavigateToWallpaper() } }

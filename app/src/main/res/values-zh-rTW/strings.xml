@@ -513,6 +513,7 @@
 
     <string name="settings_icon_theme">圖示主題</string>
     <string name="settings_icon_theme_desc">樣式、形狀與圖示包</string>
+    <string name="settings_wallpaper_desc">桌布預設與模糊特效</string>
     <string name="settings_liquid_glass_desc">實時玻璃擬態效果</string>
     <string name="settings_home_screen">桌面設定</string>
     <string name="settings_home_screen_desc">網格、Dock 與選單選項</string>
@@ -569,6 +570,9 @@
     <string name="layout_4x5">4 x 5</string>
     <string name="layout_4x6">4 x 6</string>
     <string name="layout_4x7">4 x 7</string>
+    <string name="hide_app_labels_title">隱藏應用標籤</string>
+    <string name="hide_app_labels_desc">隱藏主螢幕上的應用程式名稱</string>
+    <string name="hide_app_labels_forced_desc">此布局本身就會隱藏標籤（必定啟用）</string>
     <string name="layout_4x6_balanced">4 x 6 平衡</string>
     <string name="dock_apps">Dock 應用程式</string>
     <string name="move_up">上移</string>
@@ -593,7 +597,7 @@
     <string name="icon_size_recommend_desc">將解析度與螢幕物理像素對齊，以獲得最佳清晰度與效能。</string>
 
     <string name="icon_scale_title">Icon 尺寸微調</string>
-    <string name="icon_scale_desc">微調桌面圖標的顯示大小 (90%% 到 110%%)。</string>
+    <string name="icon_scale_desc">微調桌面圖標的顯示大小 (80%% 到 120%%)。</string>
     <string name="icon_scale_current">當前比例：%1$d%%</string>
 
     <string name="settings_update_check_interval">檢查更新頻率</string>

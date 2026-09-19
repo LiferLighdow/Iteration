@@ -4,6 +4,9 @@ import android.app.Application
 import android.app.WallpaperManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.MediaStore
 import android.content.pm.LauncherActivityInfo
 import android.content.pm.LauncherApps
 import android.graphics.Bitmap
@@ -1190,7 +1193,7 @@ fun MainViewModel.loadApps() {
         }
         if (_dockItems.value.isEmpty() || _dockItems.value.all { it.packageName.isEmpty() && !it.isFolder }) {
             if (_dockPackageNames.value.all { it.isEmpty() } && processedApps.isNotEmpty()) {
-                val defaultDock = processedApps.take(4)
+                val defaultDock = findDefaultDockApps(processedApps)
                 _dockItems.value = defaultDock
                 _dockPackageNames.value = defaultDock.map { it.packageName }
                 saveDock()
@@ -1599,4 +1602,43 @@ private suspend fun MainViewModel.generatePwaIcon(app: AppModel, sizePx: Int): B
     }
     
     return finalBitmap
+}
+
+private fun MainViewModel.findDefaultDockApps(processedApps: List<AppModel>): List<AppModel> {
+    val pm = getApplication<Application>().packageManager
+    val result = mutableListOf<AppModel>()
+    val addedPackages = mutableSetOf<String>()
+
+    // 定義優先尋找的意圖
+    val priorityIntents = listOf(
+        Intent(Intent.ACTION_DIAL), // 電話
+        Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_MESSAGING), // 簡訊
+        Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_BROWSER), // 瀏覽器
+        Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA) // 相機
+    )
+
+    for (intent in priorityIntents) {
+        val resolveInfo = pm.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
+        val pkg = resolveInfo?.activityInfo?.packageName
+        if (pkg != null && !addedPackages.contains(pkg)) {
+            // 在已處理的 App 清單中尋找對應的包名
+            processedApps.find { it.packageName == pkg }?.let {
+                result.add(it)
+                addedPackages.add(pkg)
+            }
+        }
+    }
+
+    // 補齊到 4 個（如果有些沒找到）
+    if (result.size < 4) {
+        for (app in processedApps) {
+            if (result.size >= 4) break
+            if (!addedPackages.contains(app.packageName)) {
+                result.add(app)
+                addedPackages.add(app.packageName)
+            }
+        }
+    }
+
+    return result.take(4)
 }

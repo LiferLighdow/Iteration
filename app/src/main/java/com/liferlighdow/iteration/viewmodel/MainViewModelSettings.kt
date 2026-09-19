@@ -470,6 +470,12 @@ fun MainViewModel.setDesktopRows(rows: Int) {
     loadApps()
 }
 
+fun MainViewModel.setHideAppLabel(hide: Boolean) {
+    _hideAppLabel.value = hide
+    prefs.edit().putBoolean("hide_app_label", hide).apply()
+    loadApps()
+}
+
 fun MainViewModel.setDockStyle(style: DockStyle) {
     _dockStyle.value = style
     prefs.edit().putString("dock_style", style.name).apply()

@@ -110,20 +110,22 @@ fun SettingSwitchItem(
     icon: ImageVector? = null,
     leadingContent: @Composable (() -> Unit)? = null,
     checked: Boolean,
+    enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit
 ) {
     ListItem(
-        headlineContent = { Text(title) },
-        supportingContent = supportingText?.let { { Text(it) } },
-        leadingContent = leadingContent ?: icon?.let { { Icon(it, contentDescription = null, tint = MaterialTheme.colorScheme.primary) } },
+        headlineContent = { Text(title, color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)) },
+        supportingContent = supportingText?.let { { Text(it, color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)) } },
+        leadingContent = leadingContent ?: icon?.let { { Icon(it, contentDescription = null, tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.38f)) } },
         trailingContent = {
             Switch(
                 checked = checked,
-                onCheckedChange = onCheckedChange
+                onCheckedChange = onCheckedChange,
+                enabled = enabled
             )
         },
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        modifier = Modifier.clickable { onCheckedChange(!checked) }
+        modifier = if (enabled) Modifier.clickable { onCheckedChange(!checked) } else Modifier
     )
 }
 

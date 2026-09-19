@@ -118,6 +118,7 @@ fun MainViewModel.exportConfig(): String {
             iconScale = _iconScale.value,
             iconSizePx = _iconSizePx.value,
             desktopRows = _desktopRows.value,
+            hideAppLabel = _hideAppLabel.value,
             dockStyle = _dockStyle.value,
             dockCornerRadius = _dockCornerRadius.value,
             iconCacheSize = _iconCacheSize.value,
@@ -252,6 +253,7 @@ fun MainViewModel.applyConfig(config: LauncherConfig) {
         putInt("icon_size_px", settings.iconSizePx)
         putFloat("icon_scale", settings.iconScale)
         putInt("desktop_rows", settings.desktopRows)
+        putBoolean("hide_app_label", settings.hideAppLabel)
         putString("dock_style", settings.dockStyle.name)
         putFloat("dock_corner_radius", settings.dockCornerRadius)
         putInt("icon_cache_size", settings.iconCacheSize)
@@ -334,6 +336,7 @@ fun MainViewModel.applyConfig(config: LauncherConfig) {
     _iconSizePx.value = settings.iconSizePx
     _iconScale.value = settings.iconScale
     _desktopRows.value = settings.desktopRows
+    _hideAppLabel.value = settings.hideAppLabel
     _dockStyle.value = settings.dockStyle
     _dockCornerRadius.value = settings.dockCornerRadius
     _iconCacheSize.value = settings.iconCacheSize

@@ -139,6 +139,13 @@ fun AppGrid(
     val notificationCounts by NotificationService.notifications.collectAsState()
     val mediaInfo by NotificationService.currentMedia.collectAsState()
     val mContext = LocalContext.current
+    val hideAppLabelPrefs by viewModel.hideAppLabel.collectAsState()
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val screenRatio = configuration.screenHeightDp.toFloat() / configuration.screenWidthDp.toFloat()
+    
+    // 照原本的設定規範：在 16:9 螢幕 (screenRatio < 1.85f) 且佈局為 6 列以上時，或在 18:9 螢幕 (rows >= 7 且 screenRatio < 2.22f) 時，會強制隱藏標籤
+    val isAppLabelForcedHidden = if (rows >= 6 && screenRatio < 1.85f) true else (if (rows >= 7) screenRatio < 2.22f else false)
+    val showAppLabel = !hideAppLabelPrefs && !isAppLabelForcedHidden
 
     val draggingUniqueId = draggingApp?.uniqueId
     var stackToEdit by remember { mutableStateOf<WidgetModel?>(null) }
@@ -491,7 +498,8 @@ fun AppGrid(
                                             notificationCounts[app.packageName] ?: 0
                                         }
                                     },
-                                    viewModel = viewModel
+                                    viewModel = viewModel,
+                                    showLabel = showAppLabel
                                 )
                             }
                         }
@@ -1071,7 +1079,8 @@ private fun AppGridItem(
     onAppClick: () -> Unit,
     onEditApp: () -> Unit,
     notificationCountProvider: () -> Int,
-    viewModel: MainViewModel
+    viewModel: MainViewModel,
+    showLabel: Boolean = true
 ) {
     val mContext = LocalContext.current
     val isBeingDragged = app.uniqueId == draggingUniqueId
@@ -1114,6 +1123,7 @@ private fun AppGridItem(
     Box {
         AppItem(
             app = app,
+            showLabel = showLabel,
             iconSize = iconSize,
             isLiquidGlass = isLiquidGlass,
             backdrop = backdrop,

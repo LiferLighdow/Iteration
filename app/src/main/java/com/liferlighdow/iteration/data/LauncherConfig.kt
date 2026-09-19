@@ -69,6 +69,7 @@ data class LauncherSettings(
     val iconScale: Float = 1.0f,
     val iconSizePx: Int = -1,
     val desktopRows: Int = 0,
+    val hideAppLabel: Boolean = false,
     val dockStyle: DockStyle = DockStyle.MODERN,
     val dockCornerRadius: Float = 42f,
     val iconCacheSize: Int = 250,

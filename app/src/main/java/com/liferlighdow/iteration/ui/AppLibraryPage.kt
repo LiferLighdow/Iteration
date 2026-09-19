@@ -612,6 +612,8 @@ fun AppLibraryFolder(
 
     val showLock = isLocked
 
+    val computedShape = if (isCircle) CircleShape else RoundedCornerShape(percent = (libraryCornerRadius * 100).toInt().coerceIn(0, 50))
+
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             modifier = Modifier
@@ -625,7 +627,7 @@ fun AppLibraryFolder(
                     .liquidGlass(
                         enabled = isLiquidGlass,
                         backdrop = backdrop,
-                        cornerRadius = iconSize * libraryCornerRadius,
+                        shape = computedShape,
                         blurRadius = blurRadius,
                         refractionHeight = refractionHeight,
                         refractionAmount = refractionAmount,
@@ -643,7 +645,7 @@ fun AppLibraryFolder(
             ) {
                 Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        val lockShape = if (isCircle) CircleShape else RoundedCornerShape(internalIconSize * libraryCornerRadius)
+                        val lockShape = computedShape
                         val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
                         val lockColor = if (isDark) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
                         if (showLock) {
@@ -662,7 +664,7 @@ fun AppLibraryFolder(
                         }
                     }
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        val lockShape = if (isCircle) CircleShape else RoundedCornerShape(internalIconSize * libraryCornerRadius)
+                        val lockShape = computedShape
                         val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
                         val lockColor = if (isDark) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
                         if (showLock) {
@@ -683,7 +685,7 @@ fun AppLibraryFolder(
                 }
                 Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        val lockShape = if (isCircle) CircleShape else RoundedCornerShape(internalIconSize * libraryCornerRadius)
+                        val lockShape = computedShape
                         val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
                         val lockColor = if (isDark) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
                         if (showLock) {
@@ -702,7 +704,7 @@ fun AppLibraryFolder(
                         }
                     }
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        val lockShape = if (isCircle) CircleShape else RoundedCornerShape(internalIconSize * libraryCornerRadius)
+                        val lockShape = computedShape
                         val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
                         val lockColor = if (isDark) Color.Black.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.3f)
                         if (showLock) {

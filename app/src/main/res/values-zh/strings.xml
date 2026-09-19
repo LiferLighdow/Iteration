@@ -481,6 +481,7 @@
     <string name="language_system_default">系統預設</string>
     <string name="settings_icon_theme">門牌主題</string>
     <string name="settings_icon_theme_desc">樣式、形狀和門牌包</string>
+    <string name="settings_wallpaper_desc">桌布預設與模糊特效</string>
     <string name="settings_liquid_glass_desc">即時玻璃態效應</string>
     <string name="settings_home_screen">桌面設定</string>
     <string name="settings_home_screen_desc">網格、Dock欄和選單功能</string>
@@ -522,6 +523,9 @@
     <string name="layout_4x5">4 x 5</string>
     <string name="layout_4x6">4 x 6</string>
     <string name="layout_4x7">4 x 7</string>
+    <string name="hide_app_labels_title">隱藏門牌標籤</string>
+    <string name="hide_app_labels_desc">隱藏主畫面上的眷屬名稱</string>
+    <string name="hide_app_labels_forced_desc">此布局本身就會隱藏門牌（必定啟用）</string>
     <string name="layout_4x6_balanced">4 x 6 平衡</string>
     <string name="dock_apps">Dock 眷屬</string>
     <string name="move_up">往上移</string>
@@ -545,7 +549,7 @@
     <string name="icon_size_recommend">裝置建議值</string>
     <string name="icon_size_recommend_desc">將解析度與螢幕物理像素對齊，以獲得最佳清晰度與效能。</string>
     <string name="icon_scale_title">門牌尺寸微調</string>
-    <string name="icon_scale_desc">微調桌面門牌的顯示大小 (90%% 到 110%%)。</string>
+    <string name="icon_scale_desc">微調桌面門牌的顯示大小 (80%% 到 120%%)。</string>
     <string name="icon_scale_current">當前比例：%1$d%%</string>
     <string name="settings_update_check_interval">檢查更新頻率</string>
     <string name="settings_update_check_interval_desc">設定自動檢查更新的時間間隔（0 到 36 小時，0 為不檢查）。</string>

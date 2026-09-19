@@ -571,6 +571,7 @@ fun LauncherScreen(
                                 confirmedHoveredSlotIdx = if (confirmedHoveredKey?.startsWith("$pageIndex-") == true)
                                     confirmedHoveredKey?.substringAfter("-")?.toIntOrNull() else null,
                                 draggingApp = draggingApp,
+                                showWidgetLabel = showWidgetLabel,
                                 onAppClick = { app, pos ->
                                     if (isEditMode) {
                                         if (!app.isFolder) appToEdit = app
@@ -760,8 +761,7 @@ fun LauncherScreen(
                                         searchDragOffset = 0f
                                     }
                                 },
-                                onEditApp = { appToEdit = it },
-                                showWidgetLabel = showWidgetLabel
+                                onEditApp = { appToEdit = it }
                             )
                         }
                         else -> {

@@ -43,6 +43,7 @@ import com.liferlighdow.iteration.viewmodel.*
 fun DesktopSettingsScreen(onBack: () -> Unit) {
     val viewModel: MainViewModel = viewModel()
     val desktopRows by viewModel.desktopRows.collectAsState()
+    val hideAppLabel by viewModel.hideAppLabel.collectAsState()
     val dockStyle by viewModel.dockStyle.collectAsState()
     val dockCornerRadius by viewModel.dockCornerRadius.collectAsState()
     val showMinusOnePage by viewModel.showMinusOnePage.collectAsState()
@@ -237,6 +238,18 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
                             DropdownMenuItem(text = { Text(label) }, onClick = { viewModel.setDesktopRows(value); expandedGrid = false })
                         }
                     }
+
+                    val screenRatio = configuration.screenHeightDp.toFloat() / configuration.screenWidthDp.toFloat()
+                    val rowsToCheck = if (desktopRows == 0) (if (screenRatio < 2.0f) 5 else 6) else desktopRows
+                    val isLayoutForcingHideLabel = if (rowsToCheck >= 6 && screenRatio < 1.85f) true else (if (rowsToCheck >= 7) screenRatio < 2.22f else false)
+                    SettingSwitchItem(
+                        icon = Icons.Default.VisibilityOff,
+                        title = stringResource(R.string.hide_app_labels_title),
+                        supportingText = if (isLayoutForcingHideLabel) stringResource(R.string.hide_app_labels_forced_desc) else stringResource(R.string.hide_app_labels_desc),
+                        checked = if (isLayoutForcingHideLabel) true else hideAppLabel,
+                        enabled = !isLayoutForcingHideLabel,
+                        onCheckedChange = { viewModel.setHideAppLabel(it) }
+                    )
 
                     var expandedStyle by remember { mutableStateOf(false) }
                     val styleOptions = listOf(

@@ -564,6 +564,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
     internal val _desktopRows = MutableStateFlow(prefs.getInt("desktop_rows", 0)) // 0 means auto
     val desktopRows = _desktopRows.asStateFlow()
 
+    internal val _hideAppLabel = MutableStateFlow(prefs.getBoolean("hide_app_label", false))
+    val hideAppLabel = _hideAppLabel.asStateFlow()
+
     internal val _dockStyle = MutableStateFlow(
         try {
             DockStyle.valueOf(prefs.getString("dock_style", "MODERN") ?: "MODERN")
@@ -1032,6 +1035,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
             }
             "desktop_rows" -> {
                 _desktopRows.value = sharedPreferences.getInt(key, 0)
+                loadApps()
+            }
+            "hide_app_label" -> {
+                _hideAppLabel.value = sharedPreferences.getBoolean(key, false)
                 loadApps()
             }
             "hidden_apps" -> {

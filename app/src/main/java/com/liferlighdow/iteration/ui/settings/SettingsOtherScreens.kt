@@ -889,7 +889,7 @@ fun AdvancedSettingsScreen(onBack: () -> Unit) {
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
                     ) {
                         IconButton(onClick = {
-                            viewModel.setIconScale((iconScale - 0.002f).coerceAtLeast(0.9f))
+                            viewModel.setIconScale((iconScale - 0.002f).coerceAtLeast(0.8f))
                         }) {
                             Icon(Icons.Default.Remove, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         }
@@ -897,12 +897,12 @@ fun AdvancedSettingsScreen(onBack: () -> Unit) {
                         Slider(
                             value = iconScale,
                             onValueChange = { viewModel.setIconScale(it) },
-                            valueRange = 0.9f..1.1f,
+                            valueRange = 0.8f..1.2f,
                             modifier = Modifier.weight(1f)
                         )
 
                         IconButton(onClick = {
-                            viewModel.setIconScale((iconScale + 0.002f).coerceAtMost(1.1f))
+                            viewModel.setIconScale((iconScale + 0.002f).coerceAtMost(1.2f))
                         }) {
                             Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         }
