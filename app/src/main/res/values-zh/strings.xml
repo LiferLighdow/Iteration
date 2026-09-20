@@ -673,5 +673,7 @@
     <string name="rename_backup_title">重命名備份</string>
     <string name="no_backups_found">在 Iteration/Backup 沒發現任何大作呢～</string>
     <string name="pwa_uninstall_title">%1$s</string>
-    <string name="pwa_uninstall_message">您要遣散此眷屬嗎？</string>
+    <string name="pwa_uninstall_message">您要遣散此眷屬嗎？？</string>
+    <string name="nightly_cleanup_title">深夜淨化快取 (00:00)</string>
+    <string name="nightly_cleanup_desc">在午夜時分自動淨化圖標與壁紙快取，保持啟動器的靈動與新鮮感。</string>
 </resources>

@@ -13,6 +13,7 @@ import android.os.UserManager
 import android.util.LruCache
 import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.os.LocaleListCompat
 import androidx.appcompat.app.AppCompatDelegate
@@ -245,6 +246,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
         apps.any { it.isPrivate && it.isLocked }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, true)
     val isPrivateSpaceLocked = _isPrivateSpaceLocked
+
+    internal val _isNightlyCleanupEnabled = MutableStateFlow(prefs.getBoolean("nightly_cleanup_enabled", false))
+    val isNightlyCleanupEnabled = _isNightlyCleanupEnabled.asStateFlow()
 
     internal val _removingItemIds = MutableStateFlow<Set<String>>(emptySet())
     val removingItemIds = _removingItemIds.asStateFlow()
@@ -876,6 +880,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
                 Intent.ACTION_MANAGED_PROFILE_UNAVAILABLE,
                 "android.intent.action.PROFILE_ACCESSIBLE",
                 "android.intent.action.PROFILE_INACCESSIBLE" -> refreshApps()
+                "com.liferlighdow.iteration.ACTION_CLEAR_CACHE_SILENT" -> {
+                    iconCache.evictAll()
+                    iconProcessor.clearCache()
+                    refreshApps()
+                }
                 Intent.ACTION_SCREEN_OFF -> performGreenifyCleanup()
                 Intent.ACTION_TIME_TICK -> {
                     if (_isDynamicClockEnabled.value) {
@@ -1059,9 +1068,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
             "new_version_available" -> _newVersionAvailable.value = sharedPreferences.getString(key, null)
             "new_version_download_url" -> _newVersionDownloadUrl.value = sharedPreferences.getString(key, null)
             "icon_cache_size" -> {
-                val newSize = sharedPreferences.getInt(key, 250)
-                _iconCacheSize.value = newSize
-                iconCache.resize(newSize)
+                val newCount = sharedPreferences.getInt(key, 250)
+                _iconCacheSize.value = newCount
+                // 將「數量」轉換為估算的記憶體佔用 (假設平均 160KB 一個，上限為 Heap 的 1/4)
+                val estimatedSizeKb = (newCount * 160).coerceAtMost((Runtime.getRuntime().maxMemory() / 1024).toInt() / 4)
+                iconCache.resize(estimatedSizeKb)
             }
             "icon_scale" -> {
                 _iconScale.value = sharedPreferences.getFloat(key, 1.0f)
@@ -1107,6 +1118,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
             addAction("com.liferlighdow.iteration.ACTION_REFRESH_APPS")
             addAction("com.liferlighdow.iteration.ACTION_REFRESH_WALLPAPER")
             addAction("com.liferlighdow.iteration.ACTION_PIN_SHORTCUT")
+            addAction("com.liferlighdow.iteration.ACTION_CLEAR_CACHE_SILENT")
             addAction(Intent.ACTION_MANAGED_PROFILE_UNLOCKED)
             addAction(Intent.ACTION_MANAGED_PROFILE_AVAILABLE)
             addAction(Intent.ACTION_MANAGED_PROFILE_UNAVAILABLE)
@@ -1176,8 +1188,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
 
     internal var lastBlurredSignal = -1L
 
-    internal val iconCache = object : LruCache<String, ImageBitmap>(prefs.getInt("icon_cache_size", 250)) {
-        override fun sizeOf(key: String, value: ImageBitmap): Int = 1
+    private val maxCacheMemory = (Runtime.getRuntime().maxMemory() / 1024).toInt() / 8
+
+    internal val iconCache = object : LruCache<String, ImageBitmap>(maxCacheMemory) {
+        override fun sizeOf(key: String, value: ImageBitmap): Int {
+            return (value.asAndroidBitmap().byteCount / 1024).coerceAtLeast(1)
+        }
     }
 
     internal var loadAppsJob: Job? = null

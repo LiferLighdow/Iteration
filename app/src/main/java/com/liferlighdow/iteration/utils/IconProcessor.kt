@@ -127,6 +127,7 @@ class IconProcessor(private val context: Context) {
             paint.colorFilter = createUnifiedTintFilter(tintColor)
             canvas.drawBitmap(tempBitmap, 0f, 0f, paint)
             paint.colorFilter = null
+            tempBitmap.recycle()
         } else {
             // --- 原始的分層處理邏輯 ---
             val m3Colors = if (isThemed && themeColors != null) {
@@ -262,7 +263,9 @@ class IconProcessor(private val context: Context) {
             } else {
                 mutated.toBitmap(64, 64)
             }
-            DynamicColorGenerator.extractSeedColorFromBitmap(bitmap) ?: run {
+            val seedColor = DynamicColorGenerator.extractSeedColorFromBitmap(bitmap)
+            
+            val finalColor = seedColor ?: run {
                 val pixels = IntArray(16)
                 bitmap.getPixels(pixels, 0, 4, bitmap.width / 4, bitmap.height / 4, 4, 4)
                 var r = 0; var g = 0; var b = 0
@@ -275,6 +278,8 @@ class IconProcessor(private val context: Context) {
                 }
                 if (r + g + b > 0) Color.rgb(r/16, g/16, b/16) else null
             }
+            bitmap.recycle()
+            finalColor
         } catch (e: Exception) {
             null
         }

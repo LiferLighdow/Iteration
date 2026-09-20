@@ -773,6 +773,7 @@ fun AdvancedSettingsScreen(onBack: () -> Unit) {
         LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
             item {
                 val isMaterialYouEnabled by viewModel.isMaterialYouEnabled.collectAsState()
+                val isNightlyCleanupEnabled by viewModel.isNightlyCleanupEnabled.collectAsState()
                 SettingsSection(title = stringResource(R.string.experimental_features)) {
                     SettingSwitchItem(
                         icon = Icons.Default.Palette,
@@ -780,6 +781,13 @@ fun AdvancedSettingsScreen(onBack: () -> Unit) {
                         supportingText = stringResource(R.string.material_you_desc),
                         checked = isMaterialYouEnabled,
                         onCheckedChange = { viewModel.setMaterialYouEnabled(it) }
+                    )
+                    SettingSwitchItem(
+                        icon = Icons.Default.DeleteSweep,
+                        title = stringResource(R.string.nightly_cleanup_title),
+                        supportingText = stringResource(R.string.nightly_cleanup_desc),
+                        checked = isNightlyCleanupEnabled,
+                        onCheckedChange = { viewModel.setNightlyCleanupEnabled(it) }
                     )
                 }
             }

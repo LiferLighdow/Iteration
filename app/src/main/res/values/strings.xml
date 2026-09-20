@@ -717,4 +717,6 @@
     <string name="delete_backup_confirm">Are you sure you want to delete this backup forever?</string>
     <string name="rename_backup_title">Rename Backup</string>
     <string name="no_backups_found">No backups found in Iteration/Backup</string>
+    <string name="nightly_cleanup_title">Nightly Cache Cleanup (00:00)</string>
+    <string name="nightly_cleanup_desc">Automatically clear icon and wallpaper cache at midnight to keep the launcher fresh.</string>
 </resources>

@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.os.ParcelFileDescriptor
 import android.os.UserHandle
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.drawable.toBitmap
 import com.rosan.dhizuku.api.Dhizuku
@@ -111,12 +112,53 @@ class WallpaperProcessor(private val context: Application) {
     fun loadWallpaperFromFile(file: File): WallpaperResult? {
         return try {
             if (!file.exists()) return null
-            val bitmap = BitmapFactory.decodeFile(file.absolutePath) ?: return null
-            processBitmap(bitmap)
+            
+            val dm = context.resources.displayMetrics
+            val reqW = dm.widthPixels
+            val reqH = dm.heightPixels
+
+            val options = BitmapFactory.Options().apply {
+                inJustDecodeBounds = true
+            }
+            BitmapFactory.decodeFile(file.absolutePath, options)
+            options.inSampleSize = calculateInSampleSize(options, reqW, reqH)
+            options.inJustDecodeBounds = false
+            options.inPreferredConfig = Bitmap.Config.ARGB_8888
+            
+            val bitmap = BitmapFactory.decodeFile(file.absolutePath, options) ?: return null
+            val result = processBitmap(bitmap)
+            
+            // 如果生成的原始 bitmap 大於螢幕解析度，且在處理過程中產生了新的 scaled 副本，
+            // 則可以安全地回收這個巨大的原始 bitmap 以節省 RAM。
+            if (bitmap.width > reqW || bitmap.height > reqH) {
+                // 檢查 result.raw 是否是由 bitmap 轉換而來且解析度已改變
+                // 在 processBitmap 中，result.raw 是 scaled.asImageBitmap()
+                // 如果 scaled != bitmap，則回收 bitmap
+                // 注意：這裡我們使用 ImageBitmap.asAndroidBitmap() 來比較 (需要 import)
+                if (result.raw.asAndroidBitmap() != bitmap) {
+                    bitmap.recycle()
+                }
+            }
+            
+            result
         } catch (e: Exception) {
             e.printStackTrace()
             null
         }
+    }
+
+    private fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+        val (height: Int, width: Int) = options.run { outHeight to outWidth }
+        var inSampleSize = 1
+
+        if (height > reqHeight || width > reqWidth) {
+            val halfHeight: Int = height / 2
+            val halfWidth: Int = width / 2
+            while (halfHeight / inSampleSize >= reqHeight && halfWidth / inSampleSize >= reqWidth) {
+                inSampleSize *= 2
+            }
+        }
+        return inSampleSize
     }
 
     /**
@@ -147,6 +189,16 @@ class WallpaperProcessor(private val context: Application) {
         val cropped = Bitmap.createBitmap(rawBitmap, (rawBitmap.width - cropW) / 2, (rawBitmap.height - cropH) / 2, cropW, cropH)
         
         val scaled = Bitmap.createScaledBitmap(cropped, screenW, screenH, true)
+        
+        // 如果裁剪後的圖片與縮放後的圖片不是同一個對象，且不再需要，則回收裁剪後的臨時圖片
+        if (cropped != scaled && cropped != rawBitmap) {
+            cropped.recycle()
+        }
+        
+        // 如果原始圖片大於螢幕且不同於 scaled，也可以考慮回收 (如果調用者不再需要)
+        if (rawBitmap != scaled && (rawBitmap.width > screenW || rawBitmap.height > screenH)) {
+            // rawBitmap.recycle() 
+        }
 
         // 計算頂部區域亮度 (Status Bar 所在位置)
         val isLight = systemSuggestedLight ?: calculateIsLight(scaled)

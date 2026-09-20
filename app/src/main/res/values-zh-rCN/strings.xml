@@ -720,4 +720,6 @@
     <string name="delete_backup_confirm">您确定要永久删除此备份吗？</string>
     <string name="rename_backup_title">重命名备份</string>
     <string name="no_backups_found">在 Iteration/Backup 中找不到任何备份。</string>
+    <string name="nightly_cleanup_title">夜间自动清理快取 (00:00)</string>
+    <string name="nightly_cleanup_desc">在午夜自动清除图标与壁纸快取，保持启动器性能与新鲜感。</string>
 </resources>

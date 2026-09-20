@@ -14,6 +14,7 @@ import com.liferlighdow.iteration.data.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import com.liferlighdow.iteration.service.UpdateCheckWorker
+import com.liferlighdow.iteration.service.NightlyCleanupWorker
 import androidx.work.*
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
@@ -732,4 +733,45 @@ fun MainViewModel.setBuiltinIconSelectedPackages(packages: Set<String>) {
     shouldRefreshIconsOnReturn = true
     iconCache.evictAll()
     loadApps()
+}
+
+fun MainViewModel.setNightlyCleanupEnabled(enabled: Boolean) {
+    _isNightlyCleanupEnabled.value = enabled
+    prefs.edit().putBoolean("nightly_cleanup_enabled", enabled).apply()
+    
+    val workManager = WorkManager.getInstance(getApplication())
+    if (enabled) {
+        val calendar = java.util.Calendar.getInstance()
+        val now = calendar.timeInMillis
+        
+        // 設定為明天的 00:00
+        calendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
+        calendar.set(java.util.Calendar.MINUTE, 0)
+        calendar.set(java.util.Calendar.SECOND, 0)
+        calendar.set(java.util.Calendar.MILLISECOND, 0)
+        
+        if (calendar.timeInMillis <= now) {
+            calendar.add(java.util.Calendar.DAY_OF_YEAR, 1)
+        }
+        
+        val initialDelay = calendar.timeInMillis - now
+        
+        val request = PeriodicWorkRequestBuilder<NightlyCleanupWorker>(24, TimeUnit.HOURS)
+            .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiresDeviceIdle(true)
+                    .setRequiresCharging(true)
+                    .build()
+            )
+            .build()
+            
+        workManager.enqueueUniquePeriodicWork(
+            "nightly_cleanup",
+            ExistingPeriodicWorkPolicy.UPDATE,
+            request
+        )
+    } else {
+        workManager.cancelUniqueWork("nightly_cleanup")
+    }
 }
