@@ -125,7 +125,7 @@ fun MainViewModel.loadWallpaperPresets() {
     }
 }
 
-fun MainViewModel.applyWallpaperPreset(preset: WallpaperPreset) {
+fun MainViewModel.applyWallpaperPreset(preset: WallpaperPreset, destinationFlags: Int = WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK) {
     viewModelScope.launch(Dispatchers.IO) {
         _isApplyingWallpaper.value = true
         try {
@@ -135,17 +135,19 @@ fun MainViewModel.applyWallpaperPreset(preset: WallpaperPreset) {
             
             val wallpaperFileInPreset = File(preset.wallpaperPath)
             
-            config?.let { cfg ->
-                withContext(Dispatchers.Main) {
-                    cfg.blur?.let { setLiquidGlassBlur(it) }
-                    cfg.refractionHeight?.let { setLiquidGlassRefractionHeight(it) }
-                    cfg.refractionAmount?.let { setLiquidGlassRefractionAmount(it) }
-                    cfg.chromaticAberration?.let { setLiquidGlassChromaticAberration(it) }
-                    cfg.themeMode?.let { try { setThemeMode(ThemeMode.valueOf(it)) } catch(e: Exception) {} }
-                    cfg.isMaterialYou?.let { setMaterialYouEnabled(it) }
-                    cfg.wallpaperColor?.let { setCustomWallpaperColor(it) }
-                    cfg.emojiText?.let { setEmojiWallpaperText(if (mode == EmojiRenderingMode.FULL) "" else it) }
-                    cfg.emojiPatternStyle?.let { try { setEmojiPatternStyle(EmojiPatternStyle.valueOf(it)) } catch(e: Exception) {} }
+            if ((destinationFlags and WallpaperManager.FLAG_SYSTEM) != 0) {
+                config?.let { cfg ->
+                    withContext(Dispatchers.Main) {
+                        cfg.blur?.let { setLiquidGlassBlur(it) }
+                        cfg.refractionHeight?.let { setLiquidGlassRefractionHeight(it) }
+                        cfg.refractionAmount?.let { setLiquidGlassRefractionAmount(it) }
+                        cfg.chromaticAberration?.let { setLiquidGlassChromaticAberration(it) }
+                        cfg.themeMode?.let { try { setThemeMode(ThemeMode.valueOf(it)) } catch(e: Exception) {} }
+                        cfg.isMaterialYou?.let { setMaterialYouEnabled(it) }
+                        cfg.wallpaperColor?.let { setCustomWallpaperColor(it) }
+                        cfg.emojiText?.let { setEmojiWallpaperText(if (mode == EmojiRenderingMode.FULL) "" else it) }
+                        cfg.emojiPatternStyle?.let { try { setEmojiPatternStyle(EmojiPatternStyle.valueOf(it)) } catch(e: Exception) {} }
+                    }
                 }
             }
 
@@ -155,30 +157,44 @@ fun MainViewModel.applyWallpaperPreset(preset: WallpaperPreset) {
             
             when (mode) {
                 EmojiRenderingMode.LITE -> {
-                    wm.setBitmap(liteBitmap)
-                    FileOutputStream(wallpaperFile).use { liteBitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                    if ((destinationFlags and WallpaperManager.FLAG_SYSTEM) != 0) {
+                        wm.setBitmap(liteBitmap, null, true, WallpaperManager.FLAG_SYSTEM)
+                        FileOutputStream(wallpaperFile).use { liteBitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                    }
+                    if ((destinationFlags and WallpaperManager.FLAG_LOCK) != 0) {
+                        wm.setBitmap(liteBitmap, null, true, WallpaperManager.FLAG_LOCK)
+                    }
                 }
                 EmojiRenderingMode.BALANCE -> {
-                    if (hasImage) {
+                    if (hasImage && (destinationFlags and WallpaperManager.FLAG_LOCK) != 0) {
                         val fullBitmap = BitmapFactory.decodeFile(preset.wallpaperPath)
                         wm.setBitmap(fullBitmap, null, true, WallpaperManager.FLAG_LOCK)
                     }
-                    wm.setBitmap(liteBitmap, null, true, WallpaperManager.FLAG_SYSTEM)
-                    FileOutputStream(wallpaperFile).use { liteBitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                    if ((destinationFlags and WallpaperManager.FLAG_SYSTEM) != 0) {
+                        wm.setBitmap(liteBitmap, null, true, WallpaperManager.FLAG_SYSTEM)
+                        FileOutputStream(wallpaperFile).use { liteBitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                    }
                 }
                 EmojiRenderingMode.FULL -> {
                     if (hasImage) {
                         val fullBitmap = BitmapFactory.decodeFile(preset.wallpaperPath)
-                        wm.setBitmap(fullBitmap)
-                        FileOutputStream(wallpaperFile).use { fullBitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                        if ((destinationFlags and WallpaperManager.FLAG_SYSTEM) != 0) {
+                            wm.setBitmap(fullBitmap, null, true, WallpaperManager.FLAG_SYSTEM)
+                            FileOutputStream(wallpaperFile).use { fullBitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                        }
+                        if ((destinationFlags and WallpaperManager.FLAG_LOCK) != 0) {
+                            wm.setBitmap(fullBitmap, null, true, WallpaperManager.FLAG_LOCK)
+                        }
                     }
                 }
             }
 
-            _currentWallpaperPresetName.value = preset.name
-            prefs.edit().putString("current_wallpaper_preset", preset.name).apply()
-            updateBlurredWallpaper()
-            notifyWallpaperChanged()
+            if ((destinationFlags and WallpaperManager.FLAG_SYSTEM) != 0) {
+                _currentWallpaperPresetName.value = preset.name
+                prefs.edit().putString("current_wallpaper_preset", preset.name).apply()
+                updateBlurredWallpaper()
+                notifyWallpaperChanged()
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         } finally {

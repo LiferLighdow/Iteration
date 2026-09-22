@@ -58,6 +58,8 @@ fun SettingsWallpaperScreen(onBack: () -> Unit) {
     var originalBitmapForCrop by remember { mutableStateOf<Bitmap?>(null) }
     var showRenameDialog by remember { mutableStateOf<WallpaperPreset?>(null) }
     var showNameConflictWarning by remember { mutableStateOf<String?>(null) }
+    var wallpaperToApplyTarget by remember { mutableStateOf<WallpaperPreset?>(null) }
+    val isApplyingWallpaper by viewModel.isApplyingWallpaper.collectAsState()
     
     data class EmojiSelectionData(val color: Int, val emojiText: String)
     var showEmojiModeSelection by remember { mutableStateOf<EmojiSelectionData?>(null) }
@@ -134,7 +136,7 @@ fun SettingsWallpaperScreen(onBack: () -> Unit) {
                         preset = preset,
                         isSelected = preset.name == currentPresetName,
                         aspectRatio = screenAspectRatio,
-                        onApply = { viewModel.applyWallpaperPreset(preset) },
+                        onApply = { wallpaperToApplyTarget = preset },
                         onCustomize = { selectedPresetForMenu = preset }
                     )
                 }
@@ -452,6 +454,81 @@ fun SettingsWallpaperScreen(onBack: () -> Unit) {
                 TextButton(onClick = { showNameConflictWarning = null }) { Text(stringResource(R.string.got_it)) }
             }
         )
+    }
+
+    if (wallpaperToApplyTarget != null) {
+        AlertDialog(
+            onDismissRequest = { wallpaperToApplyTarget = null },
+            title = { Text(stringResource(R.string.wallpaper_apply_to)) },
+            text = {
+                Column {
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.wallpaper_home_screen)) },
+                        leadingContent = { Icon(Icons.Default.Home, null) },
+                        modifier = Modifier.clickable {
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                                viewModel.applyWallpaperPreset(wallpaperToApplyTarget!!, android.app.WallpaperManager.FLAG_SYSTEM)
+                            } else {
+                                viewModel.applyWallpaperPreset(wallpaperToApplyTarget!!)
+                            }
+                            wallpaperToApplyTarget = null
+                        }
+                    )
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.wallpaper_lock_screen)) },
+                        leadingContent = { Icon(Icons.Default.Lock, null) },
+                        modifier = Modifier.clickable {
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                                viewModel.applyWallpaperPreset(wallpaperToApplyTarget!!, android.app.WallpaperManager.FLAG_LOCK)
+                            } else {
+                                viewModel.applyWallpaperPreset(wallpaperToApplyTarget!!)
+                            }
+                            wallpaperToApplyTarget = null
+                        }
+                    )
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.wallpaper_both)) },
+                        leadingContent = { Icon(Icons.Default.Layers, null) },
+                        modifier = Modifier.clickable {
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                                viewModel.applyWallpaperPreset(wallpaperToApplyTarget!!, android.app.WallpaperManager.FLAG_SYSTEM or android.app.WallpaperManager.FLAG_LOCK)
+                            } else {
+                                viewModel.applyWallpaperPreset(wallpaperToApplyTarget!!)
+                            }
+                            wallpaperToApplyTarget = null
+                        }
+                    )
+                }
+            },
+            confirmButton = {}
+        )
+    }
+
+    if (isApplyingWallpaper) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = {},
+            properties = androidx.compose.ui.window.DialogProperties(
+                dismissOnBackPress = false,
+                dismissOnClickOutside = false
+            )
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(120.dp)
+                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator()
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = stringResource(R.string.wallpaper_applying),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
     }
 }
 

@@ -239,10 +239,17 @@
     <string name="permission_files_desc">在您的设备中搜索文件与文件夹。</string>
     <string name="permission_files_manage">管理所有文件</string>
     <string name="permission_files_manage_desc">在 Android 11+ 上进行全设备文件搜索所需。</string>
+    <string name="permission_media_photos_videos">相册与视频访问</string>
+    <string name="permission_media_photos_videos_desc">允许访问您的相册与视频以用于壁纸与小组件</string>
     <string name="calendar">日历</string>
     <string name="files">文件</string>
     <string name="view_all">查看全部</string>
     <string name="permission_notifications">通知访问</string>
+    <string name="wallpaper_apply_to">应用壁纸至</string>
+    <string name="wallpaper_home_screen">主屏幕</string>
+    <string name="wallpaper_lock_screen">锁定屏幕</string>
+    <string name="wallpaper_both">主屏幕与锁定屏幕</string>
+    <string name="wallpaper_applying">正在应用壁纸…</string>
     <string name="permission_notifications_desc">显示通知点与标记所需</string>
     <string name="permission_accessibility">无障碍服务</string>
     <string name="permission_accessibility_desc">锁定屏幕或开启通知等手势所需</string>

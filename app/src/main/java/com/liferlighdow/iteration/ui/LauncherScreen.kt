@@ -207,6 +207,57 @@ fun LauncherScreen(
         resolveInfo?.activityInfo?.packageName == myPackageName
     }
 
+    val pendingWallpaperAction = remember { mutableStateOf<(() -> Unit)?>(null) }
+    val wallpaperMediaLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val granted = permissions.values.all { it }
+        if (granted) {
+            pendingWallpaperAction.value?.invoke()
+        }
+        pendingWallpaperAction.value = null
+    }
+
+    val runWithWallpaperPermissions: (() -> Unit) -> Unit = { action ->
+        if (viewModel.hasStoragePermission(mContext)) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                val hasImages = ContextCompat.checkSelfPermission(
+                    mContext, android.Manifest.permission.READ_MEDIA_IMAGES
+                ) == PackageManager.PERMISSION_GRANTED
+                val hasVideos = ContextCompat.checkSelfPermission(
+                    mContext, android.Manifest.permission.READ_MEDIA_VIDEO
+                ) == PackageManager.PERMISSION_GRANTED
+                
+                if (hasImages && hasVideos) {
+                    action()
+                } else {
+                    pendingWallpaperAction.value = action
+                    wallpaperMediaLauncher.launch(
+                        arrayOf(
+                            android.Manifest.permission.READ_MEDIA_IMAGES,
+                            android.Manifest.permission.READ_MEDIA_VIDEO
+                        )
+                    )
+                }
+            } else {
+                val hasStorage = ContextCompat.checkSelfPermission(
+                    mContext, android.Manifest.permission.READ_EXTERNAL_STORAGE
+                ) == PackageManager.PERMISSION_GRANTED
+                
+                if (hasStorage) {
+                    action()
+                } else {
+                    pendingWallpaperAction.value = action
+                    wallpaperMediaLauncher.launch(
+                        arrayOf(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+                    )
+                }
+            }
+        } else {
+            viewModel.requestStoragePermission(mContext)
+        }
+    }
+
     var draggingApp by remember { mutableStateOf<AppModel?>(null) }
     var lastDraggingApp by remember { mutableStateOf<AppModel?>(null) }
     val draggingAlpha by animateFloatAsState(
@@ -1105,10 +1156,12 @@ fun LauncherScreen(
         },
         onAddShortcutClick = { showShortcutPicker = true },
         onWallpaperClick = { 
-            val intent = Intent(mContext, com.liferlighdow.iteration.SettingsActivity::class.java).apply {
-                putExtra("start_page", "WALLPAPER")
+            runWithWallpaperPermissions {
+                val intent = Intent(mContext, com.liferlighdow.iteration.SettingsActivity::class.java).apply {
+                    putExtra("start_page", "WALLPAPER")
+                }
+                mContext.startActivity(intent)
             }
-            mContext.startActivity(intent)
         },
         onSettingsClick = onSettingsClick,
         onAppClick = { app, pos ->

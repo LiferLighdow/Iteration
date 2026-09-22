@@ -243,6 +243,8 @@
     <string name="permission_files_desc">在您的裝置中搜尋檔案與資料夾。</string>
     <string name="permission_files_manage">管理所有檔案</string>
     <string name="permission_files_manage_desc">在 Android 11+ 上進行全裝置檔案搜尋所需。</string>
+    <string name="permission_media_photos_videos">相片與影片存取</string>
+    <string name="permission_media_photos_videos_desc">允許存取您的相片與影片以用於桌布與小工具</string>
     <string name="calendar">日曆</string>
     <string name="files">檔案</string>
     <string name="view_all">顯示全部</string>
@@ -254,6 +256,11 @@
     <string name="permission_granted">已授予</string>
     <string name="permission_denied">已拒絕（點擊以請求）</string>
     <string name="gesture_double_tap">點兩下</string>
+    <string name="wallpaper_apply_to">套用桌布至</string>
+    <string name="wallpaper_home_screen">主畫面</string>
+    <string name="wallpaper_lock_screen">鎖定畫面</string>
+    <string name="wallpaper_both">主畫面與鎖定畫面</string>
+    <string name="wallpaper_applying">正在套用桌布…</string>
     <string name="gesture_swipe_up">向上滑動</string>
     <string name="gesture_swipe_down">向下滑動</string>
     <string name="gesture_two_finger_swipe_up">雙指向上滑動</string>

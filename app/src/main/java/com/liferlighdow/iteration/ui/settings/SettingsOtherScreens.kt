@@ -90,6 +90,23 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
         )
     }
 
+    var hasMediaPermission by remember {
+        mutableStateOf(
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                androidx.core.content.ContextCompat.checkSelfPermission(
+                    context, android.Manifest.permission.READ_MEDIA_IMAGES
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED &&
+                androidx.core.content.ContextCompat.checkSelfPermission(
+                    context, android.Manifest.permission.READ_MEDIA_VIDEO
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            } else {
+                androidx.core.content.ContextCompat.checkSelfPermission(
+                    context, android.Manifest.permission.READ_EXTERNAL_STORAGE
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            }
+        )
+    }
+
     // 通知權限狀態
     var isNotificationEnabled by remember {
         mutableStateOf(
@@ -115,6 +132,12 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         hasCalendarPermission = isGranted
+    }
+
+    val mediaLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { result ->
+        hasMediaPermission = result.values.all { it }
     }
 
     Scaffold(
@@ -234,6 +257,28 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
                                 context.startActivity(intent)
                             } else {
                                 launcher.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                            }
+                        }
+                    )
+                    SettingSwitchItem(
+                        icon = Icons.Default.Image,
+                        title = stringResource(R.string.permission_media_photos_videos),
+                        supportingText = stringResource(R.string.permission_media_photos_videos_desc),
+                        checked = hasMediaPermission,
+                        onCheckedChange = {
+                            if (!hasMediaPermission) {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    mediaLauncher.launch(
+                                        arrayOf(
+                                            android.Manifest.permission.READ_MEDIA_IMAGES,
+                                            android.Manifest.permission.READ_MEDIA_VIDEO
+                                        )
+                                    )
+                                } else {
+                                    mediaLauncher.launch(
+                                        arrayOf(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+                                    )
+                                }
                             }
                         }
                     )
@@ -416,6 +461,18 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
                 } else {
                     androidx.core.content.ContextCompat.checkSelfPermission(
                         context, android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                }
+                hasMediaPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    androidx.core.content.ContextCompat.checkSelfPermission(
+                        context, android.Manifest.permission.READ_MEDIA_IMAGES
+                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED &&
+                    androidx.core.content.ContextCompat.checkSelfPermission(
+                        context, android.Manifest.permission.READ_MEDIA_VIDEO
+                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                } else {
+                    androidx.core.content.ContextCompat.checkSelfPermission(
+                        context, android.Manifest.permission.READ_EXTERNAL_STORAGE
                     ) == android.content.pm.PackageManager.PERMISSION_GRANTED
                 }
                 isNotificationEnabled = NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)

@@ -207,10 +207,17 @@
     <string name="permission_files_desc">在您的裝置中搜尋檔案與資料夾。</string>
     <string name="permission_files_manage">管理所有文件</string>
     <string name="permission_files_manage_desc">在 Android 11+ 上進行全裝置文件搜尋所需。</string>
+    <string name="permission_media_photos_videos">相片與影片之權限</string>
+    <string name="permission_media_photos_videos_desc">給我權限，我就能幫你設定漂亮的相片桌布啦~</string>
     <string name="calendar">日历</string>
     <string name="files">文件</string>
     <string name="view_all">顯示全部</string>
     <string name="permission_notifications">通知之權限</string>
+    <string name="wallpaper_apply_to">套用桌布至</string>
+    <string name="wallpaper_home_screen">主畫面</string>
+    <string name="wallpaper_lock_screen">鎖定畫面</string>
+    <string name="wallpaper_both">主畫面與鎖定畫面</string>
+    <string name="wallpaper_applying">正在套用桌布…</string>
     <string name="permission_notifications_desc">拿到了我就能顯示通知小圓點和計數器。</string>
     <string name="permission_accessibility">無障礙服務</string>
     <string name="permission_accessibility_desc">鎖定螢幕或開啟通知等手勢需要用到他。還蠻重要的。不要隨便給別人喔~</string>

@@ -240,6 +240,8 @@
     <string name="permission_files_desc">Search for files and folders within your device.</string>
     <string name="permission_files_manage">Manage All Files</string>
     <string name="permission_files_manage_desc">Required for full device file search on Android 11+.</string>
+    <string name="permission_media_photos_videos">Photos &amp; Videos Access</string>
+    <string name="permission_media_photos_videos_desc">Allow access to photos and videos for wallpaper and widgets</string>
     <string name="calendar">Calendar</string>
     <string name="files">Files</string>
     <string name="view_all">View All</string>
@@ -253,6 +255,11 @@
     <string name="gesture_double_tap">Double Tap</string>
     <string name="gesture_swipe_up">Swipe Up</string>
     <string name="gesture_swipe_down">Swipe Down</string>
+    <string name="wallpaper_apply_to">Apply Wallpaper To</string>
+    <string name="wallpaper_home_screen">Home Screen</string>
+    <string name="wallpaper_lock_screen">Lock Screen</string>
+    <string name="wallpaper_both">Both</string>
+    <string name="wallpaper_applying">Applying wallpaper…</string>
     <string name="gesture_two_finger_swipe_up">Two Finger Swipe Up</string>
     <string name="gesture_two_finger_swipe_down">Two Finger Swipe Down</string>
     <string name="gesture_long_press">Long Press</string>

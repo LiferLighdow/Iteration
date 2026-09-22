@@ -82,9 +82,53 @@ fun SettingsMainScreen(
     var showRenameBackupDialog by remember { mutableStateOf<File?>(null) }
     var showBackupNameConflict by remember { mutableStateOf<String?>(null) }
     
+    var pendingAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+    
+    val mediaPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val granted = permissions.values.all { it }
+        if (granted) {
+            pendingAction?.invoke()
+        }
+        pendingAction = null
+    }
+
     fun runWithStoragePermission(action: () -> Unit) {
         if (viewModel.hasStoragePermission(context)) {
-            action()
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                val hasImages = androidx.core.content.ContextCompat.checkSelfPermission(
+                    context, android.Manifest.permission.READ_MEDIA_IMAGES
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                val hasVideos = androidx.core.content.ContextCompat.checkSelfPermission(
+                    context, android.Manifest.permission.READ_MEDIA_VIDEO
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                
+                if (hasImages && hasVideos) {
+                    action()
+                } else {
+                    pendingAction = action
+                    mediaPermissionLauncher.launch(
+                        arrayOf(
+                            android.Manifest.permission.READ_MEDIA_IMAGES,
+                            android.Manifest.permission.READ_MEDIA_VIDEO
+                        )
+                    )
+                }
+            } else {
+                val hasStorage = androidx.core.content.ContextCompat.checkSelfPermission(
+                    context, android.Manifest.permission.READ_EXTERNAL_STORAGE
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                
+                if (hasStorage) {
+                    action()
+                } else {
+                    pendingAction = action
+                    mediaPermissionLauncher.launch(
+                        arrayOf(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+                    )
+                }
+            }
         } else {
             viewModel.requestStoragePermission(context)
         }
