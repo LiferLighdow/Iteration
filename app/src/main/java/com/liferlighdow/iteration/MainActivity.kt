@@ -57,8 +57,17 @@ class MainActivity : AppCompatActivity() {
             viewModel.shouldRefreshIconsOnReturn = false
             viewModel.clearIconCache()
         }
+        // 背景優化：回到前景時恢復資源
+        viewModel.onForeground()
         // 回到 Launcher 時執行綠化清理
         viewModel.performGreenifyCleanup()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        val viewModel = androidx.lifecycle.ViewModelProvider(this)[MainViewModel::class.java]
+        // 背景優化：進入背景時釋放資源
+        viewModel.onBackground()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

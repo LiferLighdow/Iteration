@@ -22,7 +22,9 @@ class IterationApp : Application() {
         // TRIM_MEMORY_MODERATE / TRIM_MEMORY_COMPLETE: 記憶體極度吃緊，即將觸發 LMK
         // 使用 ComponentCallbacks2 的常數以避免直接引用過時常數
         if (level >= TRIM_MEMORY_BACKGROUND || level == TRIM_MEMORY_RUNNING_CRITICAL) {
-            val intent = Intent("com.liferlighdow.iteration.ACTION_CLEAR_CACHE_SILENT")
+            val intent = Intent("com.liferlighdow.iteration.ACTION_CLEAR_CACHE_SILENT").apply {
+                setPackage(packageName)
+            }
             sendBroadcast(intent)
         }
     }

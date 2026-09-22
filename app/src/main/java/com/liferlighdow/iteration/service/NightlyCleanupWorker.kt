@@ -21,7 +21,9 @@ class NightlyCleanupWorker(
 
             // 發送廣播通知 MainViewModel 清理內存快取並重整
             // 我們定義一個專門的廣播 ACTION_CLEAR_CACHE_SILENT
-            val intent = Intent("com.liferlighdow.iteration.ACTION_CLEAR_CACHE_SILENT")
+            val intent = Intent("com.liferlighdow.iteration.ACTION_CLEAR_CACHE_SILENT").apply {
+                setPackage(applicationContext.packageName)
+            }
             applicationContext.sendBroadcast(intent)
             
             return Result.success()

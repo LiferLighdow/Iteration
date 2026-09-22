@@ -253,6 +253,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
     internal val _removingItemIds = MutableStateFlow<Set<String>>(emptySet())
     val removingItemIds = _removingItemIds.asStateFlow()
 
+    /** 標記資源（圖標與桌布）是否已被釋放（用於背景優化） **/
+    internal var isResourcesReleased = false
+
+    fun onBackground() {
+        // 當 App 進入背景時，主動發送廣播觸發靜默清理
+        val intent = Intent("com.liferlighdow.iteration.ACTION_CLEAR_CACHE_SILENT").apply {
+            setPackage(getApplication<Application>().packageName)
+        }
+        getApplication<Application>().sendBroadcast(intent)
+    }
+
+    fun onForeground() {
+        // 當 App 回到前景時，如果資源已被釋放，則恢復它們
+        if (isResourcesReleased) {
+            isResourcesReleased = false
+            loadApps() // 這會觸發桌布與圖標的重新加載
+        }
+    }
+
     internal val _activeContextMenuId = MutableStateFlow<String?>(null)
     val activeContextMenuId = _activeContextMenuId.asStateFlow()
 
@@ -883,7 +902,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
                 "com.liferlighdow.iteration.ACTION_CLEAR_CACHE_SILENT" -> {
                     iconCache.evictAll()
                     iconProcessor.clearCache()
-                    refreshApps()
+                    // 釋放桌布引用，這些是佔用記憶體的大戶
+                    _rawWallpaper.value = null
+                    _blurredWallpaper.value = null
+                    isResourcesReleased = true
+                    // 絕對不要在背景清理時呼叫 refreshApps()，那會重新加載圖標
                 }
                 Intent.ACTION_SCREEN_OFF -> performGreenifyCleanup()
                 Intent.ACTION_TIME_TICK -> {

@@ -205,7 +205,7 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
                 SettingsSection(title = "佈局與底欄") {
                     var expandedGrid by remember { mutableStateOf(false) }
                     val configuration = LocalConfiguration.current
-                    val isLongScreen = configuration.screenHeightDp.toFloat() / configuration.screenWidthDp.toFloat() >= 2.0f
+                    val isLongScreen = configuration.screenHeightDp.toFloat() / configuration.screenWidthDp.toFloat() >= 1.8f
 
                     val gridOptions = remember(isLongScreen) {
                         val list = mutableListOf(0 to 0, 5 to 5, 6 to 6)
