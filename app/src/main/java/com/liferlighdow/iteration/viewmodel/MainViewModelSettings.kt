@@ -613,6 +613,7 @@ fun MainViewModel.syncNavigationBarHardHide(enabled: Boolean) {
 fun MainViewModel.setIconCacheSize(size: Int) {
     _iconCacheSize.value = size
     prefs.edit().putInt("icon_cache_size", size).apply()
+    iconCache.resize((size * 128).coerceAtLeast(8192))
 }
 
 fun MainViewModel.setIconSizePx(size: Int) {

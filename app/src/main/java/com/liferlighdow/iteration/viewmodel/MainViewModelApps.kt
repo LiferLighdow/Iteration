@@ -992,7 +992,6 @@ fun MainViewModel.loadApps() {
                             val customIconFile = File(customIconDir, "$fileSafeId.png")
                             val legacyCustomIconFile = File(customIconDir, "${app.packageName}.png")
                             val diskCacheFile = File(processedIconCacheDir, "${fileSafeId}_$styleSuffix.png")
-                            val cacheKey = "${app.uniqueId}_$styleSuffix"
                             val isExcluded = excludedThemedPackages.value.contains(app.packageName)
                             val isDynamicCalendar = _isDynamicCalendarEnabled.value && isCalendarApp(app.packageName)
                             val isDynamicClock = _isDynamicClockEnabled.value && isClockApp(app.packageName)
@@ -1000,30 +999,15 @@ fun MainViewModel.loadApps() {
                             val calendarDayToPass = if (isDynamicCalendar) currentDay else null
                             val clockTimeToPass = if (isDynamicClock) Pair(currentHour, currentMinute) else null
                             
-                            // 針對動態 App，快取 Key 必須包含時間標籤
-                            val finalCacheKey = when {
-                                isDynamicCalendar -> "${cacheKey}_D$currentDay"
-                                isDynamicClock -> "${cacheKey}_H${currentHour}M$currentMinute"
-                                else -> cacheKey
-                            }
                             val finalDiskFile = when {
                                 isDynamicCalendar -> File(processedIconCacheDir, "${fileSafeId}_${styleSuffix}_D$currentDay.png")
                                 isDynamicClock -> File(processedIconCacheDir, "${fileSafeId}_${styleSuffix}_H${currentHour}M$currentMinute.png")
                                 else -> diskCacheFile
                             }
 
-                            if (iconCache[finalCacheKey] == null) {
+                            if (!finalDiskFile.exists()) {
                                 val customToLoad = if (customIconFile.exists()) customIconFile else if (legacyCustomIconFile.exists()) legacyCustomIconFile else null
-                                if (customToLoad != null) {
-                                    BitmapFactory.decodeFile(customToLoad.absolutePath)?.asImageBitmap()?.let {
-                                        iconCache.put(finalCacheKey, it)
-                                    }
-                                } else if (finalDiskFile.exists()) {
-                                    BitmapFactory.decodeFile(finalDiskFile.absolutePath)?.let {
-                                        iconCache.put(finalCacheKey, it.asImageBitmap())
-                                    }
-                                } else {
-                                    // 關鍵修改：區分 PWA 與一般 App 的生成邏輯
+                                if (customToLoad == null) {
                                     val processed = if (app.isPWA) {
                                         generatePwaIcon(app, renderingSizePx)?.asImageBitmap()
                                     } else {
@@ -1032,7 +1016,6 @@ fun MainViewModel.loadApps() {
                                     
                                     processed?.let {
                                         saveIconToDisk(it, finalDiskFile)
-                                        iconCache.put(finalCacheKey, it)
                                     }
                                 }
                             }

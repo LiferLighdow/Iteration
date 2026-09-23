@@ -5,7 +5,6 @@ import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
@@ -87,20 +86,7 @@ fun MainViewModel.loadContacts() {
                 val number = cursor.getString(numIdx)
                 val photoUri = cursor.getString(photoIdx)
 
-                var photoBitmap: Bitmap? = null
-                if (photoUri != null) {
-                    try {
-                        val uri = Uri.parse(photoUri)
-                        photoBitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                            val source = android.graphics.ImageDecoder.createSource(context.contentResolver, uri)
-                            android.graphics.ImageDecoder.decodeBitmap(source)
-                        } else {
-                            @Suppress("DEPRECATION")
-                            MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
-                        }
-                    } catch (e: Exception) {}
-                }
-                contactList.add(ContactModel(id, name, number, photoBitmap))
+                contactList.add(ContactModel(id, name, number, photoUri))
             }
         }
         _contacts.value = contactList.distinctBy { it.phoneNumber }

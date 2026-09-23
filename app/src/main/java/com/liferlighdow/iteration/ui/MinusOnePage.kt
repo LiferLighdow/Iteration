@@ -3,6 +3,7 @@ package com.liferlighdow.iteration.ui
 import android.content.Intent
 import android.net.Uri
 import android.provider.ContactsContract
+import com.liferlighdow.iteration.ui.search.ContactPhotoItem
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -735,8 +736,7 @@ fun MinusOnePage(
                                         headlineContent = { Text(contact.name, color = contentColor) },
                                         supportingContent = { Text(contact.phoneNumber, color = contentColor.copy(alpha = 0.6f)) },
                                         leadingContent = {
-                                            if (contact.photo != null) Image(bitmap = contact.photo.asImageBitmap(), contentDescription = null, modifier = Modifier.size(40.dp).clip(CircleShape))
-                                            else Box(modifier = Modifier.size(40.dp).background(contentColor.copy(alpha = 0.2f), CircleShape), contentAlignment = Alignment.Center) { Icon(Icons.Default.Person, null, tint = contentColor) }
+                                            ContactPhotoItem(contact.photoUri, contentColor, modifier = Modifier.size(40.dp))
                                         },
                                         trailingContent = {
                                             IconButton(onClick = {

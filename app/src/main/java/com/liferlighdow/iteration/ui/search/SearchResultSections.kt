@@ -156,6 +156,39 @@ fun AppResultSection(
 }
 
 @Composable
+fun ContactPhotoItem(photoUri: String?, contentColor: Color, modifier: Modifier = Modifier) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val photoBitmap = remember(photoUri) {
+        if (photoUri == null) null
+        else try {
+            val uri = Uri.parse(photoUri)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                val source = android.graphics.ImageDecoder.createSource(context.contentResolver, uri)
+                android.graphics.ImageDecoder.decodeBitmap(source)
+            } else {
+                @Suppress("DEPRECATION")
+                android.provider.MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
+            }
+        } catch (e: Exception) { null }
+    }
+    if (photoBitmap != null) {
+        Image(
+            bitmap = photoBitmap.asImageBitmap(),
+            contentDescription = null,
+            modifier = modifier.clip(CircleShape),
+            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+        )
+    } else {
+        Box(
+            modifier = modifier.background(contentColor.copy(alpha = 0.2f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(Icons.Default.Person, null, tint = contentColor)
+        }
+    }
+}
+
+@Composable
 fun ContactResultSection(
     contacts: List<com.liferlighdow.iteration.data.ContactModel>,
     context: Context,
@@ -175,8 +208,7 @@ fun ContactResultSection(
                     headlineContent = { Text(contact.name, color = Color.White) },
                     supportingContent = { Text(contact.phoneNumber, color = Color.White.copy(alpha = 0.6f)) },
                     leadingContent = {
-                        if (contact.photo != null) Image(bitmap = contact.photo.asImageBitmap(), contentDescription = null, modifier = Modifier.size(40.dp).clip(CircleShape))
-                        else Box(modifier = Modifier.size(40.dp).background(Color.White.copy(alpha = 0.2f), CircleShape), contentAlignment = Alignment.Center) { Icon(Icons.Default.Person, null, tint = Color.White) }
+                        ContactPhotoItem(contact.photoUri, Color.White, modifier = Modifier.size(40.dp))
                     },
                     trailingContent = {
                         IconButton(onClick = {

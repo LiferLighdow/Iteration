@@ -902,11 +902,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
                 "com.liferlighdow.iteration.ACTION_CLEAR_CACHE_SILENT" -> {
                     iconCache.evictAll()
                     iconProcessor.clearCache()
-                    // 釋放桌布引用，這些是佔用記憶體的大戶
+                    // 釋放桌布引用並顯式 recycle Native Heap
+                    try { _rawWallpaper.value?.asAndroidBitmap()?.recycle() } catch (e: Exception) {}
                     _rawWallpaper.value = null
+                    try { _blurredWallpaper.value?.asAndroidBitmap()?.recycle() } catch (e: Exception) {}
                     _blurredWallpaper.value = null
+                    themeColorsCache = null
                     isResourcesReleased = true
-                    // 絕對不要在背景清理時呼叫 refreshApps()，那會重新加載圖標
+                    // 提示 JVM 進行垃圾回收與堆整理，儘快歸還記憶體給系統
+                    System.gc()
                 }
                 Intent.ACTION_SCREEN_OFF -> performGreenifyCleanup()
                 Intent.ACTION_TIME_TICK -> {
@@ -1211,11 +1215,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
 
     internal var lastBlurredSignal = -1L
 
-    private val maxCacheMemory = (Runtime.getRuntime().maxMemory() / 1024).toInt() / 8
+    private val initialCacheMemoryKb = (_iconCacheSize.value * 128).coerceAtLeast(8192)
 
-    internal val iconCache = object : LruCache<String, ImageBitmap>(maxCacheMemory) {
+    internal val iconCache = object : LruCache<String, ImageBitmap>(initialCacheMemoryKb) {
         override fun sizeOf(key: String, value: ImageBitmap): Int {
             return (value.asAndroidBitmap().byteCount / 1024).coerceAtLeast(1)
+        }
+
+        override fun entryRemoved(evicted: Boolean, key: String, oldValue: ImageBitmap, newValue: ImageBitmap?) {
+            super.entryRemoved(evicted, key, oldValue, newValue)
+            if (oldValue != newValue) {
+                try {
+                    oldValue.asAndroidBitmap().recycle()
+                } catch (e: Exception) {}
+            }
         }
     }
 

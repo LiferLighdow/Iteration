@@ -7,6 +7,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.os.Build
 import android.os.Environment
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.viewModelScope
 import com.liferlighdow.iteration.R
@@ -39,10 +40,20 @@ fun MainViewModel.updateBlurredWallpaper() {
 
         withContext(Dispatchers.Main) {
             result?.let {
+                val oldRaw = _rawWallpaper.value
+                val oldBlurred = _blurredWallpaper.value
+
                 _rawWallpaper.value = it.raw
                 _blurredWallpaper.value = it.blurred
                 _isLightWallpaper.value = it.isLightWallpaper
                 _wallpaperUpdateSignal.value = System.currentTimeMillis()
+
+                if (oldRaw != null && oldRaw != it.raw) {
+                    try { oldRaw.asAndroidBitmap().recycle() } catch (e: Exception) {}
+                }
+                if (oldBlurred != null && oldBlurred != it.blurred) {
+                    try { oldBlurred.asAndroidBitmap().recycle() } catch (e: Exception) {}
+                }
             }
         }
     }
@@ -366,6 +377,7 @@ private fun MainViewModel.ensureBuiltinWallpapersRegistered(wallpaperDir: File) 
                 try {
                     val bitmap = drawable.toBitmap(screenWidth, screenHeight)
                     saveWallpaperFolderInternal(folder, bitmap)
+                    bitmap.recycle()
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
@@ -385,8 +397,14 @@ private fun MainViewModel.saveWallpaperFolderInternal(folder: File, bitmap: Bitm
     
     val previewBitmap = if (bitmap.width > 400) {
         Bitmap.createScaledBitmap(bitmap, bitmap.width / 4, bitmap.height / 4, true)
-    } else bitmap
-    FileOutputStream(previewFile).use { previewBitmap.compress(Bitmap.CompressFormat.JPEG, 80, it) }
+    } else null
+
+    if (previewBitmap != null) {
+        FileOutputStream(previewFile).use { previewBitmap.compress(Bitmap.CompressFormat.JPEG, 80, it) }
+        previewBitmap.recycle()
+    } else {
+        FileOutputStream(previewFile).use { bitmap.compress(Bitmap.CompressFormat.JPEG, 80, it) }
+    }
     
     val config = WallpaperConfig(
         blur = _liquidGlassBlur.value,

@@ -171,7 +171,13 @@ class WallpaperProcessor(private val context: Application) {
 
         // 1. 優化：如果是 1x1 的純色圖片，直接返回
         if (rawBitmap.width == 1 && rawBitmap.height == 1) {
-            val isLight = systemSuggestedLight ?: (android.graphics.Color.luminance(rawBitmap.getPixel(0, 0)) > 0.5f)
+            val isLight = systemSuggestedLight ?: run {
+                val pixel = rawBitmap.getPixel(0, 0)
+                val r = android.graphics.Color.red(pixel) / 255f
+                val g = android.graphics.Color.green(pixel) / 255f
+                val b = android.graphics.Color.blue(pixel) / 255f
+                (0.299f * r + 0.587f * g + 0.114f * b) > 0.5f
+            }
             return WallpaperResult(
                 raw = rawBitmap.asImageBitmap(),
                 blurred = rawBitmap.asImageBitmap(),
@@ -195,9 +201,9 @@ class WallpaperProcessor(private val context: Application) {
             cropped.recycle()
         }
         
-        // 如果原始圖片大於螢幕且不同於 scaled，也可以考慮回收 (如果調用者不再需要)
-        if (rawBitmap != scaled && (rawBitmap.width > screenW || rawBitmap.height > screenH)) {
-            // rawBitmap.recycle() 
+        // 如果原始圖片與 scaled 不相同，且不等於 cropped，則回收 rawBitmap 以釋放龐大的 Native Heap
+        if (rawBitmap != scaled && rawBitmap != cropped) {
+            rawBitmap.recycle()
         }
 
         // 計算頂部區域亮度 (Status Bar 所在位置)
