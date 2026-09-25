@@ -157,7 +157,6 @@ fun GlobalSearchOverlay(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.45f * effectiveProgress))
-            .clickable { onDismiss() }
     ) {
         Column(
             modifier = Modifier

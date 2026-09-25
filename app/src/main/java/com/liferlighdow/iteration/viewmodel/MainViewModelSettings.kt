@@ -100,7 +100,12 @@ fun MainViewModel.setSwipeDownApp(packageName: String) {
 
 fun MainViewModel.setIsSwipeDownSplit(split: Boolean) {
     _isSwipeDownSplit.value = split
-    prefs.edit().putBoolean("is_swipe_down_split", split).apply()
+    val editor = prefs.edit().putBoolean("is_swipe_down_split", split)
+    if (split) {
+        _swipeDownAction.value = GestureAction.NONE
+        editor.putString("swipe_down_action", GestureAction.NONE.name)
+    }
+    editor.apply()
 }
 
 fun MainViewModel.setSwipeDownLeftAction(action: GestureAction) {

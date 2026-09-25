@@ -1604,23 +1604,34 @@ private suspend fun MainViewModel.generatePwaIcon(app: AppModel, sizePx: Int): B
 }
 
 private fun MainViewModel.findDefaultDockApps(processedApps: List<AppModel>): List<AppModel> {
-    val pm = getApplication<Application>().packageManager
+    val context = getApplication<Application>()
+    val pm = context.packageManager
     val result = mutableListOf<AppModel>()
     val addedPackages = mutableSetOf<String>()
 
-    // 定義優先尋找的意圖
-    val priorityIntents = listOf(
-        Intent(Intent.ACTION_DIAL), // 電話
-        Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_MESSAGING), // 簡訊
-        Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_BROWSER), // 瀏覽器
-        Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA) // 相機
-    )
+    // 1. 尋找預設電話 (Dialer / Phone)
+    val phonePkg = (context.getSystemService(Context.TELECOM_SERVICE) as? android.telecom.TelecomManager)?.defaultDialerPackage
+        ?: pm.resolveActivity(Intent(Intent.ACTION_DIAL), PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.packageName
 
-    for (intent in priorityIntents) {
-        val resolveInfo = pm.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
-        val pkg = resolveInfo?.activityInfo?.packageName
-        if (pkg != null && !addedPackages.contains(pkg)) {
-            // 在已處理的 App 清單中尋找對應的包名
+    // 2. 尋找預設簡訊 (SMS)
+    val smsPkg = android.provider.Telephony.Sms.getDefaultSmsPackage(context)
+        ?: pm.resolveActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_MESSAGING), PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.packageName
+
+    // 3. 尋找預設瀏覽器 (Browser) - 使用 ACTION_VIEW + https://www.google.com，這是最穩健抓取預設瀏覽器的方式！
+    val browserPkg = try {
+        val browserIntent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://www.google.com"))
+        pm.resolveActivity(browserIntent, PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.packageName
+    } catch (e: Exception) {
+        null
+    } ?: pm.resolveActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_BROWSER), PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.packageName
+
+    // 4. 尋找相機 (Camera)
+    val cameraPkg = pm.resolveActivity(Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA), PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.packageName
+
+    val targetPackages = listOfNotNull(phonePkg, smsPkg, browserPkg, cameraPkg)
+
+    for (pkg in targetPackages) {
+        if (!addedPackages.contains(pkg)) {
             processedApps.find { it.packageName == pkg }?.let {
                 result.add(it)
                 addedPackages.add(pkg)
