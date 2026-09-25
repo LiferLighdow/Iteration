@@ -655,6 +655,8 @@ fun MainViewModel.setIconCacheSize(size: Int) {
 fun MainViewModel.setIconSizePx(size: Int) {
     _iconSizePx.value = size
     prefs.edit().putInt("icon_size_px", size).apply()
+    iconCache.evictAll()
+    _iconUpdateSignal.value = System.currentTimeMillis()
     loadApps() // 重新載入以觸發解析度切換
 }
 

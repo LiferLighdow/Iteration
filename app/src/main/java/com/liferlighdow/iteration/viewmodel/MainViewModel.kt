@@ -1301,6 +1301,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
     fun setIconScale(scale: Float) {
         prefs.edit().putFloat("icon_scale", scale).apply()
         _iconScale.value = scale
+        _iconUpdateSignal.value = System.currentTimeMillis()
     }
 
     fun startDownload(url: String, version: String) {

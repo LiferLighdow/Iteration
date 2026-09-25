@@ -344,11 +344,12 @@ fun AppLibraryPage(
                                     viewModel.clearFocusState()
                                 }
                                 var itemPosition by remember { mutableStateOf(Offset.Zero) }
+                                val iconSignal by viewModel.iconUpdateSignal.collectAsState()
                                 Box(modifier = Modifier.fillMaxWidth().onGloballyPositioned { itemPosition = it.positionInRoot() }) {
                                     ListItem(
                                         headlineContent = { Text(app.label, color = Color.White) },
                                         leadingContent = {
-                                            val appIcon = viewModel.getIcon(app.uniqueId)
+                                            val appIcon = remember(app.uniqueId, iconSignal) { viewModel.getIcon(app.uniqueId) }
                                             if (appIcon != null) {
                                                 val listIconSize = 40.dp
                                                 val shape = RoundedCornerShape(listIconSize * iconCornerRadius)
