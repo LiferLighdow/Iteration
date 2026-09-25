@@ -95,7 +95,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
     internal val _isEditMode = MutableStateFlow(false)
     val isEditMode = _isEditMode.asStateFlow()
 
-    internal val _isThemedIconsEnabled = MutableStateFlow(prefs.getBoolean("themed_icons", false))
+    internal val _isThemedIconsEnabled = MutableStateFlow(prefs.getBoolean("themed_icons", false) || (try { IconStyle.valueOf(prefs.getString("icon_style", "STANDARD") ?: "STANDARD") == IconStyle.THEMED } catch (_: Exception) { false }))
     val isThemedIconsEnabled = _isThemedIconsEnabled.asStateFlow()
 
     internal val _isLegacyIconUniformEnabled = MutableStateFlow(prefs.getBoolean("legacy_icon_uniform", false))
@@ -523,9 +523,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
 
     internal val _iconStyle = MutableStateFlow(
         try {
-            IconStyle.valueOf(prefs.getString("icon_style", "STANDARD") ?: "STANDARD")
+            val styleStr = prefs.getString("icon_style", "STANDARD") ?: "STANDARD"
+            val style = IconStyle.valueOf(styleStr)
+            if (style == IconStyle.STANDARD && prefs.getBoolean("themed_icons", false)) {
+                IconStyle.THEMED
+            } else {
+                style
+            }
         } catch (e: Exception) {
-            IconStyle.STANDARD
+            if (prefs.getBoolean("themed_icons", false)) IconStyle.THEMED else IconStyle.STANDARD
         }
     )
     val iconStyle = _iconStyle.asStateFlow()
@@ -561,6 +567,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
     internal val _customIconUseDominantColor =
         MutableStateFlow(prefs.getBoolean("custom_icon_use_dominant_color", false))
     val customIconUseDominantColor = _customIconUseDominantColor.asStateFlow()
+
+    internal val _customIconFgHue =
+        MutableStateFlow(prefs.getFloat("custom_icon_fg_hue", 0f))
+    val customIconFgHue = _customIconFgHue.asStateFlow()
+
+    internal val _customIconFgSaturation =
+        MutableStateFlow(prefs.getFloat("custom_icon_fg_saturation", 0f))
+    val customIconFgSaturation = _customIconFgSaturation.asStateFlow()
+
+    internal val _customIconFgBrightness =
+        MutableStateFlow(prefs.getFloat("custom_icon_fg_brightness", 1f))
+    val customIconFgBrightness = _customIconFgBrightness.asStateFlow()
+
+    internal val _customIconUseDominantFgColor =
+        MutableStateFlow(prefs.getBoolean("custom_icon_use_dominant_fg_color", false))
+    val customIconUseDominantFgColor = _customIconUseDominantFgColor.asStateFlow()
 
     internal val _customIconPackPackage =
         MutableStateFlow(prefs.getString("custom_icon_pack_package", "") ?: "")
@@ -995,7 +1017,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
             "liquid_glass_minus_one_widget" -> _isLiquidGlassMinusOneWidgetEnabled.value = sharedPreferences.getBoolean(key, false)
             "liquid_glass_minus_one_search" -> _isLiquidGlassMinusOneSearchEnabled.value = sharedPreferences.getBoolean(key, false)
             "liquid_glass_minus_one_button" -> _isLiquidGlassMinusOneButtonEnabled.value = sharedPreferences.getBoolean(key, false)
-            "themed_icons" -> _isThemedIconsEnabled.value = sharedPreferences.getBoolean(key, false)
+            "themed_icons" -> {
+                val isThemed = sharedPreferences.getBoolean(key, false)
+                _isThemedIconsEnabled.value = isThemed
+                if (isThemed && _iconStyle.value != IconStyle.THEMED) {
+                    _iconStyle.value = IconStyle.THEMED
+                }
+            }
             "legacy_icon_uniform" -> {
                 _isLegacyIconUniformEnabled.value = sharedPreferences.getBoolean(key, false)
                 iconCache.evictAll()
@@ -1015,6 +1043,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
                 try {
                     val style = IconStyle.valueOf(sharedPreferences.getString(key, "STANDARD") ?: "STANDARD")
                     _iconStyle.value = style
+                    _isThemedIconsEnabled.value = (style == IconStyle.THEMED)
                     iconCache.evictAll()
                     loadApps()
                 } catch (_: Exception) {}

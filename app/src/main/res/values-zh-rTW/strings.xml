@@ -729,4 +729,11 @@
     <string name="no_backups_found">在 Iteration/Backup 中找不到任何備份。</string>
     <string name="nightly_cleanup_title">夜間自動清理快取 (00:00)</string>
     <string name="nightly_cleanup_desc">在午夜自動清除圖示與桌布快取，保持啟動器效能與新鮮感。</string>
+    <string name="use_dominant_fg_color">使用前景原色色彩</string>
+    <string name="foreground_hue">前景色調: %1$d°</string>
+    <string name="foreground_saturation">前景飽和度: %1$d%%</string>
+    <string name="foreground_brightness">前景明度: %1$d%%</string>
+    <string name="background_hue">背景色調: %1$d°</string>
+    <string name="background_saturation">背景飽和度: %1$d%%</string>
+    <string name="background_brightness">背景明度: %1$d%%</string>
 </resources>

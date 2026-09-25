@@ -726,4 +726,11 @@
     <string name="no_backups_found">No backups found in Iteration/Backup</string>
     <string name="nightly_cleanup_title">Nightly Cache Cleanup (00:00)</string>
     <string name="nightly_cleanup_desc">Automatically clear icon and wallpaper cache at midnight to keep the launcher fresh.</string>
+    <string name="use_dominant_fg_color">Use Original Foreground Color</string>
+    <string name="foreground_hue">Foreground Hue: %1$d°</string>
+    <string name="foreground_saturation">Foreground Saturation: %1$d%%</string>
+    <string name="foreground_brightness">Foreground Brightness: %1$d%%</string>
+    <string name="background_hue">Background Hue: %1$d°</string>
+    <string name="background_saturation">Background Saturation: %1$d%%</string>
+    <string name="background_brightness">Background Brightness: %1$d%%</string>
 </resources>

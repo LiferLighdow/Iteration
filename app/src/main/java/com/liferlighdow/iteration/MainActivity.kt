@@ -63,12 +63,7 @@ class MainActivity : AppCompatActivity() {
         viewModel.performGreenifyCleanup()
     }
 
-    override fun onStop() {
-        super.onStop()
-        val viewModel = androidx.lifecycle.ViewModelProvider(this)[MainViewModel::class.java]
-        // 背景優化：進入背景時釋放資源
-        viewModel.onBackground()
-    }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

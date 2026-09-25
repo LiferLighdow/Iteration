@@ -6,6 +6,7 @@ import com.liferlighdow.iteration.data.GestureSettings
 import com.liferlighdow.iteration.data.GlassParams
 import com.liferlighdow.iteration.data.LauncherConfig
 import com.liferlighdow.iteration.data.LauncherSettings
+import com.liferlighdow.iteration.utils.IconStyle
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -163,6 +164,10 @@ fun MainViewModel.exportConfig(): String {
                 useOriginal = _customIconUseOriginal.value,
                 useOriginalBg = _customIconUseOriginalBg.value,
                 useDominantColor = _customIconUseDominantColor.value,
+                useDominantFgColor = _customIconUseDominantFgColor.value,
+                fgHue = _customIconFgHue.value,
+                fgSaturation = _customIconFgSaturation.value,
+                fgBrightness = _customIconFgBrightness.value,
                 iconPackPackage = _customIconPackPackage.value
             )
         ),
@@ -199,7 +204,8 @@ fun MainViewModel.applyConfig(config: LauncherConfig) {
     val settings = config.settings
     
     // 1. 恢復基礎設定 - 直接操作 State 與 Prefs，避免觸發多個 loadApps
-    _isThemedIconsEnabled.value = settings.themedIcons
+    val resolvedStyle = if (settings.iconStyle == IconStyle.STANDARD && settings.themedIcons) IconStyle.THEMED else settings.iconStyle
+    _isThemedIconsEnabled.value = (resolvedStyle == IconStyle.THEMED) || settings.themedIcons
     _isLiquidGlassEnabled.value = settings.liquidGlassEnabled
     _isLiquidGlassDockEnabled.value = settings.liquidGlassDock
     _isLiquidGlassHomeFolderEnabled.value = settings.liquidGlassHomeFolder
@@ -225,7 +231,7 @@ fun MainViewModel.applyConfig(config: LauncherConfig) {
     _searchQuickSettingsEnabled.value = settings.searchQuickSettingsEnabled
     
     prefs.edit().apply {
-        putBoolean("themed_icons", settings.themedIcons)
+        putBoolean("themed_icons", settings.themedIcons || resolvedStyle == IconStyle.THEMED)
         putBoolean("liquid_glass_enabled", settings.liquidGlassEnabled)
         putBoolean("liquid_glass_dock", settings.liquidGlassDock)
         putBoolean("liquid_glass_home_folder", settings.liquidGlassHomeFolder)
@@ -321,7 +327,7 @@ fun MainViewModel.applyConfig(config: LauncherConfig) {
     }.apply()
 
     _actionMode.value = settings.actionMode
-    _iconStyle.value = settings.iconStyle
+    _iconStyle.value = resolvedStyle
     _iconShape.value = settings.iconShape
     _libraryShape.value = settings.libraryShape
     _iconCornerRadius.value = settings.iconCornerRadius
@@ -376,6 +382,10 @@ fun MainViewModel.applyConfig(config: LauncherConfig) {
     _customIconUseOriginal.value = settings.customIconSettings.useOriginal
     _customIconUseOriginalBg.value = settings.customIconSettings.useOriginalBg
     _customIconUseDominantColor.value = settings.customIconSettings.useDominantColor
+    _customIconUseDominantFgColor.value = settings.customIconSettings.useDominantFgColor
+    _customIconFgHue.value = settings.customIconSettings.fgHue
+    _customIconFgSaturation.value = settings.customIconSettings.fgSaturation
+    _customIconFgBrightness.value = settings.customIconSettings.fgBrightness
     _customIconPackPackage.value = settings.customIconSettings.iconPackPackage
 
     _emojiWallpaperText.value = settings.emojiWallpaperText

@@ -4,5 +4,5 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 enum class IconStyle {
-    STANDARD, BLACK, WHITE, GLASS, CUSTOM
+    STANDARD, THEMED, BLACK, WHITE, GLASS, CUSTOM
 }

@@ -53,7 +53,6 @@ import kotlinx.coroutines.withContext
 fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
     val context = LocalContext.current
     val viewModel: MainViewModel = viewModel()
-    val isThemedIconsEnabled by viewModel.isThemedIconsEnabled.collectAsState()
     val isLegacyIconUniformEnabled by viewModel.isLegacyIconUniformEnabled.collectAsState()
     val currentStyle by viewModel.iconStyle.collectAsState()
     val iconCornerRadius by viewModel.iconCornerRadius.collectAsState()
@@ -69,6 +68,7 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
 
     val styles = listOf(
         IconStyle.STANDARD to stringResource(R.string.style_standard),
+        IconStyle.THEMED to stringResource(R.string.themed_icons_m3_title),
         IconStyle.BLACK to stringResource(R.string.style_black),
         IconStyle.WHITE to stringResource(R.string.style_white),
         IconStyle.GLASS to stringResource(R.string.style_glass),
@@ -179,14 +179,6 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
                         trailingContent = { Icon(Icons.Default.ChevronRight, null) },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                         modifier = Modifier.clickable { showIconPackPicker = true }
-                    )
-
-                    SettingSwitchItem(
-                        icon = Icons.Default.Palette,
-                        title = stringResource(R.string.themed_icons_m3_title),
-                        supportingText = stringResource(R.string.themed_icons_m3_desc),
-                        checked = isThemedIconsEnabled,
-                        onCheckedChange = { viewModel.setThemedIconsEnabled(it) }
                     )
 
                     SettingSwitchItem(
@@ -625,6 +617,7 @@ fun CustomIconStylePickerDialog(
     val useOriginal by viewModel.customIconUseOriginal.collectAsState()
     val useOriginalBg by viewModel.customIconUseOriginalBg.collectAsState()
     val useDominantColor by viewModel.customIconUseDominantColor.collectAsState()
+    val useDominantFgColor by viewModel.customIconUseDominantFgColor.collectAsState()
     val customIconPack by viewModel.customIconPackPackage.collectAsState()
     val iconCornerRadius by viewModel.iconCornerRadius.collectAsState()
     val globalIconPack by viewModel.iconPackPackage.collectAsState()
@@ -635,6 +628,10 @@ fun CustomIconStylePickerDialog(
     val hue by viewModel.customIconHue.collectAsState()
     val saturation by viewModel.customIconSaturation.collectAsState()
     val brightness by viewModel.customIconBrightness.collectAsState()
+
+    val fgHue by viewModel.customIconFgHue.collectAsState()
+    val fgSaturation by viewModel.customIconFgSaturation.collectAsState()
+    val fgBrightness by viewModel.customIconFgBrightness.collectAsState()
     
     // 預覽用的虛擬 AppModel
     val context = LocalContext.current
@@ -643,7 +640,7 @@ fun CustomIconStylePickerDialog(
     // 優化點：將耗時的圖標處理移至後台線程，避免阻塞 UI 滑動
     val previewBitmap by produceState<androidx.compose.ui.graphics.ImageBitmap?>(
         initialValue = null, 
-        bgColor, fgColor, useOriginal, useOriginalBg, useDominantColor, iconCornerRadius, customIconPack, isSystemMonochrome, hue, saturation, brightness, isLegacyIconUniformEnabled
+        bgColor, fgColor, useOriginal, useOriginalBg, useDominantColor, useDominantFgColor, iconCornerRadius, customIconPack, isSystemMonochrome, hue, saturation, brightness, fgHue, fgSaturation, fgBrightness, isLegacyIconUniformEnabled
     ) {
         value = withContext(Dispatchers.Default) {
             val processor = IconProcessor(context)
@@ -672,7 +669,11 @@ fun CustomIconStylePickerDialog(
                 customSaturation = saturation,
                 customBrightness = brightness,
                 originalIcon = previewIcon,
-                useLegacyUniformSquare = isLegacyIconUniformEnabled
+                useLegacyUniformSquare = isLegacyIconUniformEnabled,
+                customFgHue = fgHue,
+                customFgSaturation = fgSaturation,
+                customFgBrightness = fgBrightness,
+                customUseDominantFgColor = useDominantFgColor
             )
         }
     }
@@ -695,26 +696,35 @@ fun CustomIconStylePickerDialog(
         },
         text = {
             LazyColumn {
+                // --- 前景設定 (Foreground Settings) ---
                 item {
-                    Text(stringResource(R.string.appearance), style = MaterialTheme.typography.titleSmall)
+                    Text(stringResource(R.string.foreground_settings), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Hue Slider
-                    Text(stringResource(R.string.hue, hue.toInt()), style = MaterialTheme.typography.labelMedium)
-                    Slider(value = hue, onValueChange = { viewModel.setCustomIconHue(it) }, valueRange = 0f..360f)
+                    Text(stringResource(R.string.hue, fgHue.toInt()), style = MaterialTheme.typography.labelMedium)
+                    Slider(value = fgHue, onValueChange = { viewModel.setCustomIconFgHue(it) }, valueRange = 0f..360f)
 
-                    // Saturation Slider
-                    Text(stringResource(R.string.saturation, (saturation * 100).toInt()), style = MaterialTheme.typography.labelMedium)
-                    Slider(value = saturation, onValueChange = { viewModel.setCustomIconSaturation(it) }, valueRange = 0f..1f)
+                    Text(stringResource(R.string.saturation, (fgSaturation * 100).toInt()), style = MaterialTheme.typography.labelMedium)
+                    Slider(value = fgSaturation, onValueChange = { viewModel.setCustomIconFgSaturation(it) }, valueRange = 0f..1f)
 
-                    // Brightness Slider
-                    Text(stringResource(R.string.brightness, (brightness * 100).toInt()), style = MaterialTheme.typography.labelMedium)
-                    Slider(value = brightness, onValueChange = { viewModel.setCustomIconBrightness(it) }, valueRange = 0f..1f)
+                    Text(stringResource(R.string.brightness, (fgBrightness * 100).toInt()), style = MaterialTheme.typography.labelMedium)
+                    Slider(value = fgBrightness, onValueChange = { viewModel.setCustomIconFgBrightness(it) }, valueRange = 0f..1f)
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    SettingSwitchItem(
+                        title = stringResource(R.string.use_dominant_fg_color),
+                        checked = useDominantFgColor,
+                        onCheckedChange = { viewModel.setCustomIconUseDominantFgColor(it) }
+                    )
+
+                    SettingSwitchItem(
+                        title = stringResource(R.string.use_original_icon),
+                        checked = useOriginal,
+                        onCheckedChange = { viewModel.setCustomIconUseOriginal(it) }
+                    )
 
                     if (isSystemMonochrome) {
-                        // 圖標包選擇 (僅在開啟 Monochrome 時顯示)
                         var showCustomIconPackPicker by remember { mutableStateOf(false) }
                         val iconPacks by produceState<List<IconPackInfo>>(initialValue = emptyList()) {
                             value = withContext(Dispatchers.IO) {
@@ -746,13 +756,40 @@ fun CustomIconStylePickerDialog(
                                 }
                             )
                         }
-
-                        SettingSwitchItem(
-                            title = stringResource(R.string.use_original_icon),
-                            checked = useOriginal,
-                            onCheckedChange = { viewModel.setCustomIconUseOriginal(it) }
-                        )
                     }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                // --- 背景設定 (Background Settings) ---
+                item {
+                    Text(stringResource(R.string.background_settings), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(stringResource(R.string.hue, hue.toInt()), style = MaterialTheme.typography.labelMedium)
+                    Slider(value = hue, onValueChange = { viewModel.setCustomIconHue(it) }, valueRange = 0f..360f)
+
+                    Text(stringResource(R.string.saturation, (saturation * 100).toInt()), style = MaterialTheme.typography.labelMedium)
+                    Slider(value = saturation, onValueChange = { viewModel.setCustomIconSaturation(it) }, valueRange = 0f..1f)
+
+                    Text(stringResource(R.string.brightness, (brightness * 100).toInt()), style = MaterialTheme.typography.labelMedium)
+                    Slider(value = brightness, onValueChange = { viewModel.setCustomIconBrightness(it) }, valueRange = 0f..1f)
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    SettingSwitchItem(
+                        title = stringResource(R.string.use_dominant_bg_color),
+                        checked = useDominantColor,
+                        onCheckedChange = { viewModel.setCustomIconUseDominantColor(it) }
+                    )
+
+                    SettingSwitchItem(
+                        title = stringResource(R.string.use_original_bg),
+                        checked = useOriginalBg,
+                        onCheckedChange = { viewModel.setCustomIconUseOriginalBg(it) }
+                    )
                 }
             }
         },

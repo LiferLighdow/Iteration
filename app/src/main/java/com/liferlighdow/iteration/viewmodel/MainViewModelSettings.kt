@@ -167,10 +167,8 @@ fun MainViewModel.setTwoFingerSwipeDownApp(packageName: String) {
 }
 
 fun MainViewModel.setThemedIconsEnabled(enabled: Boolean) {
-    _isThemedIconsEnabled.value = enabled
-    prefs.edit().putBoolean("themed_icons", enabled).apply()
-    shouldRefreshIconsOnReturn = true
-    loadApps()
+    val style = if (enabled) IconStyle.THEMED else IconStyle.STANDARD
+    setIconStyle(style)
 }
 
 fun MainViewModel.setLegacyIconUniformEnabled(enabled: Boolean) {
@@ -182,7 +180,12 @@ fun MainViewModel.setLegacyIconUniformEnabled(enabled: Boolean) {
 
 fun MainViewModel.setIconStyle(style: IconStyle) {
     _iconStyle.value = style
-    prefs.edit().putString("icon_style", style.name).apply()
+    val isThemed = (style == IconStyle.THEMED)
+    _isThemedIconsEnabled.value = isThemed
+    prefs.edit()
+        .putString("icon_style", style.name)
+        .putBoolean("themed_icons", isThemed)
+        .apply()
     shouldRefreshIconsOnReturn = true
     loadApps()
 }
@@ -239,6 +242,34 @@ fun MainViewModel.setCustomIconBrightness(brightness: Float) {
 fun MainViewModel.setCustomIconUseDominantColor(enabled: Boolean) {
     _customIconUseDominantColor.value = enabled
     prefs.edit().putBoolean("custom_icon_use_dominant_color", enabled).apply()
+    shouldRefreshIconsOnReturn = true
+    loadApps()
+}
+
+fun MainViewModel.setCustomIconFgHue(hue: Float) {
+    _customIconFgHue.value = hue
+    prefs.edit().putFloat("custom_icon_fg_hue", hue).apply()
+    shouldRefreshIconsOnReturn = true
+    loadApps()
+}
+
+fun MainViewModel.setCustomIconFgSaturation(saturation: Float) {
+    _customIconFgSaturation.value = saturation
+    prefs.edit().putFloat("custom_icon_fg_saturation", saturation).apply()
+    shouldRefreshIconsOnReturn = true
+    loadApps()
+}
+
+fun MainViewModel.setCustomIconFgBrightness(brightness: Float) {
+    _customIconFgBrightness.value = brightness
+    prefs.edit().putFloat("custom_icon_fg_brightness", brightness).apply()
+    shouldRefreshIconsOnReturn = true
+    loadApps()
+}
+
+fun MainViewModel.setCustomIconUseDominantFgColor(enabled: Boolean) {
+    _customIconUseDominantFgColor.value = enabled
+    prefs.edit().putBoolean("custom_icon_use_dominant_fg_color", enabled).apply()
     shouldRefreshIconsOnReturn = true
     loadApps()
 }

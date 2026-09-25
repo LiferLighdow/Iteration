@@ -124,5 +124,9 @@ data class CustomIconSettings(
     val useOriginal: Boolean = true,
     val useOriginalBg: Boolean = true,
     val useDominantColor: Boolean = false,
+    val useDominantFgColor: Boolean = false,
+    val fgHue: Float = 0f,
+    val fgSaturation: Float = 0f,
+    val fgBrightness: Float = 1f,
     val iconPackPackage: String = ""
 )

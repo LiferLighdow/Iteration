@@ -242,15 +242,20 @@ fun Modifier.liquidGlassDock(
     val finalShape = if (dockStyle == DockStyle.PLATFORM) PlatformDockShape(44.dp) else null
     val finalCornerRadius = if (dockStyle == DockStyle.CLASSIC) 0.dp else cornerRadius
 
+    // 3D Platform 風格使用自訂路徑形狀 (PlatformDockShape)，不支援透鏡折射扭曲效果，強制設為 0 避免閃退
+    val effectiveRefractionHeight = if (dockStyle == DockStyle.PLATFORM) 0f else refractionHeight
+    val effectiveRefractionAmount = if (dockStyle == DockStyle.PLATFORM) 0f else refractionAmount
+    val effectiveChromaticAberration = if (dockStyle == DockStyle.PLATFORM) false else chromaticAberration
+
     this.liquidGlass(
         enabled = isLiquidGlass,
         backdrop = backdrop,
         cornerRadius = finalCornerRadius,
         shape = finalShape,
         blurRadius = blurRadius,
-        refractionHeight = refractionHeight,
-        refractionAmount = refractionAmount,
-        chromaticAberration = chromaticAberration,
+        refractionHeight = effectiveRefractionHeight,
+        refractionAmount = effectiveRefractionAmount,
+        chromaticAberration = effectiveChromaticAberration,
         colorAdjustmentEnabled = colorAdjustmentEnabled,
         hue = hue,
         saturation = saturation,

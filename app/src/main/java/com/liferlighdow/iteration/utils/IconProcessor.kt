@@ -21,6 +21,7 @@ import android.os.UserHandle
 import android.os.UserManager
 import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.drawable.toBitmap
@@ -81,7 +82,11 @@ class IconProcessor(private val context: Context) {
         isPrivate: Boolean = false,
         calendarDay: String? = null,
         clockTime: Pair<Int, Int>? = null,
-        useLegacyUniformSquare: Boolean = false
+        useLegacyUniformSquare: Boolean = false,
+        customFgHue: Float = 0f,
+        customFgSaturation: Float = 0f,
+        customFgBrightness: Float = 1f,
+        customUseDominantFgColor: Boolean = false
     ): ImageBitmap {
         if (icon == null) {
             return Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888).asImageBitmap()
@@ -91,44 +96,75 @@ class IconProcessor(private val context: Context) {
         val canvas = Canvas(output)
         val paint = threadPaint.get()!!
 
-        // --- 全域著色模式 (Unified Mode / iOS Style) ---
-        // 判斷條件：關閉 Monochrome 時，只要不是「標準原色」狀態 (非 STANDARD 或已開啟 M3)，就進入全域著色
-        val useUnifiedMode = !useMonochrome && (style != IconStyle.STANDARD || isThemed)
+        // 統一定理：所有非標準著色風格（黑色、白色、透明、M3主題圖示、自訂風格）皆以「標準 (STANDARD)」圖標為底層，轉為黑白後疊加對應色彩與半透明層（系統單色模式除外，直接著色於前後景）
+        val isOverlayStyle = !useMonochrome && (style == IconStyle.BLACK || style == IconStyle.WHITE || style == IconStyle.GLASS || style == IconStyle.CUSTOM || ((style == IconStyle.STANDARD || style == IconStyle.THEMED) && isThemed)) && calendarDay == null && clockTime == null
 
-        if (useUnifiedMode && calendarDay == null && clockTime == null) {
-            val tintColor = when {
-                style == IconStyle.CUSTOM -> {
-                    Color.HSVToColor(floatArrayOf(customHue, customSaturation, customBrightness))
-                }
-                style == IconStyle.STANDARD && isThemed && themeColors != null -> {
-                    val p = themeColors.primary
-                    Color.argb(255, (p.red * 255).toInt(), (p.green * 255).toInt(), (p.blue * 255).toInt())
-                }
-                style == IconStyle.BLACK -> Color.DKGRAY
-                style == IconStyle.WHITE -> Color.WHITE
-                style == IconStyle.GLASS -> Color.LTGRAY
-                style == IconStyle.STANDARD -> Color.parseColor("#0061A4") // 修復點：STANDARD 模式下關閉 M3 時使用品牌藍
-                else -> Color.HSVToColor(floatArrayOf(customHue, customSaturation, customBrightness))
-            }
+        if (isOverlayStyle) {
+            val standardBitmap = processIcon(
+                icon = icon,
+                isThemed = false,
+                themeColors = null,
+                style = IconStyle.STANDARD,
+                cornerRadiusPercent = cornerRadiusPercent,
+                sizePx = sizePx,
+                isIconPack = isIconPack,
+                customBgColor = customBgColor,
+                customFgColor = customFgColor,
+                customUseOriginal = customUseOriginal,
+                customUseOriginalBg = customUseOriginalBg,
+                customUseDominantColor = customUseDominantColor,
+                useMonochrome = useMonochrome,
+                customHue = customHue,
+                customSaturation = customSaturation,
+                customBrightness = customBrightness,
+                originalIcon = originalIcon,
+                userId = userId,
+                isPrivate = isPrivate,
+                calendarDay = null,
+                clockTime = null,
+                useLegacyUniformSquare = useLegacyUniformSquare
+            )
 
-            val tempBitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
-            val tempCanvas = Canvas(tempBitmap)
-            
-            // 處理圖標繪製與縮放
-            if (isIconPack) {
-                val iconScale = 1.15f
-                val s = (sizePx * iconScale).toInt()
-                val o = (sizePx - s) / 2
-                icon.setBounds(o, o, o + s, o + s)
-            } else {
-                icon.setBounds(0, 0, sizePx, sizePx)
-            }
-            icon.draw(tempCanvas)
-
-            paint.colorFilter = createUnifiedTintFilter(tintColor)
-            canvas.drawBitmap(tempBitmap, 0f, 0f, paint)
+            // 1. 轉為黑白（Grayscale）作為底層：玻璃風格底層透明度設為 50%，其餘不透明
+            val matrix = ColorMatrix().apply { setSaturation(0f) }
+            paint.colorFilter = ColorMatrixColorFilter(matrix)
+            paint.alpha = if (style == IconStyle.GLASS) 128 else 255
+            canvas.drawBitmap(standardBitmap.asAndroidBitmap(), 0f, 0f, paint)
             paint.colorFilter = null
-            tempBitmap.recycle()
+            paint.alpha = 255
+
+            // 2. 決定對應的疊加色彩與透明度
+            val overlayColor = when {
+                style == IconStyle.BLACK -> Color.argb(100, 0, 0, 0) // 半透明黑
+                style == IconStyle.WHITE || style == IconStyle.GLASS -> Color.argb(100, 255, 255, 255) // 半透明白
+                (style == IconStyle.STANDARD || style == IconStyle.THEMED) && isThemed -> {
+                    val tc = themeColors
+                    if (tc != null) {
+                        val p = tc.primary
+                        Color.argb(150, (p.red * 255).toInt(), (p.green * 255).toInt(), (p.blue * 255).toInt())
+                    } else {
+                        Color.argb(150, 0, 97, 164)
+                    }
+                }
+                style == IconStyle.CUSTOM -> {
+                    val c = Color.HSVToColor(floatArrayOf(customHue, customSaturation, customBrightness))
+                    Color.argb(150, Color.red(c), Color.green(c), Color.blue(c))
+                }
+                else -> Color.TRANSPARENT
+            }
+
+            paint.color = overlayColor
+            paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP)
+            canvas.drawRect(0f, 0f, sizePx.toFloat(), sizePx.toFloat(), paint)
+            paint.xfermode = null
+
+            if (isPrivate) {
+                drawPrivateBadge(canvas, sizePx)
+            } else if (userId > 0) {
+                drawWorkBadge(canvas, output, sizePx, userId)
+            }
+
+            return output.asImageBitmap()
         } else {
             // --- 原始的分層處理邏輯 ---
             val m3Colors = if (isThemed && themeColors != null) {
@@ -140,17 +176,26 @@ class IconProcessor(private val context: Context) {
             } else null
 
             // 修復點：當關閉 Monochrome 且為 CUSTOM 時，背景色應來自 HSB
-            val customColorFromHsb = if (!useMonochrome && style == IconStyle.CUSTOM) {
+            val customColorFromHsb = if (style == IconStyle.CUSTOM) {
                 Color.HSVToColor(floatArrayOf(customHue, customSaturation, customBrightness))
             } else customBgColor
+
+            val customFgColorFromHsb = if (style == IconStyle.CUSTOM) {
+                Color.HSVToColor(floatArrayOf(customFgHue, customFgSaturation, customFgBrightness))
+            } else customFgColor
 
             val finalCustomBg = if (style == IconStyle.CUSTOM && customUseDominantColor) {
                 val colorSource = originalIcon ?: icon
                 colorSource.let { extractDominantColor(it) } ?: customColorFromHsb
             } else customColorFromHsb
 
+            val finalCustomFg = if (style == IconStyle.CUSTOM && customUseDominantFgColor) {
+                val colorSource = originalIcon ?: icon
+                colorSource.let { extractForegroundDominantColor(it) } ?: customFgColorFromHsb
+            } else customFgColorFromHsb
+
             val bgColor = determineBgColor(style, isThemed, m3Colors?.first, finalCustomBg, customUseOriginalBg, useMonochrome, isIconPack)
-            val fgColor = determineFgColor(style, isThemed, m3Colors, customFgColor, customUseOriginal, useMonochrome, isIconPack)
+            val fgColor = determineFgColor(style, isThemed, m3Colors, finalCustomFg, customUseOriginal, useMonochrome, isIconPack)
 
             if (calendarDay != null) {
                 drawCalendarDate(canvas, sizePx, calendarDay, bgColor, fgColor)
@@ -290,11 +335,12 @@ class IconProcessor(private val context: Context) {
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
         val finalBg = bgColor ?: Color.WHITE
         
-        // 判定是否為自定義或主題模式 (背景非純白)
-        val isEnhancedMode = bgColor != null && bgColor != Color.WHITE
+        // 判定是否為自定義或主題模式 (只要有指定 bgColor 即為增強/自定義模式，包含白色風格)
+        val isEnhancedMode = bgColor != null
+        val isDarkBg = ColorUtils.calculateLuminance(finalBg) < 0.5f
         
-        val finalFg = if (isEnhancedMode) Color.WHITE else (fgColor ?: Color.BLACK)
-        val headerColor = if (isEnhancedMode) Color.WHITE else Color.parseColor("#FF0000") // 預設模式恢復紅色
+        val finalFg = if (isEnhancedMode) (if (isDarkBg) Color.WHITE else Color.BLACK) else (fgColor ?: Color.BLACK)
+        val headerColor = if (isEnhancedMode) (if (isDarkBg) Color.WHITE else Color.BLACK) else Color.parseColor("#FF0000") // 預設模式恢復紅色
         val weekTextColor = finalBg // 星期文字與背景同色，產生鏤空感
         paint.color = finalBg
         canvas.drawRect(0f, 0f, sizePx.toFloat(), sizePx.toFloat(), paint)
@@ -327,8 +373,9 @@ class IconProcessor(private val context: Context) {
         val centerX = sizePx / 2f
         val centerY = sizePx / 2f
         val finalBg = bgColor ?: Color.parseColor("#003153")
-        // 修正點：自定義背景時強制白色前景
-        val finalFg = if (bgColor != null && bgColor != Color.WHITE) Color.WHITE else (fgColor ?: Color.WHITE)
+        val isDarkBg = ColorUtils.calculateLuminance(finalBg) < 0.5f
+        // 修正點：自定義背景時根據背景明暗反轉前景色彩 (黑色背配白字，白色背配黑字)
+        val finalFg = if (bgColor != null) (if (isDarkBg) Color.WHITE else Color.BLACK) else (fgColor ?: Color.WHITE)
 
         paint.color = finalBg
         canvas.drawRect(0f, 0f, sizePx.toFloat(), sizePx.toFloat(), paint)
@@ -403,47 +450,49 @@ class IconProcessor(private val context: Context) {
 
     private fun determineBgColor(style: IconStyle, isThemed: Boolean, m3Color: Int?, customBg: Int, customUseOrigBg: Boolean, useMonochrome: Boolean, isIconPack: Boolean): Int? {
         if (style == IconStyle.CUSTOM) return if (customUseOrigBg) null else customBg
-        if (isThemed && m3Color != null) {
-            // 對於圖標包，在 STANDARD 模式下保留原色
-            if (isIconPack && style == IconStyle.STANDARD) return null
+        if ((isThemed || style == IconStyle.THEMED) && m3Color != null) {
+            // 對於圖標包，在 STANDARD / THEMED 模式下保留原色
+            if (isIconPack && (style == IconStyle.STANDARD || style == IconStyle.THEMED)) return null
             return when (style) {
-                IconStyle.STANDARD -> m3Color
+                IconStyle.STANDARD, IconStyle.THEMED -> m3Color
                 IconStyle.BLACK -> ColorUtils.blendARGB(Color.BLACK, m3Color, 0.3f)
                 IconStyle.WHITE -> ColorUtils.blendARGB(Color.WHITE, m3Color, 0.5f)
                 IconStyle.GLASS -> ColorUtils.blendARGB(Color.argb(100, 255, 255, 255), m3Color, 0.15f)
-                else -> null
+                IconStyle.CUSTOM -> null
             }
         }
         return when (style) {
             IconStyle.STANDARD -> if (useMonochrome) Color.parseColor("#0061A4") else null
+            IconStyle.THEMED -> m3Color ?: if (useMonochrome) Color.parseColor("#0061A4") else null
             IconStyle.BLACK -> Color.BLACK
             IconStyle.WHITE -> Color.WHITE
             IconStyle.GLASS -> Color.argb(120, 255, 255, 255) // 半透明白
             IconStyle.CUSTOM -> customBg
-            else -> null
         }
     }
 
     private fun determineFgColor(style: IconStyle, isThemed: Boolean, m3Colors: Pair<Int, Int>?, customFg: Int, customUseOrig: Boolean, useMonochrome: Boolean, isIconPack: Boolean): Int? {
-        if (style == IconStyle.CUSTOM) return if (customUseOrig) null else customFg
-        if (isThemed && m3Colors != null) {
-            // 對於圖標包，在 STANDARD 模式下保留原色
-            if (isIconPack && style == IconStyle.STANDARD) return null
+        if (style == IconStyle.CUSTOM) {
+            return if (customUseOrig) null else customFg
+        }
+        if ((isThemed || style == IconStyle.THEMED) && m3Colors != null) {
+            // 對於圖標包，在 STANDARD / THEMED 模式下保留原色
+            if (isIconPack && (style == IconStyle.STANDARD || style == IconStyle.THEMED)) return null
             return when (style) {
-                IconStyle.STANDARD -> m3Colors.second
+                IconStyle.STANDARD, IconStyle.THEMED -> m3Colors.second
                 IconStyle.BLACK -> ColorUtils.blendARGB(Color.WHITE, m3Colors.first, 0.3f)
                 IconStyle.WHITE -> Color.BLACK
                 IconStyle.GLASS -> m3Colors.first
-                else -> null
+                IconStyle.CUSTOM -> null
             }
         }
         return when (style) {
             IconStyle.STANDARD -> if (useMonochrome) Color.WHITE else null
+            IconStyle.THEMED -> m3Colors?.second ?: if (useMonochrome) Color.WHITE else null
             IconStyle.BLACK -> Color.WHITE
             IconStyle.WHITE -> Color.BLACK
             IconStyle.GLASS -> Color.WHITE // 不透明白前景
             IconStyle.CUSTOM -> customFg
-            else -> null
         }
     }
 
@@ -484,5 +533,40 @@ class IconProcessor(private val context: Context) {
         ))
         matrix.postConcat(tintMatrix)
         return ColorMatrixColorFilter(matrix)
+    }
+
+    private fun extractForegroundDominantColor(drawable: Drawable): Int? {
+        return try {
+            val mutated = drawable.mutate()
+            val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && mutated is AdaptiveIconDrawable) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    mutated.monochrome?.toBitmap(64, 64) ?: mutated.foreground.toBitmap(64, 64)
+                } else {
+                    mutated.foreground.toBitmap(64, 64)
+                }
+            } else {
+                mutated.toBitmap(64, 64)
+            }
+            val seedColor = DynamicColorGenerator.extractSeedColorFromBitmap(bitmap)
+            val finalColor = seedColor ?: run {
+                val pixels = IntArray(16)
+                bitmap.getPixels(pixels, 0, 4, bitmap.width / 4, bitmap.height / 4, 4, 4)
+                var r = 0; var g = 0; var b = 0
+                var count = 0
+                pixels.forEach { p ->
+                    if (Color.alpha(p) > 128) {
+                        r += Color.red(p)
+                        g += Color.green(p)
+                        b += Color.blue(p)
+                        count++
+                    }
+                }
+                if (count > 0) Color.rgb(r / count, g / count, b / count) else null
+            }
+            bitmap.recycle()
+            finalColor
+        } catch (e: Exception) {
+            null
+        }
     }
 }

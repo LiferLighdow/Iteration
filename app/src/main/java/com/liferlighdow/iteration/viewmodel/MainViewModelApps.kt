@@ -601,9 +601,13 @@ fun MainViewModel.processNewIcon(
     val customHue = _customIconHue.value
     val customSaturation = _customIconSaturation.value
     val customBrightness = _customIconBrightness.value
+    val customFgHue = _customIconFgHue.value
+    val customFgSaturation = _customIconFgSaturation.value
+    val customFgBrightness = _customIconFgBrightness.value
+    val customUseDominantFgColor = _customIconUseDominantFgColor.value
 
     if (isExcluded) {
-        return iconProcessor.processIcon(finalRawIcon, false, null, IconStyle.STANDARD, iconCornerRadius, sizePx, customBgColor = 0, customFgColor = 0, customUseOriginal = true, customUseOriginalBg = true, customUseDominantColor = false, useMonochrome = false, customHue = customHue, customSaturation = customSaturation, customBrightness = customBrightness, originalIcon = null, userId = app.userId, calendarDay = calendarDay, clockTime = clockTime, useLegacyUniformSquare = useLegacyUniformSquare)
+        return iconProcessor.processIcon(finalRawIcon, false, null, IconStyle.STANDARD, iconCornerRadius, sizePx, customBgColor = 0, customFgColor = 0, customUseOriginal = true, customUseOriginalBg = true, customUseDominantColor = false, useMonochrome = false, customHue = customHue, customSaturation = customSaturation, customBrightness = customBrightness, originalIcon = null, userId = app.userId, calendarDay = calendarDay, clockTime = clockTime, useLegacyUniformSquare = useLegacyUniformSquare, customFgHue = customFgHue, customFgSaturation = customFgSaturation, customFgBrightness = customFgBrightness, customUseDominantFgColor = customUseDominantFgColor)
     }
 
     val builtinSelected = _builtinIconSelectedPackages.value
@@ -640,7 +644,11 @@ fun MainViewModel.processNewIcon(
         isPrivate = app.isPrivate,
         calendarDay = calendarDay,
         clockTime = clockTime,
-        useLegacyUniformSquare = useLegacyUniformSquare
+        useLegacyUniformSquare = useLegacyUniformSquare,
+        customFgHue = customFgHue,
+        customFgSaturation = customFgSaturation,
+        customFgBrightness = customFgBrightness,
+        customUseDominantFgColor = customUseDominantFgColor
     )
 }
 
@@ -666,12 +674,16 @@ fun MainViewModel.loadSettings() {
     loadPwaApps()
 
     val savedStyleStr = prefs.getString("icon_style", "STANDARD") ?: "STANDARD"
-    val newStyle = try { IconStyle.valueOf(savedStyleStr) } catch (e: Exception) { IconStyle.STANDARD }
-    val savedShapeStr = prefs.getString("icon_shape", "DEFAULT") ?: "DEFAULT"
-    val newShape = try { IconShape.valueOf(savedShapeStr) } catch (e: Exception) { IconShape.DEFAULT }
+    var newStyle = try { IconStyle.valueOf(savedStyleStr) } catch (e: Exception) { IconStyle.STANDARD }
+    val savedThemed = prefs.getBoolean("themed_icons", false)
+    if (newStyle == IconStyle.STANDARD && savedThemed) {
+        newStyle = IconStyle.THEMED
+    }
+    val newShapeStr = prefs.getString("icon_shape", "DEFAULT") ?: "DEFAULT"
+    val newShape = try { IconShape.valueOf(newShapeStr) } catch (e: Exception) { IconShape.DEFAULT }
     val savedLibShapeStr = prefs.getString("library_shape", "DEFAULT") ?: "DEFAULT"
     val newLibShape = try { IconShape.valueOf(savedLibShapeStr) } catch (e: Exception) { IconShape.DEFAULT }
-    val newThemed = prefs.getBoolean("themed_icons", false)
+    val newThemed = (newStyle == IconStyle.THEMED) || savedThemed
     val newLiquidEnabled = prefs.getBoolean("liquid_glass_enabled", false)
     val newLiquidDockEnabled = prefs.getBoolean("liquid_glass_dock", false)
     val newLiquidHomeFolderEnabled = prefs.getBoolean("liquid_glass_home_folder", false)
@@ -940,13 +952,17 @@ fun MainViewModel.loadApps() {
         val customOriginal = _customIconUseOriginal.value
         val customOriginalBg = _customIconUseOriginalBg.value
         val customUseDominantColor = _customIconUseDominantColor.value
+        val customUseDominantFgColor = _customIconUseDominantFgColor.value
         val customHue = _customIconHue.value
         val customSaturation = _customIconSaturation.value
         val customBrightness = _customIconBrightness.value
+        val customFgHue = _customIconFgHue.value
+        val customFgSaturation = _customIconFgSaturation.value
+        val customFgBrightness = _customIconFgBrightness.value
         val useLegacyUniformSquare = _isLegacyIconUniformEnabled.value
 
         val customKey = if (currentStyle == IconStyle.CUSTOM) {
-            "C_${customBg.toString(16)}_${customFg.toString(16)}_${if (customOriginal) "O" else "M"}_${if (customOriginalBg) "OB" else "CB"}_${if (customUseDominantColor) "D" else "S"}_${customIconPack.hashCode()}_H${customHue.toInt()}S${(customSaturation * 100).toInt()}B${(customBrightness * 100).toInt()}"
+            "C_${customBg.toString(16)}_${customFg.toString(16)}_${if (customOriginal) "O" else "M"}_${if (customOriginalBg) "OB" else "CB"}_${if (customUseDominantColor) "D" else "S"}_${if (customUseDominantFgColor) "DF" else "SF"}_${customIconPack.hashCode()}_H${customHue.toInt()}S${(customSaturation * 100).toInt()}B${(customBrightness * 100).toInt()}_FGH${customFgHue.toInt()}FGS${(customFgSaturation * 100).toInt()}FGB${(customFgBrightness * 100).toInt()}"
         } else "N"
 
         // 根據拉條設定決定渲染解析度 (畫質)
