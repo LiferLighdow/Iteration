@@ -95,6 +95,7 @@
     <item component="com.huawei.photos" drawable="ic_builtin_gallery" />
     <item component="com.sonyericsson.album" drawable="ic_builtin_gallery" />
     <item component="org.lineageos.glimpse" drawable="ic_builtin_gallery" />
+    <item component="com.libremobileos.glimpse" drawable="ic_builtin_gallery" />
 
     <!-- Files -->
     <item component="com.google.android.documentsui" drawable="ic_builtin_files" />

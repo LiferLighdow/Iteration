@@ -216,8 +216,8 @@ fun SettingsWallpaperScreen(onBack: () -> Unit) {
                     }
 
                     ListItem(
-                        headlineContent = { Text("相片 / MP4 影片 / GIF") },
-                        supportingContent = { Text("從相簿選擇圖片、動態 GIF 或 MP4 影片動態桌布") },
+                        headlineContent = { Text(stringResource(R.string.wallpaper_media_picker)) },
+                        supportingContent = { Text(stringResource(R.string.wallpaper_media_picker_desc)) },
                         leadingContent = { Icon(Icons.Default.VideoLibrary, null, tint = MaterialTheme.colorScheme.primary) },
                         modifier = Modifier.clickable {
                             showTypeDialog = false

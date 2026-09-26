@@ -25,11 +25,12 @@ fun MainViewModel.exportConfigToFile(customName: String? = null, onResult: (Bool
             val backupDir = File(documentsDir, "Iteration/Backup")
             if (!backupDir.exists()) backupDir.mkdirs()
             
-            val fileName = if (customName.isNullOrBlank()) {
-                "backup_${System.currentTimeMillis()}.json"
+            val baseName = if (customName.isNullOrBlank()) {
+                "backup_${System.currentTimeMillis()}"
             } else {
-                if (customName.endsWith(".json")) customName else "$customName.json"
+                customName.substringBeforeLast(".")
             }
+            val fileName = "$baseName.iteration"
             
             val file = File(backupDir, fileName)
             if (file.exists()) {
@@ -39,7 +40,24 @@ fun MainViewModel.exportConfigToFile(customName: String? = null, onResult: (Bool
                 return@launch
             }
             
-            FileOutputStream(file).use { it.write(jsonString.toByteArray()) }
+            java.util.zip.ZipOutputStream(FileOutputStream(file)).use { zos ->
+                // 1. config.json
+                zos.putNextEntry(java.util.zip.ZipEntry("config.json"))
+                zos.write(jsonString.toByteArray())
+                zos.closeEntry()
+                
+                // 2. Wallpapers (Iteration/Wallpaper)
+                val wallpaperDir = File(documentsDir, "Iteration/Wallpaper")
+                if (wallpaperDir.exists() && wallpaperDir.isDirectory) {
+                    zipDirectory(wallpaperDir, "Wallpaper", zos)
+                }
+                
+                // 3. Processed Icons (cache/processed_icons)
+                val iconsDir = File(getApplication<android.app.Application>().cacheDir, "processed_icons")
+                if (iconsDir.exists() && iconsDir.isDirectory) {
+                    zipDirectory(iconsDir, "icons", zos)
+                }
+            }
             
             withContext(Dispatchers.Main) {
                 onResult(true, file.absolutePath)
@@ -49,6 +67,20 @@ fun MainViewModel.exportConfigToFile(customName: String? = null, onResult: (Bool
             withContext(Dispatchers.Main) {
                 onResult(false, e.message)
             }
+        }
+    }
+}
+
+private fun zipDirectory(dir: File, baseEntryName: String, zos: java.util.zip.ZipOutputStream) {
+    val files = dir.listFiles() ?: return
+    for (file in files) {
+        if (file.isDirectory) {
+            zipDirectory(file, "$baseEntryName/${file.name}", zos)
+        } else {
+            val entryName = "$baseEntryName/${file.name}"
+            zos.putNextEntry(java.util.zip.ZipEntry(entryName))
+            file.inputStream().use { it.copyTo(zos) }
+            zos.closeEntry()
         }
     }
 }
@@ -63,7 +95,12 @@ fun MainViewModel.deleteBackupFile(file: File, onResult: (Boolean) -> Unit) {
 fun MainViewModel.renameBackupFile(file: File, newName: String, onResult: (Boolean, String?) -> Unit) {
     viewModelScope.launch(Dispatchers.IO) {
         try {
-            val name = if (newName.endsWith(".json")) newName else "$newName.json"
+            val ext = if (file.name.endsWith(".json", true)) ".json" else ".iteration"
+            val name = if (newName.endsWith(".json", true) || newName.endsWith(".iteration", true) || newName.endsWith(".zip", true)) {
+                newName
+            } else {
+                "$newName$ext"
+            }
             val newFile = File(file.parentFile, name)
             if (newFile.exists()) {
                 withContext(Dispatchers.Main) { onResult(false, "EXISTS") }
@@ -74,6 +111,69 @@ fun MainViewModel.renameBackupFile(file: File, newName: String, onResult: (Boole
         } catch (e: Exception) {
             withContext(Dispatchers.Main) { onResult(false, e.message) }
         }
+    }
+}
+
+fun MainViewModel.importConfigFromFile(file: File): Boolean {
+    return try {
+        if (file.name.endsWith(".json", ignoreCase = true)) {
+            val jsonStr = file.readText()
+            importConfig(jsonStr)
+        } else {
+            val documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+            val wallpaperDir = File(documentsDir, "Iteration/Wallpaper")
+            val iconsDir = File(getApplication<android.app.Application>().cacheDir, "processed_icons")
+            
+            java.util.zip.ZipFile(file).use { zip ->
+                val entries = zip.entries()
+                var configJson: String? = null
+                
+                while (entries.hasMoreElements()) {
+                    val entry = entries.nextElement()
+                    if (entry.name == "config.json") {
+                        configJson = zip.getInputStream(entry).bufferedReader().use { it.readText() }
+                    } else if (entry.name.startsWith("Wallpaper/")) {
+                        val outFile = File(documentsDir, "Iteration/${entry.name}")
+                        if (entry.isDirectory) {
+                            outFile.mkdirs()
+                        } else {
+                            outFile.parentFile?.mkdirs()
+                            zip.getInputStream(entry).use { input ->
+                                FileOutputStream(outFile).use { output ->
+                                    input.copyTo(output)
+                                }
+                            }
+                        }
+                    } else if (entry.name.startsWith("icons/")) {
+                        val relativePath = entry.name.removePrefix("icons/")
+                        val outFile = File(iconsDir, relativePath)
+                        if (entry.isDirectory) {
+                            outFile.mkdirs()
+                        } else {
+                            outFile.parentFile?.mkdirs()
+                            zip.getInputStream(entry).use { input ->
+                                FileOutputStream(outFile).use { output ->
+                                    input.copyTo(output)
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                if (configJson != null) {
+                    val success = importConfig(configJson)
+                    if (success) {
+                        loadWallpaperPresets()
+                    }
+                    success
+                } else {
+                    false
+                }
+            }
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+        false
     }
 }
 
@@ -133,6 +233,7 @@ fun MainViewModel.exportConfig(): String {
             customWallpaperColor = _customWallpaperColor.value,
             favoriteWallpaperColors = _favoriteWallpaperColors.value,
             homeMenuOptions = _homeMenuOptions.value.filterNotNull().toSet(),
+            currentWallpaperPresetName = _currentWallpaperPresetName.value,
             glassParams = GlassParams(
                 blur = _liquidGlassBlur.value,
                 refractionHeight = _liquidGlassRefractionHeight.value,
@@ -193,6 +294,21 @@ fun MainViewModel.importConfig(jsonString: String): Boolean {
     val config = ConfigSerializer.deserializeConfig(jsonString) ?: return false
     return try {
         applyConfig(config)
+        loadWallpaperPresets()
+        val presetName = config.settings.currentWallpaperPresetName
+        if (presetName.isNotBlank()) {
+            _currentWallpaperPresetName.value = presetName
+            prefs.edit().putString("current_wallpaper_preset", presetName).apply()
+            val targetPreset = _wallpaperPresets.value.find { it.name == presetName }
+            if (targetPreset != null) {
+                _activeWallpaperMediaType.value = targetPreset.mediaType
+                _activeWallpaperMediaPath.value = targetPreset.mediaPath
+                prefs.edit().putString("active_wallpaper_media_type", targetPreset.mediaType).apply()
+                prefs.edit().putString("active_wallpaper_media_path", targetPreset.mediaPath ?: "").apply()
+                updateBlurredWallpaper()
+                _wallpaperUpdateSignal.value = System.currentTimeMillis()
+            }
+        }
         true
     } catch (e: Exception) {
         e.printStackTrace()
@@ -319,12 +435,15 @@ fun MainViewModel.applyConfig(config: LauncherConfig) {
         putString("emoji_wallpaper_text", settings.emojiWallpaperText)
         putInt("custom_wallpaper_color", settings.customWallpaperColor)
         putString("favorite_wallpaper_colors", settings.favoriteWallpaperColors.joinToString(","))
+        putString("current_wallpaper_preset", settings.currentWallpaperPresetName)
         
         putStringSet("favorite_packages", config.favorites)
         putStringSet("excluded_themed_packages", config.excludedThemed)
         putStringSet("home_menu_options", settings.homeMenuOptions)
         putStringSet("hidden_apps", config.hiddenApps)
     }.apply()
+
+    _currentWallpaperPresetName.value = settings.currentWallpaperPresetName
 
     _actionMode.value = settings.actionMode
     _iconStyle.value = resolvedStyle

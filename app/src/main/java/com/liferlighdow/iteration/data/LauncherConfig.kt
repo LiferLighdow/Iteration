@@ -83,6 +83,7 @@ data class LauncherSettings(
     val customWallpaperColor: Int = 0,
     val favoriteWallpaperColors: List<Int> = emptyList(),
     val homeMenuOptions: Set<String> = setOf("delete_home", "edit", "uninstall", "shortcuts", "freeze", "hide", "app_info", "favorite"),
+    val currentWallpaperPresetName: String = "",
     val glassParams: GlassParams = GlassParams(),
     val gestures: GestureSettings = GestureSettings(),
     val customIconSettings: CustomIconSettings = CustomIconSettings()

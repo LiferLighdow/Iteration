@@ -178,7 +178,7 @@
     <string name="widget_color_mode">顏色風格</string>
     <string name="settings_backup_restore">備份 &amp; 還原</string>
     <string name="settings_backup_restore_desc">備份和還原您的啟動器佈局和設置</string>
-    <string name="backup_image_notice">注意：備份中不包含圖像檔案（自訂門牌、照片）。之後再做</string>
+    <string name="backup_image_notice">提示：備份已完整包含設置、佈局以及所有圖片檔案（桌布與自訂圖示）。</string>
     <string name="settings_export">匯出您的大膽想法</string>
     <string name="settings_import">匯入您的大膽想法</string>
     <string name="export_success">您的大膽配置已成功匯出</string>
@@ -684,4 +684,6 @@
     <string name="no_backups_found">在 Iteration/Backup 沒發現任何大作呢～</string>
     <string name="nightly_cleanup_title">深夜淨化快取 (00:00)</string>
     <string name="nightly_cleanup_desc">在午夜時分自動淨化圖標與壁紙快取，保持啟動器的靈動與新鮮感。</string>
+    <string name="wallpaper_media_picker">相片 / MP4 影片 / GIF</string>
+    <string name="wallpaper_media_picker_desc">從相簿選擇圖片、動態 GIF 或 MP4 影片動態桌布</string>
 </resources>

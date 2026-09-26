@@ -31,6 +31,7 @@ import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.viewmodel.MainViewModel
 import com.liferlighdow.iteration.utils.ActionMode
 import com.liferlighdow.iteration.viewmodel.exportConfigToFile
+import com.liferlighdow.iteration.viewmodel.importConfigFromFile
 import com.liferlighdow.iteration.viewmodel.hasStoragePermission
 import com.liferlighdow.iteration.viewmodel.requestStoragePermission
 import com.liferlighdow.iteration.viewmodel.importConfig
@@ -621,10 +622,10 @@ fun SettingsMainScreen(
         val documentsDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOCUMENTS)
         val backupDir = File(documentsDir, "Iteration/Backup")
         val configLayout = LocalConfiguration.current
-        var files by remember { mutableStateOf(backupDir.listFiles { f -> f.extension == "json" }?.sortedByDescending { it.lastModified() } ?: emptyList()) }
+        var files by remember { mutableStateOf(backupDir.listFiles { f -> f.extension.equals("json", true) || f.extension.equals("iteration", true) || f.extension.equals("zip", true) }?.sortedByDescending { it.lastModified() } ?: emptyList()) }
 
         fun refreshFiles() {
-            files = backupDir.listFiles { f -> f.extension == "json" }?.sortedByDescending { it.lastModified() } ?: emptyList()
+            files = backupDir.listFiles { f -> f.extension.equals("json", true) || f.extension.equals("iteration", true) || f.extension.equals("zip", true) }?.sortedByDescending { it.lastModified() } ?: emptyList()
         }
 
         AlertDialog(
@@ -646,7 +647,7 @@ fun SettingsMainScreen(
                                 onClick = {
                                     showBackupFilesDialog = false
                                     try {
-                                        if (viewModel.importConfig(file.readText())) Toast.makeText(context, context.getString(R.string.import_success), Toast.LENGTH_LONG).show()
+                                        if (viewModel.importConfigFromFile(file)) Toast.makeText(context, context.getString(R.string.import_success), Toast.LENGTH_LONG).show()
                                         else Toast.makeText(context, context.getString(R.string.import_failed), Toast.LENGTH_SHORT).show()
                                     } catch (e: Exception) { Toast.makeText(context, context.getString(R.string.import_failed_msg, e.message), Toast.LENGTH_SHORT).show() }
                                 },

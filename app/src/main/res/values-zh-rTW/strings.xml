@@ -210,7 +210,7 @@
     <!-- 備份與還原 -->
     <string name="settings_backup_restore">備份與還原</string>
     <string name="settings_backup_restore_desc">備份與還原您的啟動器佈局與設定</string>
-    <string name="backup_image_notice">注意：備份不包含圖片檔案（自訂圖示、照片）。</string>
+    <string name="backup_image_notice">提示：備份已完整包含設定、佈局以及所有圖片檔案（桌布與自訂圖示）。</string>
     <string name="settings_export">匯出配置</string>
     <string name="settings_import">匯入配置</string>
     <string name="export_success">配置匯出成功</string>
@@ -736,4 +736,6 @@
     <string name="background_hue">背景色調: %1$d°</string>
     <string name="background_saturation">背景飽和度: %1$d%%</string>
     <string name="background_brightness">背景明度: %1$d%%</string>
+    <string name="wallpaper_media_picker">相片 / MP4 影片 / GIF</string>
+    <string name="wallpaper_media_picker_desc">從相簿選擇圖片、動態 GIF 或 MP4 影片動態桌布</string>
 </resources>

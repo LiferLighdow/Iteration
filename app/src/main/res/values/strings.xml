@@ -206,7 +206,7 @@
     <!-- Backup & Restore -->
     <string name="settings_backup_restore">Backup &amp; Restore</string>
     <string name="settings_backup_restore_desc">Backup and restore your launcher layout and settings</string>
-    <string name="backup_image_notice">Note: Image files (custom icons, photos) are not included in the backup.</string>
+    <string name="backup_image_notice">Backups now include settings, layout, and image assets (wallpapers and custom icons).</string>
     <string name="settings_export">Export Configuration</string>
     <string name="settings_import">Import Configuration</string>
     <string name="export_success">Configuration exported successfully</string>
@@ -733,4 +733,6 @@
     <string name="background_hue">Background Hue: %1$d°</string>
     <string name="background_saturation">Background Saturation: %1$d%%</string>
     <string name="background_brightness">Background Brightness: %1$d%%</string>
+    <string name="wallpaper_media_picker">Photo / MP4 Video / GIF</string>
+    <string name="wallpaper_media_picker_desc">Choose photo, animated GIF, or MP4 video wallpaper from gallery</string>
 </resources>

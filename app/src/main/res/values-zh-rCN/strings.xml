@@ -206,7 +206,7 @@
     <!-- 备份与还原 -->
     <string name="settings_backup_restore">备份与还原</string>
     <string name="settings_backup_restore_desc">备份与还原您的启动器布局与设置</string>
-    <string name="backup_image_notice">注意：备份不包含图片文件（自定义图标、照片）。</string>
+    <string name="backup_image_notice">提示：备份已完整包含设置、布局以及所有图片文件（壁纸与自定义图标）。</string>
     <string name="settings_export">导出配置</string>
     <string name="settings_import">导入配置</string>
     <string name="export_success">配置导出成功</string>
@@ -729,4 +729,6 @@
     <string name="no_backups_found">在 Iteration/Backup 中找不到任何备份。</string>
     <string name="nightly_cleanup_title">夜间自动清理快取 (00:00)</string>
     <string name="nightly_cleanup_desc">在午夜自动清除图标与壁纸快取，保持启动器性能与新鲜感。</string>
+    <string name="wallpaper_media_picker">照片 / MP4 视频 / GIF</string>
+    <string name="wallpaper_media_picker_desc">从相册选择图片、动态 GIF 或 MP4 视频动态壁纸</string>
 </resources>
