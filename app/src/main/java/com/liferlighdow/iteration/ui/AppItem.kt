@@ -403,12 +403,24 @@ fun FolderIconContent(
             .padding(4.dp),
         contentAlignment = Alignment.Center
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Row(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 FolderPreviewIcon(app.folderItems.getOrNull(0), iconSize / 2.5f, iconCornerRadius, getIcon)
                 FolderPreviewIcon(app.folderItems.getOrNull(1), iconSize / 2.5f, iconCornerRadius, getIcon)
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+            Row(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 FolderPreviewIcon(app.folderItems.getOrNull(2), iconSize / 2.5f, iconCornerRadius, getIcon)
                 FolderPreviewIcon(app.folderItems.getOrNull(3), iconSize / 2.5f, iconCornerRadius, getIcon)
             }

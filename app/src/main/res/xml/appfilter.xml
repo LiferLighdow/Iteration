@@ -37,6 +37,7 @@
     <item component="com.generalmagic.magicearth" drawable="ic_builtin_maps" />
     <item component="com.tencent.map" drawable="ic_builtin_maps" />
     <item component="com.google.android.apps.mapslite" drawable="ic_builtin_maps" />
+    <item component="app.organicmaps" drawble="ic_builtin_maps" />
 
     <!-- Mail -->
     <item component="com.google.android.gm" drawable="ic_builtin_mail" />
@@ -68,6 +69,7 @@
     <item component="org.lineageos.eleven" drawable="ic_builtin_music" />
     <item component="com.msob7y.namida" drawable="ic_builtin_music" />
     <item component="io.github.muntashirakon.Music" drawable="ic_builtin_music" />
+    <item component="org.akanework.gramophone" drawable="ic_builtin_music" />
 
     <!-- Calculator -->
     <item component="com.android.calculator2" drawable="ic_builtin_calculator" />
@@ -123,6 +125,8 @@
     <item component="com.asus.soundrecorder" drawable="ic_builtin_recorder" />
     <item component="com.oneplus.soundrecorder" drawable="ic_builtin_recorder" />
     <item component="org.lineageos.recorder" drawable="ic_builtin_recorder" />
+    <item component="com.samsung.android.app.voicerecorder" drawable="ic_builtin_recorder" />
+    <item component="com.libremobileos.recorder" drawable="ic_builtin_recorder" />
 
     <!-- Notes -->
     <item component="com.google.android.keep" drawable="ic_builtin_note" />
@@ -134,7 +138,6 @@
     <item component="com.huawei.notepad" drawable="ic_builtin_note" />
     <item component="com.asus.note" drawable="ic_builtin_note" />
     <item component="com.meizu.notepaper" drawable="ic_builtin_note" />
-    <item component="org.lineageos.jelly" drawable="ic_builtin_note" />
     <item component="com.standardnotes" drawable="ic_builtin_note" />
     <item component="com.zoho.notebook" drawable="ic_builtin_note" />
     <item component="com.simplenote" drawable="ic_builtin_note" />

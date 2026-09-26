@@ -55,6 +55,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
+import com.liferlighdow.iteration.ui.components.VideoWallpaperPlayer
+import com.liferlighdow.iteration.ui.components.GifWallpaperPlayer
 import com.liferlighdow.iteration.utils.GestureAction
 import com.liferlighdow.iteration.viewmodel.*
 import com.liferlighdow.iteration.service.NotificationService
@@ -74,6 +76,8 @@ fun LauncherScreen(
 ) {
     val blurredWallpaper by viewModel.blurredWallpaper.collectAsState()
     val rawWallpaper by viewModel.rawWallpaper.collectAsState()
+    val activeWallpaperMediaType by viewModel.activeWallpaperMediaType.collectAsState()
+    val activeWallpaperMediaPath by viewModel.activeWallpaperMediaPath.collectAsState()
     val wallpaperSignal by viewModel.wallpaperUpdateSignal.collectAsState()
 
     // 唯一的採樣器，確保座標對齊
@@ -493,14 +497,30 @@ fun LauncherScreen(
                     .fillMaxSize()
                     .layerBackdrop(backdrop)
             ) {
-                // 底層：系統桌布圖片 (在 Lite/Balance 下是 1x1 純色)
-                rawWallpaper?.let {
-                    Image(
-                        bitmap = it,
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
+                // 底層：動態桌布 (VIDEO/GIF) 或 靜態桌布圖片
+                when {
+                    activeWallpaperMediaType == "VIDEO" && !activeWallpaperMediaPath.isNullOrEmpty() -> {
+                        VideoWallpaperPlayer(
+                            videoPath = activeWallpaperMediaPath!!,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                    activeWallpaperMediaType == "GIF" && !activeWallpaperMediaPath.isNullOrEmpty() -> {
+                        GifWallpaperPlayer(
+                            gifPath = activeWallpaperMediaPath!!,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                    else -> {
+                        rawWallpaper?.let {
+                            Image(
+                                bitmap = it,
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                    }
                 }
 
                 // 中層：Lite 模式即時渲染的 Emoji 陣列

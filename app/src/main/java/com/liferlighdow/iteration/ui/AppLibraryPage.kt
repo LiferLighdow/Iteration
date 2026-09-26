@@ -53,6 +53,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.text.font.FontWeight
+import com.liferlighdow.iteration.ui.components.getAppIconShape
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType.Companion.LongPress
@@ -642,9 +644,16 @@ fun AppLibraryFolder(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(folderPadding),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                         val lockShape = computedShape
                         val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
@@ -684,7 +693,13 @@ fun AppLibraryFolder(
                         }
                     }
                 }
-                Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                         val lockShape = computedShape
                         val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
@@ -719,7 +734,24 @@ fun AppLibraryFolder(
                                 Icon(Icons.Default.Lock, null, tint = Color.White, modifier = Modifier.size(internalIconSize * 0.5f))
                             }
                         }
-                        else if (apps.size > 4) Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.2f), lockShape).clickable { onMoreClick() }, contentAlignment = Alignment.Center) { Text(stringResource(R.string.plus_more, apps.size - 3), color = Color.White, style = MaterialTheme.typography.headlineSmall) }
+                        else if (apps.size > 4) {
+                            val plusShape = if (isCircle) CircleShape else getAppIconShape(iconCornerRadius, internalIconSize)
+                            Box(
+                                modifier = Modifier
+                                    .size(internalIconSize)
+                                    .clip(plusShape)
+                                    .background(Color.Black.copy(alpha = 0.35f), plusShape)
+                                    .clickable { onMoreClick() },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.plus_more, apps.size - 3),
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
                         else apps.getOrNull(3)?.let { app ->
                             LibraryItemWithMenu(app, name, iconCornerRadius, internalIconSize, onAppClick)
                         }

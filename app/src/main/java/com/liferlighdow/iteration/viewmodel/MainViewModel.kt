@@ -61,6 +61,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
     internal val _rawWallpaper = MutableStateFlow<ImageBitmap?>(null)
     val rawWallpaper = _rawWallpaper.asStateFlow()
 
+    internal val _activeWallpaperMediaType = MutableStateFlow(prefs.getString("active_wallpaper_media_type", "IMAGE") ?: "IMAGE")
+    val activeWallpaperMediaType = _activeWallpaperMediaType.asStateFlow()
+
+    internal val _activeWallpaperMediaPath = MutableStateFlow<String?>(prefs.getString("active_wallpaper_media_path", null)?.ifEmpty { null })
+    val activeWallpaperMediaPath = _activeWallpaperMediaPath.asStateFlow()
+
     internal val _seedColor = MutableStateFlow<Int?>(null)
     val seedColor = _seedColor.asStateFlow()
 
@@ -225,7 +231,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
         "com.google.android.calendar", "com.android.calendar", "com.samsung.android.calendar",
         "com.miui.calendar", "com.huawei.calendar", "com.oppo.calendar", "com.bbk.calendar",
         "com.sonymobile.calendar", "com.htc.calendar", "com.google.android.calendar.AllInOneActivity",
-        "org.lineageos.etar","ws.xsoh.etar"
+        "org.lineageos.etar","ws.xsoh.etar","com.libremobileos.etar"
     )
 
     val clockPackages = setOf(
@@ -265,6 +271,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
     }
 
     fun onForeground() {
+        refreshWallpaperFromPrefs()
         // 當 App 回到前景時，如果資源已被釋放，則恢復它們
         if (isResourcesReleased) {
             isResourcesReleased = false
@@ -915,12 +922,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
                 "com.liferlighdow.iteration.ACTION_REFRESH_APPS",
-                "com.liferlighdow.iteration.ACTION_REFRESH_WALLPAPER",
                 Intent.ACTION_MANAGED_PROFILE_UNLOCKED,
                 Intent.ACTION_MANAGED_PROFILE_AVAILABLE,
                 Intent.ACTION_MANAGED_PROFILE_UNAVAILABLE,
                 "android.intent.action.PROFILE_ACCESSIBLE",
                 "android.intent.action.PROFILE_INACCESSIBLE" -> refreshApps()
+                "com.liferlighdow.iteration.ACTION_REFRESH_WALLPAPER" -> refreshWallpaperFromPrefs()
                 "com.liferlighdow.iteration.ACTION_CLEAR_CACHE_SILENT" -> {
                     iconCache.evictAll()
                     iconProcessor.clearCache()

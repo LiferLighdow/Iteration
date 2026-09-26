@@ -13,7 +13,9 @@ data class WallpaperConfig(
     val wallpaperColor: Int? = null,
     val emojiText: String? = null,
     val emojiPatternStyle: String? = null,
-    val renderingMode: String? = null
+    val renderingMode: String? = null,
+    val mediaType: String? = null, // "IMAGE", "VIDEO", "GIF"
+    val mediaPath: String? = null
 )
 
 enum class EmojiRenderingMode {
@@ -30,5 +32,7 @@ data class WallpaperPreset(
     val previewPath: String?,
     val wallpaperPath: String,
     val originalPath: String?,
-    val config: WallpaperConfig?
+    val config: WallpaperConfig?,
+    val mediaType: String = "IMAGE", // "IMAGE", "VIDEO", "GIF"
+    val mediaPath: String? = null
 )

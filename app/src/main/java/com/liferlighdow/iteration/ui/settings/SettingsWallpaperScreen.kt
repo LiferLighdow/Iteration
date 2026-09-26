@@ -71,7 +71,16 @@ fun SettingsWallpaperScreen(onBack: () -> Unit) {
     }
 
     val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        pickedUri = uri
+        uri?.let {
+            val contentResolver = context.contentResolver
+            val mimeType = contentResolver.getType(it) ?: ""
+            if (mimeType.startsWith("video/") || mimeType.contains("gif", ignoreCase = true)) {
+                val name = "Live_${System.currentTimeMillis()}"
+                viewModel.addNewMediaWallpaperPreset(it, name)
+            } else {
+                pickedUri = it
+            }
+        }
     }
 
     val scrollState = rememberScrollState()
@@ -207,12 +216,12 @@ fun SettingsWallpaperScreen(onBack: () -> Unit) {
                     }
 
                     ListItem(
-                        headlineContent = { Text(stringResource(R.string.widget_photo)) },
-                        supportingContent = { Text(stringResource(R.string.select_wallpaper_type_desc)) },
-                        leadingContent = { Icon(Icons.Default.Image, null, tint = MaterialTheme.colorScheme.primary) },
+                        headlineContent = { Text("相片 / MP4 影片 / GIF") },
+                        supportingContent = { Text("從相簿選擇圖片、動態 GIF 或 MP4 影片動態桌布") },
+                        leadingContent = { Icon(Icons.Default.VideoLibrary, null, tint = MaterialTheme.colorScheme.primary) },
                         modifier = Modifier.clickable {
                             showTypeDialog = false
-                            galleryLauncher.launch("image/*")
+                            galleryLauncher.launch("*/*")
                         }
                     )
 
@@ -568,6 +577,35 @@ fun WallpaperPresetCard(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(Icons.Default.Check, null, tint = Color.White, modifier = Modifier.size(18.dp))
+            }
+        }
+
+        if (preset.mediaType == "VIDEO" || preset.mediaType == "GIF") {
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(16.dp),
+                color = Color.Black.copy(alpha = 0.55f),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        if (preset.mediaType == "VIDEO") Icons.Default.PlayArrow else Icons.Default.Gif,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = if (preset.mediaType == "VIDEO") "VIDEO" else "GIF",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
         
