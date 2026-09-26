@@ -286,12 +286,12 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
                                     Icon(Icons.Default.Remove, contentDescription = null)
                                 }
                                 Slider(
-                                    value = dockCornerRadius,
+                                    value = dockCornerRadius.coerceIn(0f, 50f),
                                     onValueChange = { viewModel.setDockCornerRadius(it) },
-                                    valueRange = 0f..100f,
+                                    valueRange = 0f..50f,
                                     modifier = Modifier.weight(1f)
                                 )
-                                IconButton(onClick = { viewModel.setDockCornerRadius((dockCornerRadius + 1f).coerceAtMost(100f)) }) {
+                                IconButton(onClick = { viewModel.setDockCornerRadius((dockCornerRadius + 1f).coerceAtMost(50f)) }) {
                                     Icon(Icons.Default.Add, contentDescription = null)
                                 }
                             }

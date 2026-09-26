@@ -519,8 +519,9 @@ fun MainViewModel.setDockStyle(style: DockStyle) {
 }
 
 fun MainViewModel.setDockCornerRadius(radius: Float) {
-    _dockCornerRadius.value = radius
-    prefs.edit().putFloat("dock_corner_radius", radius).apply()
+    val clamped = radius.coerceIn(0f, 50f)
+    _dockCornerRadius.value = clamped
+    prefs.edit().putFloat("dock_corner_radius", clamped).apply()
 }
 
 fun MainViewModel.setDockOffset(offset: Float) {
