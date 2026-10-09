@@ -133,6 +133,11 @@ fun MainViewModel.setLongPressApp(packageName: String) {
     prefs.edit().putString("long_press_app", packageName).apply()
 }
 
+fun MainViewModel.setDesktopLongPressTimeout(millis: Long) {
+    _desktopLongPressTimeout.value = millis
+    prefs.edit().putLong("desktop_long_press_timeout", millis).apply()
+}
+
 fun MainViewModel.setTwoFingerSwipeUpAction(action: GestureAction) {
     _twoFingerSwipeUpAction.value = action
     prefs.edit().putString("two_finger_swipe_up_action", action.name).apply()
@@ -146,6 +151,7 @@ fun MainViewModel.setTwoFingerSwipeDownAction(action: GestureAction) {
 fun MainViewModel.resetGestures() {
     setDoubleTapAction(GestureAction.NONE)
     setSwipeUpAction(GestureAction.NONE)
+    setIsSwipeDownSplit(false)
     setSwipeDownAction(GestureAction.OPEN_GLOBAL_SEARCH)
     setLongPressAction(GestureAction.OPEN_DESKTOP_MENU)
     setTwoFingerSwipeUpAction(GestureAction.NONE)
@@ -155,10 +161,12 @@ fun MainViewModel.resetGestures() {
 fun MainViewModel.applySuggestedGestures() {
     setDoubleTapAction(GestureAction.LOCK_SCREEN)
     setSwipeUpAction(GestureAction.LAUNCHER_SETTINGS)
-    setSwipeDownAction(GestureAction.OPEN_GLOBAL_SEARCH)
+    setIsSwipeDownSplit(true)
+    setSwipeDownLeftAction(GestureAction.OPEN_GLOBAL_SEARCH)
+    setSwipeDownRightAction(GestureAction.OPEN_NOTIFICATIONS)
     setLongPressAction(GestureAction.OPEN_DESKTOP_MENU)
     setTwoFingerSwipeUpAction(GestureAction.OPEN_SYSTEM_SETTINGS)
-    setTwoFingerSwipeDownAction(GestureAction.OPEN_NOTIFICATIONS)
+    setTwoFingerSwipeDownAction(GestureAction.NONE)
 }
 
 fun MainViewModel.setTwoFingerSwipeUpApp(packageName: String) {

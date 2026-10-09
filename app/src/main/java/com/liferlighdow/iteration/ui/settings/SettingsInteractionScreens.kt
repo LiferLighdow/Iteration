@@ -112,7 +112,7 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
 
             // --- System UI ---
             item {
-                SettingsSection(title = "系統介面") {
+                SettingsSection(title = stringResource(R.string.settings_system_ui)) {
                     SettingSwitchItem(
                         icon = Icons.Default.Expand,
                         title = stringResource(R.string.show_status_bar),
@@ -202,7 +202,7 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
 
             // --- Desktop Grid & Dock ---
             item {
-                SettingsSection(title = "佈局與底欄") {
+                SettingsSection(title = stringResource(R.string.settings_layout_and_dock)) {
                     var expandedGrid by remember { mutableStateOf(false) }
                     val configuration = LocalConfiguration.current
                     val isLongScreen = configuration.screenHeightDp.toFloat() / configuration.screenWidthDp.toFloat() >= 1.8f

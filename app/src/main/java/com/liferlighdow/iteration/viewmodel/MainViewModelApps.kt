@@ -777,6 +777,7 @@ fun MainViewModel.loadSettings() {
     }
     _swipeDownApp.value = prefs.getString("swipe_down_app", "") ?: ""
     _longPressApp.value = prefs.getString("long_press_app", "") ?: ""
+    _desktopLongPressTimeout.value = prefs.getLong("desktop_long_press_timeout", 500L)
     _twoFingerSwipeUpAction.value = try {
         GestureAction.valueOf(prefs.getString("two_finger_swipe_up_action", "NONE") ?: "NONE")
     } catch (e: Exception) {
@@ -1199,7 +1200,13 @@ fun MainViewModel.loadApps() {
             } else {
                 // 從舊版 package names 構建
                 val list = _dockPackageNames.value.map { pkg ->
-                    processedApps.find { it.packageName == pkg } ?: AppModel(label = "", packageName = "", uniqueId = "empty_dock_${System.currentTimeMillis()}")
+                    if (pkg.isEmpty()) {
+                        AppModel(label = "", packageName = "", uniqueId = "empty_dock_${System.currentTimeMillis()}")
+                    } else {
+                        processedApps.find { it.packageName == pkg && (it.label.contains("电话") || it.label.contains("電話") || it.label.contains("Phone") || it.label.contains("Dial") || it.label.contains("拨号") || it.label.contains("撥號")) }
+                            ?: processedApps.find { it.packageName == pkg }
+                            ?: AppModel(label = "", packageName = "", uniqueId = "empty_dock_${System.currentTimeMillis()}")
+                    }
                 }
                 _dockItems.value = list
                 saveDock()
@@ -1220,7 +1227,8 @@ fun MainViewModel.loadApps() {
                         dockApp
                     }
                 } else if (dockApp.packageName.isNotEmpty()) {
-                    val base = processedApps.find { it.packageName == dockApp.packageName && it.userId == dockApp.userId }
+                    val base = processedApps.find { it.uniqueId == dockApp.uniqueId }
+                        ?: processedApps.find { it.packageName == dockApp.packageName && it.userId == dockApp.userId }
                     if (base != null && !base.isHidden && !base.isFrozen && !base.isPrivate) {
                         base
                     } else {
@@ -1610,8 +1618,11 @@ private fun MainViewModel.findDefaultDockApps(processedApps: List<AppModel>): Li
     val addedPackages = mutableSetOf<String>()
 
     // 1. 尋找預設電話 (Dialer / Phone)
+    val dialIntent = Intent(Intent.ACTION_DIAL)
+    val dialResolve = pm.resolveActivity(dialIntent, PackageManager.MATCH_DEFAULT_ONLY)
     val phonePkg = (context.getSystemService(Context.TELECOM_SERVICE) as? android.telecom.TelecomManager)?.defaultDialerPackage
-        ?: pm.resolveActivity(Intent(Intent.ACTION_DIAL), PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.packageName
+        ?: dialResolve?.activityInfo?.packageName
+    val dialActivityName = dialResolve?.activityInfo?.name
 
     // 2. 尋找預設簡訊 (SMS)
     val smsPkg = android.provider.Telephony.Sms.getDefaultSmsPackage(context)
@@ -1632,7 +1643,16 @@ private fun MainViewModel.findDefaultDockApps(processedApps: List<AppModel>): Li
 
     for (pkg in targetPackages) {
         if (!addedPackages.contains(pkg)) {
-            processedApps.find { it.packageName == pkg }?.let {
+            val app = if (pkg == phonePkg) {
+                // 優先使用精確 Activity 名稱或「電話」名稱過濾，避免在電話與聯絡人同包名時誤選聯絡人 (PeopleActivity)
+                processedApps.find { it.packageName == pkg && dialActivityName != null && it.uniqueId.contains(dialActivityName) }
+                    ?: processedApps.find { it.packageName == pkg && (it.label.contains("电话") || it.label.contains("電話") || it.label.contains("Phone") || it.label.contains("Dial") || it.label.contains("拨号") || it.label.contains("撥號")) }
+                    ?: processedApps.find { it.packageName == pkg }
+            } else {
+                processedApps.find { it.packageName == pkg }
+            }
+
+            app?.let {
                 result.add(it)
                 addedPackages.add(pkg)
             }

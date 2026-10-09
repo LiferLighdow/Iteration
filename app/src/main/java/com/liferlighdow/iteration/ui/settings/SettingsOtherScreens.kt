@@ -204,7 +204,7 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
             // --- 基礎權限 ---
             item {
                 Text(
-                    "基礎權限",
+                    stringResource(R.string.basic_permissions),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
@@ -238,7 +238,7 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
             // --- 進階權限 ---
             item {
                 Text(
-                    "進階權限",
+                    stringResource(R.string.advanced_permissions),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
@@ -324,7 +324,7 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
                             Column {
                                 Text(stringResource(R.string.action_mode_desc))
                                 Text(
-                                    "目前模式: $currentLabel",
+                                    stringResource(R.string.current_mode_label, currentLabel),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.padding(top = 4.dp)
@@ -335,7 +335,7 @@ fun PermissionsSettingsScreen(onBack: () -> Unit) {
                         trailingContent = {
                             Box {
                                 TextButton(onClick = { expanded = true }) {
-                                    Text("切換")
+                                    Text(stringResource(R.string.switch_button))
                                     Icon(Icons.Default.ArrowDropDown, null)
                                 }
                                 DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
@@ -617,12 +617,12 @@ fun SearchEngineSettingsScreen(onBack: () -> Unit) {
     var customUrl by remember { mutableStateOf(currentSearchEngineUrl) }
 
     val categories = listOf(
-        "熱門主流" to listOf(
+        stringResource(R.string.cat_popular_mainstream) to listOf(
             "Google" to "https://www.google.com/search?q=",
             "Microsoft Bing" to "https://www.bing.com/search?q=",
             "Yahoo!" to "https://search.yahoo.com/search?p="
         ),
-        "隱私優先" to listOf(
+        stringResource(R.string.cat_privacy_first) to listOf(
             "DuckDuckGo" to "https://duckduckgo.com/?q=",
             "Brave Search" to "https://search.brave.com/search?q=",
             "Startpage" to "https://www.startpage.com/do/search?q=",
@@ -630,7 +630,7 @@ fun SearchEngineSettingsScreen(onBack: () -> Unit) {
             "Swisscows" to "https://swisscows.com/web?query=",
             "Qwant" to "https://www.qwant.com/?q="
         ),
-        "AI 助手" to listOf(
+        stringResource(R.string.cat_ai_assistant) to listOf(
             "Google Gemini" to "https://gemini.google.com/app?q=",
             "ChatGPT" to "https://chatgpt.com/?q=",
             "Microsoft Copilot" to "https://copilot.microsoft.com/?q=",
@@ -641,7 +641,7 @@ fun SearchEngineSettingsScreen(onBack: () -> Unit) {
             "Genspark" to "https://www.genspark.ai/search?q=",
             "Andi" to "https://andisearch.com/?q="
         ),
-        "地區與特色" to listOf(
+        stringResource(R.string.cat_regional_special) to listOf(
             "Baidu" to "https://www.baidu.com/s?wd=",
             "Yandex" to "https://yandex.com/search/?text=",
             "Naver" to "https://search.naver.com/search.naver?query=",
@@ -1116,6 +1116,67 @@ fun AdvancedSettingsScreen(onBack: () -> Unit) {
 
                         IconButton(onClick = {
                             viewModel.setPagerDampingRatio((pagerDampingRatio + 0.05f).coerceAtMost(1.2f))
+                        }) {
+                            Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp))
+
+                    // --- Desktop Long Press Duration ---
+                    val desktopLongPressTimeout by viewModel.desktopLongPressTimeout.collectAsState()
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            stringResource(R.string.desktop_long_press_duration_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        TextButton(
+                            onClick = { viewModel.setDesktopLongPressTimeout(500L) },
+                            enabled = desktopLongPressTimeout != 500L
+                        ) {
+                            Icon(Icons.Default.Restore, null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text(stringResource(R.string.restore_default))
+                        }
+                    }
+                    Text(
+                        stringResource(R.string.desktop_long_press_duration_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        stringResource(R.string.desktop_long_press_duration_current, desktopLongPressTimeout),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                    ) {
+                        IconButton(onClick = {
+                            viewModel.setDesktopLongPressTimeout((desktopLongPressTimeout - 50L).coerceAtLeast(100L))
+                        }) {
+                            Icon(Icons.Default.Remove, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        }
+
+                        Slider(
+                            value = desktopLongPressTimeout.toFloat(),
+                            onValueChange = { viewModel.setDesktopLongPressTimeout(it.roundToInt().toLong().coerceIn(100L, 1000L)) },
+                            valueRange = 100f..1000f,
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        IconButton(onClick = {
+                            viewModel.setDesktopLongPressTimeout((desktopLongPressTimeout + 50L).coerceAtMost(1000L))
                         }) {
                             Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         }

@@ -494,6 +494,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
     internal val _longPressApp = MutableStateFlow(prefs.getString("long_press_app", "") ?: "")
     val longPressApp = _longPressApp.asStateFlow()
 
+    internal val _desktopLongPressTimeout = MutableStateFlow(prefs.getLong("desktop_long_press_timeout", 500L))
+    val desktopLongPressTimeout = _desktopLongPressTimeout.asStateFlow()
+
     internal val _twoFingerSwipeUpAction = MutableStateFlow(
         try {
             GestureAction.valueOf(prefs.getString("two_finger_swipe_up_action", "NONE") ?: "NONE")

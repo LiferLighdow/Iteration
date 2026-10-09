@@ -14,15 +14,24 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AcUnit
+import androidx.compose.ui.input.pointer.PointerInputChange
+import androidx.compose.ui.input.pointer.PointerInputScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.material.icons.filled.BlurOn
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
@@ -49,6 +58,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.input.pointer.pointerInput
@@ -140,6 +150,7 @@ fun AppGrid(
     val mediaInfo by NotificationService.currentMedia.collectAsState()
     val mContext = LocalContext.current
     val hideAppLabelPrefs by viewModel.hideAppLabel.collectAsState()
+    val desktopLongPressTimeout by viewModel.desktopLongPressTimeout.collectAsState()
     val configuration = androidx.compose.ui.platform.LocalConfiguration.current
     val screenRatio = configuration.screenHeightDp.toFloat() / configuration.screenWidthDp.toFloat()
     
@@ -351,11 +362,13 @@ fun AppGrid(
                     }
                 }
             }
-            .pointerInput(isEditMode) {
-                detectTapGestures(
+            .pointerInput(isEditMode, desktopLongPressTimeout) {
+                detectTapGesturesWithCustomTimeout(
+                    viewModel = viewModel,
                     onDoubleTap = { onBackgroundDoubleTap() },
                     onLongPress = { onBackgroundLongPress() },
-                    onTap = { onBackgroundClick() }
+                    onTap = { onBackgroundClick() },
+                    longPressTimeoutMillis = desktopLongPressTimeout
                 )
             }
     ) {
@@ -1292,5 +1305,83 @@ private fun AppGridItem(
         }
     }
 }
+
+private suspend fun PointerInputScope.detectTapGesturesWithCustomTimeout(
+    viewModel: MainViewModel,
+    onDoubleTap: ((Offset) -> Unit)? = null,
+    onLongPress: ((Offset) -> Unit)? = null,
+    onTap: ((Offset) -> Unit)? = null,
+    longPressTimeoutMillis: Long = 500L
+) {
+    coroutineScope {
+        awaitEachGesture {
+            val down = awaitFirstDown(requireUnconsumed = false)
+            if (viewModel.pressedItemId.value != null || viewModel.activeContextMenuId.value != null) {
+                return@awaitEachGesture
+            }
+            down.consume()
+
+            var longPressJob: Job? = null
+            if (onLongPress != null) {
+                longPressJob = launch {
+                    delay(longPressTimeoutMillis)
+                    if (viewModel.pressedItemId.value == null && viewModel.activeContextMenuId.value == null) {
+                        onLongPress.invoke(down.position)
+                    }
+                }
+            }
+
+            val upOrCancel = waitForUpOrCancellation()
+            longPressJob?.cancel()
+
+            if (upOrCancel != null) {
+                upOrCancel.consume()
+                if (longPressJob == null || !longPressJob.isCompleted) {
+                    if (viewModel.pressedItemId.value == null && viewModel.activeContextMenuId.value == null) {
+                        if (onDoubleTap == null) {
+                            onTap?.invoke(upOrCancel.position)
+                        } else {
+                            val secondDown = withTimeoutOrNull(viewConfiguration.doubleTapTimeoutMillis) {
+                                var result: PointerInputChange? = null
+                                while (result == null) {
+                                    val event = awaitPointerEvent()
+                                    for (i in event.changes.indices) {
+                                        val change = event.changes[i]
+                                        if (change.pressed && !change.previousPressed) {
+                                            result = change
+                                            break
+                                        }
+                                    }
+                                }
+                                result
+                            }
+                            if (secondDown == null) {
+                                onTap?.invoke(upOrCancel.position)
+                            } else {
+                                secondDown.consume()
+                                var secondLongPressJob: Job? = null
+                                if (onLongPress != null) {
+                                    secondLongPressJob = launch {
+                                        delay(longPressTimeoutMillis)
+                                        if (viewModel.pressedItemId.value == null && viewModel.activeContextMenuId.value == null) {
+                                            onLongPress.invoke(secondDown.position)
+                                        }
+                                    }
+                                }
+                                val secondUp = waitForUpOrCancellation()
+                                secondLongPressJob?.cancel()
+                                if (secondUp != null) {
+                                    secondUp.consume()
+                                    onDoubleTap.invoke(secondUp.position)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 
 

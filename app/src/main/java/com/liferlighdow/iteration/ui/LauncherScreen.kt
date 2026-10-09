@@ -52,6 +52,8 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
@@ -82,6 +84,7 @@ fun LauncherScreen(
 
     // 唯一的採樣器，確保座標對齊
     val backdrop = rememberLayerBackdrop()
+    val haptic = LocalHapticFeedback.current
 
     // 當訊號改變時，強制重新加載
     LaunchedEffect(wallpaperSignal) {
@@ -173,6 +176,9 @@ fun LauncherScreen(
     )
 
     fun performGestureAction(action: GestureAction, pkg: String) {
+        if (action != GestureAction.NONE) {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        }
         com.liferlighdow.iteration.utils.performGestureAction(
             action = action,
             pkg = pkg,
@@ -769,8 +775,9 @@ fun LauncherScreen(
                                     if (pageIndex != pagerState.currentPage) return@AppGrid
                                     if (!isEditMode) {
                                         if (isDesktopLocked) {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                             showDesktopMenu = true
-                                        } else {
+                                        } else if (longPressAction != GestureAction.NONE) {
                                             performGestureAction(longPressAction, longPressApp)
                                         }
                                     }
@@ -827,6 +834,7 @@ fun LauncherScreen(
                                     if (pageIndex != pagerState.currentPage) return@AppGrid
                                     if (!isEditMode && swipeDownAction == GestureAction.OPEN_GLOBAL_SEARCH) {
                                         if (finalOffset > 80f) {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                             showGlobalSearch = true
                                         }
                                         searchDragOffset = 0f

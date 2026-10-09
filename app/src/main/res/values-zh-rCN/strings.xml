@@ -343,6 +343,21 @@
 
     <!-- 设置 - 桌面与布局 -->
     <string name="desktop_settings_title">桌面设置</string>
+    <string name="settings_system_ui">系统界面</string>
+    <string name="settings_layout_and_dock">布局与底栏</string>
+    <string name="desktop_long_press_duration_title">桌面长按触发时间</string>
+    <string name="desktop_long_press_duration_desc">调整长按桌面空白处触发手势或菜单所需的按压时间</string>
+    <string name="desktop_long_press_duration_current">当前：%1$d ms</string>
+    <string name="basic_permissions">基础权限</string>
+    <string name="advanced_permissions">进阶权限</string>
+    <string name="current_mode_label">当前模式：%1$s</string>
+    <string name="switch_button">切换</string>
+    <string name="cat_popular_mainstream">热门主流</string>
+    <string name="cat_privacy_first">隐私优先</string>
+    <string name="cat_ai_assistant">AI 助手</string>
+    <string name="cat_regional_special">地区与特色</string>
+    <string name="wallpaper_conflict_title">名称冲突</string>
+    <string name="wallpaper_conflict_msg">已经存在名为 "%1$s" 的壁纸预设。请选择不同的名称。</string>
     <string name="show_minus_one">显示负一屏</string>
     <string name="show_minus_one_desc">切换左侧的小部件页面</string>
     <string name="show_library">显示资源库</string>

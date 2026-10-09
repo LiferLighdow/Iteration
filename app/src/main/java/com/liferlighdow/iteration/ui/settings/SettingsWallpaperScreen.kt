@@ -457,8 +457,8 @@ fun SettingsWallpaperScreen(onBack: () -> Unit) {
     if (showNameConflictWarning != null) {
         AlertDialog(
             onDismissRequest = { showNameConflictWarning = null },
-            title = { Text("名稱衝突") },
-            text = { Text("已經存在名為 \"${showNameConflictWarning}\" 的桌布預設。請選擇不同的名稱。") },
+            title = { Text(stringResource(R.string.wallpaper_conflict_title)) },
+            text = { Text(stringResource(R.string.wallpaper_conflict_msg, showNameConflictWarning ?: "")) },
             confirmButton = {
                 TextButton(onClick = { showNameConflictWarning = null }) { Text(stringResource(R.string.got_it)) }
             }
