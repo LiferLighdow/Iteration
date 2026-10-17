@@ -700,7 +700,7 @@ fun MainViewModel.loadSettings() {
     val newLiquidBlur = prefs.getFloat("liquid_glass_blur", 0f)
     val newLiquidRefractionHeight = prefs.getFloat("liquid_glass_refraction_height", 24f)
     val newLiquidRefractionAmount = prefs.getFloat("liquid_glass_refraction_amount", 48f)
-    val newLiquidChromaticAberration = prefs.getBoolean("liquid_glass_chromatic_aberration", true)
+    val newLiquidChromaticAberration = prefs.getBoolean("liquid_glass_chromatic_aberration", false)
     val newDoubleTapActionStr = prefs.getString("double_tap_action", "NONE") ?: "NONE"
     val newDoubleTapAction = try { GestureAction.valueOf(newDoubleTapActionStr) } catch (e: Exception) { GestureAction.NONE }
     val newIconPackPackage = prefs.getString("icon_pack_package", "") ?: ""

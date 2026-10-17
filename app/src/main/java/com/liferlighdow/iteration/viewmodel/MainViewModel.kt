@@ -354,7 +354,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
     val liquidGlassRefractionAmount = _liquidGlassRefractionAmount.asStateFlow()
 
     internal val _liquidGlassChromaticAberration =
-        MutableStateFlow(prefs.getBoolean("liquid_glass_chromatic_aberration", true))
+        MutableStateFlow(prefs.getBoolean("liquid_glass_chromatic_aberration", false))
     val liquidGlassChromaticAberration = _liquidGlassChromaticAberration.asStateFlow()
 
     internal val _liquidGlassColorAdjustmentEnabled =
@@ -681,9 +681,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
 
     internal val _libraryCornerRadius = MutableStateFlow(
         if (prefs?.contains("library_corner_radius") == true) {
-            prefs?.getFloat("library_corner_radius", 0.25f) ?: 0.25f
+            prefs?.getFloat("library_corner_radius", 0.15f) ?: 0.15f
         } else {
-            if (_libraryShape.value == IconShape.CIRCLE) 0.5f else 0.25f
+            if (_libraryShape.value == IconShape.CIRCLE) 0.5f else 0.15f
         }
     )
     val libraryCornerRadius = _libraryCornerRadius.asStateFlow()
@@ -1023,7 +1023,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
             "liquid_glass_blur" -> _liquidGlassBlur.value = sharedPreferences.getFloat(key, 0f)
             "liquid_glass_refraction_height" -> _liquidGlassRefractionHeight.value = sharedPreferences.getFloat(key, 24f)
             "liquid_glass_refraction_amount" -> _liquidGlassRefractionAmount.value = sharedPreferences.getFloat(key, 48f)
-            "liquid_glass_chromatic_aberration" -> _liquidGlassChromaticAberration.value = sharedPreferences.getBoolean(key, true)
+            "liquid_glass_chromatic_aberration" -> _liquidGlassChromaticAberration.value = sharedPreferences.getBoolean(key, false)
             "liquid_glass_minus_one_widget" -> _isLiquidGlassMinusOneWidgetEnabled.value = sharedPreferences.getBoolean(key, false)
             "liquid_glass_minus_one_search" -> _isLiquidGlassMinusOneSearchEnabled.value = sharedPreferences.getBoolean(key, false)
             "liquid_glass_minus_one_button" -> _isLiquidGlassMinusOneButtonEnabled.value = sharedPreferences.getBoolean(key, false)
@@ -1225,7 +1225,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
         val p = sharedPreferences ?: return
         when (key) {
             "icon_corner_radius" -> _iconCornerRadius.value = p.getFloat(key, 0.25f)
-            "library_corner_radius" -> _libraryCornerRadius.value = p.getFloat(key, 0.25f)
+            "library_corner_radius" -> _libraryCornerRadius.value = p.getFloat(key, 0.15f)
             "icon_shape" -> {
                 _iconShape.value = try {
                     IconShape.valueOf(p.getString(key, "DEFAULT") ?: "DEFAULT")
@@ -1239,7 +1239,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
             "liquid_glass_blur" -> _liquidGlassBlur.value = p.getFloat(key, 0f)
             "liquid_glass_refraction_height" -> _liquidGlassRefractionHeight.value = p.getFloat(key, 24f)
             "liquid_glass_refraction_amount" -> _liquidGlassRefractionAmount.value = p.getFloat(key, 48f)
-            "liquid_glass_chromatic_aberration" -> _liquidGlassChromaticAberration.value = p.getBoolean(key, true)
+            "liquid_glass_chromatic_aberration" -> _liquidGlassChromaticAberration.value = p.getBoolean(key, false)
             "liquid_glass_color_adjustment_enabled" -> _liquidGlassColorAdjustmentEnabled.value = p.getBoolean(key, false)
             "liquid_glass_hue" -> _liquidGlassHue.value = p.getFloat(key, 0f)
             "liquid_glass_saturation" -> _liquidGlassSaturation.value = p.getFloat(key, 1f)

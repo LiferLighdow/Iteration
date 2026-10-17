@@ -42,11 +42,12 @@ fun MainViewModel.refreshWallpaperFromPrefs() {
             _currentWallpaperPresetName.value = presetName
         }
 
-        updateBlurredWallpaper()
+        updateBlurredWallpaper(force = true)
     }
 }
 
-fun MainViewModel.updateBlurredWallpaper() {
+fun MainViewModel.updateBlurredWallpaper(force: Boolean = false) {
+    if (!force && _blurredWallpaper.value != null && _rawWallpaper.value != null) return
     viewModelScope.launch(Dispatchers.IO) {
         val result = if (wallpaperFile.exists()) {
             wallpaperProcessor.loadWallpaperFromFile(wallpaperFile)
@@ -82,7 +83,7 @@ fun MainViewModel.setCustomWallpaper(bitmap: Bitmap) {
             FileOutputStream(wallpaperFile).use { out ->
                 bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
             }
-            updateBlurredWallpaper()
+            updateBlurredWallpaper(force = true)
             notifyWallpaperChanged()
         } catch (e: Exception) {
             e.printStackTrace()
@@ -97,7 +98,7 @@ fun MainViewModel.forceSyncSystemWallpaper() {
         _isApplyingWallpaper.value = true
         try {
             if (wallpaperFile.exists()) wallpaperFile.delete()
-            updateBlurredWallpaper()
+            updateBlurredWallpaper(force = true)
             notifyWallpaperChanged()
         } finally {
             _isApplyingWallpaper.value = false

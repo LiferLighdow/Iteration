@@ -62,7 +62,21 @@ class WallpaperProcessor(private val context: Application) {
                 }
             }
             val drawable = wm.drawable ?: return null
-            processBitmap(drawable.toBitmap(), isLight)
+            val rawBmp = drawable.toBitmap()
+            val dm = context.resources.displayMetrics
+            val reqW = (dm.widthPixels * 0.5f).toInt()
+            val reqH = (dm.heightPixels * 0.5f).toInt()
+            val constrainedBmp = if (rawBmp.width > reqW * 1.5f || rawBmp.height > reqH * 1.5f) {
+                val scaled = Bitmap.createScaledBitmap(rawBmp, reqW, reqH, true)
+                if (scaled != rawBmp) rawBmp.recycle()
+                scaled
+            } else {
+                rawBmp
+            }
+            processBitmap(constrainedBmp, isLight)
+        } catch (e: OutOfMemoryError) {
+            System.gc()
+            null
         } catch (e: Exception) {
             e.printStackTrace()
             null
@@ -70,6 +84,7 @@ class WallpaperProcessor(private val context: Application) {
     }
 
     /**
+     * 從指定檔案路徑載入並處理桌布
      * 透過 Dhizuku/Shizuku 特權身份直接讀取系統桌布檔案
      * 路徑通常在 /data/system/users/0/wallpaper
      */
@@ -97,8 +112,22 @@ class WallpaperProcessor(private val context: Application) {
             }
 
             inputStream?.use {
-                return BitmapFactory.decodeStream(it)
+                val bmp = BitmapFactory.decodeStream(it)
+                if (bmp != null) {
+                    val dm = context.resources.displayMetrics
+                    val reqW = (dm.widthPixels * 0.5f).toInt()
+                    val reqH = (dm.heightPixels * 0.5f).toInt()
+                    if (bmp.width > reqW * 1.5f || bmp.height > reqH * 1.5f) {
+                        val scaled = Bitmap.createScaledBitmap(bmp, reqW, reqH, true)
+                        if (scaled != bmp) bmp.recycle()
+                        return scaled
+                    }
+                }
+                return bmp
             }
+            null
+        } catch (e: OutOfMemoryError) {
+            System.gc()
             null
         } catch (e: Exception) {
             e.printStackTrace()
@@ -114,8 +143,8 @@ class WallpaperProcessor(private val context: Application) {
             if (!file.exists()) return null
             
             val dm = context.resources.displayMetrics
-            val reqW = dm.widthPixels
-            val reqH = dm.heightPixels
+            val reqW = (dm.widthPixels * 0.5f).toInt()
+            val reqH = (dm.heightPixels * 0.5f).toInt()
 
             val options = BitmapFactory.Options().apply {
                 inJustDecodeBounds = true
@@ -194,7 +223,9 @@ class WallpaperProcessor(private val context: Application) {
 
         val cropped = Bitmap.createBitmap(rawBitmap, (rawBitmap.width - cropW) / 2, (rawBitmap.height - cropH) / 2, cropW, cropH)
         
-        val scaled = Bitmap.createScaledBitmap(cropped, screenW, screenH, true)
+        val targetW = (screenW * 0.5f).toInt()
+        val targetH = (screenH * 0.5f).toInt()
+        val scaled = Bitmap.createScaledBitmap(cropped, targetW, targetH, true)
         
         // 如果裁剪後的圖片與縮放後的圖片不是同一個對象，且不再需要，則回收裁剪後的臨時圖片
         if (cropped != scaled && cropped != rawBitmap) {

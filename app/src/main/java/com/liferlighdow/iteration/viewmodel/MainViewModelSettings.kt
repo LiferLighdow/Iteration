@@ -735,7 +735,7 @@ fun MainViewModel.resetLiquidGlassParams() {
     setLiquidGlassBlur(0f)
     setLiquidGlassRefractionHeight(24f)
     setLiquidGlassRefractionAmount(48f)
-    setLiquidGlassChromaticAberration(true)
+    setLiquidGlassChromaticAberration(false)
     setLiquidGlassColorAdjustmentEnabled(false)
     setLiquidGlassHue(0f)
     setLiquidGlassSaturation(1f)

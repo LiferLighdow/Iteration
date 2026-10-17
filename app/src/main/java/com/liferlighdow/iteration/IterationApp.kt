@@ -1,7 +1,6 @@
 package com.liferlighdow.iteration
 
 import android.app.Application
-import android.content.Intent
 import com.rosan.dhizuku.api.Dhizuku
 
 class IterationApp : Application() {
@@ -15,6 +14,7 @@ class IterationApp : Application() {
         }
     }
 
+    /*
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
         // 當 UI 隱藏 (進入背景) 或系統記憶體吃緊時，主動發送廣播清理圖片快取與桌布 Bitmap
@@ -25,4 +25,5 @@ class IterationApp : Application() {
             sendBroadcast(intent)
         }
     }
+    */
 }

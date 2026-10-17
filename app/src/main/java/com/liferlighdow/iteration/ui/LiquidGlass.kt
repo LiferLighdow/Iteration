@@ -35,6 +35,8 @@ import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 
 @Composable
 fun glassFallbackColor(alpha: Float = 0.3f): Color {
@@ -173,7 +175,9 @@ fun Modifier.liquidGlass(
             }
         }
     } else {
-        this.drawBackdrop(
+        this.graphicsLayer {
+            compositingStrategy = CompositingStrategy.Offscreen
+        }.drawBackdrop(
             backdrop = backdrop,
             shape = { finalShape },
             effects = {

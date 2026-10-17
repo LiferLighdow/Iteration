@@ -48,7 +48,7 @@ data class LauncherSettings(
     val iconShape: IconShape = IconShape.DEFAULT,
     val libraryShape: IconShape = IconShape.DEFAULT,
     val iconCornerRadius: Float = 0.25f,
-    val libraryCornerRadius: Float = 0.25f,
+    val libraryCornerRadius: Float = 0.15f,
     val searchEngineUrl: String = "https://www.google.com/search?q=",
     val searchKeywordsEnabled: Boolean = true,
     val searchCalculatorEnabled: Boolean = true,
@@ -94,7 +94,7 @@ data class GlassParams(
     val blur: Float = 0f,
     val refractionHeight: Float = 24f,
     val refractionAmount: Float = 48f,
-    val chromaticAberration: Boolean = true
+    val chromaticAberration: Boolean = false
 )
 
 @Serializable
