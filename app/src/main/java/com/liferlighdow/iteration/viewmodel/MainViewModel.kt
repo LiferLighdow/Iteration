@@ -162,6 +162,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
     internal val _autoAddAppsToHome = MutableStateFlow(prefs.getBoolean("auto_add_apps_to_home", true))
     val autoAddAppsToHome = _autoAddAppsToHome.asStateFlow()
 
+    internal val _isOnboardingCompleted = MutableStateFlow(
+        if (prefs.contains("is_onboarding_completed")) {
+            prefs.getBoolean("is_onboarding_completed", false)
+        } else {
+            prefs.all.isNotEmpty()
+        }
+    )
+    val isOnboardingCompleted = _isOnboardingCompleted.asStateFlow()
+
+    internal val _hasShownDesktopLongPressTip = MutableStateFlow(prefs.getBoolean("has_shown_desktop_long_press_tip", false))
+    val hasShownDesktopLongPressTip = _hasShownDesktopLongPressTip.asStateFlow()
+
+    fun markDesktopLongPressTipShown() {
+        _hasShownDesktopLongPressTip.value = true
+        prefs.edit().putBoolean("has_shown_desktop_long_press_tip", true).apply()
+    }
+
     internal val _themeMode = MutableStateFlow(
         try {
             ThemeMode.valueOf(prefs.getString("theme_mode", "FOLLOW_SYSTEM") ?: "FOLLOW_SYSTEM")
@@ -631,6 +648,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
     )
     val dockStyle = _dockStyle.asStateFlow()
 
+    internal val _dockTheme = MutableStateFlow(
+        try {
+            DockTheme.valueOf(prefs.getString("dock_theme", "FOLLOW_SYSTEM") ?: "FOLLOW_SYSTEM")
+        } catch (e: Exception) {
+            DockTheme.FOLLOW_SYSTEM
+        }
+    )
+    val dockTheme = _dockTheme.asStateFlow()
+
+    internal val _dockCustomColor = MutableStateFlow(prefs.getInt("dock_custom_color", 0))
+    val dockCustomColor = _dockCustomColor.asStateFlow()
+
+    internal val _dockOpacity = MutableStateFlow(prefs.getFloat("dock_opacity", 0.3f))
+    val dockOpacity = _dockOpacity.asStateFlow()
+
+
+
     internal val _dockCornerRadius = MutableStateFlow(prefs.getFloat("dock_corner_radius", 42f))
     val dockCornerRadius = _dockCornerRadius.asStateFlow()
 
@@ -1014,6 +1048,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
                     _dockStyle.value = DockStyle.valueOf(sharedPreferences.getString(key, "MODERN") ?: "MODERN")
                 } catch (_: Exception) {}
             }
+            "dock_theme" -> {
+                try {
+                    _dockTheme.value = DockTheme.valueOf(sharedPreferences.getString(key, "FOLLOW_SYSTEM") ?: "FOLLOW_SYSTEM")
+                } catch (_: Exception) {}
+            }
+            "dock_custom_color" -> {
+                _dockCustomColor.value = sharedPreferences.getInt(key, 0)
+            }
+            "dock_opacity" -> {
+                _dockOpacity.value = sharedPreferences.getFloat(key, 0.3f)
+            }
+
             "dock_corner_radius" -> {
                 _dockCornerRadius.value = sharedPreferences.getFloat(key, 42f)
             }

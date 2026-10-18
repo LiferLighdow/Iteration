@@ -353,6 +353,7 @@
     <!-- 設定 - 桌面與佈局 -->
     <string name="desktop_settings_title">桌面設定</string>
     <string name="settings_system_ui">系統介面</string>
+    <string name="settings_bottom_bar">底欄設定</string>
     <string name="settings_layout_and_dock">佈局與底欄</string>
     <string name="desktop_long_press_duration_title">桌面長按觸發時間</string>
     <string name="desktop_long_press_duration_desc">調整長按桌面空白處觸發手勢或選單所需的按壓時間</string>
@@ -383,6 +384,13 @@
     <string name="dock_add_desc">您想要在此位置新增單個應用程式還是資料夾？</string>
     <string name="dock_style">Dock 風格</string>
     <string name="dock_style_current">目前：%1$s</string>
+    <string name="dock_theme">Dock 主題</string>
+    <string name="dock_theme_current">目前：%1$s</string>
+    <string name="dock_theme_follow_system">跟隨系統</string>
+    <string name="dock_theme_white">白色</string>
+    <string name="dock_theme_dark">黑色</string>
+    <string name="dock_theme_custom">自訂配色</string>
+    <string name="dock_opacity_label">Dock 透明度：%1$d%%</string>
     <string name="dock_radius_label">Dock 圓角半徑：%1$d</string>
     <string name="dock_offset_label">抬高 Dock：%1$d</string>
 
@@ -664,7 +672,7 @@
     <string name="pwa_uninstall_message">您要解除安裝此應用程式嗎？</string>
     <string name="pwa_uninstall_ok">確定</string>
     <string name="background_color">背景顏色</string>
-    <string name="widget_maker_title">小工具製作工具</string>
+    <string name="widget_maker_title">小工具製作工具（測試中）</string>
     <string name="widget_maker_desc">設計並建立您自己的自訂小工具。</string>
     <string name="widget_maker_list_title">我的小工具</string>
     <string name="widget_maker_new">新建小工具</string>
@@ -704,7 +712,7 @@
     <string name="builtin_pack_setup_title">Iteration 圖示包設定</string>
     <string name="builtin_pack_setup_desc">請選擇哪些應用程式要套用內建的圖示。</string>
     <string name="experimental_features">實驗性功能</string>
-    <string name="material_you_title">使用 Material You (測試中)</string>
+    <string name="material_you_title">使用 Material You</string>
     <string name="material_you_desc">從您目前的桌布擷取主要顏色，並套用到 UI 文字與元素上。</string>
     <string name="widget_stacker_cyclic">循環轉動</string>
     <string name="pager_settings_title">分頁翻頁動畫設定</string>

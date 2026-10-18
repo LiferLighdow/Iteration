@@ -1,6 +1,7 @@
 package com.liferlighdow.iteration.data
 
 import com.liferlighdow.iteration.ui.DockStyle
+import com.liferlighdow.iteration.ui.DockTheme
 import com.liferlighdow.iteration.ui.ThemeMode
 import com.liferlighdow.iteration.utils.ActionMode
 import com.liferlighdow.iteration.utils.GestureAction
@@ -71,6 +72,9 @@ data class LauncherSettings(
     val desktopRows: Int = 0,
     val hideAppLabel: Boolean = false,
     val dockStyle: DockStyle = DockStyle.MODERN,
+    val dockTheme: DockTheme = DockTheme.FOLLOW_SYSTEM,
+    val dockCustomColor: Int = 0,
+    val dockOpacity: Float = 0.3f,
     val dockCornerRadius: Float = 42f,
     val iconCacheSize: Int = 250,
     val updateCheckInterval: Int = 24,

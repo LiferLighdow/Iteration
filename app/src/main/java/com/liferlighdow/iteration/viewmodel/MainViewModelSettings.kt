@@ -9,6 +9,7 @@ import com.liferlighdow.iteration.utils.GestureAction
 import com.liferlighdow.iteration.utils.IconShape
 import com.liferlighdow.iteration.utils.IconStyle
 import com.liferlighdow.iteration.ui.DockStyle
+import com.liferlighdow.iteration.ui.DockTheme
 import com.liferlighdow.iteration.ui.ThemeMode
 import com.liferlighdow.iteration.data.*
 import kotlinx.serialization.encodeToString
@@ -526,6 +527,24 @@ fun MainViewModel.setDockStyle(style: DockStyle) {
     prefs.edit().putString("dock_style", style.name).apply()
 }
 
+fun MainViewModel.setDockTheme(theme: DockTheme) {
+    _dockTheme.value = theme
+    prefs.edit().putString("dock_theme", theme.name).apply()
+}
+
+fun MainViewModel.setDockCustomColor(color: Int) {
+    _dockCustomColor.value = color
+    prefs.edit().putInt("dock_custom_color", color).apply()
+}
+
+fun MainViewModel.setDockOpacity(opacity: Float) {
+    val clamped = opacity.coerceIn(0f, 1f)
+    _dockOpacity.value = clamped
+    prefs.edit().putFloat("dock_opacity", clamped).apply()
+}
+
+
+
 fun MainViewModel.setDockCornerRadius(radius: Float) {
     val clamped = radius.coerceIn(0f, 50f)
     _dockCornerRadius.value = clamped
@@ -758,6 +777,11 @@ fun MainViewModel.setMaterialYouEnabled(enabled: Boolean) {
     if (enabled && _seedColor.value == null) {
         updateBlurredWallpaper()
     }
+}
+
+fun MainViewModel.setOnboardingCompleted(completed: Boolean) {
+    _isOnboardingCompleted.value = completed
+    prefs.edit().putBoolean("is_onboarding_completed", completed).apply()
 }
 
 fun MainViewModel.setPagerSnapThreshold(value: Float) {

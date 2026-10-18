@@ -30,6 +30,7 @@ import com.liferlighdow.iteration.PwaActivity
 import com.liferlighdow.iteration.data.AppModel
 import com.liferlighdow.iteration.data.ConfigSerializer
 import com.liferlighdow.iteration.ui.DockStyle
+import com.liferlighdow.iteration.ui.DockTheme
 import com.liferlighdow.iteration.ui.DynamicColorGenerator
 import com.liferlighdow.iteration.ui.ThemeMode
 import com.liferlighdow.iteration.utils.ActionMode
@@ -707,6 +708,9 @@ fun MainViewModel.loadSettings() {
     val newExcluded = prefs.getStringSet("excluded_themed_packages", emptySet()) ?: emptySet()
     val newRows = prefs.getInt("desktop_rows", 0)
     val newDockStyle = try { DockStyle.valueOf(prefs.getString("dock_style", "MODERN") ?: "MODERN") } catch (e: Exception) { DockStyle.MODERN }
+    val newDockTheme = try { DockTheme.valueOf(prefs.getString("dock_theme", "FOLLOW_SYSTEM") ?: "FOLLOW_SYSTEM") } catch (e: Exception) { DockTheme.FOLLOW_SYSTEM }
+    val newDockCustomColor = prefs.getInt("dock_custom_color", 0)
+    val newDockOpacity = prefs.getFloat("dock_opacity", 0.3f)
     val newSearchEngine = prefs.getString("search_engine_url", "https://www.google.com/search?q=") ?: "https://www.google.com/search?q="
     val newAutoAdd = prefs.getBoolean("auto_add_apps_to_home", true)
     val newShowStatusBar = prefs.getBoolean("show_status_bar", true)
@@ -720,7 +724,7 @@ fun MainViewModel.loadSettings() {
     val newIconSize = prefs.getInt("icon_size_px", -1)
     val newLegacyUniform = prefs.getBoolean("legacy_icon_uniform", false)
 
-    if (_iconStyle.value != newStyle || _isThemedIconsEnabled.value != newThemed || _iconPackPackage.value != newIconPackPackage || _iconShape.value != newShape || _libraryShape.value != newLibShape || _excludedThemedPackages.value != newExcluded || _desktopRows.value != newRows || _dockStyle.value != newDockStyle || _iconSizePx.value != newIconSize || _isLegacyIconUniformEnabled.value != newLegacyUniform) {
+    if (_iconStyle.value != newStyle || _isThemedIconsEnabled.value != newThemed || _iconPackPackage.value != newIconPackPackage || _iconShape.value != newShape || _libraryShape.value != newLibShape || _excludedThemedPackages.value != newExcluded || _desktopRows.value != newRows || _dockStyle.value != newDockStyle || _dockTheme.value != newDockTheme || _dockCustomColor.value != newDockCustomColor || _dockOpacity.value != newDockOpacity || _iconSizePx.value != newIconSize || _isLegacyIconUniformEnabled.value != newLegacyUniform) {
         _iconStyle.value = newStyle
         _iconShape.value = newShape
         _libraryShape.value = newLibShape
@@ -729,6 +733,9 @@ fun MainViewModel.loadSettings() {
         _excludedThemedPackages.value = newExcluded
         _desktopRows.value = newRows
         _dockStyle.value = newDockStyle
+        _dockTheme.value = newDockTheme
+        _dockCustomColor.value = newDockCustomColor
+        _dockOpacity.value = newDockOpacity
         _iconSizePx.value = newIconSize
         _isLegacyIconUniformEnabled.value = newLegacyUniform
     }
@@ -1250,6 +1257,10 @@ fun MainViewModel.repaginate(allApps: List<AppModel>) {
         val visibleApps = allApps.filter { !it.isHidden && !it.isFrozen && !it.isPrivate }
         _pages.value = visibleApps.chunked(pageSize)
     }
+}
+
+fun MainViewModel.clearDesktopPages() {
+    _pages.value = listOf(emptyList())
 }
 
 fun MainViewModel.launchApp(app: AppModel, sourceRect: android.graphics.Rect? = null) {

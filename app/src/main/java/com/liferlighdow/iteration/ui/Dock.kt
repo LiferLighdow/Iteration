@@ -44,6 +44,7 @@ import com.liferlighdow.iteration.utils.ActionMode
 import com.liferlighdow.iteration.viewmodel.*
 import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.data.AppModel
+import com.liferlighdow.iteration.data.LiquidGlassComponent
 import androidx.compose.material.icons.filled.AcUnit
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -345,7 +346,8 @@ fun SearchPill(
                 blurRadius = blurRadius,
                 refractionHeight = refractionHeight,
                 refractionAmount = refractionAmount,
-                chromaticAberration = chromaticAberration
+                chromaticAberration = chromaticAberration,
+                component = LiquidGlassComponent.DOCK
             )
             .clickable { onClick() },
         contentAlignment = Alignment.Center

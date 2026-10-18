@@ -350,6 +350,7 @@
     <!-- Settings - Desktop & Layout -->
     <string name="desktop_settings_title">Desktop Settings</string>
     <string name="settings_system_ui">System UI</string>
+    <string name="settings_bottom_bar">Bottom Bar</string>
     <string name="settings_layout_and_dock">Layout &amp; Dock</string>
     <string name="desktop_long_press_duration_title">Desktop Long Press Duration</string>
     <string name="desktop_long_press_duration_desc">Adjust the hold duration required to trigger long-press actions on empty desktop areas</string>
@@ -380,6 +381,13 @@
     <string name="dock_add_desc">Would you like to add a single application or a folder to this slot?</string>
     <string name="dock_style">Dock Style</string>
     <string name="dock_style_current">Current: %1$s</string>
+    <string name="dock_theme">Dock Theme</string>
+    <string name="dock_theme_current">Current: %1$s</string>
+    <string name="dock_theme_follow_system">Follow System</string>
+    <string name="dock_theme_white">White</string>
+    <string name="dock_theme_dark">Black</string>
+    <string name="dock_theme_custom">Custom Color</string>
+    <string name="dock_opacity_label">Dock Opacity: %1$d%%</string>
     <string name="dock_radius_label">Dock Corner Radius: %1$d</string>
     <string name="dock_offset_label">Raise Dock: %1$d</string>
 
@@ -669,7 +677,7 @@
     <string name="pwa_uninstall_message">Do you want to uninstall this app?</string>
     <string name="pwa_uninstall_ok">OK</string>
     <string name="background_color">Background Color</string>
-    <string name="widget_maker_title">Widget Maker</string>
+    <string name="widget_maker_title">Widget Maker (Testing)</string>
     <string name="widget_maker_desc">Design and create your own custom widgets.</string>
     <string name="widget_maker_list_title">My Widgets</string>
     <string name="widget_maker_new">New Widget</string>
@@ -711,7 +719,7 @@
     <string name="builtin_pack_setup_title">Iteration Pack Setup</string>
     <string name="builtin_pack_setup_desc">Select which apps will apply the built-in icons for these categories.</string>
     <string name="experimental_features">Experimental Features</string>
-    <string name="material_you_title">Use Material You (Testing)</string>
+    <string name="material_you_title">Use Material You</string>
     <string name="material_you_desc">Extract primary colors from your current wallpaper and apply them to UI text and elements.</string>
     <string name="widget_stacker_cyclic">Cyclic Scroll</string>
     <string name="pager_settings_title">Pager Animation Settings</string>

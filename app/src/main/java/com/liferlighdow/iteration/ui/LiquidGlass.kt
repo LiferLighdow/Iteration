@@ -89,20 +89,68 @@ private fun resolveLiquidGlassParams(
     val gB by viewModel.liquidGlassBrightness.collectAsState()
     val gA by viewModel.liquidGlassAlpha.collectAsState()
 
+    val dockTheme by viewModel.dockTheme.collectAsState()
+    val dockCustomColor by viewModel.dockCustomColor.collectAsState()
+    val dockOpacity by viewModel.dockOpacity.collectAsState()
+
+    val baseAdj = colorAdjustmentEnabled ?: compCfg?.enabled ?: gAdj
+    val baseH = (if (compCfg?.enabled == true) compCfg.hue else null) ?: hue ?: gH
+    val baseS = (if (compCfg?.enabled == true) compCfg.saturation else null) ?: saturation ?: gS
+    val baseB = (if (compCfg?.enabled == true) compCfg.brightness else null) ?: brightness ?: gB
+    val baseA = (if (compCfg?.enabled == true) compCfg.alpha else null) ?: alpha ?: gA
+    val finalBlur = compCfg?.blur ?: blur ?: gBlur
+
+    val finalAdj: Boolean
+    val finalH: Float
+    val finalS: Float
+    val finalB: Float
+    val finalA: Float
+
+    if (component == LiquidGlassComponent.DOCK) {
+        when (dockTheme) {
+            DockTheme.WHITE, DockTheme.DARK, DockTheme.CUSTOM -> {
+                finalAdj = true
+                val hsv = FloatArray(3)
+                val targetColor = when (dockTheme) {
+                    DockTheme.WHITE -> android.graphics.Color.WHITE
+                    DockTheme.DARK -> android.graphics.Color.BLACK
+                    else -> if (dockCustomColor != 0) dockCustomColor else android.graphics.Color.WHITE
+                }
+                android.graphics.Color.colorToHSV(targetColor, hsv)
+                finalH = hsv[0]
+                finalS = hsv[1]
+                finalB = hsv[2]
+                finalA = dockOpacity
+            }
+            DockTheme.FOLLOW_SYSTEM -> {
+                finalAdj = baseAdj
+                finalH = baseH
+                finalS = baseS
+                finalB = baseB
+                finalA = baseA
+            }
+        }
+    } else {
+        finalAdj = baseAdj
+        finalH = baseH
+        finalS = baseS
+        finalB = baseB
+        finalA = baseA
+    }
+
     // 物理參數邏輯：如果組件有自定義(非null)，則無視全域直接採用。
     // 注意：這裡不應受 compCfg.enabled 的影響。
     return ResolvedParams(
-        blur = compCfg?.blur ?: blur ?: gBlur,
+        blur = finalBlur,
         refractionHeight = compCfg?.refractionHeight ?: refractionHeight ?: gReH,
         refractionAmount = compCfg?.refractionAmount ?: refractionAmount ?: gReA,
         chromaticAberration = compCfg?.chromaticAberration ?: chromaticAberration ?: gChA,
         
-        // 顏色參數邏輯：只有當 enabled 為 true 時才採用組件顏色，否則回退。
-        adjEnabled = colorAdjustmentEnabled ?: compCfg?.enabled ?: gAdj,
-        h = (if (compCfg?.enabled == true) compCfg.hue else null) ?: hue ?: gH,
-        s = (if (compCfg?.enabled == true) compCfg.saturation else null) ?: saturation ?: gS,
-        b = (if (compCfg?.enabled == true) compCfg.brightness else null) ?: brightness ?: gB,
-        a = (if (compCfg?.enabled == true) compCfg.alpha else null) ?: alpha ?: gA
+        adjEnabled = finalAdj,
+        h = finalH,
+        s = finalS,
+        b = finalB,
+        a = finalA
     )
 }
 
@@ -194,12 +242,8 @@ fun Modifier.liquidGlass(
             },
             onDrawSurface = {
                 if (p.adjEnabled) {
-                    if (p.s < 1f) drawRect(color = Color.Gray.copy(alpha = 1f - p.s), blendMode = BlendMode.Color)
-                    if (p.h != 0f) drawRect(color = Color.hsv(p.h, 1f, 1f), blendMode = BlendMode.Hue)
-                    drawRect(color = Color.hsv(p.h, p.s, p.b).copy(alpha = p.a), blendMode = BlendMode.SrcOver)
-                    if (p.b > 0.8f && p.s < 0.2f) {
-                        drawRect(color = Color.White.copy(alpha = (p.b - 0.8f) * p.a), blendMode = BlendMode.Screen)
-                    }
+                    val tintColor = Color.hsv(p.h, p.s.coerceIn(0f, 1f), p.b.coerceIn(0f, 1f)).copy(alpha = p.a)
+                    drawRect(color = tintColor, blendMode = BlendMode.SrcOver)
                 }
             }
         )

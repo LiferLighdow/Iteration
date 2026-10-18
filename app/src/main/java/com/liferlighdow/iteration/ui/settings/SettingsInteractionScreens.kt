@@ -33,6 +33,7 @@ import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.data.AppModel
 import com.liferlighdow.iteration.ui.AppPickerDialog
 import com.liferlighdow.iteration.ui.DockStyle
+import com.liferlighdow.iteration.ui.DockTheme
 import com.liferlighdow.iteration.ui.ThemeMode
 import com.liferlighdow.iteration.utils.GestureAction
 import com.liferlighdow.iteration.utils.IconShape
@@ -106,6 +107,54 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
                         supportingText = stringResource(R.string.settings_auto_add_apps_desc),
                         checked = autoAddAppsToHome,
                         onCheckedChange = { viewModel.setAutoAddAppsToHome(it) }
+                    )
+
+                    var expandedGrid by remember { mutableStateOf(false) }
+                    val configuration = LocalConfiguration.current
+                    val isLongScreen = configuration.screenHeightDp.toFloat() / configuration.screenWidthDp.toFloat() >= 1.8f
+
+                    val gridOptions = remember(isLongScreen) {
+                        val list = mutableListOf(0 to 0, 5 to 5, 6 to 6)
+                        if (isLongScreen) {
+                            list.add(7 to 7)
+                            list.add(-1 to -1)
+                        }
+                        list
+                    }.map { (value, _) ->
+                        value to when(value) {
+                            0 -> stringResource(R.string.auto_adaptive)
+                            5 -> stringResource(R.string.layout_4x5)
+                            6 -> stringResource(R.string.layout_4x6)
+                            7 -> stringResource(R.string.layout_4x7)
+                            else -> stringResource(R.string.layout_4x6_balanced)
+                        }
+                    }
+                    val currentGridLabel = gridOptions.find { it.first == desktopRows }?.second ?: stringResource(R.string.auto_adaptive)
+
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.layout_rows)) },
+                        supportingContent = { Text(stringResource(R.string.layout_rows_current, currentGridLabel)) },
+                        leadingContent = { Icon(Icons.Default.GridOn, null, tint = MaterialTheme.colorScheme.primary) },
+                        trailingContent = { Icon(Icons.Default.ArrowDropDown, null) },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier.clickable { expandedGrid = true }
+                    )
+                    DropdownMenu(expanded = expandedGrid, onDismissRequest = { expandedGrid = false }) {
+                        gridOptions.forEach { (value, label) ->
+                            DropdownMenuItem(text = { Text(label) }, onClick = { viewModel.setDesktopRows(value); expandedGrid = false })
+                        }
+                    }
+
+                    val screenRatio = configuration.screenHeightDp.toFloat() / configuration.screenWidthDp.toFloat()
+                    val rowsToCheck = if (desktopRows == 0) (if (screenRatio < 1.8f) 5 else if (screenRatio >= 2.15f) 7 else 6) else desktopRows
+                    val isLayoutForcingHideLabel = if (rowsToCheck >= 7) screenRatio < 2.22f else false
+                    SettingSwitchItem(
+                        icon = Icons.Default.VisibilityOff,
+                        title = stringResource(R.string.hide_app_labels_title),
+                        supportingText = if (isLayoutForcingHideLabel) stringResource(R.string.hide_app_labels_forced_desc) else stringResource(R.string.hide_app_labels_desc),
+                        checked = if (isLayoutForcingHideLabel) true else hideAppLabel,
+                        enabled = !isLayoutForcingHideLabel,
+                        onCheckedChange = { viewModel.setHideAppLabel(it) }
                     )
                 }
             }
@@ -200,57 +249,9 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
                 }
             }
 
-            // --- Desktop Grid & Dock ---
+            // --- Bottom Bar ---
             item {
-                SettingsSection(title = stringResource(R.string.settings_layout_and_dock)) {
-                    var expandedGrid by remember { mutableStateOf(false) }
-                    val configuration = LocalConfiguration.current
-                    val isLongScreen = configuration.screenHeightDp.toFloat() / configuration.screenWidthDp.toFloat() >= 1.8f
-
-                    val gridOptions = remember(isLongScreen) {
-                        val list = mutableListOf(0 to 0, 5 to 5, 6 to 6)
-                        if (isLongScreen) {
-                            list.add(7 to 7)
-                            list.add(-1 to -1)
-                        }
-                        list
-                    }.map { (value, _) ->
-                        value to when(value) {
-                            0 -> stringResource(R.string.auto_adaptive)
-                            5 -> stringResource(R.string.layout_4x5)
-                            6 -> stringResource(R.string.layout_4x6)
-                            7 -> stringResource(R.string.layout_4x7)
-                            else -> stringResource(R.string.layout_4x6_balanced)
-                        }
-                    }
-                    val currentGridLabel = gridOptions.find { it.first == desktopRows }?.second ?: stringResource(R.string.auto_adaptive)
-
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.layout_rows)) },
-                        supportingContent = { Text(stringResource(R.string.layout_rows_current, currentGridLabel)) },
-                        leadingContent = { Icon(Icons.Default.GridOn, null, tint = MaterialTheme.colorScheme.primary) },
-                        trailingContent = { Icon(Icons.Default.ArrowDropDown, null) },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        modifier = Modifier.clickable { expandedGrid = true }
-                    )
-                    DropdownMenu(expanded = expandedGrid, onDismissRequest = { expandedGrid = false }) {
-                        gridOptions.forEach { (value, label) ->
-                            DropdownMenuItem(text = { Text(label) }, onClick = { viewModel.setDesktopRows(value); expandedGrid = false })
-                        }
-                    }
-
-                    val screenRatio = configuration.screenHeightDp.toFloat() / configuration.screenWidthDp.toFloat()
-                    val rowsToCheck = if (desktopRows == 0) (if (screenRatio < 1.8f) 5 else if (screenRatio >= 2.15f) 7 else 6) else desktopRows
-                    val isLayoutForcingHideLabel = if (rowsToCheck >= 7) screenRatio < 2.22f else false
-                    SettingSwitchItem(
-                        icon = Icons.Default.VisibilityOff,
-                        title = stringResource(R.string.hide_app_labels_title),
-                        supportingText = if (isLayoutForcingHideLabel) stringResource(R.string.hide_app_labels_forced_desc) else stringResource(R.string.hide_app_labels_desc),
-                        checked = if (isLayoutForcingHideLabel) true else hideAppLabel,
-                        enabled = !isLayoutForcingHideLabel,
-                        onCheckedChange = { viewModel.setHideAppLabel(it) }
-                    )
-
+                SettingsSection(title = stringResource(R.string.settings_bottom_bar)) {
                     var expandedStyle by remember { mutableStateOf(false) }
                     val styleOptions = listOf(
                         DockStyle.MODERN to stringResource(R.string.dock_style_modern),
@@ -272,6 +273,95 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
                         styleOptions.forEach { (style, label) ->
                             DropdownMenuItem(text = { Text(label) }, onClick = { viewModel.setDockStyle(style); expandedStyle = false })
                         }
+                    }
+
+                    if (dockStyle != DockStyle.LITE) {
+                        val dockTheme by viewModel.dockTheme.collectAsState()
+                        val dockCustomColor by viewModel.dockCustomColor.collectAsState()
+                        var expandedTheme by remember { mutableStateOf(false) }
+                        var showCustomColorPicker by remember { mutableStateOf(false) }
+
+                        val themeOptions = listOf(
+                            DockTheme.FOLLOW_SYSTEM to stringResource(R.string.dock_theme_follow_system),
+                            DockTheme.WHITE to stringResource(R.string.dock_theme_white),
+                            DockTheme.DARK to stringResource(R.string.dock_theme_dark),
+                            DockTheme.CUSTOM to stringResource(R.string.dock_theme_custom)
+                        )
+                        val currentThemeLabel = themeOptions.find { it.first == dockTheme }?.second ?: stringResource(R.string.dock_theme_follow_system)
+
+                        ListItem(
+                            headlineContent = { Text(stringResource(R.string.dock_theme)) },
+                            supportingContent = { Text(stringResource(R.string.dock_theme_current, currentThemeLabel)) },
+                            leadingContent = { Icon(Icons.Default.Palette, null, tint = MaterialTheme.colorScheme.primary) },
+                            trailingContent = { Icon(Icons.Default.ArrowDropDown, null) },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            modifier = Modifier.clickable { expandedTheme = true }
+                        )
+                        DropdownMenu(expanded = expandedTheme, onDismissRequest = { expandedTheme = false }) {
+                            themeOptions.forEach { (theme, label) ->
+                                DropdownMenuItem(
+                                    text = { Text(label) },
+                                    onClick = {
+                                        expandedTheme = false
+                                        if (theme == DockTheme.CUSTOM) {
+                                            showCustomColorPicker = true
+                                        } else {
+                                            viewModel.setDockTheme(theme)
+                                        }
+                                    }
+                                )
+                            }
+                        }
+
+                        if (showCustomColorPicker) {
+                            var tempColor by remember(dockCustomColor) { mutableIntStateOf(if (dockCustomColor != 0) dockCustomColor else android.graphics.Color.WHITE) }
+                            AlertDialog(
+                                onDismissRequest = { showCustomColorPicker = false },
+                                title = { Text(stringResource(R.string.dock_theme_custom)) },
+                                text = {
+                                    ColorPicker(
+                                        initialColor = tempColor,
+                                        onColorChanged = { tempColor = it },
+                                        showAlpha = false
+                                    )
+                                },
+                                confirmButton = {
+                                    Button(onClick = {
+                                        viewModel.setDockTheme(DockTheme.CUSTOM)
+                                        viewModel.setDockCustomColor(tempColor)
+                                        showCustomColorPicker = false
+                                    }) { Text(stringResource(R.string.apply)) }
+                                },
+                                dismissButton = {
+                                    TextButton(onClick = { showCustomColorPicker = false }) { Text(stringResource(R.string.cancel)) }
+                                }
+                            )
+                        }
+
+                        val dockOpacity by viewModel.dockOpacity.collectAsState()
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Opacity, null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(stringResource(R.string.dock_opacity_label, (dockOpacity * 100).toInt()), style = MaterialTheme.typography.bodyMedium)
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(onClick = { viewModel.setDockOpacity((dockOpacity - 0.05f).coerceAtLeast(0f)) }) {
+                                    Icon(Icons.Default.Remove, contentDescription = null)
+                                }
+                                Slider(
+                                    value = dockOpacity.coerceIn(0f, 1f),
+                                    onValueChange = { viewModel.setDockOpacity(it) },
+                                    valueRange = 0f..1f,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                IconButton(onClick = { viewModel.setDockOpacity((dockOpacity + 0.05f).coerceAtMost(1f)) }) {
+                                    Icon(Icons.Default.Add, contentDescription = null)
+                                }
+                            }
+                        }
+
+
                     }
 
                     if (dockStyle == DockStyle.MODERN) {

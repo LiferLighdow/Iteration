@@ -243,9 +243,10 @@ fun PaddingRemaining(padding: androidx.compose.ui.unit.Dp, content: @Composable 
 @Composable
 fun ColorPicker(
     initialColor: Int,
-    onColorChanged: (Int) -> Unit
+    onColorChanged: (Int) -> Unit,
+    showAlpha: Boolean = true
 ) {
-    var hexText by remember(initialColor) { mutableStateOf(String.format("%08X", initialColor)) }
+    var hexText by remember(initialColor) { mutableStateOf(String.format(if (showAlpha) "%08X" else "%06X", if (showAlpha) initialColor else initialColor and 0xFFFFFF)) }
     val hsv = remember(initialColor) {
         val res = FloatArray(3)
         android.graphics.Color.colorToHSV(initialColor, res)
@@ -254,7 +255,7 @@ fun ColorPicker(
     var h by remember(initialColor) { mutableFloatStateOf(hsv[0]) }
     var s by remember(initialColor) { mutableFloatStateOf(hsv[1]) }
     var v by remember(initialColor) { mutableFloatStateOf(hsv[2]) }
-    var a by remember(initialColor) { mutableFloatStateOf(android.graphics.Color.alpha(initialColor) / 255f) }
+    var a by remember(initialColor) { mutableFloatStateOf(if (showAlpha) android.graphics.Color.alpha(initialColor) / 255f else 1f) }
 
     Column {
         Box(
@@ -319,14 +320,16 @@ fun ColorPicker(
             }
         }
         
-        Text(stringResource(R.string.alpha, (a * 100).toInt()), style = MaterialTheme.typography.labelSmall)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { a = (a - 0.01f).coerceAtLeast(0f); onColorChanged(android.graphics.Color.HSVToColor((a * 255).toInt(), floatArrayOf(h, s, v))) }) {
-                Icon(Icons.Default.Remove, null, tint = MaterialTheme.colorScheme.primary)
-            }
-            Slider(value = a, onValueChange = { a = it; onColorChanged(android.graphics.Color.HSVToColor((a * 255).toInt(), floatArrayOf(h, s, v))) }, valueRange = 0f..1f, modifier = Modifier.weight(1f))
-            IconButton(onClick = { a = (a + 0.01f).coerceAtMost(1f); onColorChanged(android.graphics.Color.HSVToColor((a * 255).toInt(), floatArrayOf(h, s, v))) }) {
-                Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.primary)
+        if (showAlpha) {
+            Text(stringResource(R.string.alpha, (a * 100).toInt()), style = MaterialTheme.typography.labelSmall)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { a = (a - 0.01f).coerceAtLeast(0f); onColorChanged(android.graphics.Color.HSVToColor((a * 255).toInt(), floatArrayOf(h, s, v))) }) {
+                    Icon(Icons.Default.Remove, null, tint = MaterialTheme.colorScheme.primary)
+                }
+                Slider(value = a, onValueChange = { a = it; onColorChanged(android.graphics.Color.HSVToColor((a * 255).toInt(), floatArrayOf(h, s, v))) }, valueRange = 0f..1f, modifier = Modifier.weight(1f))
+                IconButton(onClick = { a = (a + 0.01f).coerceAtMost(1f); onColorChanged(android.graphics.Color.HSVToColor((a * 255).toInt(), floatArrayOf(h, s, v))) }) {
+                    Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.primary)
+                }
             }
         }
     }

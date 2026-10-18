@@ -101,6 +101,13 @@ class MainActivity : AppCompatActivity() {
         )
         setContent {
             val viewModel: MainViewModel = viewModel()
+            val isOnboardingCompleted by viewModel.isOnboardingCompleted.collectAsState()
+            LaunchedEffect(isOnboardingCompleted) {
+                if (!isOnboardingCompleted) {
+                    startActivity(Intent(this@MainActivity, com.liferlighdow.iteration.ui.OnboardingActivity::class.java))
+                    finish()
+                }
+            }
             val themeMode by viewModel.themeMode.collectAsState()
             val isAmoledBlack by viewModel.isAmoledBlack.collectAsState()
             val showStatusBar by viewModel.showStatusBar.collectAsState()

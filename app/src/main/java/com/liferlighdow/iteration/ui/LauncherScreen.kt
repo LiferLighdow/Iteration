@@ -2,6 +2,7 @@ package com.liferlighdow.iteration.ui
 
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.widget.Toast
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.net.Uri
@@ -208,6 +209,15 @@ fun LauncherScreen(
     }
 
     LaunchedEffect(Unit) { viewModel.loadApps() }
+
+    val hasShownTip by viewModel.hasShownDesktopLongPressTip.collectAsState()
+    LaunchedEffect(hasShownTip) {
+        if (!hasShownTip) {
+            delay(1200)
+            Toast.makeText(mContext, "💡 Tip: Long press on any empty space to open the desktop menu", Toast.LENGTH_LONG).show()
+            viewModel.markDesktopLongPressTipShown()
+        }
+    }
 
     val myPackageName = mContext.packageName
 

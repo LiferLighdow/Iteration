@@ -221,6 +221,10 @@ fun MainViewModel.exportConfig(): String {
             desktopRows = _desktopRows.value,
             hideAppLabel = _hideAppLabel.value,
             dockStyle = _dockStyle.value,
+            dockTheme = _dockTheme.value,
+            dockCustomColor = _dockCustomColor.value,
+            dockOpacity = _dockOpacity.value,
+
             dockCornerRadius = _dockCornerRadius.value,
             iconCacheSize = _iconCacheSize.value,
             updateCheckInterval = _updateCheckInterval.value,
@@ -377,6 +381,10 @@ fun MainViewModel.applyConfig(config: LauncherConfig) {
         putInt("desktop_rows", settings.desktopRows)
         putBoolean("hide_app_label", settings.hideAppLabel)
         putString("dock_style", settings.dockStyle.name)
+        putString("dock_theme", settings.dockTheme.name)
+        putInt("dock_custom_color", settings.dockCustomColor)
+        putFloat("dock_opacity", settings.dockOpacity)
+
         putFloat("dock_corner_radius", settings.dockCornerRadius)
         putInt("icon_cache_size", settings.iconCacheSize)
         putInt("update_check_interval", settings.updateCheckInterval)
@@ -463,6 +471,10 @@ fun MainViewModel.applyConfig(config: LauncherConfig) {
     _desktopRows.value = settings.desktopRows
     _hideAppLabel.value = settings.hideAppLabel
     _dockStyle.value = settings.dockStyle
+    _dockTheme.value = settings.dockTheme
+    _dockCustomColor.value = settings.dockCustomColor
+    _dockOpacity.value = settings.dockOpacity
+
     _dockCornerRadius.value = settings.dockCornerRadius
     _iconCacheSize.value = settings.iconCacheSize
     _updateCheckInterval.value = settings.updateCheckInterval
