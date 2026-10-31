@@ -280,11 +280,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
     internal var isResourcesReleased = false
 
     fun onBackground() {
-        // 當 App 進入背景時，主動發送廣播觸發靜默清理
-        val intent = Intent("com.liferlighdow.iteration.ACTION_CLEAR_CACHE_SILENT").apply {
-            setPackage(getApplication<Application>().packageName)
-        }
-        getApplication<Application>().sendBroadcast(intent)
+        // 不在每次進入背景時強制清除快取，避免回到桌面時觸發重新載入
     }
 
     fun onForeground() {
@@ -296,12 +292,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
         }
     }
 
-    internal val _isLauncherVisible = MutableStateFlow(true)
-    val isLauncherVisible = _isLauncherVisible.asStateFlow()
 
-    fun setLauncherVisible(visible: Boolean) {
-        _isLauncherVisible.value = visible
-    }
 
     internal val _activeContextMenuId = MutableStateFlow<String?>(null)
     val activeContextMenuId = _activeContextMenuId.asStateFlow()

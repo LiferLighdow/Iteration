@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="onboarding_welcome_title">歡迎使用 Iteration</string>
+    <string name="onboarding_welcome_desc">一款現代、高度可自訂嘅桌面啟動器，融合咗 Liquid Glass 液態玻璃美學、3D 平台式 Dock 與流暢嘅手勢導覽。</string>
+    <string name="onboarding_default_home_title">設定為預設桌面</string>
+    <string name="onboarding_default_home_desc">為了獲得最佳體驗，請在系統設定中將 Iteration 設為您的預設桌面應用程式。</string>
+    <string name="onboarding_open_home_settings">開啟預設桌面設定</string>
+    <string name="onboarding_permissions_title">權限與私隱</string>
+    <string name="onboarding_permissions_desc">所有資料皆 100% 安全並在本地處理。請點擊下方授權各項必要權限。</string>
+
+    <string name="perm_contacts_title">聯絡人</string>
+    <string name="perm_contacts_desc">用於聯絡人搜尋與捷徑</string>
+    <string name="perm_calendar_title">日曆</string>
+    <string name="perm_calendar_desc">用於日曆小工具與事件</string>
+    <string name="perm_storage_title">儲存空間 / 媒體</string>
+    <string name="perm_storage_desc">用於桌布與檔案管理</string>
+    <string name="perm_phone_title">電話 / 通話</string>
+    <string name="perm_phone_desc">用於直接撥號捷徑</string>
+    <string name="perm_notification_title">通知存取權</string>
+    <string name="perm_notification_desc">用於應用程式圖示上的通知未讀角標</string>
+    <string name="perm_accessibility_title">無障礙服務</string>
+    <string name="perm_accessibility_desc">用于進階手勢與桌面動作</string>
+
+    <string name="perm_granted">已授權</string>
+    <string name="perm_grant">授權</string>
+
+    <string name="onboarding_layout_title">桌面排版風格</string>
+    <string name="onboarding_layout_desc">您希望將所有已安裝的應用程式自動填滿至桌面頁面，還是從乾淨的空白桌面開始？</string>
+    <string name="onboarding_populate_apps">填滿所有應用程式</string>
+    <string name="onboarding_clean_empty">乾淨空白桌面</string>
+
+    <string name="onboarding_features_title">啟用功能</string>
+    <string name="onboarding_features_desc">選擇是否立即啟用負一屏與應用程式庫。您可以隨時在桌面設定中切換這些功能。</string>
+    <string name="onboarding_minus_one_page">負一屏</string>
+    <string name="onboarding_app_library">應用程式庫</string>
+
+    <string name="onboarding_finish_title">主題與完成</string>
+    <string name="onboarding_finish_desc">選擇您偏好的主題模式。您已經準備好探索全新的主畫面了！</string>
+
+    <string name="onboarding_back">上一步</string>
+    <string name="onboarding_next">下一步</string>
+    <string name="onboarding_finish">完成</string>
+</resources>

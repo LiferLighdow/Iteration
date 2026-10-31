@@ -157,64 +157,64 @@ fun GlobalSearchManualScreen(onBack: () -> Unit) {
         ) {
             item {
                 ManualSection(
-                    title = "Basic Usage",
-                    content = "Swipe down on the home screen to open Global Search. It searches your apps, contacts, calendar events, and files simultaneously."
+                    title = stringResource(R.string.manual_search_basic_title),
+                    content = stringResource(R.string.manual_search_basic_content)
                 )
             }
 
             item {
                 ManualSection(
-                    title = "System Commands",
-                    content = "Trigger system actions directly. Type 'wifi', 'bt', 'alarm 7:30', 'timer 60', 'battery', or 'settings' to perform quick actions or jump to specific system pages."
+                    title = stringResource(R.string.manual_search_system_title),
+                    content = stringResource(R.string.manual_search_system_content)
                 )
             }
 
             item {
                 ManualSection(
-                    title = "Expanded Data Search",
-                    content = "Beyond apps, it now searches your Contacts (one-tap to call), Calendar Events (shows upcoming schedule), and Files/Folders across your device storage."
+                    title = stringResource(R.string.manual_search_expanded_title),
+                    content = stringResource(R.string.manual_search_expanded_content)
                 )
             }
 
             item {
                 ManualSection(
-                    title = "Scientific Calculator & Bases",
-                    content = "Enter math like 'sin(30) * pi'. For integers, it automatically shows BIN (grouped by 4), HEX, and OCT conversions. Tap any result to copy it."
+                    title = stringResource(R.string.manual_search_calc_title),
+                    content = stringResource(R.string.manual_search_calc_content)
                 )
             }
 
             item {
                 ManualSection(
-                    title = "Smart Translator (tr)",
-                    content = "Type 'tr [text]' for system language or 'tr \"[text]\" to [lang]' for specific ones. Using quotes helps when the content contains 'to'. You can also jump to Google Translate from the 'More Searches' section."
+                    title = stringResource(R.string.manual_search_translator_title),
+                    content = stringResource(R.string.manual_search_translator_content)
                 )
             }
 
             item {
                 ManualSection(
-                    title = "Unit & Currency Matrix",
-                    content = "Type '100usd' or '100m' to see a full matrix of 7 major currencies or related units instantly. For a specific conversion, use '100usd to twd'."
+                    title = stringResource(R.string.manual_search_matrix_title),
+                    content = stringResource(R.string.manual_search_matrix_content)
                 )
             }
 
             item {
                 ManualSection(
-                    title = "Search Suggestions",
-                    content = "As you type, the launcher fetches the top 4 search suggestions from the web. Tap a suggestion to fill it into the search bar."
+                    title = stringResource(R.string.manual_search_suggestions_title),
+                    content = stringResource(R.string.manual_search_suggestions_content)
                 )
             }
 
             item {
                 ManualSection(
-                    title = "Equation Solver",
-                    content = "Detected equations like 'x^2 - 4 = 0' will provide a direct link to WolframAlpha for step-by-step solutions."
+                    title = stringResource(R.string.manual_search_solver_title),
+                    content = stringResource(R.string.manual_search_solver_content)
                 )
             }
             
             item {
                 ManualSection(
-                    title = "Smart Clipboard",
-                    content = "When the search bar is empty, your last copied text appears as a card for one-tap search/calculation."
+                    title = stringResource(R.string.manual_search_clipboard_title),
+                    content = stringResource(R.string.manual_search_clipboard_content)
                 )
             }
             
@@ -243,29 +243,29 @@ fun DockStyleManualScreen(onBack: () -> Unit) {
         ) {
             item {
                 ManualSection(
-                    title = "Modern (Floating)",
-                    content = "A tribute to iOS 11 to the latest versions. This style features a high-radius rounded container that floats above the wallpaper, creating a modern and layered visual experience."
+                    title = stringResource(R.string.manual_dock_modern_title),
+                    content = stringResource(R.string.manual_dock_modern_content)
                 )
             }
 
             item {
                 ManualSection(
-                    title = "Classic (Full Width)",
-                    content = "A tribute to iOS 7 through iOS 10 and /e/OS. A familiar, reliable edge-to-edge design with a clean translucent look that provides a solid foundation for your most-used applications."
+                    title = stringResource(R.string.manual_dock_classic_title),
+                    content = stringResource(R.string.manual_dock_classic_content)
                 )
             }
 
             item {
                 ManualSection(
-                    title = "Platform (3D Glass)",
-                    content = "A tribute to iPhone OS 1 through iOS 6. This style brings back the iconic 'Glass Shelf' look, simulating a thick, refractive 3D glass platform for your apps."
+                    title = stringResource(R.string.manual_dock_platform_title),
+                    content = stringResource(R.string.manual_dock_platform_content)
                 )
             }
 
             item {
                 ManualSection(
-                    title = "Lite (Minimalist)",
-                    content = "A tribute to Android, MIUI/HyperOS, and minimalist philosophies. By removing the background container entirely, your icons breathe freely on the wallpaper for a clean, pure look."
+                    title = stringResource(R.string.manual_dock_lite_title),
+                    content = stringResource(R.string.manual_dock_lite_content)
                 )
             }
 
@@ -294,29 +294,29 @@ fun IconEngineManualScreen(onBack: () -> Unit) {
         ) {
             item {
                 ManualSection(
-                    title = "What is the Icon Cache Engine?",
-                    content = "The Icon Cache Engine is the core system responsible for generating, processing, and storing all application icons in Iteration Launcher. It ensures that complex visual effects (like glass refraction and Material You theming) run smoothly without draining your battery."
+                    title = stringResource(R.string.manual_engine_q1_title),
+                    content = stringResource(R.string.manual_engine_q1_content)
                 )
             }
 
             item {
                 ManualSection(
-                    title = "Version 13: The Unification Era",
-                    content = "Iteration currently uses the V13 Engine. This version introduced the 'ID Unification Mechanism,' ensuring that icons in your folders, desktop, and app library are always perfectly synchronized and never mismatched."
+                    title = stringResource(R.string.manual_engine_q2_title),
+                    content = stringResource(R.string.manual_engine_q2_content)
                 )
             }
 
             item {
                 ManualSection(
-                    title = "High-Performance Processing",
-                    content = "The engine utilizes a multi-threaded architecture (Semaphore 8), allowing it to process hundreds of icons simultaneously in the background. This ensures the UI remains responsive even when you change your entire icon style or theme color."
+                    title = stringResource(R.string.manual_engine_q3_title),
+                    content = stringResource(R.string.manual_engine_q3_content)
                 )
             }
 
             item {
                 ManualSection(
-                    title = "Self-Healing Cache",
-                    content = "If a visual bug occurs, the engine can be manually reset. It will automatically detect outdated cache files and regenerate them using the latest rendering algorithms to keep your desktop looking sharp."
+                    title = stringResource(R.string.manual_engine_q4_title),
+                    content = stringResource(R.string.manual_engine_q4_content)
                 )
             }
 

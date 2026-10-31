@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="onboarding_welcome_title">Welcome to Iteration</string>
+    <string name="onboarding_welcome_desc">A modern, highly customizable home launcher featuring Liquid Glass aesthetics, 3D platform dock, and smooth gesture navigation.</string>
+    <string name="onboarding_default_home_title">Set as Default Launcher</string>
+    <string name="onboarding_default_home_desc">To get the best experience, set Iteration as your default home application in system settings.</string>
+    <string name="onboarding_open_home_settings">Open Home Settings</string>
+    <string name="onboarding_permissions_title">Permissions &amp; Privacy</string>
+    <string name="onboarding_permissions_desc">Everything is 100% secure and processed locally. Tap each permission below to grant.</string>
+
+    <string name="perm_contacts_title">Contacts</string>
+    <string name="perm_contacts_desc">Required for contact search &amp; shortcuts</string>
+    <string name="perm_calendar_title">Calendar</string>
+    <string name="perm_calendar_desc">Required for calendar widgets &amp; events</string>
+    <string name="perm_storage_title">Storage / Media</string>
+    <string name="perm_storage_desc">Required for wallpapers &amp; file management</string>
+    <string name="perm_phone_title">Phone / Call</string>
+    <string name="perm_phone_desc">Required for direct dialing shortcuts</string>
+    <string name="perm_notification_title">Notification Listener</string>
+    <string name="perm_notification_desc">Required for notification badges on app icons</string>
+    <string name="perm_accessibility_title">Accessibility Service</string>
+    <string name="perm_accessibility_desc">Required for advanced gestures &amp; home actions</string>
+
+    <string name="perm_granted">Granted</string>
+    <string name="perm_grant">Grant</string>
+
+    <string name="onboarding_layout_title">Desktop Layout Style</string>
+    <string name="onboarding_layout_desc">Would you like to populate all installed apps onto your home desktop pages, or start fresh with a clean empty desktop?</string>
+    <string name="onboarding_populate_apps">Populate All Apps</string>
+    <string name="onboarding_clean_empty">Clean Empty Desktop</string>
+
+    <string name="onboarding_features_title">Enable Features</string>
+    <string name="onboarding_features_desc">Choose whether to enable the Minus One Page and App Library right away. You can toggle these anytime in Desktop Settings.</string>
+    <string name="onboarding_minus_one_page">Minus One Page</string>
+    <string name="onboarding_app_library">App Library</string>
+
+    <string name="onboarding_finish_title">Theme &amp; Finish</string>
+    <string name="onboarding_finish_desc">Select your preferred theme mode. You are all set to explore your new home screen!</string>
+
+    <string name="onboarding_back">Back</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_finish">Finish</string>
+</resources>

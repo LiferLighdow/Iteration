@@ -27,11 +27,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.liferlighdow.iteration.MainActivity
+import com.liferlighdow.iteration.R
 import com.liferlighdow.iteration.service.IterationAccessibilityService
 import com.liferlighdow.iteration.viewmodel.*
 import kotlinx.coroutines.launch
@@ -138,7 +140,7 @@ fun OnboardingScreen(
                         pagerState.animateScrollToPage(pagerState.currentPage - 1)
                     }
                 }) {
-                    Text("Back")
+                    Text(stringResource(R.string.onboarding_back))
                 }
             } else {
                 Spacer(modifier = Modifier.width(1.dp))
@@ -168,11 +170,11 @@ fun OnboardingScreen(
                         pagerState.animateScrollToPage(pagerState.currentPage + 1)
                     }
                 }) {
-                    Text("Next")
+                    Text(stringResource(R.string.onboarding_next))
                 }
             } else {
                 Button(onClick = onFinish) {
-                    Text("Finish")
+                    Text(stringResource(R.string.onboarding_finish))
                 }
             }
         }
@@ -195,13 +197,13 @@ fun WelcomePage() {
         )
         Spacer(modifier = Modifier.height(20.dp))
         Text(
-            text = "Welcome to Iteration",
+            text = stringResource(R.string.onboarding_welcome_title),
             style = MaterialTheme.typography.headlineLarge,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = "A modern, highly customizable home launcher featuring Liquid Glass aesthetics, 3D platform dock, and smooth gesture navigation.",
+            text = stringResource(R.string.onboarding_welcome_desc),
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -224,13 +226,13 @@ fun DefaultHomePromptPage(context: android.content.Context) {
         )
         Spacer(modifier = Modifier.height(20.dp))
         Text(
-            text = "Set as Default Launcher",
+            text = stringResource(R.string.onboarding_default_home_title),
             style = MaterialTheme.typography.headlineMedium,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = "To get the best experience, set Iteration as your default home application in system settings.",
+            text = stringResource(R.string.onboarding_default_home_desc),
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -248,7 +250,7 @@ fun DefaultHomePromptPage(context: android.content.Context) {
         }) {
             Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Open Home Settings")
+            Text(stringResource(R.string.onboarding_open_home_settings))
         }
     }
 }
@@ -337,13 +339,13 @@ fun PermissionsPage(context: android.content.Context) {
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "Permissions & Privacy",
+            text = stringResource(R.string.onboarding_permissions_title),
             style = MaterialTheme.typography.titleMedium,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(2.dp))
         Text(
-            text = "Everything is 100% secure and processed locally. Tap each permission below to grant.",
+            text = stringResource(R.string.onboarding_permissions_desc),
             style = MaterialTheme.typography.bodySmall,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -353,22 +355,22 @@ fun PermissionsPage(context: android.content.Context) {
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(2.dp)) {
                 PermissionRow(
-                    title = "Contacts",
-                    desc = "Required for contact search & shortcuts",
+                    title = stringResource(R.string.perm_contacts_title),
+                    desc = stringResource(R.string.perm_contacts_desc),
                     isGranted = hasContacts,
                     onClick = { contactsLauncher.launch(android.Manifest.permission.READ_CONTACTS) }
                 )
                 HorizontalDivider()
                 PermissionRow(
-                    title = "Calendar",
-                    desc = "Required for calendar widgets & events",
+                    title = stringResource(R.string.perm_calendar_title),
+                    desc = stringResource(R.string.perm_calendar_desc),
                     isGranted = hasCalendar,
                     onClick = { calendarLauncher.launch(android.Manifest.permission.READ_CALENDAR) }
                 )
                 HorizontalDivider()
                 PermissionRow(
-                    title = "Storage / Media",
-                    desc = "Required for wallpapers & file management",
+                    title = stringResource(R.string.perm_storage_title),
+                    desc = stringResource(R.string.perm_storage_desc),
                     isGranted = hasStorage,
                     onClick = {
                         val perm = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -381,15 +383,15 @@ fun PermissionsPage(context: android.content.Context) {
                 )
                 HorizontalDivider()
                 PermissionRow(
-                    title = "Phone / Call",
-                    desc = "Required for direct dialing shortcuts",
+                    title = stringResource(R.string.perm_phone_title),
+                    desc = stringResource(R.string.perm_phone_desc),
                     isGranted = hasPhone,
                     onClick = { phoneLauncher.launch(android.Manifest.permission.CALL_PHONE) }
                 )
                 HorizontalDivider()
                 PermissionRow(
-                    title = "Notification Listener",
-                    desc = "Required for notification badges on app icons",
+                    title = stringResource(R.string.perm_notification_title),
+                    desc = stringResource(R.string.perm_notification_desc),
                     isGranted = isNotificationEnabled,
                     onClick = {
                         try {
@@ -399,8 +401,8 @@ fun PermissionsPage(context: android.content.Context) {
                 )
                 HorizontalDivider()
                 PermissionRow(
-                    title = "Accessibility Service",
-                    desc = "Required for advanced gestures & home actions",
+                    title = stringResource(R.string.perm_accessibility_title),
+                    desc = stringResource(R.string.perm_accessibility_desc),
                     isGranted = isAccessibilityActive,
                     onClick = {
                         try {
@@ -427,7 +429,7 @@ fun PermissionRow(
         trailingContent = {
             AssistChip(
                 onClick = onClick,
-                label = { Text(if (isGranted) "Granted" else "Grant") },
+                label = { Text(if (isGranted) stringResource(R.string.perm_granted) else stringResource(R.string.perm_grant)) },
                 colors = AssistChipDefaults.assistChipColors(
                     containerColor = if (isGranted) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
                 )
@@ -453,13 +455,13 @@ fun DesktopLayoutChoicePage(populateApps: Boolean, onPopulateChange: (Boolean) -
         )
         Spacer(modifier = Modifier.height(20.dp))
         Text(
-            text = "Desktop Layout Style",
+            text = stringResource(R.string.onboarding_layout_title),
             style = MaterialTheme.typography.headlineMedium,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = "Would you like to populate all installed apps onto your home desktop pages, or start fresh with a clean empty desktop?",
+            text = stringResource(R.string.onboarding_layout_desc),
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -483,7 +485,7 @@ fun DesktopLayoutChoicePage(populateApps: Boolean, onPopulateChange: (Boolean) -
                 ) {
                     Icon(Icons.Default.Apps, contentDescription = null)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("Populate All Apps", style = MaterialTheme.typography.titleSmall)
+                    Text(stringResource(R.string.onboarding_populate_apps), style = MaterialTheme.typography.titleSmall)
                 }
             }
 
@@ -500,7 +502,7 @@ fun DesktopLayoutChoicePage(populateApps: Boolean, onPopulateChange: (Boolean) -
                 ) {
                     Icon(Icons.Default.LayersClear, contentDescription = null)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("Clean Empty Desktop", style = MaterialTheme.typography.titleSmall)
+                    Text(stringResource(R.string.onboarding_clean_empty), style = MaterialTheme.typography.titleSmall)
                 }
             }
         }
@@ -527,13 +529,13 @@ fun FeaturesChoicePage(
         )
         Spacer(modifier = Modifier.height(20.dp))
         Text(
-            text = "Enable Features",
+            text = stringResource(R.string.onboarding_features_title),
             style = MaterialTheme.typography.headlineMedium,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = "Choose whether to enable the Minus One Page and App Library right away. You can toggle these anytime in Desktop Settings.",
+            text = stringResource(R.string.onboarding_features_desc),
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -547,7 +549,7 @@ fun FeaturesChoicePage(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Minus One Page", style = MaterialTheme.typography.bodyLarge)
+                    Text(stringResource(R.string.onboarding_minus_one_page), style = MaterialTheme.typography.bodyLarge)
                     Switch(checked = showMinusOne, onCheckedChange = onMinusOneChange)
                 }
                 Spacer(modifier = Modifier.height(16.dp))
@@ -556,7 +558,7 @@ fun FeaturesChoicePage(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("App Library", style = MaterialTheme.typography.bodyLarge)
+                    Text(stringResource(R.string.onboarding_app_library), style = MaterialTheme.typography.bodyLarge)
                     Switch(checked = showLibrary, onCheckedChange = onLibraryChange)
                 }
             }
@@ -581,13 +583,13 @@ fun PreferencesAndFinishPage(viewModel: MainViewModel) {
         )
         Spacer(modifier = Modifier.height(20.dp))
         Text(
-            text = "Theme & Finish",
+            text = stringResource(R.string.onboarding_finish_title),
             style = MaterialTheme.typography.headlineLarge,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = "Select your preferred theme mode. You are all set to explore your new home screen!",
+            text = stringResource(R.string.onboarding_finish_desc),
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -601,19 +603,19 @@ fun PreferencesAndFinishPage(viewModel: MainViewModel) {
             FilterChip(
                 selected = themeMode == ThemeMode.LIGHT,
                 onClick = { viewModel.setThemeMode(ThemeMode.LIGHT) },
-                label = { Text("Light") },
+                label = { Text(stringResource(R.string.theme_light)) },
                 modifier = Modifier.weight(1f)
             )
             FilterChip(
                 selected = themeMode == ThemeMode.DARK,
                 onClick = { viewModel.setThemeMode(ThemeMode.DARK) },
-                label = { Text("Dark") },
+                label = { Text(stringResource(R.string.theme_dark)) },
                 modifier = Modifier.weight(1f)
             )
             FilterChip(
                 selected = themeMode == ThemeMode.FOLLOW_SYSTEM,
                 onClick = { viewModel.setThemeMode(ThemeMode.FOLLOW_SYSTEM) },
-                label = { Text("System") },
+                label = { Text(stringResource(R.string.theme_follow_system)) },
                 modifier = Modifier.weight(1f)
             )
         }

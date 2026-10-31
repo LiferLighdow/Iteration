@@ -53,13 +53,11 @@ class MainActivity : AppCompatActivity() {
         super.onPause()
         val viewModel = androidx.lifecycle.ViewModelProvider(this)[MainViewModel::class.java]
         viewModel.onBackground()
-        viewModel.setLauncherVisible(false)
     }
 
     override fun onResume() {
         super.onResume()
         val viewModel = androidx.lifecycle.ViewModelProvider(this)[MainViewModel::class.java]
-        viewModel.setLauncherVisible(true)
         viewModel.refreshPassword()
         if (viewModel.shouldRefreshIconsOnReturn) {
             viewModel.shouldRefreshIconsOnReturn = false
@@ -69,6 +67,11 @@ class MainActivity : AppCompatActivity() {
         viewModel.onForeground()
         // 回到 Launcher 時執行綠化清理
         viewModel.performGreenifyCleanup()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
     }
 
 

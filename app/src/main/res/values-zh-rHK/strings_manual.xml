@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dock_manual_title">Dock 樣式手冊</string>
+
+    <string name="manual_search_basic_title">基本使用</string>
+    <string name="manual_search_basic_content">在主畫面上向下滑動即可開啟全域搜尋。它能同時搜尋您的應用程式、聯絡人、行事曆事件與檔案。</string>
+    <string name="manual_search_system_title">系統指令</string>
+    <string name="manual_search_system_content">直接觸發系統動作。輸入 \"wifi\"、\"bt\"、\"alarm 7:30\"、\"timer 60\"、\"battery\" 或 \"settings\" 來執行快捷動作或跳轉至特定系統頁面。</string>
+    <string name="manual_search_expanded_title">擴展資料搜尋</string>
+    <string name="manual_search_expanded_content">除了應用程式外，現在還能搜尋您的聯絡人（一鍵撥號）、行事曆事件（顯示即將到來的行程）以及裝置儲存空間中的檔案與資料夾。</string>
+    <string name="manual_search_calc_title">科學計算機與進制</string>
+    <string name="manual_search_calc_content">輸入數學算式如 \"sin(30) * pi\"。對於整數，會自動顯示二進位（4位分組）、十六進位與八進位轉換。點擊任意結果即可複製。</string>
+    <string name="manual_search_translator_title">智慧翻譯 (tr)</string>
+    <string name="manual_search_translator_content">輸入 \"tr [文字]\" 翻譯至系統語言，或 \"tr \\\"[文字]\\\" to [語言]\" 翻譯至指定語言。當內容包含 \"to\" 時建議使用引號。您也可以從「更多搜尋」區塊跳轉至 Google 翻譯。</string>
+    <string name="manual_search_matrix_title">單位與貨幣矩陣</string>
+    <string name="manual_search_matrix_content">輸入 \"100usd\" 或 \"100m\" 可立即查看 7 種主要貨幣或相關單位的完整換算矩陣。若要進行特定換算，請使用 \"100usd to twd\"。</string>
+    <string name="manual_search_suggestions_title">搜尋建議</string>
+    <string name="manual_search_suggestions_content">當您輸入時，啟動器會從網路抓取前 4 個熱門搜尋建議。點擊建議即可填入搜尋列。</string>
+    <string name="manual_search_solver_title">方程式求解</string>
+    <string name="manual_search_solver_content">偵測到如 \"x^2 - 4 = 0\" 的方程式時，將提供直接連至 WolframAlpha 的連結以獲取逐步解答。</string>
+    <string name="manual_search_clipboard_title">智慧剪貼簿</string>
+    <string name="manual_search_clipboard_content">當搜尋列為空時，您最近複製的文字會以卡片形式出現，供一鍵搜尋或計算。</string>
+
+    <string name="manual_dock_modern_title">現代（懸浮）</string>
+    <string name="manual_dock_modern_content">向 iOS 11 至最新版本致敬。此風格採用大圓角容器懸浮於桌布上方，營造出現代且富有層次的視覺體驗。</string>
+    <string name="manual_dock_classic_title">經典（全寬）</string>
+    <string name="manual_dock_classic_content">向 iOS 7 至 iOS 10 以及 /e/OS 致敬。熟悉且可靠的滿版邊緣設計，搭配乾淨的半透明外觀，為您最常使用的應用程式提供穩固的基底。</string>
+    <string name="manual_dock_platform_title">平台（3D 玻璃）</string>
+    <string name="manual_dock_platform_content">向 iPhone OS 1 至 iOS 6 致敬。此風格重現了經典的「玻璃層架」外觀，為您的應用程式模擬出厚實且具折射感的 3D 玻璃平台。</string>
+    <string name="manual_dock_lite_title">極簡（無邊框）</string>
+    <string name="manual_dock_lite_content">向 Android、MIUI/HyperOS 與極簡主義致敬。完全移除背景容器，讓您的應用程式圖標在桌布上自由呼吸，呈現乾淨純粹的視覺。</string>
+
+    <string name="manual_engine_q1_title">什麼是圖標快取引擎？</string>
+    <string name="manual_engine_q1_content">圖標快取引擎是負責在 Iteration Launcher 中生成、處理與儲存所有應用程式圖標的核心系統。它確保複雜的視覺效果（如玻璃折射與 Material You 主題）能夠流暢運行而不耗費過多電量。</string>
+    <string name="manual_engine_q2_title">第 13 版：統一化時代</string>
+    <string name="manual_engine_q2_content">Iteration 目前使用 V13 引擎。此版本引入了「ID 統一化機制」，確保資料夾、桌面與應用程式庫中的圖標始終完美同步且絕不混淆。</string>
+    <string name="manual_engine_q3_title">高效能處理</string>
+    <string name="manual_engine_q3_content">引擎採用多執行緒架構（信號量 8），允許在背景同時處理數百個圖標。這確保了即使您更改了整個圖標風格或主題顏色，使用者介面依然保持高響應速度。</string>
+    <string name="manual_engine_q4_title">自我修復快取</string>
+    <string name="manual_engine_q4_content">如果發生任何視覺異常，可以手動重置引擎。它會自動偵測過期的快取檔案，並使用最新的渲染演算法重新生成，讓您的桌面始終保持清晰銳利。</string>
+</resources>

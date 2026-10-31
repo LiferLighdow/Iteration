@@ -153,7 +153,7 @@ fun LauncherScreen(
     val scope = rememberCoroutineScope()
 
     // --- iOS 風格進入動畫狀態 ---
-    var isEntering by remember { mutableStateOf(false) }
+    var isEntering by remember { mutableStateOf(true) }
     val enterScale by animateFloatAsState(
         targetValue = if (isEntering) 1f else 1.1f, // 從略大縮小回原狀，模擬從 App 抽離感
         animationSpec = spring(
@@ -196,12 +196,6 @@ fun LauncherScreen(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 viewModel.loadApps()
-                // 觸發進入動畫
-                isEntering = false
-                scope.launch {
-                    delay(16) // 確保在下一幀觸發，產生明顯的動畫起始點
-                    isEntering = true
-                }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -496,6 +490,75 @@ fun LauncherScreen(
             }
         }
 
+        // 1.1 桌布與圖案層 (固定在底層，永不隨手勢動畫隱藏)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .layerBackdrop(backdrop)
+        ) {
+            // 底層：動態桌布 (VIDEO/GIF) 或 靜態桌布圖片
+            when {
+                activeWallpaperMediaType == "VIDEO" && !activeWallpaperMediaPath.isNullOrEmpty() -> {
+                    VideoWallpaperPlayer(
+                        videoPath = activeWallpaperMediaPath!!,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+                activeWallpaperMediaType == "GIF" && !activeWallpaperMediaPath.isNullOrEmpty() -> {
+                    GifWallpaperPlayer(
+                        gifPath = activeWallpaperMediaPath!!,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+                else -> {
+                    rawWallpaper?.let {
+                        Image(
+                            bitmap = it,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                }
+            }
+
+            // 中層：Lite / Balance 模式即時渲染的 Emoji 陣列
+            if (emojiWallpaperText.isNotEmpty()) {
+                val emojis = remember(emojiWallpaperText) { parseEmojis(emojiWallpaperText) }
+                
+                if (emojis.isNotEmpty()) {
+                    androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+                        drawEmojiPattern(
+                            drawContext.canvas.nativeCanvas,
+                            emojis,
+                            size.width.toInt(),
+                            size.height.toInt(),
+                            emojiPatternStyle
+                        )
+                    }
+                }
+            }
+        }
+
+        // 獨立的模糊處理層 (Android 12 以下)
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                blurredWallpaper?.let {
+                    Image(
+                        bitmap = it,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                alpha = (launcherBlur.value / 20f).coerceIn(0f, 1f)
+                            },
+                        contentScale = ContentScale.Crop
+                    )
+                }
+            }
+        }
+
+        // 2. 動態進場/手勢動畫的內容層 (桌面 Icon、Dock、Widgets 等)
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -507,78 +570,6 @@ fun LauncherScreen(
                     }
                 }
         ) {
-            // 1.1 桌布與圖案層 (統一採樣範圍)
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .layerBackdrop(backdrop)
-            ) {
-                val isLauncherVisible by viewModel.isLauncherVisible.collectAsState()
-                // 只有在開啟 Liquid Glass 且視窗可見時，才需要繪製 Compose 應用層桌布供 Backdrop 採樣
-                if (isLiquidGlassEnabled && isLauncherVisible) {
-                    // 底層：動態桌布 (VIDEO/GIF) 或 靜態桌布圖片
-                    when {
-                        activeWallpaperMediaType == "VIDEO" && !activeWallpaperMediaPath.isNullOrEmpty() -> {
-                            VideoWallpaperPlayer(
-                                videoPath = activeWallpaperMediaPath!!,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
-                        activeWallpaperMediaType == "GIF" && !activeWallpaperMediaPath.isNullOrEmpty() -> {
-                            GifWallpaperPlayer(
-                                gifPath = activeWallpaperMediaPath!!,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
-                        else -> {
-                            rawWallpaper?.let {
-                                Image(
-                                    bitmap = it,
-                                    contentDescription = null,
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // 中層：Lite / Balance 模式即時渲染的 Emoji 陣列
-                if (emojiWallpaperText.isNotEmpty()) {
-                    val emojis = remember(emojiWallpaperText) { parseEmojis(emojiWallpaperText) }
-                    
-                    if (emojis.isNotEmpty()) {
-                        androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
-                            drawEmojiPattern(
-                                drawContext.canvas.nativeCanvas,
-                                emojis,
-                                size.width.toInt(),
-                                size.height.toInt(),
-                                emojiPatternStyle
-                            )
-                        }
-                    }
-                }
-            }
-
-            // 獨立的模糊處理層 (Android 12 以下)
-            Box(modifier = Modifier.fillMaxSize()) {
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-                    blurredWallpaper?.let {
-                        Image(
-                            bitmap = it,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .graphicsLayer {
-                                    alpha = (launcherBlur.value / 20f).coerceIn(0f, 1f)
-                                },
-                            contentScale = ContentScale.Crop
-                        )
-                    }
-                }
-            }
-
             Box(
                 modifier = Modifier
                     .fillMaxSize()
