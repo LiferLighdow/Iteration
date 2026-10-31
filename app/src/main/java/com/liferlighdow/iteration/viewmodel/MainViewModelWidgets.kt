@@ -301,3 +301,25 @@ fun MainViewModel.updateCountdown(widgetId: String, name: String, timestamp: Lon
     saveLayout()
     saveWidgets(_minusOneWidgets.value)
 }
+
+fun MainViewModel.updateMusicWidgetTargetPackage(widgetId: String, targetPackage: String?) {
+    fun updateItem(item: AppModel): AppModel {
+        val w = item.widget
+        if (w?.id == widgetId && w.widgetType is WidgetType.Music) {
+            return item.copy(widget = w.copy(widgetType = w.widgetType.copy(targetPackage = targetPackage)))
+        }
+        if (item.isFolder) {
+            return item.copy(folderItems = item.folderItems.map { updateItem(it) })
+        }
+        return item
+    }
+
+    _pages.value = _pages.value.map { page -> page.map { updateItem(it) } }
+    _minusOneWidgets.value = _minusOneWidgets.value.map { widget ->
+        if (widget.id == widgetId && widget.widgetType is WidgetType.Music) {
+            widget.copy(widgetType = widget.widgetType.copy(targetPackage = targetPackage))
+        } else widget
+    }
+    saveLayout()
+    saveWidgets(_minusOneWidgets.value)
+}

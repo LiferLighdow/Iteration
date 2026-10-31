@@ -34,5 +34,6 @@ data class WallpaperPreset(
     val originalPath: String?,
     val config: WallpaperConfig?,
     val mediaType: String = "IMAGE", // "IMAGE", "VIDEO", "GIF"
-    val mediaPath: String? = null
+    val mediaPath: String? = null,
+    val resId: Int? = null
 )

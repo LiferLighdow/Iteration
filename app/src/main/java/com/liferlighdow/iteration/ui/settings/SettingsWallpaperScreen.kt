@@ -6,6 +6,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -26,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -388,37 +390,44 @@ fun SettingsWallpaperScreen(onBack: () -> Unit) {
             title = { Text(selectedPresetForMenu!!.name) },
             text = {
                 Column {
-                    if (selectedPresetForMenu!!.originalPath != null) {
-                        ListItem(
-                            headlineContent = { Text(stringResource(R.string.adjust_position)) },
-                            leadingContent = { Icon(Icons.Default.Crop, null) },
-                            modifier = Modifier.clickable {
-                                val path = selectedPresetForMenu!!.originalPath!!
-                                scope.launch(Dispatchers.IO) {
-                                    val bitmap = BitmapFactory.decodeFile(path)
-                                    withContext(Dispatchers.Main) {
-                                        originalBitmapForCrop = bitmap
+                    if (selectedPresetForMenu!!.resId == null) {
+                        if (selectedPresetForMenu!!.originalPath != null) {
+                            ListItem(
+                                headlineContent = { Text(stringResource(R.string.adjust_position)) },
+                                leadingContent = { Icon(Icons.Default.Crop, null) },
+                                modifier = Modifier.clickable {
+                                    val path = selectedPresetForMenu!!.originalPath!!
+                                    scope.launch(Dispatchers.IO) {
+                                        val bitmap = BitmapFactory.decodeFile(path)
+                                        withContext(Dispatchers.Main) {
+                                            originalBitmapForCrop = bitmap
+                                        }
                                     }
                                 }
+                            )
+                        }
+                        ListItem(
+                            headlineContent = { Text(stringResource(R.string.rename)) },
+                            leadingContent = { Icon(Icons.Default.Edit, null) },
+                            modifier = Modifier.clickable {
+                                showRenameDialog = selectedPresetForMenu
+                                selectedPresetForMenu = null
                             }
                         )
+                        ListItem(
+                            headlineContent = { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) },
+                            leadingContent = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
+                            modifier = Modifier.clickable {
+                                viewModel.deleteWallpaperPreset(selectedPresetForMenu!!)
+                                selectedPresetForMenu = null
+                            }
+                        )
+                    } else {
+                        ListItem(
+                            headlineContent = { Text("內建預設桌布（唯讀）") },
+                            leadingContent = { Icon(Icons.Default.Info, null) }
+                        )
                     }
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.rename)) },
-                        leadingContent = { Icon(Icons.Default.Edit, null) },
-                        modifier = Modifier.clickable {
-                            showRenameDialog = selectedPresetForMenu
-                            selectedPresetForMenu = null
-                        }
-                    )
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) },
-                        leadingContent = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
-                        modifier = Modifier.clickable {
-                            viewModel.deleteWallpaperPreset(selectedPresetForMenu!!)
-                            selectedPresetForMenu = null
-                        }
-                    )
                 }
             },
             confirmButton = {}
@@ -557,7 +566,14 @@ fun WallpaperPresetCard(
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .clickable { onApply() }
     ) {
-        if (preset.previewPath != null) {
+        if (preset.resId != null) {
+            Image(
+                painter = painterResource(id = preset.resId),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        } else if (preset.previewPath != null) {
             AsyncImage(
                 model = preset.previewPath,
                 contentDescription = null,

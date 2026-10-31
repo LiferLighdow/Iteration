@@ -513,33 +513,37 @@ fun LauncherScreen(
                     .fillMaxSize()
                     .layerBackdrop(backdrop)
             ) {
-                // 底層：動態桌布 (VIDEO/GIF) 或 靜態桌布圖片
-                when {
-                    activeWallpaperMediaType == "VIDEO" && !activeWallpaperMediaPath.isNullOrEmpty() -> {
-                        VideoWallpaperPlayer(
-                            videoPath = activeWallpaperMediaPath!!,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-                    activeWallpaperMediaType == "GIF" && !activeWallpaperMediaPath.isNullOrEmpty() -> {
-                        GifWallpaperPlayer(
-                            gifPath = activeWallpaperMediaPath!!,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-                    else -> {
-                        rawWallpaper?.let {
-                            Image(
-                                bitmap = it,
-                                contentDescription = null,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
+                val isLauncherVisible by viewModel.isLauncherVisible.collectAsState()
+                // 只有在開啟 Liquid Glass 且視窗可見時，才需要繪製 Compose 應用層桌布供 Backdrop 採樣
+                if (isLiquidGlassEnabled && isLauncherVisible) {
+                    // 底層：動態桌布 (VIDEO/GIF) 或 靜態桌布圖片
+                    when {
+                        activeWallpaperMediaType == "VIDEO" && !activeWallpaperMediaPath.isNullOrEmpty() -> {
+                            VideoWallpaperPlayer(
+                                videoPath = activeWallpaperMediaPath!!,
+                                modifier = Modifier.fillMaxSize()
                             )
+                        }
+                        activeWallpaperMediaType == "GIF" && !activeWallpaperMediaPath.isNullOrEmpty() -> {
+                            GifWallpaperPlayer(
+                                gifPath = activeWallpaperMediaPath!!,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                        else -> {
+                            rawWallpaper?.let {
+                                Image(
+                                    bitmap = it,
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
                         }
                     }
                 }
 
-                // 中層：Lite 模式即時渲染的 Emoji 陣列
+                // 中層：Lite / Balance 模式即時渲染的 Emoji 陣列
                 if (emojiWallpaperText.isNotEmpty()) {
                     val emojis = remember(emojiWallpaperText) { parseEmojis(emojiWallpaperText) }
                     
@@ -1455,6 +1459,8 @@ fun drawEmojiPattern(
     height: Int,
     style: com.liferlighdow.iteration.data.EmojiPatternStyle = com.liferlighdow.iteration.data.EmojiPatternStyle.MEDIUM_GRID
 ) {
+    if (emojis.isEmpty() || width <= 0 || height <= 0) return
+
     val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = android.graphics.Paint.Align.CENTER
     }

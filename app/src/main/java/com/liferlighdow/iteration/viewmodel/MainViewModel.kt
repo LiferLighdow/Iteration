@@ -296,6 +296,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
         }
     }
 
+    internal val _isLauncherVisible = MutableStateFlow(true)
+    val isLauncherVisible = _isLauncherVisible.asStateFlow()
+
+    fun setLauncherVisible(visible: Boolean) {
+        _isLauncherVisible.value = visible
+    }
+
     internal val _activeContextMenuId = MutableStateFlow<String?>(null)
     val activeContextMenuId = _activeContextMenuId.asStateFlow()
 

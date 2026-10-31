@@ -474,6 +474,8 @@
     <string name="adjust_position">调整位置</string>
     <string name="edit_note">编辑笔记</string>
     <string name="edit_todo">编辑待办清单</string>
+    <string name="choose_music_app">选择音乐应用</string>
+    <string name="only_show_music_apps">仅显示音乐应用</string>
     <string name="choose_location">选择地点</string>
     <string name="note_placeholder">在此输入您的笔记&#8230;</string>
     <string name="ip_location_auto">使用 IP 定位（自动）</string>

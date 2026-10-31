@@ -17,7 +17,7 @@ sealed class WidgetType {
     @Serializable @SerialName("Clock") data class Clock(val isDigital: Boolean = false) : WidgetType()
     @Serializable @SerialName("Calendar") data class Calendar(val isWide: Boolean = false) : WidgetType()
     @Serializable @SerialName("Photo") data class Photo(val isWide: Boolean = false, val uri: String? = null) : WidgetType()
-    @Serializable @SerialName("Music") data class Music(val isWide: Boolean = false) : WidgetType()
+    @Serializable @SerialName("Music") data class Music(val isWide: Boolean = false, val targetPackage: String? = null) : WidgetType()
     @Serializable @SerialName("Note") data class Note(val text: String = "", val isWide: Boolean = false) : WidgetType()
     @Serializable @SerialName("Weather") data class Weather(val isWide: Boolean = true) : WidgetType()
     @Serializable @SerialName("ToDoList") data class ToDoList(val tasks: List<TodoTask> = emptyList(), val isWide: Boolean = true) : WidgetType()

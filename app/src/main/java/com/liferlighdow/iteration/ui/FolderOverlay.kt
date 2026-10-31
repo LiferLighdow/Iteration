@@ -444,7 +444,11 @@ fun FolderOverlay(
                     allApps = allAppsFlat,
                     iconCornerRadius = iconCornerRadius,
                     viewModel = viewModel,
-                    initialSelectedIds = currentFolder.folderItems.map { it.uniqueId },
+                    initialSelectedIds = currentFolder.folderItems.map { folderItem ->
+                        val baseApp = allAppsFlat.find { it.uniqueId == folderItem.uniqueId }
+                            ?: allAppsFlat.find { it.packageName == folderItem.packageName && it.userId == folderItem.userId }
+                        baseApp?.uniqueId ?: folderItem.uniqueId
+                    },
                     onDismiss = { showAppPicker = false },
                     onAppsSelected = {
                         viewModel.updateFolderApps(currentFolder.uniqueId, it)

@@ -322,7 +322,11 @@ fun MainViewModel.updateFolderApps(folderId: String, ids: List<String>) {
     val currentPages = _pages.value.map { page ->
         page.map { item ->
             if (item.uniqueId == folderId) {
-                val existingMap = item.folderItems.associateBy { it.uniqueId }
+                val existingMap = item.folderItems.associateBy { folderItem ->
+                    val baseApp = _allApps.value.find { it.uniqueId == folderItem.uniqueId }
+                        ?: _allApps.value.find { it.packageName == folderItem.packageName && it.userId == folderItem.userId }
+                    baseApp?.uniqueId ?: folderItem.uniqueId
+                }
                 val newFolderItems = ids.mapNotNull { id ->
                     existingMap[id] ?: allAppsMap[id]?.copy(
                         uniqueId = "${id}@${System.currentTimeMillis()}"
@@ -336,7 +340,11 @@ fun MainViewModel.updateFolderApps(folderId: String, ids: List<String>) {
 
     val currentDock = _dockItems.value.map { item ->
         if (item.uniqueId == folderId) {
-            val existingMap = item.folderItems.associateBy { it.uniqueId }
+            val existingMap = item.folderItems.associateBy { folderItem ->
+                val baseApp = _allApps.value.find { it.uniqueId == folderItem.uniqueId }
+                    ?: _allApps.value.find { it.packageName == folderItem.packageName && it.userId == folderItem.userId }
+                baseApp?.uniqueId ?: folderItem.uniqueId
+            }
             val newFolderItems = ids.mapNotNull { id ->
                 existingMap[id] ?: allAppsMap[id]?.copy(
                     uniqueId = "${id}@${System.currentTimeMillis()}"

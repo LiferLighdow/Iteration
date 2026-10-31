@@ -49,9 +49,17 @@ import com.liferlighdow.iteration.viewmodel.*
 
 class MainActivity : AppCompatActivity() {
 
+    override fun onPause() {
+        super.onPause()
+        val viewModel = androidx.lifecycle.ViewModelProvider(this)[MainViewModel::class.java]
+        viewModel.onBackground()
+        viewModel.setLauncherVisible(false)
+    }
+
     override fun onResume() {
         super.onResume()
         val viewModel = androidx.lifecycle.ViewModelProvider(this)[MainViewModel::class.java]
+        viewModel.setLauncherVisible(true)
         viewModel.refreshPassword()
         if (viewModel.shouldRefreshIconsOnReturn) {
             viewModel.shouldRefreshIconsOnReturn = false

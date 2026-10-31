@@ -436,6 +436,8 @@
     <string name="adjust_position">調整圖片位置</string>
     <string name="edit_note">更改記事本</string>
     <string name="edit_todo">編輯待辦清單</string>
+    <string name="choose_music_app">選擇音樂應用</string>
+    <string name="only_show_music_apps">僅顯示音樂應用</string>
     <string name="choose_location">選擇地區</string>
     <string name="note_placeholder">在這裡輸入您的大膽想法&#8230;</string>
     <string name="ip_location_auto">使用 IP 自動定位</string>

@@ -51,6 +51,8 @@ import com.liferlighdow.iteration.data.WidgetDisplayMode
 import com.liferlighdow.iteration.data.WidgetModel
 import com.liferlighdow.iteration.data.TodoTask
 import com.liferlighdow.iteration.data.WidgetType
+import com.liferlighdow.iteration.data.AppModel
+import com.liferlighdow.iteration.ui.AppPickerDialog
 import com.liferlighdow.iteration.viewmodel.*
 import kotlinx.coroutines.*
 import org.json.JSONObject
@@ -82,6 +84,7 @@ fun WidgetStackPickerDialog(
 
     var noteToEditInStack by remember { mutableStateOf<Pair<Int, WidgetModel>?>(null) }
     var todoToEditInStack by remember { mutableStateOf<Pair<Int, WidgetModel>?>(null) }
+    var musicToEditInStack by remember { mutableStateOf<Pair<Int, WidgetModel>?>(null) }
     var photoToAdjust by remember { mutableStateOf<WidgetModel?>(null) }
     var showLocationSearch by remember { mutableStateOf(false) }
 
@@ -202,6 +205,17 @@ fun WidgetStackPickerDialog(
                                                     leadingIcon = { Icon(Icons.Default.PlaylistAddCheck, null, tint = MaterialTheme.colorScheme.primary) },
                                                     onClick = {
                                                         todoToEditInStack = index to item
+                                                        showItemMenu = false
+                                                    }
+                                                )
+                                            }
+
+                                            if (item.type is WidgetType.Music) {
+                                                DropdownMenuItem(
+                                                    text = { Text(stringResource(R.string.choose_music_app)) },
+                                                    leadingIcon = { Icon(Icons.Default.MusicNote, null, tint = MaterialTheme.colorScheme.primary) },
+                                                    onClick = {
+                                                        musicToEditInStack = index to item
                                                         showItemMenu = false
                                                     }
                                                 )
@@ -378,6 +392,26 @@ fun WidgetStackPickerDialog(
                 TextButton(onClick = { noteToEditInStack = null }) {
                     Text(stringResource(R.string.cancel))
                 }
+            }
+        )
+    }
+
+    if (musicToEditInStack != null) {
+        val (index, widget) = musicToEditInStack!!
+        val allApps by viewModel.allApps.collectAsState()
+        AppPickerDialog(
+            allApps = allApps,
+            viewModel = viewModel,
+            isMusicPicker = true,
+            onDismiss = { musicToEditInStack = null },
+            onAppSelected = { app ->
+                val newList = children.toMutableList()
+                val oldWidget = newList[index]
+                val musicType = oldWidget.type as WidgetType.Music
+                val newType = musicType.copy(targetPackage = app.packageName)
+                newList[index] = oldWidget.copy(widgetType = newType)
+                children = newList
+                musicToEditInStack = null
             }
         )
     }

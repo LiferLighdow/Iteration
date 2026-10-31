@@ -2,6 +2,7 @@ package com.liferlighdow.iteration.ui.widgets
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -16,9 +17,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import android.content.Intent
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kyant.backdrop.Backdrop
 import com.liferlighdow.iteration.R
@@ -40,11 +43,29 @@ fun MusicWidget(
     isMinusOnePage: Boolean = false,
     drawFrame: Boolean = true
 ) {
-    val isWide = (widget.type as? WidgetType.Music)?.isWide ?: false
+    val context = LocalContext.current
+    val mediaInfo by NotificationService.currentMedia.collectAsState()
+    val musicType = widget.type as? WidgetType.Music
+    val isWide = musicType?.isWide ?: false
+
+    val clickModifier = modifier.clickable {
+        val targetPkg = musicType?.targetPackage ?: mediaInfo?.packageName
+        if (!targetPkg.isNullOrEmpty()) {
+            try {
+                val intent = context.packageManager.getLaunchIntentForPackage(targetPkg)?.apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                if (intent != null) {
+                    context.startActivity(intent)
+                }
+            } catch (e: Exception) {}
+        }
+    }
+
     if (isWide) {
-        WideMusicWidget(displayMode, modifier, backdrop, isMinusOnePage, drawFrame)
+        WideMusicWidget(displayMode, clickModifier, backdrop, isMinusOnePage, drawFrame)
     } else {
-        StandardMusicWidget(displayMode, modifier, backdrop, isMinusOnePage, drawFrame)
+        StandardMusicWidget(displayMode, clickModifier, backdrop, isMinusOnePage, drawFrame)
     }
 }
 

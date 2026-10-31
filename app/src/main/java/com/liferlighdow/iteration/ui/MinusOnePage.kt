@@ -98,6 +98,7 @@ fun MinusOnePage(
     var weatherToEdit by remember { mutableStateOf<WidgetModel?>(null) }
     var rssToEdit by remember { mutableStateOf<WidgetModel?>(null) }
     var countdownToEdit by remember { mutableStateOf<WidgetModel?>(null) }
+    var musicToEdit by remember { mutableStateOf<WidgetModel?>(null) }
     var photoToAdjust by remember { mutableStateOf<WidgetModel?>(null) }
     var photoToPick by remember { mutableStateOf<WidgetModel?>(null) }
     var showCropDialogByUri by remember { mutableStateOf<android.net.Uri?>(null) }
@@ -624,6 +625,17 @@ fun MinusOnePage(
                                         }
                                     )
                                 }
+                                if (widget.type is WidgetType.Music) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.choose_music_app)) },
+                                        leadingIcon = { Icon(Icons.Default.MusicNote, null) },
+                                        onClick = { 
+                                            musicToEdit = widget
+                                            showContextMenu = false
+                                            viewModel.setActiveContextMenuId(null)
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
@@ -827,6 +839,20 @@ fun MinusOnePage(
             initialTimestamp = (countdownToEdit!!.type as WidgetType.Countdown).targetTimestamp,
             viewModel = viewModel,
             onDismiss = { countdownToEdit = null }
+        )
+    }
+
+    if (musicToEdit != null) {
+        val allApps by viewModel.allApps.collectAsState()
+        AppPickerDialog(
+            allApps = allApps,
+            viewModel = viewModel,
+            isMusicPicker = true,
+            onDismiss = { musicToEdit = null },
+            onAppSelected = { app ->
+                viewModel.updateMusicWidgetTargetPackage(musicToEdit!!.id, app.packageName)
+                musicToEdit = null
+            }
         )
     }
 

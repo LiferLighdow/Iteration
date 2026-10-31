@@ -5,94 +5,66 @@
     android:viewportWidth="90"
     android:viewportHeight="180">
 
-    <!-- Layer 1: Dark Slate Prism Background -->
-    <path
-        android:pathData="M0,0h90v180h-90z">
+    <!-- Healing Twilight Sky Gradient -->
+    <path android:pathData="M0,0h90v180h-90z">
         <aapt:attr name="android:fillColor">
-            <gradient
-                android:startX="0"
-                android:startY="0"
-                android:endX="90"
-                android:endY="180"
-                android:type="linear">
-                <item android:offset="0" android:color="#232526"/>
-                <item android:offset="1" android:color="#414345"/>
+            <gradient android:startX="45" android:startY="0" android:endX="45" android:endY="180" android:type="linear">
+                <item android:offset="0" android:color="#2C2A4A"/>
+                <item android:offset="0.3" android:color="#5B4B6E"/>
+                <item android:offset="0.6" android:color="#E07A5F"/>
+                <item android:offset="1" android:color="#F4A261"/>
             </gradient>
         </aapt:attr>
     </path>
 
-    <!-- Layer 2: Main Angular Shard (Bottom-Left to Top-Right) -->
-    <path
-        android:pathData="M0,180 L90,60 L90,180 Z"
-        android:fillAlpha="0.15">
+    <!-- Soft Glowing Sunset Sun -->
+    <path android:pathData="M45,85 m-22,0 a22,22 0 1,1 44,0 a22,22 0 1,1 -44,0" android:fillAlpha="0.9">
         <aapt:attr name="android:fillColor">
-            <gradient
-                android:startX="0"
-                android:startY="180"
-                android:endX="90"
-                android:endY="60"
-                android:type="linear">
-                <item android:offset="0" android:color="#00DBDE"/>
-                <item android:offset="1" android:color="#FC00FF"/>
+            <gradient android:startX="45" android:startY="63" android:endX="45" android:endY="107" android:type="radial" android:gradientRadius="30">
+                <item android:offset="0" android:color="#FFEE93"/>
+                <item android:offset="0.5" android:color="#FFD166"/>
+                <item android:offset="1" android:color="#00000000"/>
             </gradient>
         </aapt:attr>
     </path>
 
-    <!-- Layer 3: Top Angular Shard (Top-Right to Bottom-Left) -->
-    <path
-        android:pathData="M90,0 L0,120 L0,0 Z"
-        android:fillAlpha="0.1">
+    <!-- Distant Gentle Mountains / Hills -->
+    <path android:pathData="M0,115 C30,100 65,120 90,105 V180 H0 Z" android:fillAlpha="0.6">
         <aapt:attr name="android:fillColor">
-            <gradient
-                android:startX="90"
-                android:startY="0"
-                android:endX="0"
-                android:endY="120"
-                android:type="linear">
-                <item android:offset="0" android:color="#FC00FF"/>
-                <item android:offset="1" android:color="#00DBDE"/>
+            <gradient android:startX="45" android:startY="105" android:endX="45" android:endY="180" android:type="linear">
+                <item android:offset="0" android:color="#8D6B94"/>
+                <item android:offset="1" android:color="#3D314A"/>
             </gradient>
         </aapt:attr>
     </path>
 
-    <!-- Layer 4: The Central Prism Core -->
-    <path
-        android:pathData="M45,60 L75,90 L45,120 L15,90 Z"
-        android:fillAlpha="0.8">
+    <!-- Midground Sage Hill -->
+    <path android:pathData="M0,135 C35,125 55,145 90,130 V180 H0 Z" android:fillAlpha="0.85">
         <aapt:attr name="android:fillColor">
-            <gradient
-                android:startX="45"
-                android:startY="60"
-                android:endX="45"
-                android:endY="120"
-                android:type="linear">
-                <item android:offset="0" android:color="#80FFFFFF"/>
-                <item android:offset="0.5" android:color="#CCFFFFFF"/>
-                <item android:offset="1" android:color="#80FFFFFF"/>
+            <gradient android:startX="45" android:startY="125" android:endX="45" android:endY="180" android:type="linear">
+                <item android:offset="0" android:color="#A3C1AD"/>
+                <item android:offset="1" android:color="#4F7942"/>
             </gradient>
         </aapt:attr>
     </path>
 
-    <!-- Layer 5: Neon Edge Accents -->
-    <path
-        android:strokeWidth="1.5"
-        android:pathData="M15,90 L45,60 L75,90"
-        android:strokeColor="#00DBDE"
-        android:fillColor="#00000000"/>
+    <!-- Foreground Soft Green Meadow & Cozy Silhouette Tree -->
+    <path android:pathData="M0,155 C30,145 65,160 90,150 V180 H0 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:startX="45" android:startY="145" android:endX="45" android:endY="180" android:type="linear">
+                <item android:offset="0" android:color="#6B8E23"/>
+                <item android:offset="1" android:color="#2E4615"/>
+            </gradient>
+        </aapt:attr>
+    </path>
 
-    <path
-        android:strokeWidth="1.5"
-        android:pathData="M15,90 L45,120 L75,90"
-        android:strokeColor="#FC00FF"
-        android:fillColor="#00000000"/>
+    <!-- Healing Silhouette Tree on Right -->
+    <!-- Trunk -->
+    <path android:pathData="M72,138 L74,158 H76 L75,138 Z" android:fillColor="#1A2E05"/>
+    <!-- Foliage -->
+    <path android:pathData="M74,122 C65,115 62,130 68,140 C62,146 72,154 80,146 C88,148 92,135 88,125 C90,116 82,112 74,122 Z" android:fillColor="#1A2E05"/>
 
-    <!-- Layer 6: Floating Geometry Fragments -->
-    <path
-        android:pathData="M10,30 L20,25 L15,40 Z"
-        android:fillColor="#40FFFFFF"/>
-
-    <path
-        android:pathData="M70,150 L85,145 L80,160 Z"
-        android:fillColor="#40FFFFFF"/>
+    <!-- Gentle Twinkling Stars & Fireflies in Sky -->
+    <path android:pathData="M20,30h1.5v1.5h-1.5z M75,25h1v1h-1z M35,55h1.2v1.2h-1.2z M65,45h1.5v1.5h-1.5z M25,75h1v1h-1z M70,70h1.2v1.2h-1.2z" android:fillColor="#FFEE93" android:fillAlpha="0.9"/>
 
 </vector>

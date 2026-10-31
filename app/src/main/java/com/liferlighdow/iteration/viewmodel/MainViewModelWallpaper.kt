@@ -110,63 +110,62 @@ fun MainViewModel.loadWallpaperPresets() {
     viewModelScope.launch(Dispatchers.IO) {
         val documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
         val wallpaperDir = File(documentsDir, "Iteration/Wallpaper")
-        
-        // Auto-check and register builtin wallpapers if managed storage permission is granted
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            if (Environment.isExternalStorageManager()) {
-                ensureBuiltinWallpapersRegistered(wallpaperDir)
-            }
-        } else {
-            // Check for standard storage permissions on older devices - simplified for now
-            ensureBuiltinWallpapersRegistered(wallpaperDir)
-        }
 
-        if (!wallpaperDir.exists()) return@launch
+        val builtinPresets = listOf(
+            WallpaperPreset(name = "Builtin 1", folderPath = "", previewPath = null, wallpaperPath = "", originalPath = null, config = null, resId = R.drawable.ic_builtin_wallpaper),
+            WallpaperPreset(name = "Builtin 2", folderPath = "", previewPath = null, wallpaperPath = "", originalPath = null, config = null, resId = R.drawable.ic_builtin_wallpaper2),
+            WallpaperPreset(name = "Builtin 3", folderPath = "", previewPath = null, wallpaperPath = "", originalPath = null, config = null, resId = R.drawable.ic_builtin_wallpaper3),
+            WallpaperPreset(name = "Builtin 4", folderPath = "", previewPath = null, wallpaperPath = "", originalPath = null, config = null, resId = R.drawable.ic_builtin_wallpaper4),
+            WallpaperPreset(name = "Builtin 5", folderPath = "", previewPath = null, wallpaperPath = "", originalPath = null, config = null, resId = R.drawable.ic_builtin_wallpaper5)
+        )
 
-        val presets = wallpaperDir.listFiles()?.filter { it.isDirectory }?.mapNotNull { folder ->
-            val configFile = File(folder, "config.json")
-            val wallpaperFile = File(folder, "wallpaper.png")
-            val previewFile = File(folder, "preview.jpg")
-            val originalFile = File(folder, "original.png")
+        val userPresets = if (wallpaperDir.exists()) {
+            wallpaperDir.listFiles()?.filter { it.isDirectory }?.mapNotNull { folder ->
+                val configFile = File(folder, "config.json")
+                val wallpaperFile = File(folder, "wallpaper.png")
+                val previewFile = File(folder, "preview.jpg")
+                val originalFile = File(folder, "original.jpg").takeIf { it.exists() } ?: File(folder, "original.png")
 
-            if (!wallpaperFile.exists() && !configFile.exists()) return@mapNotNull null
+                if (!wallpaperFile.exists() && !configFile.exists()) return@mapNotNull null
 
-            val config = if (configFile.exists()) {
-                try {
-                    Json.decodeFromString<WallpaperConfig>(configFile.readText())
-                } catch (e: Exception) {
-                    null
+                val config = if (configFile.exists()) {
+                    try {
+                        Json.decodeFromString<WallpaperConfig>(configFile.readText())
+                    } catch (e: Exception) {
+                        null
+                    }
+                } else null
+
+                val videoFile = File(folder, "media.mp4")
+                val gifFile = File(folder, "media.gif")
+
+                val mediaType = config?.mediaType ?: when {
+                    videoFile.exists() -> "VIDEO"
+                    gifFile.exists() -> "GIF"
+                    else -> "IMAGE"
                 }
-            } else null
 
-            val videoFile = File(folder, "media.mp4")
-            val gifFile = File(folder, "media.gif")
+                val mediaPath = config?.mediaPath ?: when (mediaType) {
+                    "VIDEO" -> if (videoFile.exists()) videoFile.absolutePath else null
+                    "GIF" -> if (gifFile.exists()) gifFile.absolutePath else null
+                    else -> null
+                }
 
-            val mediaType = config?.mediaType ?: when {
-                videoFile.exists() -> "VIDEO"
-                gifFile.exists() -> "GIF"
-                else -> "IMAGE"
-            }
+                WallpaperPreset(
+                    name = folder.name,
+                    folderPath = folder.absolutePath,
+                    previewPath = if (previewFile.exists()) previewFile.absolutePath else null,
+                    wallpaperPath = wallpaperFile.absolutePath,
+                    originalPath = if (originalFile.exists()) originalFile.absolutePath else null,
+                    config = config,
+                    mediaType = mediaType,
+                    mediaPath = mediaPath,
+                    resId = null
+                )
+            }?.sortedByDescending { File(it.folderPath).lastModified() } ?: emptyList()
+        } else emptyList()
 
-            val mediaPath = config?.mediaPath ?: when (mediaType) {
-                "VIDEO" -> if (videoFile.exists()) videoFile.absolutePath else null
-                "GIF" -> if (gifFile.exists()) gifFile.absolutePath else null
-                else -> null
-            }
-
-            WallpaperPreset(
-                name = folder.name,
-                folderPath = folder.absolutePath,
-                previewPath = if (previewFile.exists()) previewFile.absolutePath else null,
-                wallpaperPath = wallpaperFile.absolutePath,
-                originalPath = if (originalFile.exists()) originalFile.absolutePath else null,
-                config = config,
-                mediaType = mediaType,
-                mediaPath = mediaPath
-            )
-        }?.sortedByDescending { File(it.folderPath).lastModified() } ?: emptyList()
-
-        _wallpaperPresets.value = presets
+        _wallpaperPresets.value = builtinPresets + userPresets
     }
 }
 
@@ -196,7 +195,15 @@ fun MainViewModel.applyWallpaperPreset(preset: WallpaperPreset, destinationFlags
                 }
             }
 
-            val hasImage = wallpaperFileInPreset.exists()
+            val context = getApplication<android.app.Application>()
+            val bitmapToApply = if (preset.resId != null) {
+                val drawable = androidx.core.content.ContextCompat.getDrawable(context, preset.resId)
+                val dm = context.resources.displayMetrics
+                drawable?.toBitmap(dm.widthPixels, dm.heightPixels)
+            } else if (wallpaperFileInPreset.exists()) {
+                BitmapFactory.decodeFile(preset.wallpaperPath)
+            } else null
+
             val color = config?.wallpaperColor ?: 0xFF2196F3.toInt()
             val liteBitmap = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888).apply { eraseColor(color) }
             
@@ -211,9 +218,8 @@ fun MainViewModel.applyWallpaperPreset(preset: WallpaperPreset, destinationFlags
                     }
                 }
                 EmojiRenderingMode.BALANCE -> {
-                    if (hasImage && (destinationFlags and WallpaperManager.FLAG_LOCK) != 0) {
-                        val fullBitmap = BitmapFactory.decodeFile(preset.wallpaperPath)
-                        wm.setBitmap(fullBitmap, null, true, WallpaperManager.FLAG_LOCK)
+                    if (bitmapToApply != null && (destinationFlags and WallpaperManager.FLAG_LOCK) != 0) {
+                        wm.setBitmap(bitmapToApply, null, true, WallpaperManager.FLAG_LOCK)
                     }
                     if ((destinationFlags and WallpaperManager.FLAG_SYSTEM) != 0) {
                         wm.setBitmap(liteBitmap, null, true, WallpaperManager.FLAG_SYSTEM)
@@ -221,14 +227,13 @@ fun MainViewModel.applyWallpaperPreset(preset: WallpaperPreset, destinationFlags
                     }
                 }
                 EmojiRenderingMode.FULL -> {
-                    if (hasImage) {
-                        val fullBitmap = BitmapFactory.decodeFile(preset.wallpaperPath)
+                    if (bitmapToApply != null) {
                         if ((destinationFlags and WallpaperManager.FLAG_SYSTEM) != 0) {
-                            wm.setBitmap(fullBitmap, null, true, WallpaperManager.FLAG_SYSTEM)
-                            FileOutputStream(wallpaperFile).use { fullBitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                            wm.setBitmap(bitmapToApply, null, true, WallpaperManager.FLAG_SYSTEM)
+                            FileOutputStream(wallpaperFile).use { bitmapToApply.compress(Bitmap.CompressFormat.PNG, 100, it) }
                         }
                         if ((destinationFlags and WallpaperManager.FLAG_LOCK) != 0) {
-                            wm.setBitmap(fullBitmap, null, true, WallpaperManager.FLAG_LOCK)
+                            wm.setBitmap(bitmapToApply, null, true, WallpaperManager.FLAG_LOCK)
                         }
                     }
                 }
@@ -260,38 +265,46 @@ fun MainViewModel.applyWallpaperPreset(preset: WallpaperPreset, destinationFlags
 
 fun MainViewModel.addNewWallpaperPreset(croppedBitmap: Bitmap, name: String, originalBitmap: Bitmap? = null) {
     viewModelScope.launch(Dispatchers.IO) {
-        val documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
-        val wallpaperDir = File(documentsDir, "Iteration/Wallpaper/$name")
-        if (!wallpaperDir.exists()) wallpaperDir.mkdirs()
+        try {
+            val documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+            val wallpaperDir = File(documentsDir, "Iteration/Wallpaper/$name")
+            if (!wallpaperDir.exists()) wallpaperDir.mkdirs()
 
-        val wallpaperFile = File(wallpaperDir, "wallpaper.png")
-        val previewFile = File(wallpaperDir, "preview.jpg")
-        val configFile = File(wallpaperDir, "config.json")
-        val originalFile = File(wallpaperDir, "original.png")
+            val wallpaperFile = File(wallpaperDir, "wallpaper.png")
+            val previewFile = File(wallpaperDir, "preview.jpg")
+            val configFile = File(wallpaperDir, "config.json")
+            val originalFile = File(wallpaperDir, "original.jpg")
 
-        FileOutputStream(wallpaperFile).use { croppedBitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
-        originalBitmap?.let { 
-            FileOutputStream(originalFile).use { out -> it.compress(Bitmap.CompressFormat.PNG, 100, out) }
+            FileOutputStream(wallpaperFile).use { croppedBitmap.compress(Bitmap.CompressFormat.JPEG, 92, it) }
+            originalBitmap?.let { 
+                try {
+                    FileOutputStream(originalFile).use { out -> it.compress(Bitmap.CompressFormat.JPEG, 90, out) }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
+            val previewBitmap = if (croppedBitmap.width > 400) {
+                Bitmap.createScaledBitmap(croppedBitmap, croppedBitmap.width / 4, croppedBitmap.height / 4, true)
+            } else croppedBitmap
+            FileOutputStream(previewFile).use { previewBitmap.compress(Bitmap.CompressFormat.JPEG, 80, it) }
+
+            val currentConfig = WallpaperConfig(
+                blur = _liquidGlassBlur.value,
+                refractionHeight = _liquidGlassRefractionHeight.value,
+                refractionAmount = _liquidGlassRefractionAmount.value,
+                chromaticAberration = _liquidGlassChromaticAberration.value,
+                themeMode = _themeMode.value.name,
+                isMaterialYou = _isMaterialYouEnabled.value,
+                wallpaperColor = _customWallpaperColor.value,
+                emojiText = _emojiWallpaperText.value,
+                emojiPatternStyle = _emojiPatternStyle.value.name
+            )
+            configFile.writeText(Json.encodeToString(currentConfig))
+            loadWallpaperPresets()
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
-
-        val previewBitmap = if (croppedBitmap.width > 400) {
-            Bitmap.createScaledBitmap(croppedBitmap, croppedBitmap.width / 4, croppedBitmap.height / 4, true)
-        } else croppedBitmap
-        FileOutputStream(previewFile).use { previewBitmap.compress(Bitmap.CompressFormat.JPEG, 80, it) }
-
-        val currentConfig = WallpaperConfig(
-            blur = _liquidGlassBlur.value,
-            refractionHeight = _liquidGlassRefractionHeight.value,
-            refractionAmount = _liquidGlassRefractionAmount.value,
-            chromaticAberration = _liquidGlassChromaticAberration.value,
-            themeMode = _themeMode.value.name,
-            isMaterialYou = _isMaterialYouEnabled.value,
-            wallpaperColor = _customWallpaperColor.value,
-            emojiText = _emojiWallpaperText.value,
-            emojiPatternStyle = _emojiPatternStyle.value.name
-        )
-        configFile.writeText(Json.encodeToString(currentConfig))
-        loadWallpaperPresets()
     }
 }
 
@@ -344,119 +357,61 @@ fun MainViewModel.updateWallpaperPresetCrop(preset: WallpaperPreset, newCroppedB
 
 fun MainViewModel.addNewEmojiWallpaperPreset(mode: EmojiRenderingMode, color: Int, emojiText: String, style: EmojiPatternStyle, name: String) {
     viewModelScope.launch(Dispatchers.IO) {
-        val dm = getApplication<android.app.Application>().resources.displayMetrics
-        val w = dm.widthPixels
-        val h = dm.heightPixels
-        
-        val fullBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(fullBitmap)
-        canvas.drawColor(color)
-        val emojis = parseEmojis(emojiText)
-        if (emojis.isNotEmpty()) {
-            drawEmojiPattern(canvas, emojis, w, h, style)
-        }
-
-        val documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
-        val wallpaperDir = File(documentsDir, "Iteration/Wallpaper/$name")
-        if (!wallpaperDir.exists()) wallpaperDir.mkdirs()
-
-        val previewFile = File(wallpaperDir, "preview.jpg")
-        val previewBitmap = Bitmap.createScaledBitmap(fullBitmap, w / 4, h / 4, true)
-        FileOutputStream(previewFile).use { previewBitmap.compress(Bitmap.CompressFormat.JPEG, 85, it) }
-
-        if (mode != EmojiRenderingMode.LITE) {
-            val wallpaperFile = File(wallpaperDir, "wallpaper.png")
-            FileOutputStream(wallpaperFile).use { fullBitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
-        } else {
-            val wallpaperFile = File(wallpaperDir, "wallpaper.png")
-            val lite = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888).apply { eraseColor(color) }
-            FileOutputStream(wallpaperFile).use { lite.compress(Bitmap.CompressFormat.PNG, 100, it) }
-        }
-
-        val configFile = File(wallpaperDir, "config.json")
-        val config = WallpaperConfig(
-            wallpaperColor = color,
-            emojiText = emojiText,
-            emojiPatternStyle = style.name,
-            renderingMode = mode.name,
-            themeMode = _themeMode.value.name,
-            isMaterialYou = _isMaterialYouEnabled.value
-        )
-        configFile.writeText(Json.encodeToString(config))
-        
-        loadWallpaperPresets()
-        
-        withContext(Dispatchers.Main) {
-            val presets = _wallpaperPresets.value
-            val newlyCreated = presets.find { it.name == name }
-            newlyCreated?.let { applyWallpaperPreset(it) }
-        }
-    }
-}
-
-private fun MainViewModel.ensureBuiltinWallpapersRegistered(wallpaperDir: File) {
-    val context = getApplication<android.app.Application>()
-    val dm = context.resources.displayMetrics
-    val screenWidth = dm.widthPixels
-    val screenHeight = dm.heightPixels
-
-    val builtins = listOf(
-        "Builtin 1" to R.drawable.ic_builtin_wallpaper,
-        "Builtin 2" to R.drawable.ic_builtin_wallpaper2,
-        "Builtin 3" to R.drawable.ic_builtin_wallpaper3,
-        "Builtin 4" to R.drawable.ic_builtin_wallpaper4,
-        "Builtin 5" to R.drawable.ic_builtin_wallpaper5,
-        "Builtin 6" to R.drawable.ic_builtin_wallpaper6,
-        "Builtin 7" to R.drawable.ic_builtin_wallpaper7,
-        "Builtin 8" to R.drawable.ic_builtin_wallpaper8,
-        "Builtin 9" to R.drawable.ic_builtin_wallpaper9,
-        "Builtin 10" to R.drawable.ic_builtin_wallpaper10
-    )
-
-    builtins.forEach { (name, resId) ->
-        val folder = File(wallpaperDir, name)
-        if (!folder.exists()) {
-            val drawable = androidx.core.content.ContextCompat.getDrawable(context, resId)
-            if (drawable != null) {
-                try {
-                    val bitmap = drawable.toBitmap(screenWidth, screenHeight)
-                    saveWallpaperFolderInternal(folder, bitmap)
-                    bitmap.recycle()
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
+        try {
+            val dm = getApplication<android.app.Application>().resources.displayMetrics
+            val w = dm.widthPixels.coerceAtLeast(1080)
+            val h = dm.heightPixels.coerceAtLeast(1920)
+            
+            val fullBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(fullBitmap)
+            canvas.drawColor(color)
+            val emojis = parseEmojis(emojiText)
+            if (emojis.isNotEmpty()) {
+                drawEmojiPattern(canvas, emojis, w, h, style)
             }
+
+            val documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+            val wallpaperDir = File(documentsDir, "Iteration/Wallpaper/$name")
+            if (!wallpaperDir.exists()) wallpaperDir.mkdirs()
+
+            val previewFile = File(wallpaperDir, "preview.jpg")
+            val previewBitmap = Bitmap.createScaledBitmap(fullBitmap, w / 4, h / 4, true)
+            FileOutputStream(previewFile).use { previewBitmap.compress(Bitmap.CompressFormat.JPEG, 85, it) }
+
+            if (mode != EmojiRenderingMode.LITE) {
+                val wallpaperFile = File(wallpaperDir, "wallpaper.png")
+                FileOutputStream(wallpaperFile).use { fullBitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            } else {
+                val wallpaperFile = File(wallpaperDir, "wallpaper.png")
+                val lite = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888).apply { eraseColor(color) }
+                FileOutputStream(wallpaperFile).use { lite.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            }
+
+            val configFile = File(wallpaperDir, "config.json")
+            val config = WallpaperConfig(
+                wallpaperColor = color,
+                emojiText = emojiText,
+                emojiPatternStyle = style.name,
+                renderingMode = mode.name,
+                themeMode = _themeMode.value.name,
+                isMaterialYou = _isMaterialYouEnabled.value
+            )
+            configFile.writeText(Json.encodeToString(config))
+            
+            loadWallpaperPresets()
+            
+            withContext(Dispatchers.Main) {
+                val presets = _wallpaperPresets.value
+                val newlyCreated = presets.find { it.name == name }
+                newlyCreated?.let { applyWallpaperPreset(it) }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 }
 
-private fun MainViewModel.saveWallpaperFolderInternal(folder: File, bitmap: Bitmap) {
-    if (!folder.exists()) folder.mkdirs()
-    
-    val wallpaperFile = File(folder, "wallpaper.png")
-    val previewFile = File(folder, "preview.jpg")
-    val configFile = File(folder, "config.json")
-    
-    FileOutputStream(wallpaperFile).use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
-    
-    val previewBitmap = if (bitmap.width > 400) {
-        Bitmap.createScaledBitmap(bitmap, bitmap.width / 4, bitmap.height / 4, true)
-    } else null
 
-    if (previewBitmap != null) {
-        FileOutputStream(previewFile).use { previewBitmap.compress(Bitmap.CompressFormat.JPEG, 80, it) }
-        previewBitmap.recycle()
-    } else {
-        FileOutputStream(previewFile).use { bitmap.compress(Bitmap.CompressFormat.JPEG, 80, it) }
-    }
-    
-    val config = WallpaperConfig(
-        blur = _liquidGlassBlur.value,
-        themeMode = _themeMode.value.name,
-        isMaterialYou = _isMaterialYouEnabled.value
-    )
-    configFile.writeText(Json.encodeToString(config))
-}
 
 fun MainViewModel.addNewMediaWallpaperPreset(uri: android.net.Uri, name: String) {
     viewModelScope.launch(Dispatchers.IO) {

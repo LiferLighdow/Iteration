@@ -6,10 +6,8 @@ import android.graphics.Paint
 import android.net.Uri
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,6 +34,35 @@ import androidx.compose.ui.window.DialogProperties
 import com.liferlighdow.iteration.R
 import kotlin.math.roundToInt
 
+private fun decodeSampledBitmapFromUri(context: android.content.Context, uri: Uri, reqWidth: Int = 2048, reqHeight: Int = 2048): Bitmap? {
+    return try {
+        val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        context.contentResolver.openInputStream(uri)?.use {
+            BitmapFactory.decodeStream(it, null, options)
+        }
+        val (height: Int, width: Int) = options.outHeight to options.outWidth
+        var inSampleSize = 1
+        if (height > reqHeight || width > reqWidth) {
+            val halfHeight: Int = height / 2
+            val halfWidth: Int = width / 2
+            while (halfHeight / inSampleSize >= reqHeight && halfWidth / inSampleSize >= reqWidth) {
+                inSampleSize *= 2
+            }
+        }
+        options.inSampleSize = inSampleSize
+        options.inJustDecodeBounds = false
+        context.contentResolver.openInputStream(uri)?.use {
+            BitmapFactory.decodeStream(it, null, options)
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
+    } catch (e: OutOfMemoryError) {
+        e.printStackTrace()
+        null
+    }
+}
+
 @Composable
 fun WallpaperCropDialog(
     uri: Uri? = null,
@@ -46,13 +73,7 @@ fun WallpaperCropDialog(
     val mContext = LocalContext.current
     val originalBitmap = remember(uri, bitmap) {
         if (bitmap != null) return@remember bitmap
-        uri?.let {
-            try {
-                mContext.contentResolver.openInputStream(it)?.use { BitmapFactory.decodeStream(it) }
-            } catch (e: Exception) {
-                null
-            }
-        }
+        uri?.let { decodeSampledBitmapFromUri(mContext, it) }
     }
 
     if (originalBitmap == null) {
@@ -180,7 +201,7 @@ fun cropWallpaperBitmap(original: Bitmap, scale: Float, offset: Offset, containe
     val scaleY = containerSize.height / bitmapHeight
     val baseScale = Math.min(scaleX, scaleY)
 
-    val totalScale = baseScale * scale
+    val totalScale = Math.max(baseScale * scale, 0.01f)
 
     val centerX = containerSize.width / 2f
     val centerY = containerSize.height / 2f
@@ -191,22 +212,30 @@ fun cropWallpaperBitmap(original: Bitmap, scale: Float, offset: Offset, containe
     val cropLeftInContainer = centerX - overlayWidth / 2f
     val cropTopInContainer = centerY - overlayHeight / 2f
 
-    val xOffsetInBitmap = (cropLeftInContainer - bitmapLeftInContainer) / totalScale
-    val yOffsetInBitmap = (cropTopInContainer - bitmapTopInContainer) / totalScale
-    val widthInBitmap = overlayWidth / totalScale
-    val heightInBitmap = overlayHeight / totalScale
+    val xOffsetInBitmap = ((cropLeftInContainer - bitmapLeftInContainer) / totalScale).coerceIn(0f, Math.max(0f, bitmapWidth - 1f))
+    val yOffsetInBitmap = ((cropTopInContainer - bitmapTopInContainer) / totalScale).coerceIn(0f, Math.max(0f, bitmapHeight - 1f))
+    val widthInBitmap = (overlayWidth / totalScale).coerceAtMost(bitmapWidth - xOffsetInBitmap)
+    val heightInBitmap = (overlayHeight / totalScale).coerceAtMost(bitmapHeight - yOffsetInBitmap)
 
-    val result = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888)
-    val canvas = android.graphics.Canvas(result)
+    return try {
+        val result = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(result)
 
-    val srcRect = android.graphics.Rect(
-        xOffsetInBitmap.roundToInt(),
-        yOffsetInBitmap.roundToInt(),
-        (xOffsetInBitmap + widthInBitmap).roundToInt(),
-        (yOffsetInBitmap + heightInBitmap).roundToInt()
-    )
-    val dstRect = android.graphics.Rect(0, 0, targetWidth, targetHeight)
+        val srcLeft = xOffsetInBitmap.roundToInt().coerceIn(0, original.width - 1)
+        val srcTop = yOffsetInBitmap.roundToInt().coerceIn(0, original.height - 1)
+        val srcRight = (xOffsetInBitmap + widthInBitmap).roundToInt().coerceIn(srcLeft + 1, original.width)
+        val srcBottom = (yOffsetInBitmap + heightInBitmap).roundToInt().coerceIn(srcTop + 1, original.height)
 
-    canvas.drawBitmap(original, srcRect, dstRect, Paint(Paint.FILTER_BITMAP_FLAG))
-    return result
+        val srcRect = android.graphics.Rect(srcLeft, srcTop, srcRight, srcBottom)
+        val dstRect = android.graphics.Rect(0, 0, targetWidth, targetHeight)
+
+        canvas.drawBitmap(original, srcRect, dstRect, Paint(Paint.FILTER_BITMAP_FLAG))
+        result
+    } catch (e: Exception) {
+        e.printStackTrace()
+        original
+    } catch (e: OutOfMemoryError) {
+        e.printStackTrace()
+        original
+    }
 }

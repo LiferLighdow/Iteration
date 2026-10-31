@@ -5,77 +5,82 @@
     android:viewportWidth="90"
     android:viewportHeight="180">
 
-    <!-- Layer 1: Dark Tech Background -->
-    <path
-        android:pathData="M0,0h90v180h-90z">
+    <!-- Deep Space Background -->
+    <path android:pathData="M0,0h90v180h-90z">
         <aapt:attr name="android:fillColor">
-            <gradient
-                android:startX="0"
-                android:startY="0"
-                android:endX="90"
-                android:endY="180"
-                android:type="linear">
-                <item android:offset="0" android:color="#0F2027"/>
-                <item android:offset="0.5" android:color="#203A43"/>
-                <item android:offset="1" android:color="#2C5364"/>
+            <gradient android:startX="45" android:startY="0" android:endX="45" android:endY="180" android:type="linear">
+                <item android:offset="0" android:color="#05021A"/>
+                <item android:offset="0.5" android:color="#0F0638"/>
+                <item android:offset="1" android:color="#03000C"/>
             </gradient>
         </aapt:attr>
     </path>
 
-    <!-- Layer 2: Perspective Grid Lines -->
-    <path
-        android:strokeWidth="0.2"
-        android:pathData="M0,120 L90,120 M0,130 L90,130 M0,145 L90,145 M0,165 L90,165 M0,180 L90,180"
-        android:strokeColor="#4000FFCC"/>
-
-    <path
-        android:strokeWidth="0.2"
-        android:pathData="M45,110 L0,180 M45,110 L25,180 M45,110 L45,180 M45,110 L65,180 M45,110 L90,180"
-        android:strokeColor="#4000FFCC"/>
-
-    <!-- Layer 3: Neon Horizon Glow -->
-    <path
-        android:pathData="M0,110h90v2h-90z">
+    <!-- Glowing Galaxy Core & Nebula -->
+    <path android:pathData="M45,90 m-40,0 a40,40 0 1,1 80,0 a40,40 0 1,1 -80,0" android:fillAlpha="0.45">
         <aapt:attr name="android:fillColor">
-            <gradient
-                android:startX="0"
-                android:startY="110"
-                android:endX="90"
-                android:endY="110"
-                android:type="linear">
-                <item android:offset="0" android:color="#0000FFCC"/>
-                <item android:offset="0.5" android:color="#FF00FFCC"/>
-                <item android:offset="1" android:color="#0000FFCC"/>
+            <gradient android:startX="45" android:startY="50" android:endX="45" android:endY="130" android:type="radial" android:gradientRadius="50">
+                <item android:offset="0" android:color="#FF007F"/>
+                <item android:offset="0.4" android:color="#7928CA"/>
+                <item android:offset="0.8" android:color="#00F2FE"/>
+                <item android:offset="1" android:color="#00000000"/>
             </gradient>
         </aapt:attr>
     </path>
 
-    <!-- Layer 4: Floating Tech Cubes (Geometric Evolution) -->
-    <path
-        android:pathData="M20,40 L30,35 L40,40 L30,45 Z"
-        android:fillAlpha="0.6"
-        android:fillColor="#00FFCC"/>
-
-    <path
-        android:pathData="M60,70 L75,65 L90,70 L75,75 Z"
-        android:fillAlpha="0.4"
-        android:fillColor="#00FFCC"/>
-
-    <!-- Layer 5: Vertical Scanning Beam -->
-    <path
-        android:pathData="M40,0h10v180h-10z">
+    <!-- Planetary Rings (Back) -->
+    <path android:pathData="M10,90 C10,75 80,75 80,90 C80,105 10,105 10,90 Z" android:fillAlpha="0.35">
         <aapt:attr name="android:fillColor">
-            <gradient
-                android:startX="40"
-                android:startY="0"
-                android:endX="50"
-                android:endY="0"
-                android:type="linear">
-                <item android:offset="0" android:color="#0000FFCC"/>
-                <item android:offset="0.5" android:color="#1A00FFCC"/>
-                <item android:offset="1" android:color="#0000FFCC"/>
+            <gradient android:startX="10" android:startY="90" android:endX="80" android:endY="90" android:type="linear">
+                <item android:offset="0" android:color="#38BDF8"/>
+                <item android:offset="0.5" android:color="#F43F5E"/>
+                <item android:offset="1" android:color="#38BDF8"/>
             </gradient>
         </aapt:attr>
     </path>
+
+    <!-- Central Ringed Planet Body -->
+    <path android:pathData="M45,90 m-24,0 a24,24 0 1,1 48,0 a24,24 0 1,1 -48,0" android:fillAlpha="0.95">
+        <aapt:attr name="android:fillColor">
+            <gradient android:startX="21" android:startY="66" android:endX="69" android:endY="114" android:type="linear">
+                <item android:offset="0" android:color="#00F2FE"/>
+                <item android:offset="0.4" android:color="#4FACFE"/>
+                <item android:offset="0.7" android:color="#7F00FF"/>
+                <item android:offset="1" android:color="#1A0A3A"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Planet Atmospheric Rim Glow -->
+    <path android:pathData="M45,90 m-24,0 a24,24 0 1,1 48,0 a24,24 0 1,1 -48,0" android:strokeWidth="0.7" android:strokeColor="#A5F3FC" android:fillColor="#00000000" android:strokeAlpha="0.9"/>
+
+    <!-- Planet Shadow (Crescent Terminator) -->
+    <path android:pathData="M45,66 C58,66 69,76 69,90 C69,104 58,114 45,114 C55,114 65,104 65,90 C65,76 55,66 45,66 Z" android:fillColor="#000000" android:fillAlpha="0.55"/>
+
+    <!-- Planetary Rings (Front across planet) -->
+    <path android:pathData="M8,94 C15,108 75,108 82,94 C75,102 15,102 8,94 Z" android:fillAlpha="0.75">
+        <aapt:attr name="android:fillColor">
+            <gradient android:startX="8" android:startY="94" android:endX="82" android:endY="94" android:type="linear">
+                <item android:offset="0" android:color="#F43F5E"/>
+                <item android:offset="0.5" android:color="#FB7185"/>
+                <item android:offset="1" android:color="#00F2FE"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Star Sparkle Top-Left -->
+    <path android:pathData="M22,35 L22.5,33.5 L24,33 L22.5,32.5 L22,31 L21.5,32.5 L20,33 L21.5,33.5 Z" android:fillColor="#FFFFFF" android:fillAlpha="0.95"/>
+
+    <!-- Star Sparkle Top-Right -->
+    <path android:pathData="M68,40 L68.4,38.8 L69.6,38.4 L68.4,38 L68,36.8 L67.6,38 L66.4,38.4 L67.6,38.8 Z" android:fillColor="#FDE68A" android:fillAlpha="0.95"/>
+
+    <!-- Star Sparkle Bottom-Left -->
+    <path android:pathData="M25,145 L25.3,144 L26.3,143.7 L25.3,143.4 L25,142.4 L24.7,143.4 L23.7,143.7 L24.7,144 Z" android:fillColor="#38BDF8" android:fillAlpha="0.9"/>
+
+    <!-- Star Sparkle Bottom-Right -->
+    <path android:pathData="M70,140 L70.3,139 L71.3,138.7 L70.3,138.4 L70,137.4 L69.7,138.4 L68.7,138.7 L69.7,139 Z" android:fillColor="#FFFFFF" android:fillAlpha="0.95"/>
+
+    <!-- Scattered Stardust -->
+    <path android:pathData="M35,20h1.5v1.5h-1.5z M55,25h1v1h-1z M15,60h1.5v1.5h-1.5z M75,70h1v1h-1z M20,115h1v1h-1z M80,125h1.5v1.5h-1.5z M45,155h1v1h-1z M60,165h1.5v1.5h-1.5z" android:fillColor="#FFFFFF" android:fillAlpha="0.85"/>
 
 </vector>

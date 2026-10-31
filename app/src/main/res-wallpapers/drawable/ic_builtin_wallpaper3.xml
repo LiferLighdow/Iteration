@@ -5,94 +5,34 @@
     android:viewportWidth="90"
     android:viewportHeight="180">
 
-    <!-- Layer 1: Soft Zen Background (Warm Sand to Soft Pearl) -->
-    <path
-        android:pathData="M0,0h90v180h-90z">
+    <!-- Liquid Peach Minimalist Background -->
+    <path android:pathData="M0,0h90v180h-90z">
         <aapt:attr name="android:fillColor">
-            <gradient
-                android:startX="45"
-                android:startY="0"
-                android:endX="45"
-                android:endY="180"
-                android:type="linear">
-                <item android:offset="0" android:color="#FDFCFB"/>
-                <item android:offset="1" android:color="#E2D1C3"/>
+            <gradient android:startX="45" android:startY="0" android:endX="45" android:endY="180" android:type="linear">
+                <item android:offset="0" android:color="#FFF1EB"/>
+                <item android:offset="1" android:color="#ACE0F9"/>
             </gradient>
         </aapt:attr>
     </path>
 
-    <!-- Layer 2: Soft Floating Sphere (Bottom Right) -->
-    <path
-        android:pathData="M120,180 A60,60 0 1,1 0,180 Z"
-        android:fillAlpha="0.3">
+    <!-- Floating Soft Blob 1 -->
+    <path android:pathData="M90,30 C70,10 20,20 10,60 C0,100 40,120 70,100 C100,80 110,50 90,30 Z" android:fillAlpha="0.6">
         <aapt:attr name="android:fillColor">
-            <gradient
-                android:startX="60"
-                android:startY="120"
-                android:endX="60"
-                android:endY="180"
-                android:type="radial"
-                android:gradientRadius="60">
-                <item android:offset="0" android:color="#a18cd1"/>
-                <item android:offset="1" android:color="#fbc2eb"/>
+            <gradient android:startX="45" android:startY="20" android:endX="45" android:endY="120" android:type="linear">
+                <item android:offset="0" android:color="#FF9A8B"/>
+                <item android:offset="1" android:color="#FF6A88"/>
             </gradient>
         </aapt:attr>
     </path>
 
-    <!-- Layer 3: Minimalist Orbit Paths -->
-    <path
-        android:strokeWidth="0.5"
-        android:pathData="M-20,90 Q45,70 110,90"
-        android:strokeColor="#80A18CD1"
-        android:fillColor="#00000000"/>
-
-    <path
-        android:strokeWidth="0.3"
-        android:pathData="M-20,110 Q45,90 110,110"
-        android:strokeColor="#60A18CD1"
-        android:fillColor="#00000000"/>
-
-    <!-- Layer 4: The Focused Node (Zen Point) -->
-    <path
-        android:pathData="M45,80 A3,3 0 1,1 44.99,80 Z">
+    <!-- Floating Soft Blob 2 -->
+    <path android:pathData="M10,130 C30,110 70,120 80,140 C90,160 50,180 25,170 C0,160 -10,150 10,130 Z" android:fillAlpha="0.5">
         <aapt:attr name="android:fillColor">
-            <gradient
-                android:startX="45"
-                android:startY="77"
-                android:endX="45"
-                android:endY="83"
-                android:type="linear">
-                <item android:offset="0" android:color="#a18cd1"/>
-                <item android:offset="1" android:color="#fbc2eb"/>
+            <gradient android:startX="45" android:startY="110" android:endX="45" android:endY="180" android:type="linear">
+                <item android:offset="0" android:color="#6EE7B7"/>
+                <item android:offset="1" android:color="#3B82F6"/>
             </gradient>
         </aapt:attr>
     </path>
-
-    <!-- Layer 5: Top Soft Mist -->
-    <path
-        android:pathData="M0,0h90v40h-90z">
-        <aapt:attr name="android:fillColor">
-            <gradient
-                android:startX="45"
-                android:startY="0"
-                android:endX="45"
-                android:endY="40"
-                android:type="linear">
-                <item android:offset="0" android:color="#40FFFFFF"/>
-                <item android:offset="1" android:color="#00FFFFFF"/>
-            </gradient>
-        </aapt:attr>
-    </path>
-
-    <!-- Layer 6: Subtle Accent Blobs -->
-    <path
-        android:pathData="M10,30 A15,15 0 1,1 9.99,30 Z"
-        android:fillAlpha="0.1"
-        android:fillColor="#a18cd1"/>
-
-    <path
-        android:pathData="M80,140 A10,10 0 1,1 79.99,140 Z"
-        android:fillAlpha="0.15"
-        android:fillColor="#fbc2eb"/>
 
 </vector>

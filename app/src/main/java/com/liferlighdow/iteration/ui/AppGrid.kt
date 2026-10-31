@@ -46,6 +46,7 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.AddAPhoto
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlaylistAddCheck
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material3.*
@@ -165,6 +166,7 @@ fun AppGrid(
     var weatherToEdit by remember { mutableStateOf<WidgetModel?>(null) }
     var rssToEdit by remember { mutableStateOf<WidgetModel?>(null) }
     var countdownToEdit by remember { mutableStateOf<WidgetModel?>(null) }
+    var musicToEdit by remember { mutableStateOf<WidgetModel?>(null) }
     var photoToAdjust by remember { mutableStateOf<WidgetModel?>(null) }
     var photoToPick by remember { mutableStateOf<WidgetModel?>(null) }
     var showCropDialogByUri by remember { mutableStateOf<Uri?>(null) }
@@ -474,6 +476,7 @@ fun AppGrid(
                                     onUpdateWeatherToEdit = { weatherToEdit = it },
                                     onUpdateRssToEdit = { rssToEdit = it },
                                     onUpdateCountdownToEdit = { countdownToEdit = it },
+                                    onUpdateMusicToEdit = { musicToEdit = it },
                                     onUpdatePhotoToAdjust = { photoToAdjust = it },
                                     onUpdatePhotoToPick = { photoToPick = it },
                                     onShowContextMenu = { 
@@ -646,6 +649,20 @@ fun AppGrid(
         )
     }
 
+    if (musicToEdit != null) {
+        val allApps by viewModel.allApps.collectAsState()
+        AppPickerDialog(
+            allApps = allApps,
+            viewModel = viewModel,
+            isMusicPicker = true,
+            onDismiss = { musicToEdit = null },
+            onAppSelected = { app ->
+                viewModel.updateMusicWidgetTargetPackage(musicToEdit!!.id, app.packageName)
+                musicToEdit = null
+            }
+        )
+    }
+
     if (photoToAdjust != null) {
         val type = photoToAdjust!!.type as? WidgetType.Photo
         val uriStr = type?.uri
@@ -695,6 +712,7 @@ private fun WidgetGridItem(
     onUpdateWeatherToEdit: (WidgetModel) -> Unit,
     onUpdateRssToEdit: (WidgetModel) -> Unit,
     onUpdateCountdownToEdit: (WidgetModel) -> Unit,
+    onUpdateMusicToEdit: (WidgetModel) -> Unit,
     onUpdatePhotoToAdjust: (WidgetModel) -> Unit,
     onUpdatePhotoToPick: (WidgetModel) -> Unit,
     onShowContextMenu: () -> Unit,
@@ -1052,6 +1070,16 @@ private fun WidgetGridItem(
                     leadingIcon = { Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary) },
                     onClick = {
                         onUpdateCountdownToEdit(app.widget!!)
+                        onContextMenuDismiss()
+                    }
+                )
+            }
+            if (app.widget?.type is WidgetType.Music) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.choose_music_app)) },
+                    leadingIcon = { Icon(Icons.Default.MusicNote, null, tint = MaterialTheme.colorScheme.primary) },
+                    onClick = {
+                        onUpdateMusicToEdit(app.widget!!)
                         onContextMenuDismiss()
                     }
                 )

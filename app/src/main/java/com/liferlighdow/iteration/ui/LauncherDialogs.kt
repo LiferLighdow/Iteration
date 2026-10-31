@@ -291,9 +291,12 @@ fun AppPickerDialog(
     allApps: List<AppModel>,
     iconCornerRadius: Float = 0.25f,
     viewModel: MainViewModel,
+    isMusicPicker: Boolean = false,
     onDismiss: () -> Unit,
     onAppSelected: (AppModel) -> Unit
 ) {
+    var onlyMusicApps by remember { mutableStateOf(isMusicPicker) }
+
     Dialog(onDismissRequest = onDismiss) {
         Card(
             modifier = Modifier
@@ -319,9 +322,51 @@ fun AppPickerDialog(
                     shape = RoundedCornerShape(12.dp)
                 )
 
-                val filtered = remember(query, allApps) {
-                    allApps.filter { !it.isFrozen && !it.isPrivate && it.label.contains(query, ignoreCase = true) }
-                        .sortedBy { it.label.lowercase() }
+                if (isMusicPicker) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onlyMusicApps = !onlyMusicApps }
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = onlyMusicApps,
+                            onCheckedChange = { onlyMusicApps = it }
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = stringResource(R.string.only_show_music_apps),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+
+                val musicKeywords = remember {
+                    setOf(
+                        "music", "audio", "player", "spotify", "kugou", "netease", "cloudmusic", 
+                        "qqmusic", "pandora", "deezer", "tidal", "soundcloud", "qobuz", "kuwo", 
+                        "viper", "neutron", "poweramp", "musicolet", "foobar2000", "retro", 
+                        "auxio", "gramophone", "hiby", "fiio", "podcast", "radio", "tunein", 
+                        "audible", "siriusxm", "apple", "youtube.music", "163", "qq",
+                        "音樂", "音乐", "播放器", "電台", "电台", "播客"
+                    )
+                }
+
+                val filtered = remember(query, allApps, onlyMusicApps) {
+                    allApps.filter { app ->
+                        if (app.isFrozen || app.isPrivate) return@filter false
+                        if (!app.label.contains(query, ignoreCase = true) && !app.packageName.contains(query, ignoreCase = true)) {
+                            return@filter false
+                        }
+                        if (onlyMusicApps) {
+                            val pkg = app.packageName.lowercase()
+                            val label = app.label.lowercase()
+                            musicKeywords.any { pkg.contains(it) || label.contains(it) }
+                        } else {
+                            true
+                        }
+                    }.sortedBy { it.label.lowercase() }
                 }
 
                 LazyColumn(modifier = Modifier.weight(1f)) {
