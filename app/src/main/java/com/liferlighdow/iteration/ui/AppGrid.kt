@@ -571,18 +571,20 @@ fun AppGrid(
                                         }
                                     )
                                 }
-                                .pointerInput(app.uniqueId) {
-                                    detectTapGestures(
-                                        onPress = {
-                                            viewModel.setPressedItemId(app.uniqueId)
-                                            try { awaitRelease() } finally { viewModel.setPressedItemId(null) }
-                                        },
-                                        onTap = {
-                                            if (!viewModel.isEditMode.value && !showContextMenu) {
-                                                currentOnAppClick(app, lastPosition.pos)
+                                .pointerInput(app.uniqueId, app.isWidget) {
+                                    if (!app.isWidget) {
+                                        detectTapGestures(
+                                            onPress = {
+                                                viewModel.setPressedItemId(app.uniqueId)
+                                                try { awaitRelease() } finally { viewModel.setPressedItemId(null) }
+                                            },
+                                            onTap = {
+                                                if (!viewModel.isEditMode.value && !showContextMenu) {
+                                                    currentOnAppClick(app, lastPosition.pos)
+                                                }
                                             }
-                                        }
-                                    )
+                                        )
+                                    }
                                 }
                         )
                     }
@@ -859,7 +861,8 @@ private fun WidgetGridItem(
                         widget = widget,
                         displayMode = widget.displayMode,
                         modifier = Modifier.fillMaxSize(),
-                        backdrop = backdrop
+                        backdrop = backdrop,
+                        onLongClick = onShowContextMenu
                     )
                     is WidgetType.Note -> NoteWidget(
                         widget = widget,

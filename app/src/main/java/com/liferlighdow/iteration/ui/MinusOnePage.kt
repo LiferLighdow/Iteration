@@ -484,7 +484,16 @@ fun MinusOnePage(
                                 }
                                 is WidgetType.Calendar -> CalendarWidget(widget = widget, displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
                                 is WidgetType.Photo -> PhotoWidget(widget = widget, viewModel = viewModel)
-                                is WidgetType.Music -> MusicWidget(widget = widget, displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
+                                is WidgetType.Music -> MusicWidget(
+                                    widget = widget,
+                                    displayMode = widget.displayMode,
+                                    backdrop = backdrop,
+                                    isMinusOnePage = true,
+                                    onLongClick = {
+                                        viewModel.setActiveContextMenuId(widget.id)
+                                        showContextMenu = true
+                                    }
+                                )
                                 is WidgetType.Note -> NoteWidget(widget = widget, displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
                                 is WidgetType.ToDoList -> TodoWidget(widget = widget, displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
                                 is WidgetType.Weather -> WeatherWidget(displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)

@@ -1,8 +1,10 @@
 package com.liferlighdow.iteration.ui.widgets
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -34,6 +36,7 @@ import com.liferlighdow.iteration.ui.liquidGlass
 import com.liferlighdow.iteration.ui.withGlassShadow
 import com.liferlighdow.iteration.viewmodel.MainViewModel
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MusicWidget(
     widget: WidgetModel,
@@ -41,26 +44,30 @@ fun MusicWidget(
     modifier: Modifier = Modifier,
     backdrop: Backdrop? = null,
     isMinusOnePage: Boolean = false,
-    drawFrame: Boolean = true
+    drawFrame: Boolean = true,
+    onLongClick: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val mediaInfo by NotificationService.currentMedia.collectAsState()
     val musicType = widget.type as? WidgetType.Music
     val isWide = musicType?.isWide ?: false
 
-    val clickModifier = modifier.clickable {
-        val targetPkg = musicType?.targetPackage ?: mediaInfo?.packageName
-        if (!targetPkg.isNullOrEmpty()) {
-            try {
-                val intent = context.packageManager.getLaunchIntentForPackage(targetPkg)?.apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                if (intent != null) {
-                    context.startActivity(intent)
-                }
-            } catch (e: Exception) {}
-        }
-    }
+    val clickModifier = modifier.combinedClickable(
+        onClick = {
+            val targetPkg = musicType?.targetPackage ?: mediaInfo?.packageName
+            if (!targetPkg.isNullOrEmpty()) {
+                try {
+                    val intent = context.packageManager.getLaunchIntentForPackage(targetPkg)?.apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    if (intent != null) {
+                        context.startActivity(intent)
+                    }
+                } catch (e: Exception) {}
+            }
+        },
+        onLongClick = onLongClick
+    )
 
     if (isWide) {
         WideMusicWidget(displayMode, clickModifier, backdrop, isMinusOnePage, drawFrame)
