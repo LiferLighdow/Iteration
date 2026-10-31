@@ -523,7 +523,10 @@ fun AppGrid(
                         // 2. 手勢層 (覆蓋在圖示上方，高度僅限圖示區域)
                         Box(
                             modifier = Modifier
-                                .size(if (app.isWidget) (cellWidth * w) else (cellWidth * 0.9f), if (app.isWidget) (cellHeight * h) else (iconSize + 8.dp))
+                                .size(
+                                    if (app.isWidget) (if (isEditMode) cellWidth * w else 0.dp) else (cellWidth * 0.9f),
+                                    if (app.isWidget) (if (isEditMode) cellHeight * h else 0.dp) else (iconSize + 8.dp)
+                                )
                                 .pointerInput(app.uniqueId) {
                                     var totalDragDistance = 0f
                                     var hasTriggeredDrag = false
