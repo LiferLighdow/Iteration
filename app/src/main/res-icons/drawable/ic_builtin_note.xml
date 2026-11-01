@@ -5,12 +5,12 @@
     android:viewportWidth="1000"
     android:viewportHeight="1000">
 
-    <!-- 1. 底層：米黃色紙張背景 (滿版) -->
+    <!-- 米黃色紙張背景 -->
     <path
         android:pathData="M0,0 h1000 v1000 h-1000 z"
         android:fillColor="#FFF9E1" />
 
-    <!-- 2. 頂部裝訂條：橘紅色漸層 (滿版寬度) -->
+    <!-- 頂部裝訂條層 -->
     <path
         android:pathData="M0,0 h1000 v300 h-1000 z">
         <aapt:attr name="android:fillColor">
@@ -26,12 +26,8 @@
         </aapt:attr>
     </path>
 
-    <!-- 3. 裝訂條下方的細小深色陰影線，增加層次感 -->
-    <path
-        android:fillColor="#20000000"
-        android:pathData="M0,300 h1000 v10 h-1000 z" />
 
-    <!-- 4. 內文橫線 (灰褐色) - 調整為四條 -->
+    <!-- 內文橫線 -->
     <group>
         <path android:fillColor="#DED3B8" android:pathData="M0,450 h1000 v6 h-1000 z" />
         <path android:fillColor="#DED3B8" android:pathData="M0,600 h1000 v6 h-1000 z" />

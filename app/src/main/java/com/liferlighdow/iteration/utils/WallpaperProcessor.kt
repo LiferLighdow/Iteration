@@ -22,6 +22,29 @@ import java.io.InputStream
  */
 class WallpaperProcessor(private val context: Application) {
 
+    companion object {
+        fun drawableToCroppedBitmap(drawable: android.graphics.drawable.Drawable, targetWidth: Int, targetHeight: Int): Bitmap {
+            val intrinsicWidth = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else targetWidth
+            val intrinsicHeight = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else targetHeight
+
+            val bitmap = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888)
+            val canvas = android.graphics.Canvas(bitmap)
+
+            val scaleX = targetWidth.toFloat() / intrinsicWidth.toFloat()
+            val scaleY = targetHeight.toFloat() / intrinsicHeight.toFloat()
+            val scale = maxOf(scaleX, scaleY)
+
+            val scaledWidth = intrinsicWidth * scale
+            val scaledHeight = intrinsicHeight * scale
+            val left = (targetWidth - scaledWidth) / 2f
+            val top = (targetHeight - scaledHeight) / 2f
+
+            drawable.setBounds(left.toInt(), top.toInt(), (left + scaledWidth).toInt(), (top + scaledHeight).toInt())
+            drawable.draw(canvas)
+            return bitmap
+        }
+    }
+
     data class WallpaperResult(
         val raw: ImageBitmap,
         val blurred: ImageBitmap,

@@ -24,7 +24,7 @@
         android:fillColor="#FF0000"
         android:pathData="M410,102m-18,0a18,18 0,1,1 36,0a18,18 0,1,1 -36,0" />
 
-    <!-- 相機前景層：白色圓框 + 純黑填滿 + 反光點 -->
+    <!-- 相機前景層 -->
     <group
         android:pivotX="256"
         android:pivotY="256"

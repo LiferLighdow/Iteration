@@ -22,14 +22,14 @@
             android:fillColor="#FFFFFF"
             android:pathData="M44,35c0,-3.3 2.7,-6 6,-6s6,2.7 6,6v14c0,3.3 -2.7,6 -6,6s-6,-2.7 -6,-6z" />
 
-        <!-- 麥克風架 (更收縮的 U 型) -->
+        <!-- 麥克風架 -->
         <path
             android:strokeColor="#FFFFFF"
             android:strokeWidth="3.5"
             android:strokeLineCap="round"
             android:pathData="M40,46c0,6.6 4.5,12 10,12s10,-5.4 10,-12" />
 
-        <!-- 麥克風支撐桿與底座 (底座加長) -->
+        <!-- 麥克風支撐桿與底座 -->
         <path
             android:strokeColor="#FFFFFF"
             android:strokeWidth="3.5"

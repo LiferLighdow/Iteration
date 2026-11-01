@@ -40,15 +40,19 @@
     </aapt:attr>
   </path>
 
-  <!-- 3. 中間人物圖標 (無底盤，全新精緻剪影設計) -->
-  <group android:pivotX="256" android:pivotY="256" android:scaleX="1.1" android:scaleY="1.1" android:translateX="-28" android:translateY="-4">
+  <!-- 3. 中間人物圖標 (往左上移動 24px) -->
+  <group android:pivotX="256" android:pivotY="256" android:scaleX="1.2" android:scaleY="1.2" android:translateX="-28" android:translateY="-4">
+      <!-- 圓底盤 -->
+      <path
+          android:pathData="M256,256m-110,0a110,110 0,1 1,220 0a110,110 0,1 1,-220 0"
+          android:fillColor="#9e9e9e"/>
       <!-- 頭部 -->
       <path
-          android:pathData="M256,170m-52,0a52,52 0,1,1 104,0a52,52 0,1,1 -104,0"
-          android:fillColor="#3E2723"/>
-      <!-- 肩膀 / 半身剪影 -->
+          android:pathData="M256,216m-40,0a40,40 0,1 1,80 0a40,40 0,1 1,-80 0"
+          android:fillColor="#FFFFFF"/>
+      <!-- 肩膀 -->
       <path
-          android:pathData="M256,246 C190,246 136,290 136,368 C136,378 144,386 154,386 H358 C368,386 376,378 376,368 C376,290 322,246 256,246 Z"
-          android:fillColor="#3E2723"/>
+          android:pathData="M339.6,327.5C319.5,351.1 289.5,366 256,366s-63.5,-14.9 -83.6,-38.5C185.6,309.1 218.2,296 256,296S326.4,309.1 339.6,327.5z"
+          android:fillColor="#FFFFFF"/>
   </group>
 </vector>

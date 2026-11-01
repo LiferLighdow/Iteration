@@ -199,7 +199,9 @@ fun MainViewModel.applyWallpaperPreset(preset: WallpaperPreset, destinationFlags
             val bitmapToApply = if (preset.resId != null) {
                 val drawable = androidx.core.content.ContextCompat.getDrawable(context, preset.resId)
                 val dm = context.resources.displayMetrics
-                drawable?.toBitmap(dm.widthPixels, dm.heightPixels)
+                if (drawable != null) {
+                    com.liferlighdow.iteration.utils.WallpaperProcessor.drawableToCroppedBitmap(drawable, dm.widthPixels, dm.heightPixels)
+                } else null
             } else if (wallpaperFileInPreset.exists()) {
                 BitmapFactory.decodeFile(preset.wallpaperPath)
             } else null

@@ -11,7 +11,6 @@ import android.os.Environment
 import android.service.wallpaper.WallpaperService
 import android.view.SurfaceHolder
 import androidx.core.content.ContextCompat
-import androidx.core.graphics.drawable.toBitmap
 import com.liferlighdow.iteration.R
 import java.io.File
 
@@ -70,7 +69,7 @@ class IterationWallpaperService : WallpaperService() {
                 } else {
                     ContextCompat.getDrawable(applicationContext, R.drawable.ic_builtin_wallpaper)?.let { drawable ->
                         val dm = applicationContext.resources.displayMetrics
-                        drawable.toBitmap(dm.widthPixels, dm.heightPixels)
+                        com.liferlighdow.iteration.utils.WallpaperProcessor.drawableToCroppedBitmap(drawable, dm.widthPixels, dm.heightPixels)
                     }
                 }
                 
