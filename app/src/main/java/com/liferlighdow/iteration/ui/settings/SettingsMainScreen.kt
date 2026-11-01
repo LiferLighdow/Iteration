@@ -59,6 +59,7 @@ fun SettingsMainScreen(
     onNavigateToGestures: () -> Unit,
     onNavigateToSearch: () -> Unit,
     onNavigateToPermissions: () -> Unit,
+    onNavigateToAppOps: () -> Unit,
     onNavigateToManuals: () -> Unit,
     onNavigateToLanguage: () -> Unit,
     onNavigateToAdvanced: () -> Unit,
@@ -475,6 +476,14 @@ fun SettingsMainScreen(
                             icon = Icons.Default.Security,
                             iconColor = Color(0xFF607D8B),
                             onClick = onNavigateToPermissions
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        SettingsItem(
+                            headline = stringResource(R.string.settings_app_ops),
+                            supporting = stringResource(R.string.settings_app_ops_desc),
+                            icon = Icons.Default.AdminPanelSettings,
+                            iconColor = Color(0xFF9C27B0),
+                            onClick = onNavigateToAppOps
                         )
                     }
                 }

@@ -16,7 +16,7 @@
         android:name="folder_group"
         android:scaleX="0.9"
         android:scaleY="0.9"
-        android:pivotX="256"
+        android:pivotX="257"
         android:pivotY="0"
         android:translateX="0"
         android:translateY="10">
@@ -36,26 +36,18 @@
             </aapt:attr>
         </path>
 
-        <!-- Document Inside Folder -->
+        <!-- White Paper / Document Tab visible prominently at the top slot -->
         <path
-            android:fillColor="#F0F4F8"
-            android:pathData="M116,176 h256 c6.63,0 12,5.37 12,12 v168 c0,6.63 -5.37,12 -12,12 H116 c-6.63,0 -12,-5.37 -12,-12 V188 c0,-6.63 5.37,-12 12,-12 z" />
+            android:fillColor="#FFFFFF"
+            android:pathData="M99,165 h328 c6.63,0 12,5.37 12,12 v16 c0,6.63 -5.37,12 -12,12 H85 c-6.63,0 -12,-5.37 -12,-12 v-16 c0,-6.63 5.37,-12 12,-12 z" />
 
-        <!-- Document Lines -->
+        <!-- Front Folder Flap (moved down) -->
         <path
-            android:fillColor="#CBD5E1"
-            android:pathData="M148,216 h152 c4.42,0 8,3.58 8,8 c0,4.42 -3.58,8 -8,8 H148 c-4.42,0 -8,-3.58 -8,-8 c0,-4.42 3.58,-8 8,-8 z" />
-        <path
-            android:fillColor="#CBD5E1"
-            android:pathData="M148,252 h112 c4.42,0 8,3.58 8,8 c0,4.42 -3.58,8 -8,8 H148 c-4.42,0 -8,-3.58 -8,-8 c0,-4.42 3.58,-8 8,-8 z" />
-
-        <!-- Front Folder Flap -->
-        <path
-            android:pathData="M64,216 c0,-13.25 10.75,-24 24,-24 h336 c13.25,0 24,10.75 24,24 v172 c0,13.25 -10.75,24 -24,24 H88 c-13.25,0 -24,-10.75 -24,-24 z">
+            android:pathData="M64,200 c0,-13.25 10.75,-24 24,-24 h336 c13.25,0 24,10.75 24,24 v204 c0,13.25 -10.75,24 -24,24 H88 c-13.25,0 -24,-10.75 -24,-24 z">
             <aapt:attr name="android:fillColor">
                 <gradient
                     android:startX="256"
-                    android:startY="192"
+                    android:startY="176"
                     android:endX="256"
                     android:endY="412"
                     android:startColor="#33ccff"
@@ -63,12 +55,6 @@
                     android:type="linear" />
             </aapt:attr>
         </path>
-
-        <!-- Front Flap Top Highlight Gloss -->
-        <path
-            android:fillColor="#FFFFFF"
-            android:fillAlpha="0.3"
-            android:pathData="M88,206 h336 c3.31,0 6,2.69 6,6 v2 c0,-3.31 -2.69,-6 -6,-6 H88 c-3.31,0 -6,2.69 -6,6 v-2 c0,-3.31 2.69,-6 6,-6 z" />
 
     </group>
 

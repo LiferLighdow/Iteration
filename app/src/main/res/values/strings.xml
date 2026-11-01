@@ -226,6 +226,8 @@
     <string name="settings_gestures_desc">Customizing touch gestures on the home screen</string>
     <string name="settings_permissions">Permissions</string>
     <string name="settings_permissions_desc">Manage application permissions and privacy</string>
+    <string name="settings_app_ops">App Ops</string>
+    <string name="settings_app_ops_desc">Manage advanced app operations and privacy permissions using Shizuku/Root</string>
     <string name="settings_action_mode">Action Mode</string>
     <string name="action_mode_accessibility">Accessibility (Standard)</string>
     <string name="action_mode_shizuku">Shizuku / Sui</string>

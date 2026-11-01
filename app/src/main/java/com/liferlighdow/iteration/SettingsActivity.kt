@@ -102,6 +102,7 @@ fun SettingsNavigation() {
         ) 
     }
     var workshopWidgetId by remember { mutableStateOf<String?>(null) }
+    var selectedAppPackage by remember { mutableStateOf<String?>(null) }
     
     BackHandler(enabled = currentPage != SettingsPage.MAIN) {
         when (currentPage) {
@@ -111,6 +112,8 @@ fun SettingsNavigation() {
             SettingsPage.DOCK_MANUAL -> currentPage = SettingsPage.MANUALS
             SettingsPage.WIDGET_WORKSHOP -> currentPage = SettingsPage.WIDGET_MAKER
             SettingsPage.SEARCH_ENGINE -> currentPage = SettingsPage.SEARCH
+            SettingsPage.APP_OPS_DETAIL -> currentPage = SettingsPage.APP_OPS_LIST
+            SettingsPage.APP_OPS_LIST -> currentPage = SettingsPage.MAIN
             else -> currentPage = SettingsPage.MAIN
         }
     }
@@ -128,6 +131,7 @@ fun SettingsNavigation() {
             onNavigateToGestures = { currentPage = SettingsPage.GESTURES },
             onNavigateToSearch = { currentPage = SettingsPage.SEARCH },
             onNavigateToPermissions = { currentPage = SettingsPage.PERMISSIONS },
+            onNavigateToAppOps = { currentPage = SettingsPage.APP_OPS_LIST },
             onNavigateToManuals = { currentPage = SettingsPage.MANUALS },
             onNavigateToLanguage = { currentPage = SettingsPage.LANGUAGE },
             onNavigateToAdvanced = { currentPage = SettingsPage.ADVANCED },
@@ -154,6 +158,17 @@ fun SettingsNavigation() {
         )
         SettingsPage.SEARCH_ENGINE -> SearchEngineSettingsScreen(onBack = { currentPage = SettingsPage.SEARCH })
         SettingsPage.PERMISSIONS -> PermissionsSettingsScreen(onBack = { currentPage = SettingsPage.MAIN })
+        SettingsPage.APP_OPS_LIST -> AppOpsListScreen(
+            onBack = { currentPage = SettingsPage.MAIN },
+            onSelectApp = { pkg ->
+                selectedAppPackage = pkg
+                currentPage = SettingsPage.APP_OPS_DETAIL
+            }
+        )
+        SettingsPage.APP_OPS_DETAIL -> AppOpsDetailScreen(
+            packageName = selectedAppPackage ?: "",
+            onBack = { currentPage = SettingsPage.APP_OPS_LIST }
+        )
         SettingsPage.MANUALS -> ManualsScreen(
             onBack = { currentPage = SettingsPage.MAIN },
             onNavigateToGlobalSearchManual = { currentPage = SettingsPage.GLOBAL_SEARCH_MANUAL },

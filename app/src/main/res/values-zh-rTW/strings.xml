@@ -229,6 +229,8 @@
     <string name="settings_gestures_desc">自訂主畫面上的觸控手勢</string>
     <string name="settings_permissions">權限</string>
     <string name="settings_permissions_desc">管理應用程式權限與隱私</string>
+    <string name="settings_app_ops">App Ops</string>
+    <string name="settings_app_ops_desc">使用 Shizuku/ROOT 管理進階應用程式操作與隱私權限</string>
     <string name="settings_action_mode">操作模式</string>
     <string name="action_mode_accessibility">無障礙服務（標準）</string>
     <string name="action_mode_shizuku">Shizuku / Sui</string>

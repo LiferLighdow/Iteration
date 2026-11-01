@@ -30,15 +30,6 @@
     <!-- Settings -->
     <item component="com.android.settings" drawable="ic_builtin_settings" />
 
-    <!-- Maps -->
-    <item component="com.google.android.apps.maps" drawable="ic_builtin_maps" />
-    <item component="com.baidu.BaiduMap" drawable="ic_builtin_maps" />
-    <item component="com.autonavi.minimap" drawable="ic_builtin_maps" />
-    <item component="com.generalmagic.magicearth" drawable="ic_builtin_maps" />
-    <item component="com.tencent.map" drawable="ic_builtin_maps" />
-    <item component="com.google.android.apps.mapslite" drawable="ic_builtin_maps" />
-    <item component="app.organicmaps" drawble="ic_builtin_maps" />
-
     <!-- Mail -->
     <item component="com.google.android.gm" drawable="ic_builtin_mail" />
     <item component="foundation.e.mail" drawable="ic_builtin_mail" />
@@ -183,15 +174,6 @@
     <item component="com.machiav3lli.fdroid" drawable="ic_builtin_store2" />
 
 
-    <!-- SU -->
-    <item component="com.topjohnwu.magisk" drawable="ic_builtin_su" />
-    <item component="me.tiann.kernelsu" drawable="ic_builtin_su" />
-    <item component="me.bmax.apatch" drawable="ic_builtin_su" />
-    <item component="eu.chainfire.supersu" drawable="ic_builtin_su" />
-    <item component="eu.chainfire.supersu.pro" drawable="ic_builtin_su" />
-    <item component="com.koushikdutta.superuser" drawable="ic_builtin_su" />
-    <item component="com.noshufou.android.su" drawable="ic_builtin_su" />
-    <item component="com.kingroot.kinguser" drawable="ic_builtin_su" />
-    <item component="com.kingoapp.root" drawable="ic_builtin_su" />
+
 
 </resources>
