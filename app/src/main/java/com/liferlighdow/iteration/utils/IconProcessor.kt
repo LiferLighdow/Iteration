@@ -43,7 +43,6 @@ class IconProcessor(private val context: Context) {
     private val maskCache = ConcurrentHashMap<String, Bitmap>()
 
     fun clearCache() {
-        maskCache.values.forEach { it.recycle() }
         maskCache.clear()
     }
 

@@ -966,11 +966,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
                 "com.liferlighdow.iteration.ACTION_CLEAR_CACHE_SILENT" -> {
                     iconCache.evictAll()
                     iconProcessor.clearCache()
-                    // 釋放桌布引用並顯式 recycle Native Heap
-                    try { _rawWallpaper.value?.asAndroidBitmap()?.recycle() } catch (e: Exception) {}
-                    _rawWallpaper.value = null
-                    try { _blurredWallpaper.value?.asAndroidBitmap()?.recycle() } catch (e: Exception) {}
-                    _blurredWallpaper.value = null
                     themeColorsCache = null
                     isResourcesReleased = true
                     // 提示 JVM 進行垃圾回收與堆整理，儘快歸還記憶體給系統
@@ -1307,11 +1302,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
 
         override fun entryRemoved(evicted: Boolean, key: String, oldValue: ImageBitmap, newValue: ImageBitmap?) {
             super.entryRemoved(evicted, key, oldValue, newValue)
-            if (oldValue != newValue) {
-                try {
-                    oldValue.asAndroidBitmap().recycle()
-                } catch (e: Exception) {}
-            }
         }
     }
 

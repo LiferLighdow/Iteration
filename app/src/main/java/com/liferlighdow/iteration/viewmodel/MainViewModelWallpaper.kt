@@ -57,20 +57,10 @@ fun MainViewModel.updateBlurredWallpaper(force: Boolean = false) {
 
         withContext(Dispatchers.Main) {
             result?.let {
-                val oldRaw = _rawWallpaper.value
-                val oldBlurred = _blurredWallpaper.value
-
                 _rawWallpaper.value = it.raw
                 _blurredWallpaper.value = it.blurred
                 _isLightWallpaper.value = it.isLightWallpaper
                 _wallpaperUpdateSignal.value = System.currentTimeMillis()
-
-                if (oldRaw != null && oldRaw != it.raw) {
-                    try { oldRaw.asAndroidBitmap().recycle() } catch (e: Exception) {}
-                }
-                if (oldBlurred != null && oldBlurred != it.blurred) {
-                    try { oldBlurred.asAndroidBitmap().recycle() } catch (e: Exception) {}
-                }
             }
         }
     }

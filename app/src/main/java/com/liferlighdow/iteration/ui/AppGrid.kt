@@ -520,36 +520,35 @@ fun AppGrid(
                             }
                         }
 
-                        // 2. 手勢層 (覆蓋在圖示上方，高度僅限圖示區域)
+                        // 2. 手勢層 (覆蓋在圖示/Widget上方)
                         Box(
                             modifier = Modifier
                                 .size(
-                                    if (app.isWidget) (if (isEditMode) cellWidth * w else 0.dp) else (cellWidth * 0.9f),
-                                    if (app.isWidget) (if (isEditMode) cellHeight * h else 0.dp) else (iconSize + 8.dp)
+                                    if (app.isWidget) (cellWidth * w) else (cellWidth * 0.9f),
+                                    if (app.isWidget) (cellHeight * h) else (iconSize + 8.dp)
                                 )
                                 .pointerInput(app.uniqueId) {
                                     var totalDragDistance = 0f
                                     var hasTriggeredDrag = false
                                     detectDragGesturesAfterLongPress(
-                                        onDragStart = { _ ->
+                                        onDragStart = { localOffset ->
                                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                             totalDragDistance = 0f
                                             hasTriggeredDrag = false
                                             viewModel.setActiveContextMenuId(app.uniqueId)
                                             showContextMenu = true
+                                            currentOnDragStart(app, lastPosition.pos + localOffset)
                                         },
                                         onDrag = { change, dragAmount ->
                                             totalDragDistance += dragAmount.getDistance()
                                             
-                                            if (!hasTriggeredDrag && totalDragDistance > 25f) {
+                                            if (!hasTriggeredDrag && totalDragDistance > 10f) {
                                                 if (!viewModel.isEditMode.value) {
                                                     viewModel.setEditMode(true)
                                                 }
                                                 
                                                 showContextMenu = false
                                                 viewModel.setActiveContextMenuId(null) 
-                                                
-                                                currentOnDragStart(app, lastPosition.pos + change.position)
                                                 hasTriggeredDrag = true
                                             }
                                             
@@ -701,7 +700,7 @@ fun AppGrid(
 }
 
 @Composable
-private fun WidgetGridItem(
+fun WidgetGridItem(
     app: AppModel,
     draggingUniqueId: String?,
     isEditMode: Boolean,
@@ -825,7 +824,78 @@ private fun WidgetGridItem(
                 }
             }
     ) {
-        Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+        val mContext = LocalContext.current
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .pointerInput(app.uniqueId, isEditMode) {
+                    if (!isEditMode) {
+                        detectTapGestures(
+                            onPress = {
+                                viewModel.setPressedItemId(app.uniqueId)
+                                try { awaitRelease() } finally { viewModel.setPressedItemId(null) }
+                            },
+                            onTap = {
+                                val w = app.widget ?: return@detectTapGestures
+                                when (w.type) {
+                                    is WidgetType.Note -> onUpdateNoteToEdit(w)
+                                    is WidgetType.ToDoList -> onUpdateTodoToEdit(w)
+                                    is WidgetType.Weather -> onUpdateWeatherToEdit(w)
+                                    is WidgetType.Countdown -> onUpdateCountdownToEdit(w)
+                                    is WidgetType.Photo -> {
+                                        val p = w.type as WidgetType.Photo
+                                        if (p.uri != null) onUpdatePhotoToAdjust(w) else {
+                                            onUpdatePhotoToPick(w)
+                                            photoPickerLauncher.launch("image/*")
+                                        }
+                                    }
+                                    is WidgetType.Stack -> onUpdateStackToEdit(w)
+                                    is WidgetType.RSS -> {
+                                        val r = w.type as WidgetType.RSS
+                                        if (r.url.isBlank()) onUpdateRssToEdit(w)
+                                    }
+                                    is WidgetType.Clock -> {
+                                        try {
+                                            val intent = Intent(android.provider.AlarmClock.ACTION_SHOW_ALARMS).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK }
+                                            mContext.startActivity(intent)
+                                        } catch (e: Exception) {
+                                            try {
+                                                val intent = mContext.packageManager.getLaunchIntentForPackage("com.google.android.deskclock")
+                                                    ?: mContext.packageManager.getLaunchIntentForPackage("com.android.deskclock")
+                                                intent?.let { mContext.startActivity(it) }
+                                            } catch (_: Exception) {}
+                                        }
+                                    }
+                                    is WidgetType.Calendar -> {
+                                        try {
+                                            val intent = Intent(Intent.ACTION_VIEW).apply {
+                                                data = android.net.Uri.parse("content://com.android.calendar/time/")
+                                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                            }
+                                            mContext.startActivity(intent)
+                                        } catch (_: Exception) {}
+                                    }
+                                    is WidgetType.Battery -> {
+                                        try {
+                                            val intent = Intent(android.provider.Settings.ACTION_BATTERY_SAVER_SETTINGS).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK }
+                                            mContext.startActivity(intent)
+                                        } catch (_: Exception) {}
+                                    }
+                                    is WidgetType.InfoHub, is WidgetType.InfoHub2 -> {
+                                        try {
+                                            val intent = Intent(android.provider.Settings.ACTION_SETTINGS).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK }
+                                            mContext.startActivity(intent)
+                                        } catch (_: Exception) {}
+                                    }
+                                    else -> {}
+                                }
+                            }
+                        )
+                    }
+                },
+            contentAlignment = Alignment.Center
+        ) {
             val widget = app.widget
             if (widget != null) {
                 when (val type = widget.type) {

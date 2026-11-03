@@ -333,7 +333,7 @@ fun AppLibraryPage(
                                 ) {
                                     Text(
                                         text = initial,
-                                        style = MaterialTheme.typography.titleSmall,
+                                        style = MaterialTheme.typography.titleSmall.withGlassShadow(),
                                         color = Color.White.copy(alpha = 0.7f)
                                     )
                                 }
@@ -349,7 +349,7 @@ fun AppLibraryPage(
                                 val iconSignal by viewModel.iconUpdateSignal.collectAsState()
                                 Box(modifier = Modifier.fillMaxWidth().onGloballyPositioned { itemPosition = it.positionInRoot() }) {
                                     ListItem(
-                                        headlineContent = { Text(app.label, color = Color.White) },
+                                        headlineContent = { Text(app.label, style = MaterialTheme.typography.bodyLarge.withGlassShadow(), color = Color.White) },
                                         leadingContent = {
                                             val appIcon = remember(app.uniqueId, iconSignal) { viewModel.getIcon(app.uniqueId) }
                                             if (appIcon != null) {
@@ -502,7 +502,7 @@ fun AppLibraryPage(
                             val isAvailable = alphabetMapping.containsKey(letter)
                             Text(
                                 text = letter,
-                                fontSize = 10.sp,
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp).withGlassShadow(),
                                 color = if (isAvailable) Color.White else Color.White.copy(alpha = 0.3f),
                                 fontWeight = if (isAvailable) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal,
                                 modifier = Modifier.padding(horizontal = 4.dp)
@@ -747,7 +747,7 @@ fun AppLibraryFolder(
                                 Text(
                                     text = stringResource(R.string.plus_more, apps.size - 3),
                                     color = Color.White,
-                                    style = MaterialTheme.typography.titleMedium,
+                                    style = MaterialTheme.typography.titleMedium.withGlassShadow(),
                                     fontWeight = FontWeight.Bold
                                 )
                             }
@@ -768,7 +768,7 @@ fun AppLibraryFolder(
         ) {
             Text(
                 text = name,
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelMedium.withGlassShadow(),
                 color = Color.White,
                 textAlign = TextAlign.Center
             )

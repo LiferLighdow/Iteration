@@ -468,6 +468,24 @@ fun MinusOnePage(
                                                     viewModel.setActiveContextMenuId(widget.id)
                                                     showContextMenu = true
                                                 }
+                                            },
+                                            onTap = {
+                                                when (widget.type) {
+                                                    is WidgetType.Note -> noteToEdit = widget
+                                                    is WidgetType.ToDoList -> todoToEdit = widget
+                                                    is WidgetType.Weather -> weatherToEdit = widget
+                                                    is WidgetType.Countdown -> countdownToEdit = widget
+                                                    is WidgetType.Photo -> {
+                                                        val p = widget.type as WidgetType.Photo
+                                                        if (p.uri != null) photoToAdjust = widget else photoToPick = widget
+                                                    }
+                                                    is WidgetType.Stack -> stackToEdit = widget
+                                                    is WidgetType.RSS -> {
+                                                        val r = widget.type as WidgetType.RSS
+                                                        if (r.url.isBlank()) rssToEdit = widget
+                                                    }
+                                                    else -> {}
+                                                }
                                             }
                                         )
                                     }

@@ -1,5 +1,8 @@
 package com.liferlighdow.iteration.ui
 
+import com.liferlighdow.iteration.data.WidgetType
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.widget.Toast
@@ -419,36 +422,51 @@ fun LauncherScreen(
 
         // --- 修正後的拖拽邊緣切頁邏輯 ---
         var lastEdgeTriggerTime by remember { mutableLongStateOf(0L) }
+        var pageSwitchCooldownUntil by remember { mutableLongStateOf(0L) }
 
         LaunchedEffect(draggingApp != null) {
             if (draggingApp == null) return@LaunchedEffect
 
             while (true) {
+                val currentTime = System.currentTimeMillis()
                 val currentX = touchPosition.x + dragOffset.x
                 val isAtRightEdge = currentX > screenWidthPx - edgeThresholdPx
                 val isAtLeftEdge = currentX < edgeThresholdPx
 
+                if (currentTime < pageSwitchCooldownUntil) {
+                    lastEdgeTriggerTime = 0L
+                    delay(50)
+                    continue
+                }
+
                 if (isAtRightEdge || isAtLeftEdge) {
                     if (lastEdgeTriggerTime == 0L) {
-                        lastEdgeTriggerTime = System.currentTimeMillis()
-                    } else if (System.currentTimeMillis() - lastEdgeTriggerTime > 800) {
+                        lastEdgeTriggerTime = currentTime
+                    } else if (currentTime - lastEdgeTriggerTime > 400) {
                         // 觸發翻頁或新增
                         val currentPage = pagerState.currentPage
+                        var didSwitch = false
                         if (isAtRightEdge) {
                             if (currentPage < desktopStartIndex + desktopPageCount - 1) {
                                 pagerState.animateScrollToPage(currentPage + 1)
+                                didSwitch = true
                             } else if (currentPage == desktopStartIndex + desktopPageCount - 1) {
                                 viewModel.addEmptyPage()
                                 delay(100) // 等待列表更新
                                 pagerState.animateScrollToPage(currentPage + 1)
+                                didSwitch = true
                             }
                         } else if (isAtLeftEdge) {
                             if (currentPage > desktopStartIndex) {
                                 pagerState.animateScrollToPage(currentPage - 1)
+                                didSwitch = true
                             }
                         }
+
+                        if (didSwitch) {
+                            pageSwitchCooldownUntil = System.currentTimeMillis() + 750 // 翻頁後 750ms 緩衝期
+                        }
                         lastEdgeTriggerTime = 0L // 觸發後重置計時
-                        delay(1000) // 防止連續快速翻頁
                     }
                 } else {
                     lastEdgeTriggerTime = 0L
@@ -1063,36 +1081,103 @@ fun LauncherScreen(
             }
         }
 
+        val photoPickerLauncher = rememberLauncherForActivityResult(
+            ActivityResultContracts.GetContent()
+        ) {}
+
         lastDraggingApp?.let { app ->
             if (draggingAlpha > 0f) {
-                // 手中的圖示縮放
-                val inHandScale by animateFloatAsState(1.2f, label = "inHandScale")
-                
+                val inHandScale by animateFloatAsState(1.05f, label = "inHandScale")
+
+                val isWidget = app.isWidget && app.widget != null
+                val widgetWidthDp: Dp
+                val widgetHeightDp: Dp
+
+                if (isWidget) {
+                    val type = app.widget!!.type
+                    val w = when (type) {
+                        is WidgetType.Calendar -> if (type.isWide) 4 else 2
+                        is WidgetType.Photo -> if (type.isWide) 4 else 2
+                        is WidgetType.Music -> if (type.isWide) 4 else 2
+                        is WidgetType.Note -> if (type.isWide) 4 else 2
+                        is WidgetType.Stack -> if (type.isWide) 4 else 2
+                        is WidgetType.Weather -> if (type.isWide) 4 else 2
+                        is WidgetType.ToDoList -> if (type.isWide) 4 else 2
+                        is WidgetType.RSS -> 4
+                        is WidgetType.Countdown -> if (type.isWide) 4 else 2
+                        is WidgetType.InfoHub -> 4
+                        is WidgetType.InfoHub2 -> 4
+                        is WidgetType.Custom -> if (type.size == "4x2") 4 else 2
+                        is WidgetType.Battery, is WidgetType.Clock -> 2
+                        else -> 2
+                    }
+                    val h = when (type) {
+                        is WidgetType.RSS -> if (type.isTall) 4 else 2
+                        else -> 2
+                    }
+                    val currentConfig = androidx.compose.ui.platform.LocalConfiguration.current
+                    val cellWidthDp = currentConfig.screenWidthDp.dp / columns
+                    val cellHeightDp = currentConfig.screenHeightDp.dp / rows
+                    widgetWidthDp = cellWidthDp * w
+                    widgetHeightDp = cellHeightDp * h
+                } else {
+                    widgetWidthDp = iconSize
+                    widgetHeightDp = iconSize
+                }
+
+                val density = LocalDensity.current
+                val widthPx = with(density) { widgetWidthDp.toPx() }
+                val heightPx = with(density) { widgetHeightDp.toPx() }
+
                 Box(
                     modifier = Modifier
                         .graphicsLayer {
-                            translationX = touchPosition.x + dragOffset.x - iconSizePx / 2
-                            translationY = touchPosition.y + dragOffset.y - iconSizePx / 2
-                            // 改為完全不透明 (1.0f)，讓 icon 看起來更紮實
+                            translationX = touchPosition.x + dragOffset.x - widthPx / 2
+                            translationY = touchPosition.y + dragOffset.y - heightPx / 2
                             alpha = draggingAlpha
                             scaleX = inHandScale
                             scaleY = inHandScale
-                            // 稍微增加一點陰影感（如果硬體支援渲染效果，這裡可以用 renderEffect，目前先用 alpha 保證清晰）
                         }
                 ) {
-                    AppItem(
-                        app = app,
-                        iconSize = iconSize,
-                        showLabel = false,
-                        iconCornerRadius = iconCornerRadius,
-                        libraryCornerRadius = iconCornerRadius,
-                        isLiquidGlass = isLiquidGlassEnabled,
-                        backdrop = backdrop,
-                        blurRadius = blurRadius,
-                        refractionHeight = refractionHeight,
-                        refractionAmount = refractionAmount,
-                        chromaticAberration = chromaticAberration,
-                        getIcon = { pkg -> viewModel.getIcon(pkg) })
+                    if (isWidget) {
+                        Box(modifier = Modifier.size(widgetWidthDp, widgetHeightDp)) {
+                            WidgetGridItem(
+                                app = app,
+                                draggingUniqueId = null,
+                                isEditMode = true,
+                                backdrop = backdrop,
+                                viewModel = viewModel,
+                                showContextMenu = false,
+                                onContextMenuDismiss = {},
+                                onUpdateStackToEdit = {},
+                                onUpdateNoteToEdit = {},
+                                onUpdateTodoToEdit = {},
+                                onUpdateWeatherToEdit = {},
+                                onUpdateRssToEdit = {},
+                                onUpdateCountdownToEdit = {},
+                                onUpdateMusicToEdit = {},
+                                onUpdatePhotoToAdjust = {},
+                                onUpdatePhotoToPick = {},
+                                onShowContextMenu = {},
+                                photoPickerLauncher = photoPickerLauncher
+                            )
+                        }
+                    } else {
+                        AppItem(
+                            app = app,
+                            iconSize = iconSize,
+                            showLabel = false,
+                            iconCornerRadius = iconCornerRadius,
+                            libraryCornerRadius = iconCornerRadius,
+                            isLiquidGlass = isLiquidGlassEnabled,
+                            backdrop = backdrop,
+                            blurRadius = blurRadius,
+                            refractionHeight = refractionHeight,
+                            refractionAmount = refractionAmount,
+                            chromaticAberration = chromaticAberration,
+                            getIcon = { pkg -> viewModel.getIcon(pkg) }
+                        )
+                    }
                 }
             }
         }
