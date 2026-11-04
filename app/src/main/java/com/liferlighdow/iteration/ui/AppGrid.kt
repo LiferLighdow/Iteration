@@ -159,6 +159,8 @@ fun AppGrid(
     val isAppLabelForcedHidden = if (rows >= 7) screenRatio < 2.22f else false
     val showAppLabel = !hideAppLabelPrefs && !isAppLabelForcedHidden
 
+    var rootCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
+    val localSlotBounds = remember { mutableStateMapOf<Int, Rect>() }
     val draggingUniqueId = draggingApp?.uniqueId
     var stackToEdit by remember { mutableStateOf<WidgetModel?>(null) }
     var noteToEdit by remember { mutableStateOf<WidgetModel?>(null) }
@@ -274,6 +276,7 @@ fun AppGrid(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = horizontalPadding)
+            .onGloballyPositioned { rootCoords = it }
             .pointerInput(isEditMode) {
                 if (!isEditMode) {
                     awaitPointerEventScope {
@@ -367,6 +370,7 @@ fun AppGrid(
             .pointerInput(isEditMode, desktopLongPressTimeout) {
                 detectTapGesturesWithCustomTimeout(
                     viewModel = viewModel,
+                    localSlotBounds = localSlotBounds,
                     onDoubleTap = { onBackgroundDoubleTap() },
                     onLongPress = { onBackgroundLongPress() },
                     onTap = { onBackgroundClick() },
@@ -442,10 +446,14 @@ fun AppGrid(
                             translationY = animY.toPx()
                         }
                         .size(cellWidth * w, cellHeight * h)
-                        .onGloballyPositioned {
-                            val pos = it.positionInRoot()
+                        .onGloballyPositioned { slotCoords ->
+                            rootCoords?.let { root ->
+                                val localPos = root.localPositionOf(slotCoords, Offset.Zero)
+                                localSlotBounds[index] = Rect(localPos, Size(slotCoords.size.width.toFloat(), slotCoords.size.height.toFloat()))
+                            }
+                            val pos = slotCoords.positionInRoot()
                             lastPosition.pos = pos
-                            onSlotPositioned(index, Rect(pos, Size(it.size.width.toFloat(), it.size.height.toFloat())))
+                            onSlotPositioned(index, Rect(pos, Size(slotCoords.size.width.toFloat(), slotCoords.size.height.toFloat())))
                         },
                     contentAlignment = Alignment.Center
                 ) {
@@ -531,13 +539,13 @@ fun AppGrid(
                                     var totalDragDistance = 0f
                                     var hasTriggeredDrag = false
                                     detectDragGesturesAfterLongPress(
-                                        onDragStart = { localOffset ->
+                                        onDragStart = { _ ->
                                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                             totalDragDistance = 0f
                                             hasTriggeredDrag = false
                                             viewModel.setActiveContextMenuId(app.uniqueId)
                                             showContextMenu = true
-                                            currentOnDragStart(app, lastPosition.pos + localOffset)
+                                            // 尚未開始拖移前，讓 widget 留在原位播放長按動畫/選單
                                         },
                                         onDrag = { change, dragAmount ->
                                             totalDragDistance += dragAmount.getDistance()
@@ -549,6 +557,9 @@ fun AppGrid(
                                                 
                                                 showContextMenu = false
                                                 viewModel.setActiveContextMenuId(null) 
+                                                
+                                                // 當手指開始真正拖移時，才將 widget 提起並設定初始抓取位置
+                                                currentOnDragStart(app, lastPosition.pos + change.position)
                                                 hasTriggeredDrag = true
                                             }
                                             
@@ -1412,6 +1423,7 @@ private fun AppGridItem(
 
 private suspend fun PointerInputScope.detectTapGesturesWithCustomTimeout(
     viewModel: MainViewModel,
+    localSlotBounds: Map<Int, Rect>,
     onDoubleTap: ((Offset) -> Unit)? = null,
     onLongPress: ((Offset) -> Unit)? = null,
     onTap: ((Offset) -> Unit)? = null,
@@ -1420,7 +1432,7 @@ private suspend fun PointerInputScope.detectTapGesturesWithCustomTimeout(
     coroutineScope {
         awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = false)
-            if (viewModel.pressedItemId.value != null || viewModel.activeContextMenuId.value != null) {
+            if (viewModel.pressedItemId.value != null || viewModel.activeContextMenuId.value != null || localSlotBounds.values.any { it.contains(down.position) }) {
                 return@awaitEachGesture
             }
             down.consume()

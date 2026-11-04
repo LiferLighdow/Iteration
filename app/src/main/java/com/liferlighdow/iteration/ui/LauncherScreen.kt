@@ -1115,11 +1115,10 @@ fun LauncherScreen(
                         is WidgetType.RSS -> if (type.isTall) 4 else 2
                         else -> 2
                     }
-                    val currentConfig = androidx.compose.ui.platform.LocalConfiguration.current
-                    val cellWidthDp = currentConfig.screenWidthDp.dp / columns
-                    val cellHeightDp = currentConfig.screenHeightDp.dp / rows
-                    widgetWidthDp = cellWidthDp * w
-                    widgetHeightDp = cellHeightDp * h
+                    val cellWidth = (maxWidth - (horizontalPadding * 2)) / columns
+                    val cellHeight = maxHeight / rows
+                    widgetWidthDp = cellWidth * w
+                    widgetHeightDp = cellHeight * h
                 } else {
                     widgetWidthDp = iconSize
                     widgetHeightDp = iconSize
@@ -1147,6 +1146,7 @@ fun LauncherScreen(
                                 isEditMode = true,
                                 backdrop = backdrop,
                                 viewModel = viewModel,
+                                showLabel = false,
                                 showContextMenu = false,
                                 onContextMenuDismiss = {},
                                 onUpdateStackToEdit = {},

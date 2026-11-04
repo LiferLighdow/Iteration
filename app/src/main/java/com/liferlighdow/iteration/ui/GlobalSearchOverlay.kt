@@ -144,8 +144,8 @@ fun GlobalSearchOverlay(
 
     val effectiveProgress = progress.value
 
-    LaunchedEffect(effectiveProgress >= 0.3f, isVisible) {
-        if (isVisible && effectiveProgress >= 0.3f) {
+    LaunchedEffect(effectiveProgress >= 0.85f, isVisible) {
+        if (isVisible && effectiveProgress >= 0.85f) {
             focusRequester.requestFocus()
             keyboardController?.show()
         }
