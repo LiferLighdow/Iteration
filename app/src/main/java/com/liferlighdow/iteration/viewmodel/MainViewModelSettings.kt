@@ -1,6 +1,8 @@
 package com.liferlighdow.iteration.viewmodel
 
 import android.content.pm.PackageManager
+import android.widget.Toast
+import com.liferlighdow.iteration.R
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.viewModelScope
@@ -358,6 +360,8 @@ fun MainViewModel.setLiquidGlassEnabled(enabled: Boolean) {
     _isLiquidGlassEnabled.value = enabled
     prefs.edit().putBoolean("liquid_glass_enabled", enabled).apply()
     if (enabled) {
+        _isProvisionedBlurEnabled.value = false
+        prefs.edit().putBoolean("provisioned_blur_enabled", false).apply()
         updateBlurredWallpaper()
     }
 }
@@ -748,6 +752,47 @@ fun MainViewModel.dismissVNaviInstallDialog() {
 fun MainViewModel.setUseVNaviForPwa(enabled: Boolean) {
     _useVNaviForPwa.value = enabled
     prefs.edit().putBoolean("use_vnavi_for_pwa", enabled).apply()
+}
+
+fun MainViewModel.setProvisionedBlurEnabled(enabled: Boolean) {
+    if (enabled && _isLiquidGlassEnabled.value) {
+        _isProvisionedBlurEnabled.value = false
+        prefs.edit().putBoolean("provisioned_blur_enabled", false).apply()
+        android.widget.Toast.makeText(getApplication<android.app.Application>(), R.string.provisioned_blur_disabled_by_liquid_glass, android.widget.Toast.LENGTH_SHORT).show()
+        return
+    }
+    _isProvisionedBlurEnabled.value = enabled
+    prefs.edit().putBoolean("provisioned_blur_enabled", enabled).apply()
+}
+
+fun MainViewModel.setProvisionedBlurDockEnabled(enabled: Boolean) {
+    _isProvisionedBlurDockEnabled.value = enabled
+    prefs.edit().putBoolean("provisioned_blur_dock", enabled).apply()
+}
+
+fun MainViewModel.setProvisionedBlurFolderEnabled(enabled: Boolean) {
+    _isProvisionedBlurFolderEnabled.value = enabled
+    prefs.edit().putBoolean("provisioned_blur_folder", enabled).apply()
+}
+
+fun MainViewModel.setProvisionedBlurSearchEnabled(enabled: Boolean) {
+    _isProvisionedBlurSearchEnabled.value = enabled
+    prefs.edit().putBoolean("provisioned_blur_search", enabled).apply()
+}
+
+fun MainViewModel.setProvisionedBlurWidgetsEnabled(enabled: Boolean) {
+    _isProvisionedBlurWidgetsEnabled.value = enabled
+    prefs.edit().putBoolean("provisioned_blur_widgets", enabled).apply()
+}
+
+fun MainViewModel.setProvisionedBlurButtonEnabled(enabled: Boolean) {
+    _isProvisionedBlurButtonEnabled.value = enabled
+    prefs.edit().putBoolean("provisioned_blur_button", enabled).apply()
+}
+
+fun MainViewModel.setProvisionedBlurAppIconEnabled(enabled: Boolean) {
+    _isProvisionedBlurAppIconEnabled.value = enabled
+    prefs.edit().putBoolean("provisioned_blur_app_icon", enabled).apply()
 }
 
 fun MainViewModel.resetLiquidGlassParams() {

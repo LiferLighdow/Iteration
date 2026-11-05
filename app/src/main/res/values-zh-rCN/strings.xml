@@ -625,6 +625,10 @@
     <string name="icon_scale_current">当前比例：%1$d%%</string>
 
     <string name="settings_update_check_interval">更新检查间隔</string>
+    <string name="provisioned_blur">佈建模糊化</string>
+    <string name="provisioned_blur_desc">针对指定桌面组件启用原生高斯模糊效果</string>
+    <string name="provisioned_blur_dialog_title">选择模糊组件</string>
+    <string name="provisioned_blur_disabled_by_liquid_glass">因已启用液态玻璃，无法使用布建模糊化</string>
     <string name="settings_update_check_interval_desc">自动检查更新的时间间隔（0 到 36 小時，0 为禁用）。</string>
     <string name="settings_update_check_hours">%1$d 小时</string>
     <string name="update_dialog_title">发现新版本</string>

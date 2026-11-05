@@ -586,6 +586,10 @@
     <string name="icon_scale_desc">微調桌面門牌的顯示大小 (80%% 到 120%%)。</string>
     <string name="icon_scale_current">當前比例：%1$d%%</string>
     <string name="settings_update_check_interval">檢查更新頻率</string>
+    <string name="provisioned_blur">佈建模糊化</string>
+    <string name="provisioned_blur_desc">針對指定桌面元件啟用原生高斯模糊效果</string>
+    <string name="provisioned_blur_dialog_title">選擇模糊元件</string>
+    <string name="provisioned_blur_disabled_by_liquid_glass">因已啟用液態玻璃，無法使用佈建模糊化</string>
     <string name="settings_update_check_interval_desc">設定自動檢查更新的時間間隔（0 到 36 小時，0 為不檢查）。</string>
     <string name="settings_update_check_hours">%1$d 小時</string>
     <string name="update_dialog_title">發現新版本</string>

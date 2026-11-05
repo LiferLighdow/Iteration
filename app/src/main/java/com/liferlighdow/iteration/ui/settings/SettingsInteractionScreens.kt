@@ -246,6 +246,69 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
                         checked = isAmoledBlack,
                         onCheckedChange = { viewModel.setAmoledBlack(it) }
                     )
+
+                    val isProvisionedBlurEnabled by viewModel.isProvisionedBlurEnabled.collectAsState()
+                    var showProvisionedBlurDialog by remember { mutableStateOf(false) }
+
+                    SettingSwitchItem(
+                        icon = Icons.Default.BlurOn,
+                        title = stringResource(R.string.provisioned_blur),
+                        supportingText = stringResource(R.string.provisioned_blur_desc),
+                        checked = isProvisionedBlurEnabled,
+                        onCheckedChange = { viewModel.setProvisionedBlurEnabled(it) }
+                    )
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.provisioned_blur_dialog_title)) },
+                        supportingContent = { Text(stringResource(R.string.component_configs_title)) },
+                        leadingContent = { Icon(Icons.Default.Tune, null, tint = MaterialTheme.colorScheme.primary) },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier.clickable { showProvisionedBlurDialog = true }
+                    )
+
+                    if (showProvisionedBlurDialog) {
+                        val dockBlur by viewModel.isProvisionedBlurDockEnabled.collectAsState()
+                        val folderBlur by viewModel.isProvisionedBlurFolderEnabled.collectAsState()
+                        val searchBlur by viewModel.isProvisionedBlurSearchEnabled.collectAsState()
+                        val widgetBlur by viewModel.isProvisionedBlurWidgetsEnabled.collectAsState()
+                        val buttonBlur by viewModel.isProvisionedBlurButtonEnabled.collectAsState()
+                        val iconBlur by viewModel.isProvisionedBlurAppIconEnabled.collectAsState()
+
+                        AlertDialog(
+                            onDismissRequest = { showProvisionedBlurDialog = false },
+                            title = { Text(stringResource(R.string.provisioned_blur_dialog_title)) },
+                            text = {
+                                Column {
+                                    class ComponentItem(val label: String, val checked: Boolean, val onCheckedChange: (Boolean) -> Unit)
+                                    val components = listOf(
+                                        ComponentItem(stringResource(R.string.component_dock), dockBlur) { viewModel.setProvisionedBlurDockEnabled(it) },
+                                        ComponentItem(stringResource(R.string.component_folder), folderBlur) { viewModel.setProvisionedBlurFolderEnabled(it) },
+                                        ComponentItem(stringResource(R.string.component_search), searchBlur) { viewModel.setProvisionedBlurSearchEnabled(it) },
+                                        ComponentItem(stringResource(R.string.component_widget), widgetBlur) { viewModel.setProvisionedBlurWidgetsEnabled(it) },
+                                        ComponentItem(stringResource(R.string.component_button), buttonBlur) { viewModel.setProvisionedBlurButtonEnabled(it) },
+                                        ComponentItem(stringResource(R.string.component_icon), iconBlur) { viewModel.setProvisionedBlurAppIconEnabled(it) }
+                                    )
+                                    components.forEach { item ->
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable { item.onCheckedChange(!item.checked) }
+                                                .padding(vertical = 8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Checkbox(checked = item.checked, onCheckedChange = item.onCheckedChange)
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Text(item.label, style = MaterialTheme.typography.bodyLarge)
+                                        }
+                                    }
+                                }
+                            },
+                            confirmButton = {
+                                Button(onClick = { showProvisionedBlurDialog = false }) {
+                                    Text(stringResource(R.string.apply))
+                                }
+                            }
+                        )
+                    }
                 }
             }
 
@@ -338,25 +401,27 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
                             )
                         }
 
-                        val dockOpacity by viewModel.dockOpacity.collectAsState()
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Opacity, null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(stringResource(R.string.dock_opacity_label, (dockOpacity * 100).toInt()), style = MaterialTheme.typography.bodyMedium)
-                            }
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(onClick = { viewModel.setDockOpacity((dockOpacity - 0.05f).coerceAtLeast(0f)) }) {
-                                    Icon(Icons.Default.Remove, contentDescription = null)
+                        if (dockTheme != DockTheme.FOLLOW_SYSTEM) {
+                            val dockOpacity by viewModel.dockOpacity.collectAsState()
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Opacity, null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(stringResource(R.string.dock_opacity_label, (dockOpacity * 100).toInt()), style = MaterialTheme.typography.bodyMedium)
                                 }
-                                Slider(
-                                    value = dockOpacity.coerceIn(0f, 1f),
-                                    onValueChange = { viewModel.setDockOpacity(it) },
-                                    valueRange = 0f..1f,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                IconButton(onClick = { viewModel.setDockOpacity((dockOpacity + 0.05f).coerceAtMost(1f)) }) {
-                                    Icon(Icons.Default.Add, contentDescription = null)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    IconButton(onClick = { viewModel.setDockOpacity((dockOpacity - 0.05f).coerceAtLeast(0f)) }) {
+                                        Icon(Icons.Default.Remove, contentDescription = null)
+                                    }
+                                    Slider(
+                                        value = dockOpacity.coerceIn(0f, 1f),
+                                        onValueChange = { viewModel.setDockOpacity(it) },
+                                        valueRange = 0f..1f,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    IconButton(onClick = { viewModel.setDockOpacity((dockOpacity + 0.05f).coerceAtMost(1f)) }) {
+                                        Icon(Icons.Default.Add, contentDescription = null)
+                                    }
                                 }
                             }
                         }

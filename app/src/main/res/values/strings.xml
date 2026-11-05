@@ -638,6 +638,10 @@
     <string name="icon_scale_current">Current Scale: %1$d%%</string>
 
     <string name="settings_update_check_interval">Update Check Interval</string>
+    <string name="provisioned_blur">Provisioned Blur</string>
+    <string name="provisioned_blur_desc">Enable gaussian blur for specific desktop components</string>
+    <string name="provisioned_blur_dialog_title">Select Components to Blur</string>
+    <string name="provisioned_blur_disabled_by_liquid_glass">Provisioned blur cannot be used because Liquid Glass is enabled</string>
     <string name="settings_update_check_interval_desc">How often to check for updates (0 to 36 hours, 0 to disable).</string>
     <string name="settings_update_check_hours">%1$d hours</string>
     <string name="update_dialog_title">New Version Available</string>

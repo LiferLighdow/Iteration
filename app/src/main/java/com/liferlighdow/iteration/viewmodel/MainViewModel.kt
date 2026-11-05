@@ -111,6 +111,34 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
         MutableStateFlow(prefs.getBoolean("liquid_glass_enabled", false))
     val isLiquidGlassEnabled = _isLiquidGlassEnabled.asStateFlow()
 
+    internal val _isProvisionedBlurEnabled =
+        MutableStateFlow(prefs.getBoolean("provisioned_blur_enabled", false))
+    val isProvisionedBlurEnabled = _isProvisionedBlurEnabled.asStateFlow()
+
+    internal val _isProvisionedBlurDockEnabled =
+        MutableStateFlow(prefs.getBoolean("provisioned_blur_dock", true))
+    val isProvisionedBlurDockEnabled = _isProvisionedBlurDockEnabled.asStateFlow()
+
+    internal val _isProvisionedBlurFolderEnabled =
+        MutableStateFlow(prefs.getBoolean("provisioned_blur_folder", true))
+    val isProvisionedBlurFolderEnabled = _isProvisionedBlurFolderEnabled.asStateFlow()
+
+    internal val _isProvisionedBlurSearchEnabled =
+        MutableStateFlow(prefs.getBoolean("provisioned_blur_search", true))
+    val isProvisionedBlurSearchEnabled = _isProvisionedBlurSearchEnabled.asStateFlow()
+
+    internal val _isProvisionedBlurWidgetsEnabled =
+        MutableStateFlow(prefs.getBoolean("provisioned_blur_widgets", true))
+    val isProvisionedBlurWidgetsEnabled = _isProvisionedBlurWidgetsEnabled.asStateFlow()
+
+    internal val _isProvisionedBlurButtonEnabled =
+        MutableStateFlow(prefs.getBoolean("provisioned_blur_button", true))
+    val isProvisionedBlurButtonEnabled = _isProvisionedBlurButtonEnabled.asStateFlow()
+
+    internal val _isProvisionedBlurAppIconEnabled =
+        MutableStateFlow(prefs.getBoolean("provisioned_blur_app_icon", true))
+    val isProvisionedBlurAppIconEnabled = _isProvisionedBlurAppIconEnabled.asStateFlow()
+
     internal val _isLiquidGlassDockEnabled =
         MutableStateFlow(prefs.getBoolean("liquid_glass_dock", false))
     val isLiquidGlassDockEnabled = _isLiquidGlassDockEnabled.asStateFlow()
@@ -1030,6 +1058,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
                 }
             }
             "liquid_glass_enabled" -> _isLiquidGlassEnabled.value = sharedPreferences.getBoolean(key, false)
+            "provisioned_blur_enabled" -> _isProvisionedBlurEnabled.value = sharedPreferences.getBoolean(key, false)
+            "provisioned_blur_dock" -> _isProvisionedBlurDockEnabled.value = sharedPreferences.getBoolean(key, true)
+            "provisioned_blur_folder" -> _isProvisionedBlurFolderEnabled.value = sharedPreferences.getBoolean(key, true)
+            "provisioned_blur_search" -> _isProvisionedBlurSearchEnabled.value = sharedPreferences.getBoolean(key, true)
+            "provisioned_blur_widgets" -> _isProvisionedBlurWidgetsEnabled.value = sharedPreferences.getBoolean(key, true)
+            "provisioned_blur_button" -> _isProvisionedBlurButtonEnabled.value = sharedPreferences.getBoolean(key, true)
+            "provisioned_blur_app_icon" -> _isProvisionedBlurAppIconEnabled.value = sharedPreferences.getBoolean(key, true)
             "liquid_glass_dock" -> _isLiquidGlassDockEnabled.value = sharedPreferences.getBoolean(key, false)
             "liquid_glass_home_folder" -> _isLiquidGlassHomeFolderEnabled.value = sharedPreferences.getBoolean(key, false)
             "liquid_glass_app_library_folder" -> _isLiquidGlassAppLibraryFolderEnabled.value = sharedPreferences.getBoolean(key, false)

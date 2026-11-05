@@ -35,8 +35,21 @@ import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.asComposeRenderEffect
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.asAndroidPath
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun glassFallbackColor(alpha: Float = 0.3f): Color {
@@ -186,13 +199,41 @@ fun Modifier.liquidGlass(
     component: LiquidGlassComponent? = null
 ): Modifier = composed {
     val viewModel: MainViewModel = viewModel()
+    val rawWallpaper by viewModel.rawWallpaper.collectAsState()
     val p = resolveLiquidGlassParams(viewModel, component, blurRadius, refractionHeight, refractionAmount, chromaticAberration, colorAdjustmentEnabled, hue, saturation, brightness, alpha)
     
+    var posInWindow by remember { mutableStateOf(Offset.Zero) }
+    val context = LocalContext.current
+    val displayMetrics = remember(context) { context.resources.displayMetrics }
+    val screenWidthPx = displayMetrics.widthPixels.toFloat().coerceAtLeast(1f)
+    val screenHeightPx = displayMetrics.heightPixels.toFloat().coerceAtLeast(1f)
+
     val fallbackColor = glassFallbackColor()
     val finalShape = shape ?: RoundedCornerShape(cornerRadius)
     val isAndroid12 = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S
 
-    if (!enabled || backdrop == null || !isAndroid12) {
+    val isProvisionedBlurEnabled by viewModel.isProvisionedBlurEnabled.collectAsState()
+    val isDockBlur by viewModel.isProvisionedBlurDockEnabled.collectAsState()
+    val isFolderBlur by viewModel.isProvisionedBlurFolderEnabled.collectAsState()
+    val isSearchBlur by viewModel.isProvisionedBlurSearchEnabled.collectAsState()
+    val isWidgetBlur by viewModel.isProvisionedBlurWidgetsEnabled.collectAsState()
+    val isButtonBlur by viewModel.isProvisionedBlurButtonEnabled.collectAsState()
+    val isIconBlur by viewModel.isProvisionedBlurAppIconEnabled.collectAsState()
+
+    val componentBlurAllowed = when (component) {
+        LiquidGlassComponent.DOCK -> isDockBlur
+        LiquidGlassComponent.FOLDER -> isFolderBlur
+        LiquidGlassComponent.SEARCH -> isSearchBlur
+        LiquidGlassComponent.WIDGET -> isWidgetBlur
+        LiquidGlassComponent.BUTTON -> isButtonBlur
+        LiquidGlassComponent.APP_ICON -> isIconBlur
+        else -> true
+    }
+
+    val useLiquidGlass = enabled && backdrop != null && isAndroid12
+    val useProvisionedBlur = !useLiquidGlass && isProvisionedBlurEnabled && componentBlurAllowed && isAndroid12
+
+    if (!useLiquidGlass && !useProvisionedBlur) {
         this.drawBehind {
             val color = if (p.adjEnabled) {
                 Color.hsv(p.h, p.s.coerceIn(0f, 1f), p.b.coerceIn(0f, 1f), p.a)
@@ -222,11 +263,144 @@ fun Modifier.liquidGlass(
                 )
             }
         }
+    } else if (useProvisionedBlur) {
+        val density = LocalDensity.current
+        this
+            .onGloballyPositioned { coordinates ->
+                posInWindow = coordinates.positionInWindow()
+            }
+            .clip(finalShape)
+            .drawBehind {
+                val color = if (p.adjEnabled) {
+                    Color.hsv(p.h, p.s.coerceIn(0f, 1f), p.b.coerceIn(0f, 1f), p.a)
+                } else {
+                    fallbackColor
+                }
+                val highlightColor = Color.White.copy(alpha = 0.2f * p.a)
+                val baseBlurDp = if (p.blur > 0f) p.blur.coerceAtMost(30f) else 20f
+                val blurPx = with(density) { baseBlurDp.dp.toPx() }
+
+                if (isAndroid12 && blurPx > 0.01f && size.width > 0f && size.height > 0f) {
+                    val width = size.width.toInt().coerceAtLeast(1)
+                    val height = size.height.toInt().coerceAtLeast(1)
+
+                    val renderNode = android.graphics.RenderNode("NonLiquidGlassBackground").apply {
+                        setPosition(0, 0, width, height)
+                        setRenderEffect(
+                            android.graphics.RenderEffect.createBlurEffect(
+                                blurPx,
+                                blurPx,
+                                android.graphics.Shader.TileMode.CLAMP
+                            )
+                        )
+                    }
+
+                    val canvas = renderNode.beginRecording(width, height)
+                    
+                    val rawBmp = rawWallpaper?.asAndroidBitmap()
+                    if (rawBmp != null && !rawBmp.isRecycled) {
+                        val relX = (posInWindow.x / screenWidthPx).coerceIn(0f, 1f)
+                        val relY = (posInWindow.y / screenHeightPx).coerceIn(0f, 1f)
+                        val relW = (size.width / screenWidthPx).coerceIn(0f, 1f)
+                        val relH = (size.height / screenHeightPx).coerceIn(0f, 1f)
+
+                        val cropLeft = (relX * rawBmp.width).toInt().coerceIn(0, (rawBmp.width - 1).coerceAtLeast(0))
+                        val cropTop = (relY * rawBmp.height).toInt().coerceIn(0, (rawBmp.height - 1).coerceAtLeast(0))
+                        val cropRight = ((relX + relW) * rawBmp.width).toInt().coerceIn(cropLeft + 1, rawBmp.width)
+                        val cropBottom = ((relY + relH) * rawBmp.height).toInt().coerceIn(cropTop + 1, rawBmp.height)
+
+                        val srcRect = android.graphics.Rect(cropLeft, cropTop, cropRight, cropBottom)
+                        val dstRect = android.graphics.RectF(0f, 0f, size.width, size.height)
+                        val wallpaperPaint = android.graphics.Paint().apply {
+                            isAntiAlias = true
+                            isFilterBitmap = true
+                        }
+                        if (shape != null) {
+                            val outline = shape.createOutline(size, layoutDirection, this)
+                            canvas.save()
+                            when (outline) {
+                                is Outline.Generic -> canvas.clipPath(outline.path.asAndroidPath())
+                                is Outline.Rectangle -> canvas.clipRect(outline.rect.left, outline.rect.top, outline.rect.right, outline.rect.bottom)
+                                is Outline.Rounded -> {
+                                    val rPath = android.graphics.Path().apply {
+                                        val rr = outline.roundRect
+                                        addRoundRect(rr.left, rr.top, rr.right, rr.bottom, rr.bottomLeftCornerRadius.x, rr.bottomLeftCornerRadius.y, android.graphics.Path.Direction.CW)
+                                    }
+                                    canvas.clipPath(rPath)
+                                }
+                            }
+                            canvas.drawBitmap(rawBmp, srcRect, dstRect, wallpaperPaint)
+                            canvas.restore()
+                        } else {
+                            val cr = cornerRadius.toPx()
+                            canvas.save()
+                            val rPath = android.graphics.Path().apply {
+                                addRoundRect(0f, 0f, size.width, size.height, cr, cr, android.graphics.Path.Direction.CW)
+                            }
+                            canvas.clipPath(rPath)
+                            canvas.drawBitmap(rawBmp, srcRect, dstRect, wallpaperPaint)
+                            canvas.restore()
+                        }
+                    }
+
+                    val brushPaint = android.graphics.Paint().apply {
+                        isAntiAlias = true
+                        style = android.graphics.Paint.Style.FILL
+                        shader = android.graphics.LinearGradient(
+                            0f, 0f, 0f, size.height,
+                            intArrayOf(highlightColor.toArgb(), color.toArgb()),
+                            floatArrayOf(0f, 1f),
+                            android.graphics.Shader.TileMode.CLAMP
+                        )
+                    }
+
+                    if (shape != null) {
+                        val outline = shape.createOutline(size, layoutDirection, this)
+                        when (outline) {
+                            is Outline.Generic -> canvas.drawPath(outline.path.asAndroidPath(), brushPaint)
+                            is Outline.Rectangle -> canvas.drawRect(outline.rect.left, outline.rect.top, outline.rect.right, outline.rect.bottom, brushPaint)
+                            is Outline.Rounded -> {
+                                val rr = outline.roundRect
+                                canvas.drawRoundRect(rr.left, rr.top, rr.right, rr.bottom, rr.bottomLeftCornerRadius.x, rr.bottomLeftCornerRadius.y, brushPaint)
+                            }
+                        }
+                    } else {
+                        val cr = cornerRadius.toPx()
+                        canvas.drawRoundRect(0f, 0f, size.width, size.height, cr, cr, brushPaint)
+                    }
+
+                    renderNode.endRecording()
+
+                    val nativeCanvas = drawContext.canvas.nativeCanvas
+                    nativeCanvas.drawRenderNode(renderNode)
+
+                    val solidPaint = android.graphics.Paint().apply {
+                        isAntiAlias = true
+                        style = android.graphics.Paint.Style.FILL
+                        this.color = color.toArgb()
+                    }
+
+                    if (shape != null) {
+                        val outline = shape.createOutline(size, layoutDirection, this)
+                        when (outline) {
+                            is Outline.Generic -> nativeCanvas.drawPath(outline.path.asAndroidPath(), solidPaint)
+                            is Outline.Rectangle -> nativeCanvas.drawRect(outline.rect.left, outline.rect.top, outline.rect.right, outline.rect.bottom, solidPaint)
+                            is Outline.Rounded -> {
+                                val rr = outline.roundRect
+                                nativeCanvas.drawRoundRect(rr.left, rr.top, rr.right, rr.bottom, rr.bottomLeftCornerRadius.x, rr.bottomLeftCornerRadius.y, solidPaint)
+                            }
+                        }
+                    } else {
+                        val cr = cornerRadius.toPx()
+                        nativeCanvas.drawRoundRect(0f, 0f, size.width, size.height, cr, cr, solidPaint)
+                    }
+                }
+            }
     } else {
         this.graphicsLayer {
             compositingStrategy = CompositingStrategy.Offscreen
         }.drawBackdrop(
-            backdrop = backdrop,
+            backdrop = backdrop!!,
             shape = { finalShape },
             effects = {
                 if (p.blur > 0f) blur(radius = p.blur.dp.toPx())
