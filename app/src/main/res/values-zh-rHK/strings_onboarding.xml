@@ -18,8 +18,8 @@
     <string name="perm_phone_desc">用於直接撥號捷徑</string>
     <string name="perm_notification_title">通知存取權</string>
     <string name="perm_notification_desc">用於應用程式圖示上的通知未讀角標</string>
-    <string name="perm_accessibility_title">無障礙服務</string>
-    <string name="perm_accessibility_desc">用于進階手勢與桌面動作</string>
+    <string name="perm_manage_storage_title">管理所有檔案</string>
+    <string name="perm_manage_storage_desc">用於完整檔案管理與搜尋（Android 11+）</string>
 
     <string name="perm_granted">已授權</string>
     <string name="perm_grant">授權</string>

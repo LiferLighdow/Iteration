@@ -146,7 +146,7 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
                     }
 
                     val screenRatio = configuration.screenHeightDp.toFloat() / configuration.screenWidthDp.toFloat()
-                    val rowsToCheck = if (desktopRows == 0) (if (screenRatio < 1.8f) 5 else if (screenRatio >= 2.15f) 7 else 6) else desktopRows
+                    val rowsToCheck = if (desktopRows == 0) (if (screenRatio < 1.8f) 5 else if (screenRatio >= 2.22f) 7 else 6) else desktopRows
                     val isLayoutForcingHideLabel = if (rowsToCheck >= 7) screenRatio < 2.22f else false
                     SettingSwitchItem(
                         icon = Icons.Default.VisibilityOff,

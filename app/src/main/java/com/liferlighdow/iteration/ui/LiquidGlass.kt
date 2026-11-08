@@ -299,15 +299,13 @@ fun Modifier.liquidGlass(
                     
                     val rawBmp = rawWallpaper?.asAndroidBitmap()
                     if (rawBmp != null && !rawBmp.isRecycled) {
-                        val relX = (posInWindow.x / screenWidthPx).coerceIn(0f, 1f)
-                        val relY = (posInWindow.y / screenHeightPx).coerceIn(0f, 1f)
-                        val relW = (size.width / screenWidthPx).coerceIn(0f, 1f)
-                        val relH = (size.height / screenHeightPx).coerceIn(0f, 1f)
+                        val wallpaperScaleX = rawBmp.width.toFloat() / screenWidthPx.coerceAtLeast(1f)
+                        val wallpaperScaleY = rawBmp.height.toFloat() / screenHeightPx.coerceAtLeast(1f)
 
-                        val cropLeft = (relX * rawBmp.width).toInt().coerceIn(0, (rawBmp.width - 1).coerceAtLeast(0))
-                        val cropTop = (relY * rawBmp.height).toInt().coerceIn(0, (rawBmp.height - 1).coerceAtLeast(0))
-                        val cropRight = ((relX + relW) * rawBmp.width).toInt().coerceIn(cropLeft + 1, rawBmp.width)
-                        val cropBottom = ((relY + relH) * rawBmp.height).toInt().coerceIn(cropTop + 1, rawBmp.height)
+                        val cropLeft = (posInWindow.x * wallpaperScaleX).toInt().coerceIn(0, (rawBmp.width - 1).coerceAtLeast(0))
+                        val cropTop = (posInWindow.y * wallpaperScaleY).toInt().coerceIn(0, (rawBmp.height - 1).coerceAtLeast(0))
+                        val cropRight = ((posInWindow.x + size.width) * wallpaperScaleX).toInt().coerceIn(cropLeft + 1, rawBmp.width)
+                        val cropBottom = ((posInWindow.y + size.height) * wallpaperScaleY).toInt().coerceIn(cropTop + 1, rawBmp.height)
 
                         val srcRect = android.graphics.Rect(cropLeft, cropTop, cropRight, cropBottom)
                         val dstRect = android.graphics.RectF(0f, 0f, size.width, size.height)

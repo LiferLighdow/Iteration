@@ -1,6 +1,5 @@
 package com.liferlighdow.iteration.ui
 
-import android.content.ComponentName
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -34,7 +33,6 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.liferlighdow.iteration.MainActivity
 import com.liferlighdow.iteration.R
-import com.liferlighdow.iteration.service.IterationAccessibilityService
 import com.liferlighdow.iteration.viewmodel.*
 import kotlinx.coroutines.launch
 
@@ -301,12 +299,30 @@ fun PermissionsPage(context: android.content.Context) {
         )
     }
 
-    val isAccessibilityEnabled = {
-        val expectedComponentName = ComponentName(context, IterationAccessibilityService::class.java).flattenToString()
-        val enabledServices = Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
-        enabledServices?.contains(expectedComponentName) == true
+    var hasManageStorage by remember {
+        mutableStateOf(
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                android.os.Environment.isExternalStorageManager()
+            } else {
+                true
+            }
+        )
     }
-    var isAccessibilityActive by remember { mutableStateOf(isAccessibilityEnabled()) }
+
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    hasManageStorage = android.os.Environment.isExternalStorageManager()
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     val contactsLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -399,17 +415,25 @@ fun PermissionsPage(context: android.content.Context) {
                         } catch (_: Exception) {}
                     }
                 )
-                HorizontalDivider()
-                PermissionRow(
-                    title = stringResource(R.string.perm_accessibility_title),
-                    desc = stringResource(R.string.perm_accessibility_desc),
-                    isGranted = isAccessibilityActive,
-                    onClick = {
-                        try {
-                            context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                        } catch (_: Exception) {}
-                    }
-                )
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    HorizontalDivider()
+                    PermissionRow(
+                        title = stringResource(R.string.perm_manage_storage_title),
+                        desc = stringResource(R.string.perm_manage_storage_desc),
+                        isGranted = hasManageStorage,
+                        onClick = {
+                            try {
+                                val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, android.net.Uri.parse("package:${context.packageName}"))
+                                context.startActivity(intent)
+                            } catch (_: Exception) {
+                                try {
+                                    val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                                    context.startActivity(intent)
+                                } catch (_: Exception) {}
+                            }
+                        }
+                    )
+                }
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
@@ -474,35 +498,55 @@ fun DesktopLayoutChoicePage(populateApps: Boolean, onPopulateChange: (Boolean) -
         ) {
             ElevatedCard(
                 onClick = { onPopulateChange(true) },
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .height(130.dp),
                 colors = CardDefaults.elevatedCardColors(
                     containerColor = if (populateApps) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
                 )
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
                     Icon(Icons.Default.Apps, contentDescription = null)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(stringResource(R.string.onboarding_populate_apps), style = MaterialTheme.typography.titleSmall)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        stringResource(R.string.onboarding_populate_apps),
+                        style = MaterialTheme.typography.titleSmall,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2
+                    )
                 }
             }
 
             ElevatedCard(
                 onClick = { onPopulateChange(false) },
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .height(130.dp),
                 colors = CardDefaults.elevatedCardColors(
                     containerColor = if (!populateApps) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
                 )
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
                     Icon(Icons.Default.LayersClear, contentDescription = null)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(stringResource(R.string.onboarding_clean_empty), style = MaterialTheme.typography.titleSmall)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        stringResource(R.string.onboarding_clean_empty),
+                        style = MaterialTheme.typography.titleSmall,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2
+                    )
                 }
             }
         }

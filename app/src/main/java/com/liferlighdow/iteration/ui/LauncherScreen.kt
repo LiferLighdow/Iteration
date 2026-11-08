@@ -477,7 +477,7 @@ fun LauncherScreen(
 
         val screenRatio = maxHeight / maxWidth
 
-        val rows = if (isBalanced) 6 else if (userRows > 0) userRows else (if (screenRatio < 1.8f) 5 else if (screenRatio >= 2.15f) 7 else 6)
+        val rows = if (isBalanced) 6 else if (userRows > 0) userRows else (if (screenRatio < 1.8f) 5 else if (screenRatio >= 2.22f) 7 else 6)
 
         // 佈局為 7 列以上且螢幕比例小於 2.22f 時隱藏 Widget 標籤以節省空間（16:9 螢幕 4x6 已開放顯示標籤）
         val showWidgetLabel = if (rows >= 7) screenRatio >= 2.22f else true

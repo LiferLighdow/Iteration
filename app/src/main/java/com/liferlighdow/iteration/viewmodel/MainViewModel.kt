@@ -112,7 +112,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
     val isLiquidGlassEnabled = _isLiquidGlassEnabled.asStateFlow()
 
     internal val _isProvisionedBlurEnabled =
-        MutableStateFlow(prefs.getBoolean("provisioned_blur_enabled", false))
+        MutableStateFlow(prefs.getBoolean("provisioned_blur_enabled", true))
     val isProvisionedBlurEnabled = _isProvisionedBlurEnabled.asStateFlow()
 
     internal val _isProvisionedBlurDockEnabled =
@@ -1058,7 +1058,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
                 }
             }
             "liquid_glass_enabled" -> _isLiquidGlassEnabled.value = sharedPreferences.getBoolean(key, false)
-            "provisioned_blur_enabled" -> _isProvisionedBlurEnabled.value = sharedPreferences.getBoolean(key, false)
+            "provisioned_blur_enabled" -> _isProvisionedBlurEnabled.value = sharedPreferences.getBoolean(key, true)
             "provisioned_blur_dock" -> _isProvisionedBlurDockEnabled.value = sharedPreferences.getBoolean(key, true)
             "provisioned_blur_folder" -> _isProvisionedBlurFolderEnabled.value = sharedPreferences.getBoolean(key, true)
             "provisioned_blur_search" -> _isProvisionedBlurSearchEnabled.value = sharedPreferences.getBoolean(key, true)

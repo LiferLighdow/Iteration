@@ -18,8 +18,8 @@
     <string name="perm_phone_desc">Required for direct dialing shortcuts</string>
     <string name="perm_notification_title">Notification Listener</string>
     <string name="perm_notification_desc">Required for notification badges on app icons</string>
-    <string name="perm_accessibility_title">Accessibility Service</string>
-    <string name="perm_accessibility_desc">Required for advanced gestures &amp; home actions</string>
+    <string name="perm_manage_storage_title">Manage All Files</string>
+    <string name="perm_manage_storage_desc">Required for full file management &amp; search (Android 11+)</string>
 
     <string name="perm_granted">Granted</string>
     <string name="perm_grant">Grant</string>

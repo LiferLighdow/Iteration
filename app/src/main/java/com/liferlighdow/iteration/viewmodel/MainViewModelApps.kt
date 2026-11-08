@@ -411,17 +411,42 @@ internal fun executeCommandSilent(command: Array<String>): Boolean {
 
 fun MainViewModel.removeAppFromHomeByPackage(packageName: String) {
     val currentPages = _pages.value.map { page ->
-        page.filter { item ->
-            if (item.isFolder) true else item.packageName != packageName
-        }.map { item ->
+        page.map { item ->
             if (item.isFolder) {
-                item.copy(folderItems = item.folderItems.filter { it.packageName != packageName })
-            } else item
-        }
+                val updatedFolderItems = item.folderItems.filter { it.packageName != packageName }
+                when {
+                    updatedFolderItems.isEmpty() -> null
+                    updatedFolderItems.size == 1 -> updatedFolderItems[0]
+                    else -> item.copy(folderItems = updatedFolderItems)
+                }
+            } else if (item.packageName == packageName) {
+                null
+            } else {
+                item
+            }
+        }.filterNotNull()
     }.filter { it.isNotEmpty() }
 
     _pages.value = currentPages
+
+    val currentDock = _dockItems.value.map { dockItem ->
+        if (dockItem.isFolder) {
+            val updatedFolderItems = dockItem.folderItems.filter { it.packageName != packageName }
+            when {
+                updatedFolderItems.isEmpty() -> AppModel(label = "", packageName = "", uniqueId = "empty_dock_${System.currentTimeMillis()}")
+                updatedFolderItems.size == 1 -> updatedFolderItems[0]
+                else -> dockItem.copy(folderItems = updatedFolderItems)
+            }
+        } else if (dockItem.packageName == packageName) {
+            AppModel(label = "", packageName = "", uniqueId = "empty_dock_${System.currentTimeMillis()}")
+        } else {
+            dockItem
+        }
+    }
+    _dockItems.value = currentDock
+
     saveLayout()
+    saveDock()
 }
 
 fun MainViewModel.removeAppFromHomeByPackageWithAnimation(packageName: String) {
@@ -1110,9 +1135,21 @@ fun MainViewModel.loadApps() {
                                 if (!isHidden) {
                                     if (savedApp.isFolder) {
                                         val filteredItems = savedApp.folderItems.filter { child ->
-                                            !hiddenPackages.contains(child.uniqueId) && !hiddenPackages.contains(child.packageName)
+                                            val isHiddenChild = hiddenPackages.contains(child.uniqueId) || hiddenPackages.contains(child.packageName)
+                                            val exists = if (child.isPWA || child.isShortcut || child.isWidget) {
+                                                true
+                                            } else {
+                                                processedApps.any { it.uniqueId == child.uniqueId || (it.packageName == child.packageName && it.userId == child.userId) }
+                                            }
+                                            !isHiddenChild && exists
                                         }
-                                        pageItems.add(savedApp.copy(folderItems = filteredItems))
+                                        if (filteredItems.isNotEmpty()) {
+                                            if (filteredItems.size == 1) {
+                                                pageItems.add(filteredItems[0])
+                                            } else {
+                                                pageItems.add(savedApp.copy(folderItems = filteredItems))
+                                            }
+                                        }
                                     } else {
                                         pageItems.add(savedApp)
                                     }
@@ -1227,9 +1264,23 @@ fun MainViewModel.loadApps() {
                         AppModel(label = "", packageName = "", uniqueId = "empty_dock_${System.currentTimeMillis()}")
                     } else if (dockApp.isFolder) {
                         val filteredItems = dockApp.folderItems.filter { child ->
-                            !hiddenPackages.contains(child.uniqueId) && !hiddenPackages.contains(child.packageName)
+                            val isHiddenChild = hiddenPackages.contains(child.uniqueId) || hiddenPackages.contains(child.packageName)
+                            val exists = if (child.isPWA || child.isShortcut || child.isWidget) {
+                                true
+                            } else {
+                                processedApps.any { it.uniqueId == child.uniqueId || (it.packageName == child.packageName && it.userId == child.userId) }
+                            }
+                            !isHiddenChild && exists
                         }
-                        dockApp.copy(folderItems = filteredItems)
+                        if (filteredItems.isNotEmpty()) {
+                            if (filteredItems.size == 1) {
+                                filteredItems[0]
+                            } else {
+                                dockApp.copy(folderItems = filteredItems)
+                            }
+                        } else {
+                            AppModel(label = "", packageName = "", uniqueId = "empty_dock_${System.currentTimeMillis()}")
+                        }
                     } else {
                         dockApp
                     }
