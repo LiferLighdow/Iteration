@@ -49,17 +49,38 @@ jobs:
       env:
         SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
 
-    - name: Prepare Named APKs
+    - name: Prepare Clean Release APKs
       run: |
         VERSION_NAME="${{ steps.get_version.outputs.version }}"
         mkdir -p build/dist
-        for apk in app/build/outputs/apk/release/*.apk; do
-          if [ -f "$apk" ]; then
+        
+        if ls app/build/outputs/apk/release/*-signed.apk 1> /dev/null 2>&1; then
+          echo "Processing signed APKs..."
+          for apk in app/build/outputs/apk/release/*-signed.apk; do
             filename=$(basename "$apk")
-            newname=$(echo "$filename" | sed -E "s/app-(.*)-release\.apk/Iteration-v${VERSION_NAME}-\1\.apk/" | sed -E "s/app-release\.apk/Iteration-v${VERSION_NAME}\.apk/")
-            cp "$apk" "build/dist/$newname"
-          fi
-        done
+            abi=$(echo "$filename" | sed -E 's/app-([^-]+)-.*/\1/')
+            if [ "$abi" = "app" ] || [ "$abi" = "release" ]; then
+              cp "$apk" "build/dist/Iteration-v${VERSION_NAME}.apk"
+            else
+              cp "$apk" "build/dist/Iteration-v${VERSION_NAME}-${abi}.apk"
+            fi
+          done
+        else
+          echo "Processing standard release APKs..."
+          for apk in app/build/outputs/apk/release/*.apk; do
+            filename=$(basename "$apk")
+            if [[ "$filename" == *"-aligned"* ]]; then continue; fi
+            abi=$(echo "$filename" | sed -E 's/app-([^-]+)-.*/\1/')
+            if [ "$abi" = "app" ] || [ "$abi" = "release" ]; then
+              cp "$apk" "build/dist/Iteration-v${VERSION_NAME}.apk"
+            else
+              cp "$apk" "build/dist/Iteration-v${VERSION_NAME}-${abi}.apk"
+            fi
+          done
+        fi
+
+        echo "Clean APKs in build/dist:"
+        ls -la build/dist/
 
     - name: Upload Release APK
       uses: actions/upload-artifact@v4
