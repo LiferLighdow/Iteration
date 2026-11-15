@@ -56,28 +56,34 @@ jobs:
         
         if ls app/build/outputs/apk/release/*-signed.apk 1> /dev/null 2>&1; then
           echo "Processing signed APKs..."
-          for apk in app/build/outputs/apk/release/*-signed.apk; do
-            filename=$(basename "$apk")
-            abi=$(echo "$filename" | sed -E 's/app-([^-]+)-.*/\1/')
-            if [ "$abi" = "app" ] || [ "$abi" = "release" ]; then
-              cp "$apk" "build/dist/Iteration-v${VERSION_NAME}.apk"
-            else
-              cp "$apk" "build/dist/Iteration-v${VERSION_NAME}-${abi}.apk"
-            fi
-          done
+          APKS=(app/build/outputs/apk/release/*-signed.apk)
         else
           echo "Processing standard release APKs..."
-          for apk in app/build/outputs/apk/release/*.apk; do
-            filename=$(basename "$apk")
-            if [[ "$filename" == *"-aligned"* ]]; then continue; fi
-            abi=$(echo "$filename" | sed -E 's/app-([^-]+)-.*/\1/')
-            if [ "$abi" = "app" ] || [ "$abi" = "release" ]; then
-              cp "$apk" "build/dist/Iteration-v${VERSION_NAME}.apk"
-            else
-              cp "$apk" "build/dist/Iteration-v${VERSION_NAME}-${abi}.apk"
-            fi
-          done
+          APKS=(app/build/outputs/apk/release/*.apk)
         fi
+
+        for apk in "${APKS[@]}"; do
+          filename=$(basename "$apk")
+          if [[ "$filename" == *"-aligned"* ]]; then continue; fi
+          
+          if [[ "$filename" == *"arm64-v8a"* ]]; then
+            abi="arm64-v8a"
+          elif [[ "$filename" == *"armeabi-v7a"* ]]; then
+            abi="armeabi-v7a"
+          elif [[ "$filename" == *"x86_64"* ]]; then
+            abi="x86_64"
+          elif [[ "$filename" == *"universal"* ]]; then
+            abi="universal"
+          else
+            abi=""
+          fi
+
+          if [ -n "$abi" ]; then
+            cp "$apk" "build/dist/Iteration-v${VERSION_NAME}-${abi}.apk"
+          else
+            cp "$apk" "build/dist/Iteration-v${VERSION_NAME}.apk"
+          fi
+        done
 
         echo "Clean APKs in build/dist:"
         ls -la build/dist/
