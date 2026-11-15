@@ -409,9 +409,13 @@ fun SettingsMainScreen(
                         val langOptions = listOf(
                             "" to stringResource(R.string.language_system_default),
                             "en" to stringResource(R.string.language_english),
-                            "zh-HK" to stringResource(R.string.language_chinese_special),
                             "zh-TW" to stringResource(R.string.language_chinese_tw),
-                            "zh-CN" to stringResource(R.string.language_chinese_cn)
+                            "zh-CN" to stringResource(R.string.language_chinese_cn),
+                            "de" to stringResource(R.string.language_german),
+                            "ru" to stringResource(R.string.language_russian),
+                            "pt-BR" to stringResource(R.string.language_portuguese),
+                            "es" to stringResource(R.string.language_spanish),
+                            "fr" to stringResource(R.string.language_french)
                         )
                         val currentLangLabel = langOptions.find { it.first == appLanguage }?.second ?: stringResource(R.string.language_system_default)
 

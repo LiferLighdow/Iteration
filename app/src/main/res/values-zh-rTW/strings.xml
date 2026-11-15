@@ -541,7 +541,11 @@
     <string name="language_english">英文 (English)</string>
     <string name="language_chinese_tw">中文 (繁體)</string>
     <string name="language_chinese_cn">中文 (簡體)</string>
-    <string name="language_chinese_special">進化版中文</string>
+    <string name="language_german">德文 (German)</string>
+    <string name="language_russian">俄文 (Russian)</string>
+    <string name="language_portuguese">葡萄牙文 (Portuguese)</string>
+    <string name="language_spanish">西班牙文 (Spanish)</string>
+    <string name="language_french">法文 (French)</string>
     <string name="language_system_default">系統預設</string>
     <string name="language_system_default_desc">使用裝置設定。如果翻譯不可用，則退回英文。</string>
 

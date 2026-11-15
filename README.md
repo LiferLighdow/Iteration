@@ -10,6 +10,7 @@
   <img src="https://img.shields.io/badge/Kotlin-2.4+-7F52FF?logo=kotlin&logoColor=white" alt="Kotlin">
   <img src="https://img.shields.io/badge/UI-Jetpack_Compose-4285F4?logo=jetpackcompose&logoColor=white" alt="Jetpack Compose">
   <img src="https://img.shields.io/badge/Design-Material_3-757575?logo=materialdesign&logoColor=white" alt="Material 3">
+  <a href="https://crowdin.com/project/iteration-launcher"><img src="https://badges.crowdin.net/iteration-launcher/localized.svg" alt="Crowdin"></a>
   <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License">
   <img src="https://img.shields.io/badge/Android-17_Ready-3DDC84?logo=android&logoColor=white" alt="Android">
 </p>
@@ -17,6 +18,23 @@
 ---
 
 **Iteration** is a high-performance, minimalist Android launcher built from the ground up using **Jetpack Compose**. It bridges the gap between fluid, intuitive UI patterns and the robust flexibility of the Android ecosystem. Minimum <strong>Android 6 (API 23)</strong> supported. Optimized for the latest **Android 12 (API 31)** through **Android 17 (API 37)**.
+
+---
+
+## 📸 Screenshots
+
+<p align="center">
+  <img src="fastlane/metadata/android/en-US/images/1.png" width="22%" />
+  <img src="fastlane/metadata/android/en-US/images/2.png" width="22%" />
+  <img src="fastlane/metadata/android/en-US/images/3.png" width="22%" />
+  <img src="fastlane/metadata/android/en-US/images/4.png" width="22%" />
+</p>
+<p align="center">
+  <img src="fastlane/metadata/android/en-US/images/5.png" width="22%" />
+  <img src="fastlane/metadata/android/en-US/images/6.png" width="22%" />
+  <img src="fastlane/metadata/android/en-US/images/7.png" width="22%" />
+  <img src="fastlane/metadata/android/en-US/images/8.png" width="22%" />
+</p>
 
 ---
 
@@ -80,14 +98,21 @@
     *   **Discoverable Power**: Step-by-step guides for Global Search, hidden gestures, and advanced tools.
     *   **Modular Design**: Expanding library of "manual books" to help you master every corner of the launcher.
 
-### 🌍 Globalization & Localization (V4.8 Major Update)
-*   **Complete Resource Migration**: 100% of UI strings, Toasts, menus, and descriptions have been migrated from hardcoded code to `strings.xml`.
+### 🌍 Globalization & Localization
+*   **Complete Resource Migration**: 100% of UI strings, Toasts, menus, and descriptions are fully externalized into `strings.xml`.
 *   **Multi-Language Support**:
-    *   **English**: Default global language.
-    *   **Traditional Chinese (繁體中文)**: Fully translated and native-ready.
-    *   **Simplified Chinese (简体中文)**: Optimized for mainland users.
-    *   **Special Persona (進化版中文)**: A unique, personified interface language with a "loyal assistant/AI" personality.
-*   **Dynamic Locale Switching**: Real-time interface updates using `AppCompatDelegate` and `LocaleListCompat` without requiring a full device restart.
+    *   **English**: Default global language (`en`).
+    *   **Traditional Chinese (繁體中文)**: Fully translated (`zh-TW`, `zh-HK`).
+    *   **Simplified Chinese (简体中文)**: Optimized for mainland users (`zh-CN`).
+    *   **German (Deutsch)**: Native support (`de`).
+    *   **Russian (Русский)**: Native support (`ru`).
+    *   **Portuguese (Brasil)**: Native support (`pt-BR`).
+    *   **Spanish (Español)**: Native support (`es`).
+    *   **French (Français)**: Native support (`fr`).
+*   **Dynamic Locale Switching**: Real-time interface updates using `AppCompatDelegate` and `LocaleListCompat` without requiring a device restart.
+*   **Crowdsourced Translations (Crowdin)**:
+    [![Crowdin](https://badges.crowdin.net/iteration-launcher/localized.svg)](https://crowdin.com/project/iteration-launcher)  
+    Help us translate Iteration Launcher into your native language! Join our open-source translation community on [Crowdin](https://crowdin.com/project/iteration-launcher).
 
 ### 🎭 Industrial-Grade App & Profile Management
 *   **Full Multi-User & Work Profile Support**: Native compatibility with **Work Profiles**, **Parallel Spaces** (Xiaomi Dual Apps, Samsung Secure Folder), and multiple guest profiles.

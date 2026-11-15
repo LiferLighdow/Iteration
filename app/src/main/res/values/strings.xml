@@ -538,7 +538,11 @@
     <string name="language_english">English</string>
     <string name="language_chinese_tw">Chinese (Traditional)</string>
     <string name="language_chinese_cn">Chinese (Simplified)</string>
-    <string name="language_chinese_special">Chinese (Iteration Style)</string>
+    <string name="language_german">German</string>
+    <string name="language_russian">Russian</string>
+    <string name="language_portuguese">Portuguese (Brazil)</string>
+    <string name="language_spanish">Spanish</string>
+    <string name="language_french">French</string>
     <string name="language_system_default">System Default</string>
     <string name="language_system_default_desc">Use device settings. Falls back to English if the translation is unavailable.</string>
 

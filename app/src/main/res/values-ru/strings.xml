@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Iteration</string>
+    <string name="settings_title">Настройки</string>
+    <string name="done">Готово</string>
+    <string name="cancel">Отмена</string>
+    <string name="create">Создать</string>
+    <string name="save">Сохранить</string>
+    <string name="add">Добавить</string>
+    <string name="delete">Удалить</string>
+    <string name="edit">Изменить</string>
+    <string name="rename">Переименовать</string>
+    <string name="unlock">Разблокировать</string>
+    <string name="close">Закрыть</string>
+    <string name="apply">Применить</string>
+    <string name="confirm">Подтвердить</string>
+    <string name="settings_language">Язык</string>
+    <string name="language_english">Английский (English)</string>
+    <string name="language_chinese_tw">Китайский (традиционный)</string>
+    <string name="language_chinese_cn">Китайский (упрощенный)</string>
+    <string name="language_german">Немецкий (German)</string>
+    <string name="language_russian">Русский (Russian)</string>
+    <string name="language_portuguese">Португальский (Бразилия)</string>
+    <string name="language_spanish">Испанский (Spanish)</string>
+    <string name="language_french">Французский (French)</string>
+    <string name="language_system_default">Системный по умолчанию</string>
+    <string name="language_system_default_desc">Использовать настройки устройства. Если перевод недоступен, используется английский язык.</string>
+</resources>

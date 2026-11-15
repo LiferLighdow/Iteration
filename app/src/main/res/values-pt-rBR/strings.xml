@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Iteration</string>
+    <string name="settings_title">Configurações</string>
+    <string name="done">Concluído</string>
+    <string name="cancel">Cancelar</string>
+    <string name="create">Criar</string>
+    <string name="save">Salvar</string>
+    <string name="add">Adicionar</string>
+    <string name="delete">Excluir</string>
+    <string name="edit">Editar</string>
+    <string name="rename">Renomear</string>
+    <string name="unlock">Desbloquear</string>
+    <string name="close">Fechar</string>
+    <string name="apply">Aplicar</string>
+    <string name="confirm">Confirmar</string>
+    <string name="settings_language">Idioma</string>
+    <string name="language_english">Inglês (English)</string>
+    <string name="language_chinese_tw">Chinês (Tradicional)</string>
+    <string name="language_chinese_cn">Chinês (Simplificado)</string>
+    <string name="language_german">Alemão (German)</string>
+    <string name="language_russian">Russo (Russian)</string>
+    <string name="language_portuguese">Português (Brasil)</string>
+    <string name="language_spanish">Espanhol (Spanish)</string>
+    <string name="language_french">Francês (French)</string>
+    <string name="language_system_default">Padrão do sistema</string>
+    <string name="language_system_default_desc">Usar configurações do dispositivo. Retorna ao inglês se a tradução não estiver disponível.</string>
+</resources>

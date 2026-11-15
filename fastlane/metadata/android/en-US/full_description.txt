@@ -1,0 +1,12 @@
+Iteration is a high-performance, minimalist Android launcher built from the ground up using Jetpack Compose. It bridges the gap between fluid, intuitive UI patterns and the robust flexibility of the Android ecosystem.
+
+Key Features:
+• Immersive Edge-to-Edge Design with Liquid Glass Effects (Backdrop)
+• Universal Search for Apps, Contacts, Calendar, Files, and Calculator
+• Premium Built-in Widgets (Info Hub, Music, Notes, RSS, Weather, Photo)
+• Full Multi-User, Parallel Space, and Work Profile Support
+• Built-in App Freezer (Shizuku & Root Support)
+• Complete Privacy: All personal data stays on-device
+• Customizable Dock Styles, Layouts, and Themed Icons
+
+Open-source and light, keep it fast, stay in control.

@@ -115,27 +115,18 @@ fun AppLibraryPage(
     var isHiddenUnlocked by remember { mutableStateOf(false) }
     var showPasswordDialog by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
-    val density = LocalDensity.current
     val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
     val dummyFocusRequester = remember { FocusRequester() }
     val mContext = LocalContext.current
 
-    // 自動清除焦點邏輯：當鍵盤放下時，強制將焦點轉移到 dummy 組件
-    val isKeyboardVisible = WindowInsets.ime.getBottom(density) > 0
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(isPageVisible) {
         if (!isPageVisible) {
+            keyboardController?.hide()
             focusManager.clearFocus(force = true)
             viewModel.setLibrarySearchFocused(false)
-        }
-    }
-
-    LaunchedEffect(isKeyboardVisible) {
-        if (!isKeyboardVisible && isSearchFocused) {
-            kotlinx.coroutines.delay(100)
-            try { dummyFocusRequester.requestFocus() } catch (e: Exception) { focusManager.clearFocus(force = true) }
-            viewModel.setLibrarySearchFocused(false)
+            viewModel.setSearchQuery("")
         }
     }
 
@@ -156,8 +147,14 @@ fun AppLibraryPage(
     var appToUnfreeze by remember { mutableStateOf<AppModel?>(null) }
 
     BackHandler(enabled = isSearchFocused || searchQuery.isNotEmpty() || (selectedCategory != null && selectedCategory != "All")) {
-        if (selectedCategory != null && selectedCategory != "All") viewModel.setSelectedCategory("All")
-        else { viewModel.setSearchQuery(""); focusManager.clearFocus(); viewModel.setLibrarySearchFocused(false) }
+        if (selectedCategory != null && selectedCategory != "All") {
+            viewModel.setSelectedCategory("All")
+        } else {
+            keyboardController?.hide()
+            focusManager.clearFocus(force = true)
+            viewModel.setSearchQuery("")
+            viewModel.setLibrarySearchFocused(false)
+        }
     }
 
     // 分類目錄邏輯
@@ -200,7 +197,11 @@ fun AppLibraryPage(
                 enabled = isPageVisible,
                 modifier = Modifier
                     .weight(1f)
-                    .onFocusChanged { viewModel.setLibrarySearchFocused(it.isFocused) }
+                    .onFocusChanged { 
+                        if (it.isFocused) {
+                            viewModel.setLibrarySearchFocused(true)
+                        }
+                    }
                     .liquidGlass(
                         enabled = isSearchLiquidGlass,
                         backdrop = backdrop,

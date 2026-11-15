@@ -242,6 +242,17 @@ fun getLocalizedPermissionName(perm: String): String {
     return if (resId != 0) stringResource(resId) else perm.substringAfterLast('.')
 }
 
+internal fun getAppOpsOpName(perm: String): String {
+    return when (perm) {
+        android.Manifest.permission.ACCESS_FINE_LOCATION -> "FINE_LOCATION"
+        android.Manifest.permission.ACCESS_COARSE_LOCATION -> "COARSE_LOCATION"
+        android.Manifest.permission.ACCESS_BACKGROUND_LOCATION -> "GPS"
+        android.Manifest.permission.POST_NOTIFICATIONS -> "POST_NOTIFICATION"
+        android.Manifest.permission.PACKAGE_USAGE_STATS -> "GET_USAGE_STATS"
+        else -> perm.substringAfterLast('.')
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppOpsDetailScreen(packageName: String, onBack: () -> Unit) {
@@ -407,17 +418,18 @@ fun AppOpsDetailScreen(packageName: String, onBack: () -> Unit) {
                                                 onClick = {
                                                     expanded = false
                                                     scope.launch(Dispatchers.IO) {
+                                                        val opName = getAppOpsOpName(perm)
                                                         val success = when (mode) {
                                                             "Allow" -> {
-                                                                executePrivilegedCmd(arrayOf("pm", "grant", packageName, perm)) &&
-                                                                executePrivilegedCmd(arrayOf("appops", "set", packageName, perm.substringAfterLast('.'), "allow"))
+                                                                executePrivilegedCmd(arrayOf("pm", "grant", packageName, perm))
+                                                                executePrivilegedCmd(arrayOf("appops", "set", packageName, opName, "allow"))
                                                             }
                                                             "Ignore" -> {
-                                                                executePrivilegedCmd(arrayOf("appops", "set", packageName, perm.substringAfterLast('.'), "ignore"))
+                                                                executePrivilegedCmd(arrayOf("appops", "set", packageName, opName, "ignore"))
                                                             }
                                                             "Deny" -> {
-                                                                executePrivilegedCmd(arrayOf("pm", "revoke", packageName, perm)) &&
-                                                                executePrivilegedCmd(arrayOf("appops", "set", packageName, perm.substringAfterLast('.'), "deny"))
+                                                                executePrivilegedCmd(arrayOf("pm", "revoke", packageName, perm))
+                                                                executePrivilegedCmd(arrayOf("appops", "set", packageName, opName, "deny"))
                                                             }
                                                             else -> false
                                                         }

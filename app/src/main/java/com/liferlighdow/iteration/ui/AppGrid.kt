@@ -535,55 +535,61 @@ fun AppGrid(
                                     if (app.isWidget) (cellWidth * w) else (cellWidth * 0.9f),
                                     if (app.isWidget) (cellHeight * h) else (iconSize + 8.dp)
                                 )
-                                .pointerInput(app.uniqueId) {
-                                    var totalDragDistance = 0f
-                                    var hasTriggeredDrag = false
-                                    detectDragGesturesAfterLongPress(
-                                        onDragStart = { _ ->
-                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            totalDragDistance = 0f
-                                            hasTriggeredDrag = false
-                                            viewModel.setActiveContextMenuId(app.uniqueId)
-                                            showContextMenu = true
-                                            // 尚未開始拖移前，讓 widget 留在原位播放長按動畫/選單
-                                        },
-                                        onDrag = { change, dragAmount ->
-                                            totalDragDistance += dragAmount.getDistance()
-                                            
-                                            if (!hasTriggeredDrag && totalDragDistance > 10f) {
-                                                if (!viewModel.isEditMode.value) {
-                                                    viewModel.setEditMode(true)
+                                .then(
+                                    if (app.widget?.type is WidgetType.Stack && !isEditMode) {
+                                        Modifier
+                                    } else {
+                                        Modifier.pointerInput(app.uniqueId) {
+                                            var totalDragDistance = 0f
+                                            var hasTriggeredDrag = false
+                                            detectDragGesturesAfterLongPress(
+                                                onDragStart = { _ ->
+                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                    totalDragDistance = 0f
+                                                    hasTriggeredDrag = false
+                                                    viewModel.setActiveContextMenuId(app.uniqueId)
+                                                    showContextMenu = true
+                                                    // 尚未開始拖移前，讓 widget 留在原位播放長按動畫/選單
+                                                },
+                                                onDrag = { change, dragAmount ->
+                                                    totalDragDistance += dragAmount.getDistance()
+                                                    
+                                                    if (!hasTriggeredDrag && totalDragDistance > 10f) {
+                                                        if (!viewModel.isEditMode.value) {
+                                                            viewModel.setEditMode(true)
+                                                        }
+                                                        
+                                                        showContextMenu = false
+                                                        viewModel.setActiveContextMenuId(null) 
+                                                        
+                                                        // 當手指開始真正拖移時，才將 widget 提起並設定初始抓取位置
+                                                        currentOnDragStart(app, lastPosition.pos + change.position)
+                                                        hasTriggeredDrag = true
+                                                    }
+                                                    
+                                                    if (hasTriggeredDrag) {
+                                                        change.consume()
+                                                        currentOnDrag(dragAmount)
+                                                    }
+                                                },
+                                                onDragCancel = {
+                                                    currentOnDragEnd()
+                                                    hasTriggeredDrag = false
+                                                    if (!showContextMenu) {
+                                                        viewModel.setActiveContextMenuId(null)
+                                                    }
+                                                },
+                                                onDragEnd = {
+                                                    currentOnDragEnd()
+                                                    hasTriggeredDrag = false
+                                                    if (!showContextMenu) {
+                                                        viewModel.setActiveContextMenuId(null)
+                                                    }
                                                 }
-                                                
-                                                showContextMenu = false
-                                                viewModel.setActiveContextMenuId(null) 
-                                                
-                                                // 當手指開始真正拖移時，才將 widget 提起並設定初始抓取位置
-                                                currentOnDragStart(app, lastPosition.pos + change.position)
-                                                hasTriggeredDrag = true
-                                            }
-                                            
-                                            if (hasTriggeredDrag) {
-                                                change.consume()
-                                                currentOnDrag(dragAmount)
-                                            }
-                                        },
-                                        onDragCancel = {
-                                            currentOnDragEnd()
-                                            hasTriggeredDrag = false
-                                            if (!showContextMenu) {
-                                                viewModel.setActiveContextMenuId(null)
-                                            }
-                                        },
-                                        onDragEnd = {
-                                            currentOnDragEnd()
-                                            hasTriggeredDrag = false
-                                            if (!showContextMenu) {
-                                                viewModel.setActiveContextMenuId(null)
-                                            }
+                                            )
                                         }
-                                    )
-                                }
+                                    }
+                                )
                                 .pointerInput(app.uniqueId, app.isWidget) {
                                     if (!app.isWidget) {
                                         detectTapGestures(
@@ -846,6 +852,10 @@ fun WidgetGridItem(
                             onPress = {
                                 viewModel.setPressedItemId(app.uniqueId)
                                 try { awaitRelease() } finally { viewModel.setPressedItemId(null) }
+                            },
+                            onLongPress = {
+                                viewModel.setEditMode(true)
+                                onShowContextMenu()
                             },
                             onTap = {
                                 val w = app.widget ?: return@detectTapGestures

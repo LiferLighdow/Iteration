@@ -49,15 +49,23 @@ jobs:
       env:
         SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
 
+    - name: Prepare Named APKs
+      run: |
+        VERSION_NAME="${{ steps.get_version.outputs.version }}"
+        mkdir -p build/dist
+        for apk in app/build/outputs/apk/release/*.apk; do
+          if [ -f "$apk" ]; then
+            filename=$(basename "$apk")
+            newname=$(echo "$filename" | sed -E "s/app-(.*)-release\.apk/Iteration-v${VERSION_NAME}-\1\.apk/" | sed -E "s/app-release\.apk/Iteration-v${VERSION_NAME}\.apk/")
+            cp "$apk" "build/dist/$newname"
+          fi
+        done
+
     - name: Upload Release APK
       uses: actions/upload-artifact@v4
       with:
-        name: app-release
-        # 如果簽署成功，上傳簽署後的檔案；否則上傳未簽署的檔案
-        path: |
-          ${{ steps.sign_app.outputs.signedReleaseFile }}
-          app/build/outputs/apk/release/*-unsigned.apk
-          app/build/outputs/apk/release/*.apk
+        name: Iteration-v${{ steps.get_version.outputs.version }}
+        path: build/dist/*.apk
 
     - name: Create or Update Release
       uses: softprops/action-gh-release@v2
@@ -71,10 +79,10 @@ jobs:
           - Commit: ${{ github.sha }}
           - Timestamp: ${{ github.event.head_commit.timestamp }}
         files: |
-          app/build/outputs/apk/release/*-signed.apk
+          build/dist/*.apk
         prerelease: false
         generate_release_notes: true
         make_latest: true
-        fail_on_unmatched_files: true
+        fail_on_unmatched_files: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
