@@ -113,3 +113,41 @@ jobs:
         fail_on_unmatched_files: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Sync Code and Tags to Gitea
+      run: |
+        git push --force --prune https://LiferLighdow:${{ secrets.GITEA_TOKEN }}@git.liferlighdow.duckdns.org/LiferLighdow/Iteration.git HEAD:refs/heads/main --tags
+
+    - name: Mirror Release and APKs to Gitea
+      env:
+        GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+        VERSION: ${{ steps.get_version.outputs.version }}
+      run: |
+
+        EXISTING_ID=$(curl -s -H "Authorization: token $GITEA_TOKEN" \
+          "https://git.liferlighdow.duckdns.org/api/v1/repos/LiferLighdow/Iteration/releases/tags/v$VERSION" | jq -r '.id // empty')
+        if [ -n "$EXISTING_ID" ]; then
+          curl -s -X DELETE -H "Authorization: token $GITEA_TOKEN" \
+            "https://git.liferlighdow.duckdns.org/api/v1/repos/LiferLighdow/Iteration/releases/$EXISTING_ID"
+        fi
+
+        CREATE_RES=$(curl -s -X POST "https://git.liferlighdow.duckdns.org/api/v1/repos/LiferLighdow/Iteration/releases" \
+          -H "Authorization: token $GITEA_TOKEN" \
+          -H "Content-Type: application/json" \
+          -d "{
+            \"tag_name\": \"v$VERSION\",
+            \"name\": \"Release v$VERSION\",
+            \"body\": \"Synced from GitHub Actions (Commit: ${{ github.sha }})\",
+            \"draft\": false,
+            \"prerelease\": false
+          }")
+        RELEASE_ID=$(echo "$CREATE_RES" | jq -r '.id')
+
+        for apk in build/dist/*.apk; do
+          filename=$(basename "$apk")
+          echo "Uploading $filename to Gitea Release ID $RELEASE_ID..."
+          curl -s -X POST "https://git.liferlighdow.duckdns.org/api/v1/repos/LiferLighdow/Iteration/releases/$RELEASE_ID/assets?name=$filename" \
+            -H "Authorization: token $GITEA_TOKEN" \
+            -H "Content-Type: application/octet-stream" \
+            --data-binary @"$apk" > /dev/null
+        done
