@@ -277,22 +277,63 @@ fun AppGrid(
             .fillMaxSize()
             .padding(horizontal = horizontalPadding)
             .onGloballyPositioned { rootCoords = it }
-            .pointerInput(isEditMode) {
-                if (!isEditMode) {
-                    awaitPointerEventScope {
-                        while (true) {
-                            val down = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
-                            
-                            // 關鍵修正：如果觸摸點擊在某個 icon 上（正在被按下），或是目前正處於聚焦模式（選單開啟中）
-                            // 則忽略背景手勢，避免與 icon 內部的長按、拖拽或選單操作相衝突
-                            if (viewModel.pressedItemId.value != null || viewModel.activeContextMenuId.value != null) {
-                                // 等待這次手勢結束
-                                do {
-                                    val event = awaitPointerEvent(pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
-                                    val anyPressed = event.changes.any { it.pressed }
-                                } while (anyPressed)
-                                continue
-                            }
+    ) {
+        val density = LocalDensity.current
+        val totalWidthDp = maxWidth
+        val totalHeightDp = maxHeight
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(isEditMode) {
+                    if (!isEditMode) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val down = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                                
+                                val totalWidthPx = with(density) { totalWidthDp.toPx() }
+                                val totalHeightPx = with(density) { totalHeightDp.toPx() }
+                                val colWidthPx = if (columns > 0) totalWidthPx / columns else 1f
+                                val rowHeightPx = if (rows > 0) totalHeightPx / rows else 1f
+
+                                val downCol = (down.position.x / colWidthPx).toInt().coerceIn(0, (columns - 1).coerceAtLeast(0))
+                                val downRow = (down.position.y / rowHeightPx).toInt().coerceIn(0, (rows - 1).coerceAtLeast(0))
+
+                                val isTouchOnItem = layoutItems.any { (app, r, c) ->
+                                    val type = app.widget?.type
+                                    val w = when (type) {
+                                        is WidgetType.Calendar -> if (type.isWide) 4 else 2
+                                        is WidgetType.Photo -> if (type.isWide) 4 else 2
+                                        is WidgetType.Music -> if (type.isWide) 4 else 2
+                                        is WidgetType.Note -> if (type.isWide) 4 else 2
+                                        is WidgetType.Stack -> if (type.isWide) 4 else 2
+                                        is WidgetType.Weather -> if (type.isWide) 4 else 2
+                                        is WidgetType.ToDoList -> if (type.isWide) 4 else 2
+                                        is WidgetType.RSS -> 4
+                                        is WidgetType.Countdown -> if (type.isWide) 4 else 2
+                                        is WidgetType.InfoHub -> 4
+                                        is WidgetType.InfoHub2 -> 4
+                                        is WidgetType.Custom -> if (type.size == "4x2") 4 else 2
+                                        is WidgetType.Battery, is WidgetType.Clock -> 2
+                                        null -> 1
+                                    }
+                                    val h = when (type) {
+                                        is WidgetType.RSS -> if (type.isTall) 4 else 2
+                                        null -> 1
+                                        else -> 2
+                                    }
+                                    downRow in r until (r + h) && downCol in c until (c + w)
+                                }
+
+                                // 關鍵修正：如果點擊落在任何 App 或 Widget 圖示上（包括 Stacker）、正在按住或是處於選單模式
+                                // 則背景手勢立即放行，避免攔截 Icon/Widget 內部的滑動、長按或拖拽
+                                if (isTouchOnItem || viewModel.pressedItemId.value != null || viewModel.activeContextMenuId.value != null) {
+                                    do {
+                                        val event = awaitPointerEvent(pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                                        val anyPressed = event.changes.any { it.pressed }
+                                    } while (anyPressed)
+                                    continue
+                                }
 
                             var hasTriggered = false
                             var directionLocked = 0 // 0: 未定, 1: 垂直鎖定 (Search), 2: 水平鎖定 (Pager), 3: 多指鎖定
@@ -378,8 +419,8 @@ fun AppGrid(
                 )
             }
     ) {
-        val cellWidth = maxWidth / columns
-        val cellHeight = maxHeight / rows
+        val cellWidth = totalWidthDp / columns
+        val cellHeight = totalHeightDp / rows
 
         layoutItems.forEachIndexed { index, (app, foundRow, foundCol) ->
             // 使用 key 讓 Compose 追蹤每個元件，減少不必要的重組
@@ -491,7 +532,8 @@ fun AppGrid(
                                         viewModel.setActiveContextMenuId(app.uniqueId)
                                         showContextMenu = true 
                                     },
-                                    photoPickerLauncher = photoPickerLauncher
+                                    photoPickerLauncher = photoPickerLauncher,
+                                    rotation = rotation
                                 )
                             } else {
                                 AppGridItem(
@@ -535,61 +577,54 @@ fun AppGrid(
                                     if (app.isWidget) (cellWidth * w) else (cellWidth * 0.9f),
                                     if (app.isWidget) (cellHeight * h) else (iconSize + 8.dp)
                                 )
-                                .then(
-                                    if (app.widget?.type is WidgetType.Stack && !isEditMode) {
-                                        Modifier
-                                    } else {
-                                        Modifier.pointerInput(app.uniqueId) {
-                                            var totalDragDistance = 0f
-                                            var hasTriggeredDrag = false
-                                            detectDragGesturesAfterLongPress(
-                                                onDragStart = { _ ->
-                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    totalDragDistance = 0f
-                                                    hasTriggeredDrag = false
-                                                    viewModel.setActiveContextMenuId(app.uniqueId)
-                                                    showContextMenu = true
-                                                    // 尚未開始拖移前，讓 widget 留在原位播放長按動畫/選單
-                                                },
-                                                onDrag = { change, dragAmount ->
-                                                    totalDragDistance += dragAmount.getDistance()
-                                                    
-                                                    if (!hasTriggeredDrag && totalDragDistance > 10f) {
-                                                        if (!viewModel.isEditMode.value) {
-                                                            viewModel.setEditMode(true)
-                                                        }
-                                                        
-                                                        showContextMenu = false
-                                                        viewModel.setActiveContextMenuId(null) 
-                                                        
-                                                        // 當手指開始真正拖移時，才將 widget 提起並設定初始抓取位置
-                                                        currentOnDragStart(app, lastPosition.pos + change.position)
-                                                        hasTriggeredDrag = true
-                                                    }
-                                                    
-                                                    if (hasTriggeredDrag) {
-                                                        change.consume()
-                                                        currentOnDrag(dragAmount)
-                                                    }
-                                                },
-                                                onDragCancel = {
-                                                    currentOnDragEnd()
-                                                    hasTriggeredDrag = false
-                                                    if (!showContextMenu) {
-                                                        viewModel.setActiveContextMenuId(null)
-                                                    }
-                                                },
-                                                onDragEnd = {
-                                                    currentOnDragEnd()
-                                                    hasTriggeredDrag = false
-                                                    if (!showContextMenu) {
-                                                        viewModel.setActiveContextMenuId(null)
-                                                    }
+                                .pointerInput(app.uniqueId) {
+                                    var totalDragDistance = 0f
+                                    var hasTriggeredDrag = false
+                                    detectNonBlockingLongPressDrag(
+                                        onDragStart = { _ ->
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            totalDragDistance = 0f
+                                            hasTriggeredDrag = false
+                                            viewModel.setActiveContextMenuId(app.uniqueId)
+                                            showContextMenu = true
+                                            // 尚未開始拖移前，讓 widget 留在原位播放長按動畫/選單
+                                        },
+                                        onDrag = { change, dragAmount ->
+                                            totalDragDistance += dragAmount.getDistance()
+
+                                            if (!hasTriggeredDrag && totalDragDistance > 10f) {
+                                                if (!viewModel.isEditMode.value) {
+                                                    viewModel.setEditMode(true)
                                                 }
-                                            )
+
+                                                showContextMenu = false
+                                                viewModel.setActiveContextMenuId(null)
+
+                                                // 當手指開始真正拖移時，才將 widget 提起並設定初始抓取位置
+                                                currentOnDragStart(app, lastPosition.pos + change.position)
+                                                hasTriggeredDrag = true
+                                            }
+
+                                            if (hasTriggeredDrag) {
+                                                currentOnDrag(dragAmount)
+                                            }
+                                        },
+                                        onDragCancel = {
+                                            currentOnDragEnd()
+                                            hasTriggeredDrag = false
+                                            if (!showContextMenu) {
+                                                viewModel.setActiveContextMenuId(null)
+                                            }
+                                        },
+                                        onDragEnd = {
+                                            currentOnDragEnd()
+                                            hasTriggeredDrag = false
+                                            if (!showContextMenu) {
+                                                viewModel.setActiveContextMenuId(null)
+                                            }
                                         }
-                                    }
-                                )
+                                    )
+                                }
                                 .pointerInput(app.uniqueId, app.isWidget) {
                                     if (!app.isWidget) {
                                         detectTapGestures(
@@ -715,6 +750,7 @@ fun AppGrid(
         )
     }
 }
+}
 
 @Composable
 fun WidgetGridItem(
@@ -737,7 +773,8 @@ fun WidgetGridItem(
     onUpdatePhotoToAdjust: (WidgetModel) -> Unit,
     onUpdatePhotoToPick: (WidgetModel) -> Unit,
     onShowContextMenu: () -> Unit,
-    photoPickerLauncher: androidx.activity.result.ActivityResultLauncher<String>
+    photoPickerLauncher: androidx.activity.result.ActivityResultLauncher<String>,
+    rotation: Float = 0f
 ) {
     val isWide = when (val type = app.widget?.type) {
         is WidgetType.Calendar -> type.isWide
@@ -838,6 +875,8 @@ fun WidgetGridItem(
                             renderEffect = null
                         }
                     }
+                } else if (isEditMode && !isBeingDragged) {
+                    rotationZ = rotation
                 }
             }
     ) {
@@ -847,7 +886,7 @@ fun WidgetGridItem(
                 .fillMaxWidth()
                 .weight(1f)
                 .pointerInput(app.uniqueId, isEditMode) {
-                    if (!isEditMode) {
+                    if (!isEditMode && app.widget?.type !is WidgetType.Music && app.widget?.type !is WidgetType.Custom) {
                         detectTapGestures(
                             onPress = {
                                 viewModel.setPressedItemId(app.uniqueId)
@@ -979,7 +1018,9 @@ fun WidgetGridItem(
                         widget = widget,
                         viewModel = viewModel,
                         modifier = Modifier.fillMaxSize(),
-                        backdrop = backdrop
+                        backdrop = backdrop,
+                        onLongClick = onShowContextMenu,
+                        onTap = { onUpdateStackToEdit(widget) }
                     )
                     is WidgetType.RSS -> RSSWidget(
                         widget = widget,
@@ -1503,6 +1544,62 @@ private suspend fun PointerInputScope.detectTapGesturesWithCustomTimeout(
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+private suspend fun PointerInputScope.detectNonBlockingLongPressDrag(
+    onDragStart: (Offset) -> Unit,
+    onDrag: (PointerInputChange, Offset) -> Unit,
+    onDragEnd: () -> Unit,
+    onDragCancel: () -> Unit
+) {
+    val touchSlop = viewConfiguration.touchSlop
+    val longPressTimeout = viewConfiguration.longPressTimeoutMillis
+    coroutineScope {
+        awaitEachGesture {
+            val down = try {
+                awaitFirstDown(requireUnconsumed = false)
+            } catch (_: Exception) {
+                return@awaitEachGesture
+            }
+
+            var dragStarted = false
+            var isCancelled = false
+
+            val longPressJob = launch {
+                delay(longPressTimeout)
+                if (!isCancelled) {
+                    dragStarted = true
+                    onDragStart(down.position)
+                }
+            }
+
+            while (true) {
+                val event = awaitPointerEvent()
+                val change = event.changes.firstOrNull() ?: break
+
+                if (!change.pressed) {
+                    isCancelled = true
+                    longPressJob.cancel()
+                    if (dragStarted) {
+                        onDragEnd()
+                    }
+                    break
+                }
+
+                if (!dragStarted) {
+                    if ((change.position - down.position).getDistance() > touchSlop) {
+                        isCancelled = true
+                        longPressJob.cancel()
+                        break
+                    }
+                } else {
+                    change.consume()
+                    val dragAmount = change.position - change.previousPosition
+                    onDrag(change, dragAmount)
                 }
             }
         }

@@ -1244,6 +1244,11 @@ fun LauncherScreen(
             showWidgetPicker = false
             widgetTargetPage = null
         },
+        onWidgetAdded = { addedPage ->
+            scope.launch {
+                pagerState.animateScrollToPage(desktopStartIndex + addedPage)
+            }
+        },
         showShortcutPicker = showShortcutPicker,
         onDismissShortcutPicker = { showShortcutPicker = false },
         showDockPicker = showDockPicker,

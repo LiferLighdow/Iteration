@@ -455,19 +455,15 @@ fun MinusOnePage(
                                     }
                                 }
                                 .pointerInput(widget.type, effectiveEditMode) {
-                                    if (!effectiveEditMode) {
+                                    if (!effectiveEditMode && widget.type !is WidgetType.Stack) {
                                         detectTapGestures(
                                             onPress = {
                                                 viewModel.setPressedItemId(widget.id)
                                                 try { awaitRelease() } finally { viewModel.setPressedItemId(null) }
                                             },
                                             onLongPress = {
-                                                if (widget.type is WidgetType.Stack) {
-                                                    stackToEdit = widget
-                                                } else {
-                                                    viewModel.setActiveContextMenuId(widget.id)
-                                                    showContextMenu = true
-                                                }
+                                                viewModel.setActiveContextMenuId(widget.id)
+                                                showContextMenu = true
                                             },
                                             onTap = {
                                                 when (widget.type) {
@@ -479,7 +475,6 @@ fun MinusOnePage(
                                                         val p = widget.type as WidgetType.Photo
                                                         if (p.uri != null) photoToAdjust = widget else photoToPick = widget
                                                     }
-                                                    is WidgetType.Stack -> stackToEdit = widget
                                                     is WidgetType.RSS -> {
                                                         val r = widget.type as WidgetType.RSS
                                                         if (r.url.isBlank()) rssToEdit = widget
@@ -519,7 +514,17 @@ fun MinusOnePage(
                                 is WidgetType.Countdown -> CountdownWidget(widget = widget, displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
                                 is WidgetType.InfoHub -> InfoHubWidget(displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
                                 is WidgetType.InfoHub2 -> InfoHub2Widget(displayMode = widget.displayMode, backdrop = backdrop, isMinusOnePage = true)
-                                is WidgetType.Stack -> StackWidget(widget = widget, viewModel = viewModel, backdrop = backdrop, isMinusOnePage = true)
+                                is WidgetType.Stack -> StackWidget(
+                                    widget = widget,
+                                    viewModel = viewModel,
+                                    backdrop = backdrop,
+                                    isMinusOnePage = true,
+                                    onLongClick = {
+                                        viewModel.setActiveContextMenuId(widget.id)
+                                        showContextMenu = true
+                                    },
+                                    onTap = { stackToEdit = widget }
+                                )
                                 is WidgetType.Custom -> CustomWidget(
                                     widget = widget, 
                                     backdrop = backdrop, 

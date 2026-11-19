@@ -140,6 +140,91 @@ fun MainViewModel.insertAtPage(pages: MutableList<MutableList<AppModel>>, index:
     }
 }
 
+fun MainViewModel.getWidgetDimensions(type: WidgetType): Pair<Int, Int> {
+    return when (type) {
+        is WidgetType.Battery -> 2 to 2
+        is WidgetType.Clock -> 2 to 2
+        is WidgetType.Calendar -> if (type.isWide) 4 to 2 else 2 to 2
+        is WidgetType.Photo -> if (type.isWide) 4 to 2 else 2 to 2
+        is WidgetType.Music -> if (type.isWide) 4 to 2 else 2 to 2
+        is WidgetType.Note -> if (type.isWide) 4 to 2 else 2 to 2
+        is WidgetType.Weather -> if (type.isWide) 4 to 2 else 2 to 2
+        is WidgetType.ToDoList -> if (type.isWide) 4 to 2 else 2 to 2
+        is WidgetType.Stack -> if (type.isWide) 4 to 2 else 2 to 2
+        is WidgetType.Countdown -> 2 to 2
+        is WidgetType.RSS -> 4 to 2
+        is WidgetType.InfoHub -> 4 to 2
+        is WidgetType.InfoHub2 -> 4 to 2
+        is WidgetType.Custom -> if (type.size == "4x2") 4 to 2 else 2 to 2
+    }
+}
+
+fun MainViewModel.canWidgetFitOnPage(
+    existingItems: List<AppModel>,
+    widgetType: WidgetType,
+    columns: Int = 4,
+    rows: Int = (pageSize / 4).coerceAtLeast(5)
+): Boolean {
+    val grid = Array(rows) { BooleanArray(columns) }
+
+    // 將既有 App 與 Widget 填入模擬網格
+    for (item in existingItems) {
+        val (w, h) = if (item.isWidget && item.widget != null) {
+            getWidgetDimensions(item.widget.type)
+        } else {
+            1 to 1
+        }
+        
+        var placed = false
+        for (r in 0..(rows - h)) {
+            for (c in 0..(columns - w)) {
+                var canPlace = true
+                for (dr in 0 until h) {
+                    for (dc in 0 until w) {
+                        if (grid[r + dr][c + dc]) {
+                            canPlace = false
+                            break
+                        }
+                    }
+                    if (!canPlace) break
+                }
+                if (canPlace) {
+                    for (dr in 0 until h) {
+                        for (dc in 0 until w) {
+                            grid[r + dr][c + dc] = true
+                        }
+                    }
+                    placed = true
+                    break
+                }
+            }
+            if (placed) break
+        }
+    }
+
+    // 檢查新 Widget 的形狀 (寬 w, 高 h) 能否放入剩餘空位
+    val (reqW, reqH) = getWidgetDimensions(widgetType)
+    if (reqH > rows || reqW > columns) return false
+
+    for (r in 0..(rows - reqH)) {
+        for (c in 0..(columns - reqW)) {
+            var fit = true
+            for (dr in 0 until reqH) {
+                for (dc in 0 until reqW) {
+                    if (grid[r + dr][c + dc]) {
+                        fit = false
+                        break
+                    }
+                }
+                if (!fit) break
+            }
+            if (fit) return true
+        }
+    }
+
+    return false
+}
+
 fun MainViewModel.calculateUsedSlots(items: List<AppModel>): Int {
     return items.sumOf { item ->
         if (item.isWidget) {
@@ -200,19 +285,23 @@ fun MainViewModel.cleanupEmptyPages(exceptPageIndex: Int) {
 fun MainViewModel.reorganizeAllPages(pages: MutableList<MutableList<AppModel>>) {
     val result = mutableListOf<MutableList<AppModel>>()
     var overflowItems = mutableListOf<AppModel>()
+    val columns = 4
+    val rows = (pageSize / 4).coerceAtLeast(5)
 
     for (page in pages) {
         val combinedItems = (overflowItems + page).toMutableList()
         overflowItems = mutableListOf()
         
         val pageItems = mutableListOf<AppModel>()
-        var used = 0
         
         for (item in combinedItems) {
-            val itemSlots = calculateUsedSlots(listOf(item))
-            if (used + itemSlots <= pageSize) {
+            val fit = if (item.isWidget && item.widget != null) {
+                canWidgetFitOnPage(pageItems, item.widget.type, columns, rows)
+            } else {
+                canWidgetFitOnPage(pageItems, WidgetType.Battery, columns, rows) // 1x1 app item
+            }
+            if (fit) {
                 pageItems.add(item)
-                used += itemSlots
             } else {
                 overflowItems.add(item)
             }
@@ -222,19 +311,17 @@ fun MainViewModel.reorganizeAllPages(pages: MutableList<MutableList<AppModel>>) 
 
     while (overflowItems.isNotEmpty()) {
         val pageItems = mutableListOf<AppModel>()
-        var used = 0
         val iterator = overflowItems.iterator()
         while (iterator.hasNext()) {
             val item = iterator.next()
-            val itemSlots = calculateUsedSlots(listOf(item))
-            if (used + itemSlots <= pageSize) {
+            val fit = if (item.isWidget && item.widget != null) {
+                canWidgetFitOnPage(pageItems, item.widget.type, columns, rows)
+            } else {
+                canWidgetFitOnPage(pageItems, WidgetType.Battery, columns, rows)
+            }
+            if (pageItems.isEmpty() || fit) {
                 pageItems.add(item)
-                used += itemSlots
                 iterator.remove()
-            } else if (pageItems.isEmpty()) {
-                pageItems.add(item)
-                iterator.remove()
-                break
             } else {
                 break
             }

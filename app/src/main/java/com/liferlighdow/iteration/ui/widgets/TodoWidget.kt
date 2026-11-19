@@ -95,9 +95,7 @@ fun TodoWidget(
                                 style = MaterialTheme.typography.bodySmall.withGlassShadow(isGlass).copy(
                                     textDecoration = if (task.isDone) TextDecoration.LineThrough else null
                                 ),
-                                color = contentColor.copy(alpha = if (task.isDone) 0.5f else 1.0f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                color = contentColor.copy(alpha = if (task.isDone) 0.5f else 1.0f)
                             )
                         }
                     }

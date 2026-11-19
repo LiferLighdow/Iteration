@@ -1,7 +1,11 @@
 package com.liferlighdow.iteration.ui.widgets
 
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -13,6 +17,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -22,17 +28,59 @@ import com.liferlighdow.iteration.data.WidgetModel
 import com.liferlighdow.iteration.data.WidgetType
 import com.liferlighdow.iteration.ui.glassFallbackColor
 import com.liferlighdow.iteration.viewmodel.MainViewModel
-
-import androidx.compose.ui.graphics.graphicsLayer
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
 
+fun Modifier.detectWidgetLongPress(
+    onLongClick: (() -> Unit)?
+): Modifier = if (onLongClick == null) this else this.pointerInput(onLongClick) {
+    val touchSlop = viewConfiguration.touchSlop
+    coroutineScope {
+        awaitEachGesture {
+            val down = try {
+                awaitFirstDown(requireUnconsumed = false)
+            } catch (_: Exception) {
+                return@awaitEachGesture
+            }
+
+            var isMovedOrUp = false
+            val longPressJob = launch {
+                delay(400L)
+                if (!isMovedOrUp) {
+                    onLongClick()
+                }
+            }
+
+            while (true) {
+                val event = awaitPointerEvent()
+                val change = event.changes.firstOrNull() ?: break
+                if (!change.pressed) {
+                    isMovedOrUp = true
+                    longPressJob.cancel()
+                    break
+                }
+                if ((change.position - down.position).getDistance() > touchSlop) {
+                    isMovedOrUp = true
+                    longPressJob.cancel()
+                    break
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun StackWidget(
     widget: WidgetModel,
     viewModel: MainViewModel,
     modifier: Modifier = Modifier,
     backdrop: Backdrop? = null,
-    isMinusOnePage: Boolean = false
+    isMinusOnePage: Boolean = false,
+    onLongClick: (() -> Unit)? = null,
+    onTap: (() -> Unit)? = null
 ) {
     val stackType = widget.type as? WidgetType.Stack
     val isWide = stackType?.isWide ?: false
@@ -48,16 +96,25 @@ fun StackWidget(
     val stackAspectRatio = if (isWide) 2.0f else 1f
 
     Box(
-        modifier = modifier.aspectRatio(stackAspectRatio)
+        modifier = modifier
+            .aspectRatio(stackAspectRatio)
+            .detectWidgetLongPress(onLongClick)
     ) {
         if (stackItems.isEmpty()) {
             Card(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .combinedClickable(onClick = { onTap?.invoke() }, onLongClick = onLongClick),
                 shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(containerColor = glassFallbackColor(0.1f))
             ) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(stringResource(R.string.empty_stack_hint), color = Color.White.copy(alpha = 0.6f), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelSmall)
+                    Text(
+                        stringResource(R.string.empty_stack_hint),
+                        color = Color.White.copy(alpha = 0.6f),
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.labelSmall
+                    )
                 }
             }
         } else {
@@ -113,12 +170,18 @@ fun StackWidget(
                     }
                 }
 
-                // Page Indicator on the right
+                // Page Indicator on the right (with tap & long click support)
                 if (stackItems.size > 1) {
                     Column(
                         modifier = Modifier
                             .align(Alignment.CenterEnd)
-                            .padding(end = 8.dp),
+                            .padding(end = 4.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .combinedClickable(
+                                onClick = { onTap?.invoke() },
+                                onLongClick = onLongClick
+                            )
+                            .padding(horizontal = 6.dp, vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {

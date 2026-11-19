@@ -63,21 +63,12 @@ import java.io.FileOutputStream
  * 從 LruCache 或磁碟獲取處理後的圖示
  */
 fun MainViewModel.getIcon(uniqueId: String): ImageBitmap? {
-    val styleSuffix = currentStyleSuffix
-    if (styleSuffix == "default") return null
-
-    // 獲取目前日期與時間 (用於動態圖標匹配)
-    val cal = java.util.Calendar.getInstance()
-    val currentDay = cal.get(java.util.Calendar.DAY_OF_MONTH).toString()
-    val currentHour = cal.get(java.util.Calendar.HOUR_OF_DAY)
-    val currentMinute = cal.get(java.util.Calendar.MINUTE)
-
     // 1. 處理 Shortcut 類型的 ID
     if (uniqueId.startsWith("shortcut_")) {
+        val styleSuffix = currentStyleSuffix
         val cacheKey = "${uniqueId}_$styleSuffix"
         iconCache[cacheKey]?.let { return it }
 
-        // 檢查磁碟快取 (Shortcut 的圖標已經在保存時轉為檔名安全格式)
         val fileSafeId = uniqueId.replace("/", "_").replace(":", "_").replace("@", "_")
         val diskCacheFile = File(processedIconCacheDir, "${fileSafeId}_$styleSuffix.png")
         if (diskCacheFile.exists()) {
@@ -91,19 +82,33 @@ fun MainViewModel.getIcon(uniqueId: String): ImageBitmap? {
     }
 
     // 2. 取得基礎 ID (App 類型)
-    val baseId = if (uniqueId.contains("@")) {
-        val parts = uniqueId.split("@")
-        val lastPart = parts.last()
-        if (lastPart.length >= 10 && lastPart.toLongOrNull() != null) {
-            uniqueId.substringBeforeLast("@")
-        } else {
-            uniqueId
-        }
-    } else {
-        uniqueId
-    }
-    
+    val baseId = getBaseId(uniqueId)
+    val fileSafeId = baseId.replace("/", "_").replace(":", "_").replace("@", "_")
     val pkgName = baseId.substringBefore("/")
+
+    // 3. 優先檢查自定義圖示 (不論 styleSuffix 是否為 default)
+    val customIconFile = File(customIconDir, "$fileSafeId.png")
+    if (customIconFile.exists()) {
+        return try {
+            BitmapFactory.decodeFile(customIconFile.absolutePath)?.asImageBitmap()
+        } catch (e: Exception) { null }
+    }
+    val legacyCustomIconFile = File(customIconDir, "$pkgName.png")
+    if (legacyCustomIconFile.exists()) {
+        return try {
+            BitmapFactory.decodeFile(legacyCustomIconFile.absolutePath)?.asImageBitmap()
+        } catch (e: Exception) { null }
+    }
+
+    val styleSuffix = currentStyleSuffix
+    if (styleSuffix == "default") return null
+
+    // 獲取目前日期與時間 (用於動態圖標匹配)
+    val cal = java.util.Calendar.getInstance()
+    val currentDay = cal.get(java.util.Calendar.DAY_OF_MONTH).toString()
+    val currentHour = cal.get(java.util.Calendar.HOUR_OF_DAY)
+    val currentMinute = cal.get(java.util.Calendar.MINUTE)
+
     val isDynamicCalendar = _isDynamicCalendarEnabled.value && isCalendarApp(pkgName)
     val isDynamicClock = _isDynamicClockEnabled.value && isClockApp(pkgName)
     
@@ -113,21 +118,10 @@ fun MainViewModel.getIcon(uniqueId: String): ImageBitmap? {
         else -> "${baseId}_$styleSuffix"
     }
 
-    // 2. 檢查 LruCache
+    // 4. 檢查 LruCache
     iconCache[cacheKey]?.let { return it }
 
-    // 3. 檢查自定義圖示
-    val fileSafeId = baseId.replace("/", "_").replace(":", "_").replace("@", "_")
-    val customIconFile = File(customIconDir, "$fileSafeId.png")
-    if (customIconFile.exists()) {
-        return try {
-            BitmapFactory.decodeFile(customIconFile.absolutePath)?.asImageBitmap()?.also {
-                iconCache.put(cacheKey, it)
-            }
-        } catch (e: Exception) { null }
-    }
-
-    // 4. 檢查磁碟快取
+    // 5. 檢查磁碟快取
     val diskCacheFile = when {
         isDynamicCalendar -> File(processedIconCacheDir, "${fileSafeId}_${styleSuffix}_D$currentDay.png")
         isDynamicClock -> File(processedIconCacheDir, "${fileSafeId}_${styleSuffix}_H${currentHour}M${currentMinute}.png")
@@ -142,7 +136,7 @@ fun MainViewModel.getIcon(uniqueId: String): ImageBitmap? {
         } catch (e: Exception) { null }
     }
 
-    // 修復：如果動態圖標開啟但找不到特定時間快取，嘗試尋找原始快取
+    // 如果動態圖標開啟但找不到特定時間快取，嘗試尋找原始快取
     if (isDynamicCalendar || isDynamicClock) {
         val fallbackFile = File(processedIconCacheDir, "${fileSafeId}_$styleSuffix.png")
         if (fallbackFile.exists()) {
@@ -249,23 +243,62 @@ fun MainViewModel.setCustomLabel(uniqueId: String, newLabel: String) {
     loadApps()
 }
 
+private fun getBaseId(uniqueId: String): String {
+    if (uniqueId.startsWith("shortcut_")) return uniqueId
+    return if (uniqueId.contains("@")) {
+        val parts = uniqueId.split("@")
+        val lastPart = parts.last()
+        if (lastPart.length >= 10 && lastPart.toLongOrNull() != null) {
+            uniqueId.substringBeforeLast("@")
+        } else {
+            uniqueId
+        }
+    } else {
+        uniqueId
+    }
+}
+
 fun MainViewModel.setCustomIcon(uniqueId: String, bitmap: Bitmap) {
-    val fileSafeId = uniqueId.replace("/", "_").replace(":", "_").replace("@", "_")
-    val file = File(customIconDir, "$fileSafeId.png")
-    FileOutputStream(file).use { out ->
+    val baseId = getBaseId(uniqueId)
+    val fileSafeId = baseId.replace("/", "_").replace(":", "_").replace("@", "_")
+    val pkgName = baseId.substringBefore("/")
+
+    val file1 = File(customIconDir, "$fileSafeId.png")
+    FileOutputStream(file1).use { out ->
         bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
     }
-    iconCache.remove(uniqueId)
+    val file2 = File(customIconDir, "$pkgName.png")
+    FileOutputStream(file2).use { out ->
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+    }
+
+    iconCache.evictAll()
+    clearAppIconCache(pkgName)
+    processedIconCacheDir.listFiles { _, name ->
+        name.contains(fileSafeId) || name.contains(pkgName)
+    }?.forEach { it.delete() }
+
     prefs.edit().putLong("icon_refresh_trigger", System.currentTimeMillis()).apply()
+    _iconUpdateSignal.value = System.currentTimeMillis()
     loadApps()
 }
 
 fun MainViewModel.resetCustomIcon(uniqueId: String) {
-    val fileSafeId = uniqueId.replace("/", "_").replace(":", "_").replace("@", "_")
-    val file = File(customIconDir, "$fileSafeId.png")
-    if (file.exists()) file.delete()
-    iconCache.remove(uniqueId)
+    val baseId = getBaseId(uniqueId)
+    val fileSafeId = baseId.replace("/", "_").replace(":", "_").replace("@", "_")
+    val pkgName = baseId.substringBefore("/")
+
+    File(customIconDir, "$fileSafeId.png").takeIf { it.exists() }?.delete()
+    File(customIconDir, "$pkgName.png").takeIf { it.exists() }?.delete()
+
+    iconCache.evictAll()
+    clearAppIconCache(pkgName)
+    processedIconCacheDir.listFiles { _, name ->
+        name.contains(fileSafeId) || name.contains(pkgName)
+    }?.forEach { it.delete() }
+
     prefs.edit().putLong("icon_refresh_trigger", System.currentTimeMillis()).apply()
+    _iconUpdateSignal.value = System.currentTimeMillis()
     loadApps()
 }
 

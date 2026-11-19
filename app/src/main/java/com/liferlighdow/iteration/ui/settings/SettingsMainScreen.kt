@@ -185,6 +185,7 @@ fun SettingsMainScreen(
                 if (viewModel.getPassword().isNullOrEmpty()) onNavigateToHideApps() else {} 
             }, isHideApps = true),
             SettingsMetadata(context.getString(R.string.settings_greenify_title), context.getString(R.string.greenify_desc), Icons.Default.Eco, Color(0xFF4CAF50), onNavigateToGreenify),
+            SettingsMetadata(context.getString(R.string.settings_app_ops), context.getString(R.string.settings_app_ops_desc), Icons.Default.AdminPanelSettings, Color(0xFF9C27B0), onNavigateToAppOps),
             SettingsMetadata(context.getString(R.string.settings_export), context.getString(R.string.settings_backup_restore_desc), Icons.Default.Backup, Color(0xFF4CAF50), { }, isExport = true),
             SettingsMetadata(context.getString(R.string.settings_import), context.getString(R.string.import_from_backup), Icons.Default.Restore, Color(0xFF03A9F4), { }, isImport = true),
             SettingsMetadata(context.getString(R.string.settings_restart_launcher), context.getString(R.string.settings_restart_desc), Icons.Default.RestartAlt, Color.Red, { }, isRestart = true),
@@ -199,7 +200,7 @@ fun SettingsMainScreen(
         else allSettingsItems.filter { 
             (it.label.contains(searchQuery, ignoreCase = true) || 
             it.supporting.contains(searchQuery, ignoreCase = true)) &&
-            (if (it.label == context.getString(R.string.settings_greenify_title)) isAdvancedMode else true)
+            (if (it.label == context.getString(R.string.settings_greenify_title) || it.label == context.getString(R.string.settings_app_ops)) isAdvancedMode else true)
         }
     }
 
@@ -481,14 +482,20 @@ fun SettingsMainScreen(
                             iconColor = Color(0xFF607D8B),
                             onClick = onNavigateToPermissions
                         )
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                        SettingsItem(
-                            headline = stringResource(R.string.settings_app_ops),
-                            supporting = stringResource(R.string.settings_app_ops_desc),
-                            icon = Icons.Default.AdminPanelSettings,
-                            iconColor = Color(0xFF9C27B0),
-                            onClick = onNavigateToAppOps
-                        )
+                        if (isAdvancedModeLocal) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                thickness = 0.5.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            )
+                            SettingsItem(
+                                headline = stringResource(R.string.settings_app_ops),
+                                supporting = stringResource(R.string.settings_app_ops_desc),
+                                icon = Icons.Default.AdminPanelSettings,
+                                iconColor = Color(0xFF9C27B0),
+                                onClick = onNavigateToAppOps
+                            )
+                        }
                     }
                 }
 

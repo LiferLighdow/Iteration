@@ -52,6 +52,7 @@ fun LauncherOverlays(
     onDeletePage: (Int) -> Unit,
     showWidgetPicker: Boolean,
     onDismissWidgetPicker: () -> Unit,
+    onWidgetAdded: ((Int) -> Unit)? = null,
     showDockPicker: Int?,
     onDismissDockPicker: () -> Unit,
     showDockAddTypePicker: Int?,
@@ -244,9 +245,13 @@ fun LauncherOverlays(
     if (showWidgetPicker) {
         WidgetPickerDialog(
             viewModel = viewModel,
+            isDesktop = currentPage >= 0,
             onDismiss = onDismissWidgetPicker,
             onWidgetSelected = {
-                viewModel.addWidget(it, currentPage)
+                val addedPage = viewModel.addWidget(it, currentPage)
+                if (addedPage >= 0) {
+                    onWidgetAdded?.invoke(addedPage)
+                }
                 onDismissWidgetPicker()
             }
         )

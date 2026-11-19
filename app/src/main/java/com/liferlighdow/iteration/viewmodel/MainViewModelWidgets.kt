@@ -28,7 +28,7 @@ fun MainViewModel.loadWidgets() {
     _minusOneWidgets.value = list
 }
 
-fun MainViewModel.addWidget(type: WidgetType, pageIndex: Int = -1) {
+fun MainViewModel.addWidget(type: WidgetType, pageIndex: Int = -1): Int {
     var label = when (type) {
         is WidgetType.Battery -> "Battery"
         is WidgetType.Clock -> "Clock"
@@ -57,6 +57,7 @@ fun MainViewModel.addWidget(type: WidgetType, pageIndex: Int = -1) {
         val newList = _minusOneWidgets.value + WidgetModel(widgetType = type, label = label)
         _minusOneWidgets.value = newList
         saveWidgets(newList)
+        return -1
     } else {
         // 加入到指定桌面分頁
         val widget = WidgetModel(widgetType = type, label = label)
@@ -66,8 +67,27 @@ fun MainViewModel.addWidget(type: WidgetType, pageIndex: Int = -1) {
             widget = widget
         )
         val currentPages = _pages.value.map { it.toMutableList() }.toMutableList()
-        insertAtPage(currentPages, pageIndex, appModel)
+        val targetIndex = pageIndex.coerceIn(0, (currentPages.size - 1).coerceAtLeast(0))
+        val itemSlots = calculateUsedSlots(listOf(appModel))
+        val currentSlots = if (targetIndex < currentPages.size) calculateUsedSlots(currentPages[targetIndex]) else 0
+
+        val finalPageIndex: Int
+        if (targetIndex < currentPages.size && canWidgetFitOnPage(currentPages[targetIndex], type, columns = 4, rows = (pageSize / 4).coerceAtLeast(5))) {
+            // 當前分頁幾何空間足夠放得下該 Widget 形狀 (例如 2x2 或 4x2)
+            currentPages[targetIndex].add(appModel)
+            finalPageIndex = targetIndex
+        } else {
+            // 當前分頁空間或形狀不足 -> 自動在目標頁面後方新增一個分頁放置 Widget
+            finalPageIndex = (targetIndex + 1).coerceAtMost(currentPages.size)
+            if (finalPageIndex < currentPages.size) {
+                currentPages.add(finalPageIndex, mutableListOf(appModel))
+            } else {
+                currentPages.add(mutableListOf(appModel))
+            }
+        }
+
         reorganizeAllPages(currentPages)
+        return finalPageIndex
     }
 }
 

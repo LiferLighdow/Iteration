@@ -881,6 +881,8 @@ fun ChangeIconScreen(onBack: () -> Unit) {
         pickedImageUri = uri
     }
 
+    val iconSignal by viewModel.iconUpdateSignal.collectAsState()
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -901,7 +903,7 @@ fun ChangeIconScreen(onBack: () -> Unit) {
                     ListItem(
                         headlineContent = { Text(app.label) },
                         leadingContent = {
-                            val appIcon = viewModel.getIcon(app.uniqueId)
+                            val appIcon = remember(app.uniqueId, iconSignal) { viewModel.getIcon(app.uniqueId) }
                             if (appIcon != null) {
                                 Image(
                                     bitmap = appIcon,
@@ -914,7 +916,7 @@ fun ChangeIconScreen(onBack: () -> Unit) {
                         },
                         trailingContent = {
                             Row {
-                                IconButton(onClick = { viewModel.resetCustomIcon(app.packageName) }) {
+                                IconButton(onClick = { viewModel.resetCustomIcon(app.uniqueId) }) {
                                     Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.restore_default), tint = MaterialTheme.colorScheme.primary)
                                 }
                                 IconButton(onClick = {
@@ -1005,27 +1007,24 @@ fun ChangeIconScreen(onBack: () -> Unit) {
                                     modifier = Modifier.clickable {
                                         val drawable = androidx.core.content.ContextCompat.getDrawable(context, resId)
                                         drawable?.let {
-                                            // 關鍵修改：模擬 IconProcessor 的放大裁切邏輯
+                                            // 關鍵修改：正確繪製圓角遮罩 (使用 SRC_IN 防止圖標變黑/空白)
                                             val size = 512
                                             val iconScale = 1.15f
                                             val scaledSize = (size * iconScale).toInt()
                                             val offset = (size - scaledSize) / 2f
 
-                                            // 1. 取得放大後的原始圖
                                             val rawBitmap = it.toBitmap(scaledSize, scaledSize)
                                             val maskedBitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
                                             val canvas = android.graphics.Canvas(maskedBitmap)
                                             val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
 
-                                            // 2. 將放大後的圖置中繪製 (這會造成邊緣溢出，正是我們要的)
+                                            val cornerRadius = size * iconCornerRadius
+                                            canvas.drawRoundRect(0f, 0f, size.toFloat(), size.toFloat(), cornerRadius, cornerRadius, paint)
+
+                                            paint.xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.SRC_IN)
                                             canvas.drawBitmap(rawBitmap, offset, offset, paint)
 
-                                            // 3. 套用遮罩進行裁切
-                                            val mask = viewModel.iconProcessor.getOrCreateMask(iconCornerRadius, size)
-                                            paint.xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.DST_IN)
-                                            canvas.drawBitmap(mask, 0f, 0f, paint)
-
-                                            viewModel.setCustomIcon(selectedApp!!.packageName, maskedBitmap)
+                                            viewModel.setCustomIcon(selectedApp!!.uniqueId, maskedBitmap)
                                         }
                                         showBuiltinPicker = false
                                         selectedApp = null
@@ -1046,19 +1045,19 @@ fun ChangeIconScreen(onBack: () -> Unit) {
                 uri = pickedImageUri!!,
                 onDismiss = { pickedImageUri = null },
                 onConfirm = { croppedBitmap ->
-                    // 關鍵修改：將從藝廊選取的圖片也進行形狀裁切
+                    // 關鍵修改：將從藝廊選取的圖片也進行形狀裁切 (使用 SRC_IN)
                     val size = croppedBitmap.width
                     val maskedBitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
                     val canvas = android.graphics.Canvas(maskedBitmap)
                     val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
 
+                    val cornerRadius = size * iconCornerRadius
+                    canvas.drawRoundRect(0f, 0f, size.toFloat(), size.toFloat(), cornerRadius, cornerRadius, paint)
+
+                    paint.xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.SRC_IN)
                     canvas.drawBitmap(croppedBitmap, 0f, 0f, paint)
 
-                    val mask = viewModel.iconProcessor.getOrCreateMask(iconCornerRadius, size)
-                    paint.xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.DST_IN)
-                    canvas.drawBitmap(mask, 0f, 0f, paint)
-
-                    viewModel.setCustomIcon(selectedApp!!.packageName, maskedBitmap)
+                    viewModel.setCustomIcon(selectedApp!!.uniqueId, maskedBitmap)
                     pickedImageUri = null
                     selectedApp = null
                 }

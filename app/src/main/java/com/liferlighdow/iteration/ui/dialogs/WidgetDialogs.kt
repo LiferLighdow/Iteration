@@ -876,7 +876,8 @@ private data class WidgetTemplate(
 fun WidgetPickerDialog(
     viewModel: MainViewModel,
     onDismiss: () -> Unit,
-    onWidgetSelected: (WidgetType) -> Unit
+    onWidgetSelected: (WidgetType) -> Unit,
+    isDesktop: Boolean = false
 ) {
     var selectedTemplate by remember { mutableStateOf<WidgetTemplate?>(null) }
     var showCustomList by remember { mutableStateOf(false) }
@@ -888,8 +889,8 @@ fun WidgetPickerDialog(
     val infoHubV1Label = stringResource(R.string.widget_info_hub)
     val infoHubV2Label = stringResource(R.string.widget_info_hub2)
 
-    val templates = remember(analogClockLabel, digitalClockLabel, infoHubV1Label, infoHubV2Label) {
-        listOf(
+    val templates = remember(analogClockLabel, digitalClockLabel, infoHubV1Label, infoHubV2Label, isDesktop) {
+        val allTemplates = listOf(
             WidgetTemplate(
                 nameRes = R.string.widget_battery,
                 descRes = R.string.desc_battery,
@@ -994,6 +995,11 @@ fun WidgetPickerDialog(
                 )
             )
         )
+        if (isDesktop) {
+            allTemplates.filter { it.nameRes != R.string.widget_stacker }
+        } else {
+            allTemplates
+        }
     }
 
     Dialog(
