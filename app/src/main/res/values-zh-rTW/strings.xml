@@ -572,6 +572,8 @@
     <string name="clock_9">9</string>
 
     <string name="no_compatible_icon_packs">未找到相容的線條類圖標包</string>
+    <string name="free_grid_title">自由網格模式</string>
+    <string name="free_grid_desc">允許圖標任意擺放與留白，關閉自動補位</string>
     <string name="calculator">計算機</string>
     <string name="unit_converter">單位換算</string>
     <string name="currency_converter">匯率換算</string>

@@ -11,4 +11,6 @@
     <string name="language_french">法语 (French)</string>
     <string name="language_system_default">系统默认</string>
     <string name="language_system_default_desc">使用设备设置。如果翻译不可用，则回退到英文。</string>
+    <string name="free_grid_title">自由网格模式</string>
+    <string name="free_grid_desc">允许图标任意摆放与留白，关闭自动补位</string>
 </resources>

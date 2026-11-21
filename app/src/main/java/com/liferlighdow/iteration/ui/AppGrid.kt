@@ -184,11 +184,20 @@ fun AppGrid(
         }
     }
 
-    val displayApps = remember(apps, confirmedHoveredSlotIdx, draggingUniqueId) {
+    val isFreeGridEnabled by viewModel.isFreeGridEnabled.collectAsState()
+
+    val displayApps = remember(apps, confirmedHoveredSlotIdx, draggingUniqueId, isFreeGridEnabled, columns, rows) {
         val list = apps.toMutableList()
+        val totalSlots = columns * rows
+        if (isFreeGridEnabled) {
+            while (list.size < totalSlots) {
+                list.add(AppModel(label = "", packageName = "", uniqueId = "empty_slot_${System.currentTimeMillis()}_${list.size}"))
+            }
+        }
+
         val fromIdx = list.indexOfFirst { it.uniqueId == draggingUniqueId }
 
-        if (confirmedHoveredSlotIdx != null) {
+        if (!isFreeGridEnabled && confirmedHoveredSlotIdx != null) {
             if (fromIdx != -1) {
                 val item = list.removeAt(fromIdx)
                 val targetIdx = confirmedHoveredSlotIdx.coerceIn(0, list.size)
@@ -202,11 +211,11 @@ fun AppGrid(
     }
 
     // 1. 預先計算佈局座標，避免在重組時重複運算
-    val layoutItems = remember(displayApps, columns, rows) {
+    val layoutItems = remember(displayApps, columns, rows, isFreeGridEnabled) {
         val grid = Array(rows) { BooleanArray(columns) { false } }
         val result = mutableListOf<Triple<AppModel, Int, Int>>() // app, row, col
         
-        displayApps.forEach { app ->
+        displayApps.forEachIndexed { index, app ->
             val w: Int
             val h: Int
             if (app.isWidget) {
@@ -236,35 +245,46 @@ fun AppGrid(
                 w = 1; h = 1
             }
 
-            var foundRow = -1
-            var foundCol = -1
-            outer@for (r in 0 until rows) {
-                for (c in 0 until columns) {
-                    var canFit = true
-                    if (r + h > rows || c + w > columns) {
-                        canFit = false
-                    } else {
-                        for (tr in r until r + h) {
-                            for (tc in c until c + w) {
-                                if (grid[tr][tc]) {
-                                    canFit = false
-                                    break
+            if (isFreeGridEnabled && !app.isWidget) {
+                val targetRow = (index / columns).coerceIn(0, rows - 1)
+                val targetCol = (index % columns).coerceIn(0, columns - 1)
+                for (tr in targetRow until (targetRow + h).coerceAtMost(rows)) {
+                    for (tc in targetCol until (targetCol + w).coerceAtMost(columns)) {
+                        grid[tr][tc] = true
+                    }
+                }
+                result.add(Triple(app, targetRow, targetCol))
+            } else {
+                var foundRow = -1
+                var foundCol = -1
+                outer@for (r in 0 until rows) {
+                    for (c in 0 until columns) {
+                        var canFit = true
+                        if (r + h > rows || c + w > columns) {
+                            canFit = false
+                        } else {
+                            for (tr in r until r + h) {
+                                for (tc in c until c + w) {
+                                    if (grid[tr][tc]) {
+                                        canFit = false
+                                        break
+                                    }
+                                }
+                                if (!canFit) break
+                            }
+                        }
+
+                        if (canFit) {
+                            foundRow = r
+                            foundCol = c
+                            for (tr in r until r + h) {
+                                for (tc in c until c + w) {
+                                    grid[tr][tc] = true
                                 }
                             }
-                            if (!canFit) break
+                            result.add(Triple(app, foundRow, foundCol))
+                            break@outer
                         }
-                    }
-
-                    if (canFit) {
-                        foundRow = r
-                        foundCol = c
-                        for (tr in r until r + h) {
-                            for (tc in c until c + w) {
-                                grid[tr][tc] = true
-                            }
-                        }
-                        result.add(Triple(app, foundRow, foundCol))
-                        break@outer
                     }
                 }
             }
@@ -505,7 +525,8 @@ fun AppGrid(
                     ) {
                         // 1. 內容層 (純渲染，不攔截手勢)
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            if (app.isWidget) {
+                            if (app.packageName.isNotEmpty() || app.isFolder || app.isWidget || app.isShortcut) {
+                                if (app.isWidget) {
                                 WidgetGridItem(
                                     app = app,
                                     draggingUniqueId = draggingUniqueId,
@@ -569,6 +590,9 @@ fun AppGrid(
                                 )
                             }
                         }
+                        }
+
+                        val isEmptyPlaceholder = app.packageName.isEmpty() && !app.isFolder && !app.isWidget && !app.isShortcut
 
                         // 2. 手勢層 (覆蓋在圖示/Widget上方)
                         Box(
@@ -577,67 +601,87 @@ fun AppGrid(
                                     if (app.isWidget) (cellWidth * w) else (cellWidth * 0.9f),
                                     if (app.isWidget) (cellHeight * h) else (iconSize + 8.dp)
                                 )
-                                .pointerInput(app.uniqueId) {
-                                    var totalDragDistance = 0f
-                                    var hasTriggeredDrag = false
-                                    detectNonBlockingLongPressDrag(
-                                        onDragStart = { _ ->
-                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            totalDragDistance = 0f
-                                            hasTriggeredDrag = false
-                                            viewModel.setActiveContextMenuId(app.uniqueId)
-                                            showContextMenu = true
-                                            // 尚未開始拖移前，讓 widget 留在原位播放長按動畫/選單
-                                        },
-                                        onDrag = { change, dragAmount ->
-                                            totalDragDistance += dragAmount.getDistance()
-
-                                            if (!hasTriggeredDrag && totalDragDistance > 10f) {
-                                                if (!viewModel.isEditMode.value) {
-                                                    viewModel.setEditMode(true)
+                                .let { mod ->
+                                    if (isEmptyPlaceholder) {
+                                        mod.pointerInput(Unit) {
+                                            detectTapGestures(
+                                                onLongPress = {
+                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                    onBackgroundLongPress()
+                                                },
+                                                onTap = {
+                                                    if (viewModel.isEditMode.value) {
+                                                        viewModel.setEditMode(false)
+                                                    } else {
+                                                        onBackgroundClick()
+                                                    }
                                                 }
+                                            )
+                                        }
+                                    } else {
+                                        mod.pointerInput(app.uniqueId) {
+                                            var totalDragDistance = 0f
+                                            var hasTriggeredDrag = false
+                                            detectNonBlockingLongPressDrag(
+                                                onDragStart = { _ ->
+                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                    totalDragDistance = 0f
+                                                    hasTriggeredDrag = false
+                                                    viewModel.setActiveContextMenuId(app.uniqueId)
+                                                    showContextMenu = true
+                                                    // 尚未開始拖移前，讓 widget 留在原位播放長按動畫/選單
+                                                },
+                                                onDrag = { change, dragAmount ->
+                                                    totalDragDistance += dragAmount.getDistance()
 
-                                                showContextMenu = false
-                                                viewModel.setActiveContextMenuId(null)
+                                                    if (!hasTriggeredDrag && totalDragDistance > 10f) {
+                                                        if (!viewModel.isEditMode.value) {
+                                                            viewModel.setEditMode(true)
+                                                        }
 
-                                                // 當手指開始真正拖移時，才將 widget 提起並設定初始抓取位置
-                                                currentOnDragStart(app, lastPosition.pos + change.position)
-                                                hasTriggeredDrag = true
-                                            }
+                                                        showContextMenu = false
+                                                        viewModel.setActiveContextMenuId(null)
 
-                                            if (hasTriggeredDrag) {
-                                                currentOnDrag(dragAmount)
-                                            }
-                                        },
-                                        onDragCancel = {
-                                            currentOnDragEnd()
-                                            hasTriggeredDrag = false
-                                            if (!showContextMenu) {
-                                                viewModel.setActiveContextMenuId(null)
-                                            }
-                                        },
-                                        onDragEnd = {
-                                            currentOnDragEnd()
-                                            hasTriggeredDrag = false
-                                            if (!showContextMenu) {
-                                                viewModel.setActiveContextMenuId(null)
+                                                        // 當手指開始真正拖移時，才將 widget 提起並設定初始抓取位置
+                                                        currentOnDragStart(app, lastPosition.pos + change.position)
+                                                        hasTriggeredDrag = true
+                                                    }
+
+                                                    if (hasTriggeredDrag) {
+                                                        currentOnDrag(dragAmount)
+                                                    }
+                                                },
+                                                onDragCancel = {
+                                                    currentOnDragEnd()
+                                                    hasTriggeredDrag = false
+                                                    if (!showContextMenu) {
+                                                        viewModel.setActiveContextMenuId(null)
+                                                    }
+                                                },
+                                                onDragEnd = {
+                                                    currentOnDragEnd()
+                                                    hasTriggeredDrag = false
+                                                    if (!showContextMenu) {
+                                                        viewModel.setActiveContextMenuId(null)
+                                                    }
+                                                }
+                                            )
+                                        }
+                                        .pointerInput(app.uniqueId, app.isWidget) {
+                                            if (!app.isWidget) {
+                                                detectTapGestures(
+                                                    onPress = {
+                                                        viewModel.setPressedItemId(app.uniqueId)
+                                                        try { awaitRelease() } finally { viewModel.setPressedItemId(null) }
+                                                    },
+                                                    onTap = {
+                                                        if ((!viewModel.isEditMode.value || app.isFolder) && !showContextMenu) {
+                                                            currentOnAppClick(app, lastPosition.pos)
+                                                        }
+                                                    }
+                                                )
                                             }
                                         }
-                                    )
-                                }
-                                .pointerInput(app.uniqueId, app.isWidget) {
-                                    if (!app.isWidget) {
-                                        detectTapGestures(
-                                            onPress = {
-                                                viewModel.setPressedItemId(app.uniqueId)
-                                                try { awaitRelease() } finally { viewModel.setPressedItemId(null) }
-                                            },
-                                            onTap = {
-                                                if (!viewModel.isEditMode.value && !showContextMenu) {
-                                                    currentOnAppClick(app, lastPosition.pos)
-                                                }
-                                            }
-                                        )
                                     }
                                 }
                         )
@@ -1316,13 +1360,32 @@ private fun AppGridItem(
             labelFontSize = labelFontSize,
             getIcon = { pkg -> viewModel.getIcon(pkg) },
             onDeleteClick = {
-                if (app.isPWA) {
-                    showNativeUninstallDialog(mContext, app.label) {
-                        viewModel.deletePWA(app)
+                showRemoveOrUninstallDialog(
+                    context = mContext,
+                    appName = app.label,
+                    onRemoveFromDesktop = {
+                        if (app.isPWA) {
+                            viewModel.deletePWA(app)
+                        } else {
+                            viewModel.removeAppFromHomeWithAnimation(app.uniqueId)
+                        }
+                    },
+                    onUninstall = {
+                        if (app.isPWA) {
+                            viewModel.deletePWA(app)
+                        } else {
+                            try {
+                                val intent = Intent(Intent.ACTION_DELETE).apply {
+                                    data = Uri.fromParts("package", app.packageName, null)
+                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                }
+                                mContext.startActivity(intent)
+                            } catch (e: Exception) {
+                                Log.e("Iteration", "Uninstall failed", e)
+                            }
+                        }
                     }
-                } else {
-                    viewModel.removeAppFromHomeWithAnimation(app.uniqueId)
-                }
+                )
             },
             notificationCountProvider = notificationCountProvider,
             modifier = Modifier.graphicsLayer {
@@ -1332,7 +1395,7 @@ private fun AppGridItem(
                 if (isEditMode && !isBeingDragged) rotationZ = rotation
             }
         )
-        
+
         val menuOptions by viewModel.homeMenuOptions.collectAsState()
         val isDesktopLocked by viewModel.isDesktopLocked.collectAsState()
         

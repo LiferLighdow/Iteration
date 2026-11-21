@@ -50,6 +50,7 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
     val showMinusOnePage by viewModel.showMinusOnePage.collectAsState()
     val showAppLibrary by viewModel.showAppLibrary.collectAsState()
     val isDesktopLocked by viewModel.isDesktopLocked.collectAsState()
+    val isFreeGridEnabled by viewModel.isFreeGridEnabled.collectAsState()
     val autoAddAppsToHome by viewModel.autoAddAppsToHome.collectAsState()
     val showStatusBar by viewModel.showStatusBar.collectAsState()
     val showNavigationBar by viewModel.showNavigationBar.collectAsState()
@@ -100,6 +101,13 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
                         supportingText = stringResource(R.string.lock_desktop_desc),
                         checked = isDesktopLocked,
                         onCheckedChange = { viewModel.setDesktopLocked(it) }
+                    )
+                    SettingSwitchItem(
+                        icon = Icons.Default.GridOn,
+                        title = stringResource(R.string.free_grid_title),
+                        supportingText = stringResource(R.string.free_grid_desc),
+                        checked = isFreeGridEnabled,
+                        onCheckedChange = { viewModel.setFreeGridEnabled(it) }
                     )
                     SettingSwitchItem(
                         icon = Icons.Default.AddBox,

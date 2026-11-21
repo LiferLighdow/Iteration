@@ -311,6 +311,7 @@ fun LauncherScreen(
     val slotBounds = remember { mutableStateMapOf<String, Rect>() }
     var rawHoveredKey by remember { mutableStateOf<String?>(null) }
     var confirmedHoveredKey by remember { mutableStateOf<String?>(null) }
+    var folderTargetKey by remember { mutableStateOf<String?>(null) }
     var confirmedIntent by remember { mutableStateOf(MainViewModel.DropType.REORDER) }
 
     LaunchedEffect(rawHoveredKey, confirmedIntent) {
@@ -491,23 +492,6 @@ fun LauncherScreen(
 
         LaunchedEffect(columns, rows) { viewModel.setPageSize(columns * rows) }
 
-        LaunchedEffect(draggingApp) {
-            if (draggingApp == null) return@LaunchedEffect
-            while (true) {
-                val finalX = touchPosition.x + dragOffset.x
-                val edgeWidth = with(density) { 45.dp.toPx() }
-
-                if (finalX < edgeWidth && pagerState.currentPage > desktopStartIndex) {
-                    pagerState.animateScrollToPage(pagerState.currentPage - 1)
-                    delay(800)
-                } else if (finalX > with(density) { maxWidth.toPx() } - edgeWidth && pagerState.currentPage < desktopStartIndex + desktopPageCount - 1) {
-                    pagerState.animateScrollToPage(pagerState.currentPage + 1)
-                    delay(800)
-                }
-                delay(100)
-            }
-        }
-
         // 1.1 桌布與圖案層 (固定在底層，永不隨手勢動畫隱藏)
         Box(
             modifier = Modifier
@@ -674,7 +658,12 @@ fun LauncherScreen(
                                 showWidgetLabel = showWidgetLabel,
                                 onAppClick = { app, pos ->
                                     if (isEditMode) {
-                                        if (!app.isFolder) appToEdit = app
+                                        if (app.isFolder) {
+                                            folderIconPosition = pos
+                                            folderToOpenId = app.uniqueId
+                                        } else {
+                                            appToEdit = app
+                                        }
                                         return@AppGrid
                                     }
                                     
@@ -726,10 +715,23 @@ fun LauncherScreen(
                                             maxOverlap = overlap; bestKey = key
                                         }
                                     }
-                                    rawHoveredKey = if (maxOverlap > 0.15f) bestKey else null
+
+                                    val isOccupied = if (bestKey != null) {
+                                        val parts = bestKey.split("-")
+                                        val tPageIdx = parts[0].toInt()
+                                        val tSlotIdx = parts[1].toInt()
+                                        val targetApp = pages.getOrNull(tPageIdx - desktopStartIndex)?.getOrNull(tSlotIdx)
+                                        targetApp != null && targetApp.uniqueId != draggingApp?.uniqueId && (targetApp.packageName.isNotEmpty() || targetApp.isFolder || targetApp.isWidget || targetApp.isShortcut)
+                                    } else false
+
+                                    if (maxOverlap > 0.4f && isOccupied) {
+                                        folderTargetKey = bestKey
+                                        rawHoveredKey = null
+                                    } else if (maxOverlap < 0.3f) {
+                                        folderTargetKey = null
+                                        rawHoveredKey = if (maxOverlap > 0.15f) bestKey else null
+                                    }
                                     
-                                    // 調整門檻：提高 FOLDER 的門檻，讓使用者必須更精確地「瞄準」
-                                    // 同時讓 REORDER 更難誤觸
                                     confirmedIntent = MainViewModel.DropType.REORDER
                                 },
                                 onDragEnd = {
@@ -749,34 +751,48 @@ fun LauncherScreen(
                                                 maxOverlap = overlap; bestKey = key
                                             }
                                         }
-                                        if (bestKey != null) {
-                                            val parts = bestKey!!.split("-")
+
+                                        val targetPageIndex = (pagerState.currentPage - desktopStartIndex).coerceIn(0, (desktopPageCount - 1).coerceAtLeast(0))
+
+                                        val targetKey = bestKey ?: run {
+                                            var nearestKey: String? = null
+                                            var minDistance = Float.MAX_VALUE
+                                            slotBounds.filter { it.key.startsWith("$targetPageIndex-") }.forEach { (key, rect) ->
+                                                val center = rect.center
+                                                val dist = (center - finalPos).getDistance()
+                                                if (dist < minDistance) {
+                                                    minDistance = dist
+                                                    nearestKey = key
+                                                }
+                                            }
+                                            nearestKey
+                                        }
+
+                                        if (targetKey != null) {
+                                            val parts = targetKey.split("-")
                                             val tPageIdx = parts[0].toInt()
                                             val tSlotIdx = parts[1].toInt()
                                             val targetApp =
                                                 pages.getOrNull(tPageIdx - desktopStartIndex)
                                                     ?.getOrNull(tSlotIdx)
+                                            val isFolderMerge = !draggingApp!!.isFolder && (maxOverlap > 0.4f || folderTargetKey == targetKey) && targetApp != null && targetApp.uniqueId != draggingApp!!.uniqueId && (targetApp.packageName.isNotEmpty() || targetApp.isFolder) && !targetApp.isWidget && !targetApp.isPWA
                                             viewModel.handleAppDrop(
                                                 fromId = draggingApp!!.uniqueId,
                                                 targetId = targetApp?.uniqueId,
                                                 targetPageIndex = tPageIdx - desktopStartIndex,
                                                 targetSlotIndex = tSlotIdx,
-                                                isFromLibrary = false
+                                                isFromLibrary = false,
+                                                isFolderMerge = isFolderMerge
                                             )
                                         } else {
                                             val currentPage = pagerState.currentPage
                                             if (showAppLibrary && currentPage == pageCount - 1) {
                                                 viewModel.removeAppFromHome(draggingApp!!.uniqueId)
                                             } else {
-                                                val targetIdx =
-                                                    (currentPage - desktopStartIndex).coerceIn(
-                                                        0,
-                                                        desktopPageCount - 1
-                                                    )
                                                 viewModel.handleAppDrop(
                                                     fromId = draggingApp!!.uniqueId,
                                                     targetId = null,
-                                                    targetPageIndex = targetIdx,
+                                                    targetPageIndex = targetPageIndex,
                                                     targetSlotIndex = null,
                                                     isFromLibrary = false
                                                 )

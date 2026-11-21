@@ -452,6 +452,38 @@ fun MainViewModel.setDesktopLocked(locked: Boolean) {
     prefs.edit().putBoolean("is_desktop_locked", locked).apply()
 }
 
+fun MainViewModel.setFreeGridEnabled(enabled: Boolean) {
+    _isFreeGridEnabled.value = enabled
+    prefs.edit().putBoolean("is_free_grid_enabled", enabled).apply()
+
+    val currentPages = _pages.value.map { it.toMutableList() }.toMutableList()
+    if (enabled) {
+        // 轉為自由網格模式：補滿固定插槽 (Placeholder)
+        val columns = 4
+        val rows = if (_desktopRows.value > 0) _desktopRows.value else (pageSize / 4).coerceAtLeast(6)
+        val totalSlots = columns * rows
+        
+        val freeGridPages = currentPages.map { page ->
+            val realItems = page.filter { it.packageName.isNotEmpty() || it.isFolder || it.isWidget || it.isShortcut }
+            val fixedPage = MutableList(totalSlots) { idx ->
+                AppModel(label = "", packageName = "", uniqueId = "empty_slot_${System.currentTimeMillis()}_$idx")
+            }
+            realItems.forEachIndexed { idx, item ->
+                if (idx < totalSlots) fixedPage[idx] = item
+            }
+            fixedPage
+        }.toMutableList()
+        _pages.value = freeGridPages
+    } else {
+        // 轉為自動補位模式：移除空白插槽並重新排版
+        val compactPages = currentPages.map { page ->
+            page.filter { it.packageName.isNotEmpty() || it.isFolder || it.isWidget || it.isShortcut }.toMutableList()
+        }.toMutableList()
+        reorganizeAllPages(compactPages)
+    }
+    saveLayout()
+}
+
 fun MainViewModel.setDynamicCalendarEnabled(enabled: Boolean) {
     _isDynamicCalendarEnabled.value = enabled
     prefs.edit().putBoolean("dynamic_calendar_enabled", enabled).apply()

@@ -574,6 +574,8 @@
     <string name="dominant_bg_note">Automatically extracts the dominant color from the original icon background.</string>
     <string name="icon_pack_lines_only_desc">Only showing line/outline-style icon packs</string>
     <string name="no_compatible_icon_packs">No compatible line-style icon packs found</string>
+    <string name="free_grid_title">Free Grid Mode</string>
+    <string name="free_grid_desc">Allow custom positioning and empty slots without auto-refilling</string>
 
     <string name="calculator">Calculator</string>
     <string name="unit_converter">Unit Converter</string>

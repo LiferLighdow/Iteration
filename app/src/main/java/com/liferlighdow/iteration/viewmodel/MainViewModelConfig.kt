@@ -229,6 +229,7 @@ fun MainViewModel.exportConfig(): String {
             iconCacheSize = _iconCacheSize.value,
             updateCheckInterval = _updateCheckInterval.value,
             isDesktopLocked = _isDesktopLocked.value,
+            isFreeGridEnabled = _isFreeGridEnabled.value,
             isMaterialYouEnabled = _isMaterialYouEnabled.value,
             pagerSnapThreshold = _pagerSnapThreshold.value,
             pagerDampingRatio = _pagerDampingRatio.value,
@@ -389,6 +390,7 @@ fun MainViewModel.applyConfig(config: LauncherConfig) {
         putInt("icon_cache_size", settings.iconCacheSize)
         putInt("update_check_interval", settings.updateCheckInterval)
         putBoolean("is_desktop_locked", settings.isDesktopLocked)
+        putBoolean("is_free_grid_enabled", settings.isFreeGridEnabled)
         putBoolean("material_you_enabled", settings.isMaterialYouEnabled)
         putFloat("pager_snap_threshold", settings.pagerSnapThreshold)
         putFloat("pager_damping_ratio", settings.pagerDampingRatio)
@@ -479,6 +481,7 @@ fun MainViewModel.applyConfig(config: LauncherConfig) {
     _iconCacheSize.value = settings.iconCacheSize
     _updateCheckInterval.value = settings.updateCheckInterval
     _isDesktopLocked.value = settings.isDesktopLocked
+    _isFreeGridEnabled.value = settings.isFreeGridEnabled
     _isMaterialYouEnabled.value = settings.isMaterialYouEnabled
     _pagerSnapThreshold.value = settings.pagerSnapThreshold
     _pagerDampingRatio.value = settings.pagerDampingRatio

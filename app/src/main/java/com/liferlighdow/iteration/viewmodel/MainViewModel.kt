@@ -261,6 +261,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
     internal val _isDesktopLocked = MutableStateFlow(prefs.getBoolean("is_desktop_locked", false))
     val isDesktopLocked = _isDesktopLocked.asStateFlow()
 
+    internal val _isFreeGridEnabled = MutableStateFlow(prefs.getBoolean("is_free_grid_enabled", false))
+    val isFreeGridEnabled = _isFreeGridEnabled.asStateFlow()
+
     internal val _password = MutableStateFlow(prefs.getString("password", null))
     val password = _password.asStateFlow()
 

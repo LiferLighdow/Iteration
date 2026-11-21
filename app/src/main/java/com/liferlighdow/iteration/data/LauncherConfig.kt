@@ -79,6 +79,7 @@ data class LauncherSettings(
     val iconCacheSize: Int = 250,
     val updateCheckInterval: Int = 24,
     val isDesktopLocked: Boolean = false,
+    val isFreeGridEnabled: Boolean = false,
     val isMaterialYouEnabled: Boolean = false,
     val pagerSnapThreshold: Float = 0.4f,
     val pagerDampingRatio: Float = 1.0f,

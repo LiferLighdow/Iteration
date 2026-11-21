@@ -32,3 +32,36 @@ fun showNativeUninstallDialog(
     dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(googleBlue)
     dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(googleBlue)
 }
+
+/**
+ * 顯示詢問是要從桌面上移除還是解除安裝對話框
+ */
+fun showRemoveOrUninstallDialog(
+    context: Context,
+    appName: String,
+    onRemoveFromDesktop: () -> Unit,
+    onUninstall: () -> Unit
+) {
+    val options = arrayOf(
+        context.getString(R.string.delete_home),
+        context.getString(R.string.menu_uninstall)
+    )
+    val dialog = AlertDialog.Builder(context, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        .setTitle(appName)
+        .setItems(options) { d, which ->
+            when (which) {
+                0 -> onRemoveFromDesktop()
+                1 -> onUninstall()
+            }
+            d.dismiss()
+        }
+        .setNegativeButton(context.getString(R.string.cancel)) { d, _ ->
+            d.dismiss()
+        }
+        .create()
+    
+    dialog.show()
+
+    val googleBlue = context.getColor(R.color.google_blue)
+    dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(googleBlue)
+}

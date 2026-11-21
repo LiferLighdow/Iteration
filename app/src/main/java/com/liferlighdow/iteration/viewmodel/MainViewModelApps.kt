@@ -443,22 +443,23 @@ internal fun executeCommandSilent(command: Array<String>): Boolean {
 }
 
 fun MainViewModel.removeAppFromHomeByPackage(packageName: String) {
+    val isFreeGrid = _isFreeGridEnabled.value
     val currentPages = _pages.value.map { page ->
-        page.map { item ->
+        page.mapIndexed { idx, item ->
             if (item.isFolder) {
                 val updatedFolderItems = item.folderItems.filter { it.packageName != packageName }
                 when {
-                    updatedFolderItems.isEmpty() -> null
+                    updatedFolderItems.isEmpty() -> if (isFreeGrid) AppModel(label = "", packageName = "", uniqueId = "empty_slot_${System.currentTimeMillis()}_$idx") else null
                     updatedFolderItems.size == 1 -> updatedFolderItems[0]
                     else -> item.copy(folderItems = updatedFolderItems)
                 }
             } else if (item.packageName == packageName) {
-                null
+                if (isFreeGrid) AppModel(label = "", packageName = "", uniqueId = "empty_slot_${System.currentTimeMillis()}_$idx") else null
             } else {
                 item
             }
-        }.filterNotNull()
-    }.filter { it.isNotEmpty() }
+        }.map { it ?: AppModel(label = "", packageName = "", uniqueId = "empty_slot_${System.currentTimeMillis()}") }
+    }.let { pages -> if (isFreeGrid) pages else pages.filter { it.isNotEmpty() } }
 
     _pages.value = currentPages
 
@@ -1205,6 +1206,8 @@ fun MainViewModel.loadApps() {
                                     }
                                     pageItems.add(savedApp)
                                 }
+                            } else if (savedApp.packageName.isEmpty()) {
+                                pageItems.add(savedApp)
                             } else {
                                 val baseApp = processedApps.find { it.uniqueId == savedApp.uniqueId }
                                     ?: processedApps.find { it.packageName == savedApp.packageName && it.userId == savedApp.userId }

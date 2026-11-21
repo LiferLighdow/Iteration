@@ -21,31 +21,134 @@ fun MainViewModel.handleAppDrop(
     targetId: String?,
     targetPageIndex: Int,
     targetSlotIndex: Int? = null,
-    isFromLibrary: Boolean
+    isFromLibrary: Boolean,
+    isFolderMerge: Boolean = false
 ) {
     // 使用備份作為基準，如果沒有備份則使用當前狀態
     val basePages = dragBackupPages ?: _pages.value
     val currentPages = basePages.map { it.toMutableList() }.toMutableList()
     dragBackupPages = null // 清除備份
-    
+
+    // 1. 自由網格模式 (Free Grid) 處理邏輯
+    if (_isFreeGridEnabled.value) {
+        val targetPageIdx = targetPageIndex.coerceIn(0, (currentPages.size - 1).coerceAtLeast(0))
+        if (currentPages.isEmpty()) currentPages.add(mutableListOf())
+        val page = currentPages[targetPageIdx]
+
+        val columns = 4
+        val rows = if (_desktopRows.value > 0) _desktopRows.value else (pageSize / 4).coerceAtLeast(6)
+        val totalSlots = columns * rows
+        while (page.size < totalSlots) {
+            page.add(AppModel(label = "", packageName = "", uniqueId = "empty_slot_${System.currentTimeMillis()}_${page.size}"))
+        }
+
+        if (isFromLibrary) {
+            val baseApp = _allApps.value.find { it.uniqueId == fromId } ?: return
+            if (baseApp.isPrivate) return
+            val item = baseApp.copy(uniqueId = "${fromId}@${System.currentTimeMillis()}")
+            val dropIdx = targetSlotIndex?.coerceIn(0, page.size - 1) ?: page.indexOfFirst { it.packageName.isEmpty() && !it.isFolder && !it.isWidget }
+            if (dropIdx != -1 && dropIdx < page.size) {
+                page[dropIdx] = item
+            } else {
+                page.add(item)
+            }
+        } else {
+            var fromPageIdx = -1
+            var fromSlotIdx = -1
+            var movingItem: AppModel? = null
+
+            outer@ for (pIdx in currentPages.indices) {
+                val p = currentPages[pIdx]
+                val topIdx = p.indexOfFirst { it.uniqueId == fromId }
+                if (topIdx != -1) {
+                    fromPageIdx = pIdx
+                    fromSlotIdx = topIdx
+                    movingItem = p[topIdx]
+                    break@outer
+                }
+                for (i in p.indices) {
+                    val folder = p[i]
+                    if (folder.isFolder) {
+                        val fIdx = folder.folderItems.indexOfFirst { it.uniqueId == fromId }
+                        if (fIdx != -1) {
+                            val mutableFolderItems = folder.folderItems.toMutableList()
+                            movingItem = mutableFolderItems.removeAt(fIdx)
+                            if (mutableFolderItems.isEmpty()) {
+                                p[i] = AppModel(label = "", packageName = "", uniqueId = "empty_slot_${System.currentTimeMillis()}_$i")
+                            } else if (mutableFolderItems.size == 1) {
+                                p[i] = mutableFolderItems[0]
+                            } else {
+                                p[i] = folder.copy(folderItems = mutableFolderItems)
+                            }
+                            break@outer
+                        }
+                    }
+                }
+            }
+
+            val item = movingItem ?: return
+            val dropSlotIdx = targetSlotIndex?.coerceIn(0, page.size - 1)
+                ?: if (fromPageIdx == targetPageIdx && fromSlotIdx != -1) {
+                    fromSlotIdx
+                } else {
+                    val emptyIdx = page.indexOfFirst { it.packageName.isEmpty() && !it.isFolder && !it.isWidget }
+                    if (emptyIdx != -1) emptyIdx else 0
+                }
+
+            if (isFolderMerge) {
+                val targetApp = page[dropSlotIdx]
+                if (targetApp.packageName.isNotEmpty() || targetApp.isFolder) {
+                    if (targetApp.isFolder) {
+                        page[dropSlotIdx] = targetApp.copy(folderItems = targetApp.folderItems + item)
+                    } else if (!targetApp.isWidget && !targetApp.isPWA) {
+                        val defaultFolderName = getApplication<Application>().getString(R.string.folder_default_name)
+                        val newFolder = AppModel(
+                            label = defaultFolderName,
+                            isFolder = true,
+                            folderItems = listOf(targetApp, item),
+                            uniqueId = "folder_${System.currentTimeMillis()}"
+                        )
+                        page[dropSlotIdx] = newFolder
+                    }
+                    if (fromPageIdx != -1 && fromSlotIdx != -1) {
+                        currentPages[fromPageIdx][fromSlotIdx] = AppModel(label = "", packageName = "", uniqueId = "empty_slot_${System.currentTimeMillis()}_$fromSlotIdx")
+                    }
+                }
+            } else {
+                if (fromPageIdx != -1 && fromSlotIdx != -1) {
+                    val targetApp = page[dropSlotIdx]
+                    currentPages[fromPageIdx][fromSlotIdx] = targetApp
+                    page[dropSlotIdx] = item
+                } else {
+                    page[dropSlotIdx] = item
+                }
+            }
+        }
+
+        _pages.value = currentPages
+        saveLayout()
+        return
+    }
+
+    // 2. 自動補位模式 (Auto-Refill Mode) 處理邏輯
+    val cleanedPages = currentPages.map { page ->
+        page.filter { it.packageName.isNotEmpty() || it.isFolder || it.isWidget || it.isShortcut }.toMutableList()
+    }.toMutableList()
+
     var movingItem: AppModel? = null
 
-    // 1. 取得移動物件 (包含從資料夾內抓取)
     if (isFromLibrary) {
         val baseApp = _allApps.value.find { it.uniqueId == fromId }
-        if (baseApp?.isPrivate == true) return // 禁止從庫中將私密應用拖放至桌面
+        if (baseApp?.isPrivate == true) return
         movingItem = baseApp?.copy(uniqueId = "${fromId}@${System.currentTimeMillis()}")
     } else {
-        // 遞迴尋找：檢查頁面與資料夾
-        outer@for (pIdx in currentPages.indices) {
-            val page = currentPages[pIdx]
-            // 檢查頂層
+        outer@ for (pIdx in cleanedPages.indices) {
+            val page = cleanedPages[pIdx]
             val topIdx = page.indexOfFirst { it.uniqueId == fromId }
             if (topIdx != -1) {
                 movingItem = page.removeAt(topIdx)
                 break@outer
             }
-            // 檢查資料夾內
             for (i in page.indices) {
                 val item = page[i]
                 if (item.isFolder) {
@@ -53,11 +156,10 @@ fun MainViewModel.handleAppDrop(
                     if (fIdx != -1) {
                         val mutableFolderItems = item.folderItems.toMutableList()
                         movingItem = mutableFolderItems.removeAt(fIdx)
-                        // 更新資料夾
                         if (mutableFolderItems.isEmpty()) {
                             page.removeAt(i)
                         } else if (mutableFolderItems.size == 1) {
-                            page[i] = mutableFolderItems[0] // 剩一個則拆解資料夾
+                            page[i] = mutableFolderItems[0]
                         } else {
                             page[i] = item.copy(folderItems = mutableFolderItems)
                         }
@@ -67,22 +169,40 @@ fun MainViewModel.handleAppDrop(
             }
         }
     }
-    
+
     val item = movingItem ?: return
 
-    // 2. 處理落點
     var success = false
-    
-    // 優先嘗試使用目標插槽索引進行插入，這比 ID 查找更精確 (尤其是回到原位時)
-    if (targetSlotIndex != null && targetPageIndex in currentPages.indices) {
-        val page = currentPages[targetPageIndex]
+
+    if (isFolderMerge && targetSlotIndex != null && targetPageIndex in cleanedPages.indices) {
+        val page = cleanedPages[targetPageIndex]
+        if (targetSlotIndex in page.indices) {
+            val targetApp = page[targetSlotIndex]
+            if (targetApp.isFolder) {
+                page[targetSlotIndex] = targetApp.copy(folderItems = targetApp.folderItems + item)
+                success = true
+            } else if (!targetApp.isWidget && !targetApp.isPWA) {
+                val defaultFolderName = getApplication<Application>().getString(R.string.folder_default_name)
+                val newFolder = AppModel(
+                    label = defaultFolderName,
+                    isFolder = true,
+                    folderItems = listOf(targetApp, item),
+                    uniqueId = "folder_${System.currentTimeMillis()}"
+                )
+                page[targetSlotIndex] = newFolder
+                success = true
+            }
+        }
+    }
+
+    if (!success && targetSlotIndex != null && targetPageIndex in cleanedPages.indices) {
+        val page = cleanedPages[targetPageIndex]
         page.add(targetSlotIndex.coerceIn(0, page.size), item)
         success = true
-    } 
-    
-    // 如果插槽插入失敗，則嘗試按 ID 查找 (作為保險)
+    }
+
     if (!success && targetId != null) {
-        for (page in currentPages) {
+        for (page in cleanedPages) {
             val tIdx = page.indexOfFirst { it.uniqueId == targetId }
             if (tIdx != -1) {
                 page.add(tIdx, item)
@@ -91,10 +211,10 @@ fun MainViewModel.handleAppDrop(
             }
         }
     }
-    
-    if (!success) insertAtPage(currentPages, targetPageIndex, item)
 
-    reorganizeAllPages(currentPages)
+    if (!success) insertAtPage(cleanedPages, targetPageIndex, item)
+
+    reorganizeAllPages(cleanedPages)
 }
 
 fun MainViewModel.addAppToHome(uniqueId: String) {
@@ -283,6 +403,21 @@ fun MainViewModel.cleanupEmptyPages(exceptPageIndex: Int) {
 }
 
 fun MainViewModel.reorganizeAllPages(pages: MutableList<MutableList<AppModel>>) {
+    if (_isFreeGridEnabled.value) {
+        val columns = 4
+        val rows = if (_desktopRows.value > 0) _desktopRows.value else (pageSize / 4).coerceAtLeast(6)
+        val totalSlots = columns * rows
+        val paddedPages = pages.map { page ->
+            val mutablePage = page.toMutableList()
+            while (mutablePage.size < totalSlots) {
+                mutablePage.add(AppModel(label = "", packageName = "", uniqueId = "empty_slot_${System.currentTimeMillis()}_${mutablePage.size}"))
+            }
+            mutablePage
+        }.toMutableList()
+        _pages.value = paddedPages
+        saveLayout()
+        return
+    }
     val result = mutableListOf<MutableList<AppModel>>()
     var overflowItems = mutableListOf<AppModel>()
     val columns = 4
@@ -452,7 +587,11 @@ fun MainViewModel.removeAppFromHome(uniqueId: String) {
     for (page in currentPages) {
         val index = page.indexOfFirst { it.uniqueId == uniqueId }
         if (index != -1) {
-            page.removeAt(index)
+            if (_isFreeGridEnabled.value) {
+                page[index] = AppModel(label = "", packageName = "", uniqueId = "empty_slot_${System.currentTimeMillis()}_$index")
+            } else {
+                page.removeAt(index)
+            }
             removed = true
             break
         }
