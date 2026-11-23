@@ -574,6 +574,9 @@
     <string name="no_compatible_icon_packs">未找到相容的線條類圖標包</string>
     <string name="free_grid_title">自由網格模式</string>
     <string name="free_grid_desc">允許圖標任意擺放與留白，關閉自動補位</string>
+    <string name="remove_or_uninstall_msg">請選擇要對此應用執行的動作：</string>
+    <string name="delete_home_desc">從主畫面移除，保留在應用程式庫中</string>
+    <string name="uninstall_desc">從裝置中永久解除安裝此應用</string>
     <string name="calculator">計算機</string>
     <string name="unit_converter">單位換算</string>
     <string name="currency_converter">匯率換算</string>

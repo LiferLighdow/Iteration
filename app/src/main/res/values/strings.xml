@@ -576,6 +576,9 @@
     <string name="no_compatible_icon_packs">No compatible line-style icon packs found</string>
     <string name="free_grid_title">Free Grid Mode</string>
     <string name="free_grid_desc">Allow custom positioning and empty slots without auto-refilling</string>
+    <string name="remove_or_uninstall_msg" translatable="false">Choose an action for this application:</string>
+    <string name="delete_home_desc" translatable="false">Remove from home screen, keep in app library</string>
+    <string name="uninstall_desc" translatable="false">Permanently uninstall app from device</string>
 
     <string name="calculator">Calculator</string>
     <string name="unit_converter">Unit Converter</string>

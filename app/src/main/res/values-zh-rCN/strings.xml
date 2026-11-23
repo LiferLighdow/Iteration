@@ -13,4 +13,7 @@
     <string name="language_system_default_desc">使用设备设置。如果翻译不可用，则回退到英文。</string>
     <string name="free_grid_title">自由网格模式</string>
     <string name="free_grid_desc">允许图标任意摆放与留白，关闭自动补位</string>
+    <string name="remove_or_uninstall_msg">请选择要对此应用执行的操作：</string>
+    <string name="delete_home_desc">从主屏幕移除，保留在应用库中</string>
+    <string name="uninstall_desc">从设备中永久卸载此应用</string>
 </resources>

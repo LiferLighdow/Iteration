@@ -172,6 +172,7 @@ fun AppGrid(
     var photoToAdjust by remember { mutableStateOf<WidgetModel?>(null) }
     var photoToPick by remember { mutableStateOf<WidgetModel?>(null) }
     var showCropDialogByUri by remember { mutableStateOf<Uri?>(null) }
+    var appToRemoveOrUninstall by remember { mutableStateOf<AppModel?>(null) }
 
     val photoPickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.GetContent()
@@ -586,7 +587,8 @@ fun AppGrid(
                                         }
                                     },
                                     viewModel = viewModel,
-                                    showLabel = showAppLabel
+                                    showLabel = showAppLabel,
+                                    onDeleteClick = { targetApp -> appToRemoveOrUninstall = targetApp }
                                 )
                             }
                         }
@@ -790,6 +792,36 @@ fun AppGrid(
                 viewModel.updatePhotoWidgetUri(photoToPick!!.id, showCropDialogByUri.toString())
                 showCropDialogByUri = null
                 photoToPick = null
+            }
+        )
+    }
+
+    if (appToRemoveOrUninstall != null) {
+        val targetApp = appToRemoveOrUninstall!!
+        RemoveOrUninstallDialog(
+            appName = targetApp.label,
+            onDismiss = { appToRemoveOrUninstall = null },
+            onRemoveFromDesktop = {
+                if (targetApp.isPWA) {
+                    viewModel.deletePWA(targetApp)
+                } else {
+                    viewModel.removeAppFromHomeWithAnimation(targetApp.uniqueId)
+                }
+            },
+            onUninstall = {
+                if (targetApp.isPWA) {
+                    viewModel.deletePWA(targetApp)
+                } else {
+                    try {
+                        val intent = Intent(Intent.ACTION_DELETE).apply {
+                            data = Uri.fromParts("package", targetApp.packageName, null)
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        }
+                        mContext.startActivity(intent)
+                    } catch (e: Exception) {
+                        Log.e("Iteration", "Uninstall failed", e)
+                    }
+                }
             }
         )
     }
@@ -1301,6 +1333,7 @@ private fun AppGridItem(
     onContextMenuDismiss: () -> Unit,
     onAppClick: () -> Unit,
     onEditApp: () -> Unit,
+    onDeleteClick: (AppModel) -> Unit,
     notificationCountProvider: () -> Int,
     viewModel: MainViewModel,
     showLabel: Boolean = true
@@ -1360,32 +1393,7 @@ private fun AppGridItem(
             labelFontSize = labelFontSize,
             getIcon = { pkg -> viewModel.getIcon(pkg) },
             onDeleteClick = {
-                showRemoveOrUninstallDialog(
-                    context = mContext,
-                    appName = app.label,
-                    onRemoveFromDesktop = {
-                        if (app.isPWA) {
-                            viewModel.deletePWA(app)
-                        } else {
-                            viewModel.removeAppFromHomeWithAnimation(app.uniqueId)
-                        }
-                    },
-                    onUninstall = {
-                        if (app.isPWA) {
-                            viewModel.deletePWA(app)
-                        } else {
-                            try {
-                                val intent = Intent(Intent.ACTION_DELETE).apply {
-                                    data = Uri.fromParts("package", app.packageName, null)
-                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                }
-                                mContext.startActivity(intent)
-                            } catch (e: Exception) {
-                                Log.e("Iteration", "Uninstall failed", e)
-                            }
-                        }
-                    }
-                )
+                onDeleteClick(app)
             },
             notificationCountProvider = notificationCountProvider,
             modifier = Modifier.graphicsLayer {

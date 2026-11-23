@@ -443,7 +443,7 @@ fun LauncherScreen(
                 if (isAtRightEdge || isAtLeftEdge) {
                     if (lastEdgeTriggerTime == 0L) {
                         lastEdgeTriggerTime = currentTime
-                    } else if (currentTime - lastEdgeTriggerTime > 400) {
+                    } else if (currentTime - lastEdgeTriggerTime > 180) {
                         // 觸發翻頁或新增
                         val currentPage = pagerState.currentPage
                         var didSwitch = false
@@ -752,12 +752,11 @@ fun LauncherScreen(
                                             }
                                         }
 
-                                        val targetPageIndex = (pagerState.currentPage - desktopStartIndex).coerceIn(0, (desktopPageCount - 1).coerceAtLeast(0))
-
+                                        val currentAbsPage = pagerState.currentPage
                                         val targetKey = bestKey ?: run {
                                             var nearestKey: String? = null
                                             var minDistance = Float.MAX_VALUE
-                                            slotBounds.filter { it.key.startsWith("$targetPageIndex-") }.forEach { (key, rect) ->
+                                            slotBounds.filter { it.key.startsWith("$currentAbsPage-") }.forEach { (key, rect) ->
                                                 val center = rect.center
                                                 val dist = (center - finalPos).getDistance()
                                                 if (dist < minDistance) {
@@ -792,7 +791,7 @@ fun LauncherScreen(
                                                 viewModel.handleAppDrop(
                                                     fromId = draggingApp!!.uniqueId,
                                                     targetId = null,
-                                                    targetPageIndex = targetPageIndex,
+                                                    targetPageIndex = (pagerState.currentPage - desktopStartIndex).coerceIn(0, (desktopPageCount - 1).coerceAtLeast(0)),
                                                     targetSlotIndex = null,
                                                     isFromLibrary = false
                                                 )

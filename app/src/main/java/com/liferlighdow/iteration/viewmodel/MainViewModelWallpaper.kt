@@ -106,7 +106,8 @@ fun MainViewModel.loadWallpaperPresets() {
             WallpaperPreset(name = "Builtin 2", folderPath = "", previewPath = null, wallpaperPath = "", originalPath = null, config = null, resId = R.drawable.ic_builtin_wallpaper2),
             WallpaperPreset(name = "Builtin 3", folderPath = "", previewPath = null, wallpaperPath = "", originalPath = null, config = null, resId = R.drawable.ic_builtin_wallpaper3),
             WallpaperPreset(name = "Builtin 4", folderPath = "", previewPath = null, wallpaperPath = "", originalPath = null, config = null, resId = R.drawable.ic_builtin_wallpaper4),
-            WallpaperPreset(name = "Builtin 5", folderPath = "", previewPath = null, wallpaperPath = "", originalPath = null, config = null, resId = R.drawable.ic_builtin_wallpaper5)
+            WallpaperPreset(name = "Builtin 5", folderPath = "", previewPath = null, wallpaperPath = "", originalPath = null, config = null, resId = R.drawable.ic_builtin_wallpaper5),
+            WallpaperPreset(name = "Builtin 6", folderPath = "", previewPath = null, wallpaperPath = "", originalPath = null, config = null, resId = R.drawable.ic_builtin_wallpaper6)
         )
 
         val userPresets = if (wallpaperDir.exists()) {

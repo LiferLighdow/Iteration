@@ -2,6 +2,18 @@ package com.liferlighdow.iteration.ui
 
 import android.app.AlertDialog
 import android.content.Context
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import com.liferlighdow.iteration.R
 
 /**
@@ -34,34 +46,113 @@ fun showNativeUninstallDialog(
 }
 
 /**
- * 顯示詢問是要從桌面上移除還是解除安裝對話框
+ * Material 3 設計的精美對話框：詢問從桌面上移除或是解除安裝
  */
-fun showRemoveOrUninstallDialog(
-    context: Context,
+@Composable
+fun RemoveOrUninstallDialog(
     appName: String,
+    onDismiss: () -> Unit,
     onRemoveFromDesktop: () -> Unit,
     onUninstall: () -> Unit
 ) {
-    val options = arrayOf(
-        context.getString(R.string.delete_home),
-        context.getString(R.string.menu_uninstall)
-    )
-    val dialog = AlertDialog.Builder(context, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-        .setTitle(appName)
-        .setItems(options) { d, which ->
-            when (which) {
-                0 -> onRemoveFromDesktop()
-                1 -> onUninstall()
-            }
-            d.dismiss()
-        }
-        .setNegativeButton(context.getString(R.string.cancel)) { d, _ ->
-            d.dismiss()
-        }
-        .create()
-    
-    dialog.show()
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = appName,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = stringResource(R.string.remove_or_uninstall_msg),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(16.dp))
 
-    val googleBlue = context.getColor(R.color.google_blue)
-    dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(googleBlue)
+                // Option 1: Remove from Desktop
+                Surface(
+                    onClick = {
+                        onRemoveFromDesktop()
+                        onDismiss()
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Home,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text(
+                                text = stringResource(R.string.delete_home),
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = stringResource(R.string.delete_home_desc),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Option 2: Uninstall
+                Surface(
+                    onClick = {
+                        onUninstall()
+                        onDismiss()
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DeleteForever,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text(
+                                text = stringResource(R.string.menu_uninstall),
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                            Text(
+                                text = stringResource(R.string.uninstall_desc),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+        shape = RoundedCornerShape(24.dp),
+        containerColor = MaterialTheme.colorScheme.surface
+    )
 }
