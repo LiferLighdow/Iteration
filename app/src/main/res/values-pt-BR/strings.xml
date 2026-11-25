@@ -515,6 +515,14 @@
     <string name="no_events_today">No events today</string>
     <string name="search_hint_general">Search&#8230;</string>
     <string name="failed_to_load_image">Failed to load image</string>
+    <string name="builtin_wallpaper_readonly">Built-in preset wallpaper (read-only)</string>
+    <string name="wallpaper_color_overlay">Color Overlay</string>
+    <string name="wallpaper_delete_color_overlay">Remove Color Overlay</string>
+    <string name="app_menu_title">App Menu</string>
+    <string name="app_menu_desc">Select options to display in app menu</string>
+    <string name="app_menu_at_least_one">At least one option must be selected</string>
+    <string name="desktop_menu_title">Desktop Menu</string>
+    <string name="desktop_menu_desc">Select options to display in desktop long-press menu</string>
     <string name="settings_language">Language</string>
     <string name="language_english">English</string>
     <string name="language_chinese_tw">Chinese (Traditional)</string>
