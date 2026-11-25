@@ -524,6 +524,15 @@ fun LauncherScreen(
                 }
             }
 
+            val wallpaperColorOverlay by viewModel.wallpaperColorOverlay.collectAsState()
+            if (wallpaperColorOverlay != 0) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(wallpaperColorOverlay))
+                )
+            }
+
             // 中層：Lite / Balance 模式即時渲染的 Emoji 陣列
             if (emojiWallpaperText.isNotEmpty()) {
                 val emojis = remember(emojiWallpaperText) { parseEmojis(emojiWallpaperText) }

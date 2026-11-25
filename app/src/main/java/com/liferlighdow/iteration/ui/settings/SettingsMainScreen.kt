@@ -48,6 +48,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun SettingsMainScreen(
+    listState: androidx.compose.foundation.lazy.LazyListState = androidx.compose.foundation.lazy.rememberLazyListState(),
     onBack: () -> Unit,
     onNavigateToHideApps: () -> Unit,
     onNavigateToRenameApps: () -> Unit,
@@ -231,6 +232,7 @@ fun SettingsMainScreen(
         }
     ) { innerPadding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize(),

@@ -12,8 +12,8 @@ android {
         applicationId = "com.liferlighdow.iteration"
         minSdk = 23
         targetSdk = 37
-        versionCode = 115
-        versionName = "6.7.1"
+        versionCode = 116
+        versionName = "6.7.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -51,6 +51,7 @@ android {
     }
     lint {
         disable += "NullSafeMutableLiveData"
+        disable += "MissingTranslation"
         abortOnError = false
         checkReleaseBuilds = false
     }

@@ -34,35 +34,42 @@ fun LauncherMenu(
 ) {
     if (isVisible) {
         val isDesktopLocked by viewModel.isDesktopLocked.collectAsState()
+        val desktopMenuOptions by viewModel.desktopMenuOptions.collectAsState()
         ModalBottomSheet(onDismissRequest = onDismiss) {
             Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                 if (!isDesktopLocked) {
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.menu_add_widget)) },
-                        leadingContent = { Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                        modifier = Modifier.clickable {
-                            onAddWidgetClick()
-                            onDismiss()
-                        }
-                    )
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.menu_add_shortcut)) },
-                        leadingContent = { Icon(Icons.Default.Link, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                        modifier = Modifier.clickable {
-                            onAddShortcutClick()
-                            onDismiss()
-                        }
-                    )
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.menu_new_folder)) },
-                        leadingContent = { Icon(Icons.Default.CreateNewFolder, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                        modifier = Modifier.clickable {
-                            onCreateFolderClick()
-                            onDismiss()
-                        }
-                    )
+                    if (desktopMenuOptions.contains("add_widget")) {
+                        ListItem(
+                            headlineContent = { Text(stringResource(R.string.menu_add_widget)) },
+                            leadingContent = { Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                            modifier = Modifier.clickable {
+                                onAddWidgetClick()
+                                onDismiss()
+                            }
+                        )
+                    }
+                    if (desktopMenuOptions.contains("add_shortcut")) {
+                        ListItem(
+                            headlineContent = { Text(stringResource(R.string.menu_add_shortcut)) },
+                            leadingContent = { Icon(Icons.Default.Link, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                            modifier = Modifier.clickable {
+                                onAddShortcutClick()
+                                onDismiss()
+                            }
+                        )
+                    }
+                    if (desktopMenuOptions.contains("new_folder")) {
+                        ListItem(
+                            headlineContent = { Text(stringResource(R.string.menu_new_folder)) },
+                            leadingContent = { Icon(Icons.Default.CreateNewFolder, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                            modifier = Modifier.clickable {
+                                onCreateFolderClick()
+                                onDismiss()
+                            }
+                        )
+                    }
 
-                    if (isMultiplePages) {
+                    if (isMultiplePages && desktopMenuOptions.contains("delete_page")) {
                         ListItem(
                             headlineContent = { Text(stringResource(R.string.menu_delete_page), color = MaterialTheme.colorScheme.error) },
                             leadingContent = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
@@ -74,16 +81,18 @@ fun LauncherMenu(
                     }
                 }
 
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.menu_wallpaper)) },
-                    leadingContent = { Icon(Icons.Default.Image, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                    modifier = Modifier.clickable {
-                        onWallpaperClick()
-                        onDismiss()
-                    }
-                )
+                if (desktopMenuOptions.contains("wallpaper")) {
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.menu_wallpaper)) },
+                        leadingContent = { Icon(Icons.Default.Image, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                        modifier = Modifier.clickable {
+                            onWallpaperClick()
+                            onDismiss()
+                        }
+                    )
+                }
 
-                if (!isDefaultLauncher && !isDesktopLocked) {
+                if (!isDefaultLauncher && !isDesktopLocked && desktopMenuOptions.contains("set_default")) {
                     ListItem(
                         headlineContent = { Text(stringResource(R.string.menu_set_default)) },
                         leadingContent = { Icon(Icons.Default.Home, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
@@ -94,14 +103,16 @@ fun LauncherMenu(
                     )
                 }
 
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.menu_launcher_settings)) },
-                    leadingContent = { Icon(Icons.Default.Settings, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                    modifier = Modifier.clickable {
-                        onSettingsClick()
-                        onDismiss()
-                    }
-                )
+                if (desktopMenuOptions.contains("settings")) {
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.menu_launcher_settings)) },
+                        leadingContent = { Icon(Icons.Default.Settings, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                        modifier = Modifier.clickable {
+                            onSettingsClick()
+                            onDismiss()
+                        }
+                    )
+                }
                 Spacer(modifier = Modifier.height(32.dp))
             }
         }

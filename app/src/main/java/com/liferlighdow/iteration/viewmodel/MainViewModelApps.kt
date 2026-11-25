@@ -858,6 +858,7 @@ fun MainViewModel.loadSettings() {
     _twoFingerSwipeDownApp.value = prefs.getString("two_finger_swipe_down_app", "") ?: ""
 
     _homeMenuOptions.value = prefs.getStringSet("home_menu_options", setOf("delete_home", "uninstall", "shortcuts", "freeze")) ?: setOf("delete_home", "uninstall", "shortcuts", "freeze")
+    _desktopMenuOptions.value = prefs.getStringSet("desktop_menu_options", setOf("add_widget", "add_shortcut", "new_folder", "delete_page", "wallpaper", "set_default", "settings")) ?: setOf("add_widget", "add_shortcut", "new_folder", "delete_page", "wallpaper", "set_default", "settings")
     _favoritePackages.value = prefs.getStringSet("favorite_packages", emptySet()) ?: emptySet()
 }
 

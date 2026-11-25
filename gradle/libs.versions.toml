@@ -17,7 +17,7 @@ media3 = "1.5.1"
 materialColorUtilities = "4.0.1"
 shizuku = "13.1.5"
 dhizuku = "2.6.0"
-backdrop = "2.0.0"
+backdrop = "2.0.1"
 work = "2.11.2"
 
 [libraries]

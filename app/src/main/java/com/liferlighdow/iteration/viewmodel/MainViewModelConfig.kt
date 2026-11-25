@@ -238,6 +238,7 @@ fun MainViewModel.exportConfig(): String {
             customWallpaperColor = _customWallpaperColor.value,
             favoriteWallpaperColors = _favoriteWallpaperColors.value,
             homeMenuOptions = _homeMenuOptions.value.filterNotNull().toSet(),
+            desktopMenuOptions = _desktopMenuOptions.value.filterNotNull().toSet(),
             currentWallpaperPresetName = _currentWallpaperPresetName.value,
             glassParams = GlassParams(
                 blur = _liquidGlassBlur.value,
@@ -450,6 +451,7 @@ fun MainViewModel.applyConfig(config: LauncherConfig) {
         putStringSet("favorite_packages", config.favorites)
         putStringSet("excluded_themed_packages", config.excludedThemed)
         putStringSet("home_menu_options", settings.homeMenuOptions)
+        putStringSet("desktop_menu_options", settings.desktopMenuOptions)
         putStringSet("hidden_apps", config.hiddenApps)
     }.apply()
 
@@ -529,6 +531,7 @@ fun MainViewModel.applyConfig(config: LauncherConfig) {
     _favoritePackages.value = config.favorites
     _excludedThemedPackages.value = config.excludedThemed
     _homeMenuOptions.value = settings.homeMenuOptions
+    _desktopMenuOptions.value = settings.desktopMenuOptions
     
     hiddenPackages.clear()
     hiddenPackages.addAll(config.hiddenApps)

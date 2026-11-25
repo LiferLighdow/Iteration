@@ -429,6 +429,13 @@ fun MainViewModel.setHomeMenuOption(option: String, enabled: Boolean) {
     prefs.edit().putStringSet("home_menu_options", current).apply()
 }
 
+fun MainViewModel.setHomeMenuOptions(options: Set<String>) {
+    if (options.isNotEmpty()) {
+        _homeMenuOptions.value = options
+        prefs.edit().putStringSet("home_menu_options", options).apply()
+    }
+}
+
 fun MainViewModel.toggleFavoriteApp(packageName: String) {
     val current = _favoritePackages.value.toMutableSet()
     if (current.contains(packageName)) current.remove(packageName)

@@ -429,6 +429,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
     )
     val homeMenuOptions = _homeMenuOptions.asStateFlow()
 
+    internal val _desktopMenuOptions = MutableStateFlow(
+        prefs.getStringSet("desktop_menu_options", setOf("add_widget", "add_shortcut", "new_folder", "delete_page", "wallpaper", "set_default", "settings"))
+            ?: setOf("add_widget", "add_shortcut", "new_folder", "delete_page", "wallpaper", "set_default", "settings")
+    )
+    val desktopMenuOptions = _desktopMenuOptions.asStateFlow()
+
+    fun setDesktopMenuOptions(options: Set<String>) {
+        if (options.isNotEmpty()) {
+            _desktopMenuOptions.value = options
+            prefs.edit().putStringSet("desktop_menu_options", options).apply()
+        }
+    }
+
     internal val _favoritePackages =
         MutableStateFlow(prefs.getStringSet("favorite_packages", emptySet()) ?: emptySet())
     val favoritePackages = _favoritePackages.asStateFlow()
@@ -784,6 +797,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application), S
 
     internal val _customWallpaperColor = MutableStateFlow(prefs.getInt("custom_wallpaper_color", 0))
     val customWallpaperColor = _customWallpaperColor.asStateFlow()
+
+    internal val _wallpaperColorOverlay = MutableStateFlow(prefs.getInt("wallpaper_color_overlay", 0))
+    val wallpaperColorOverlay = _wallpaperColorOverlay.asStateFlow()
+
+    fun setWallpaperColorOverlay(color: Int) {
+        _wallpaperColorOverlay.value = color
+        prefs.edit().putInt("wallpaper_color_overlay", color).apply()
+    }
 
     internal val _favoriteWallpaperColors = MutableStateFlow(
         prefs.getString("favorite_wallpaper_colors", "")?.split(",")?.filter { it.isNotEmpty() }?.map { it.toInt() } ?: emptyList()

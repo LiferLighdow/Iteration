@@ -104,6 +104,8 @@ fun SettingsNavigation() {
     var workshopWidgetId by remember { mutableStateOf<String?>(null) }
     var selectedAppPackage by remember { mutableStateOf<String?>(null) }
     
+    val mainListState = androidx.compose.foundation.lazy.rememberLazyListState()
+
     BackHandler(enabled = currentPage != SettingsPage.MAIN) {
         when (currentPage) {
             SettingsPage.CHANGE_ICON -> currentPage = SettingsPage.ICON_THEME
@@ -120,6 +122,7 @@ fun SettingsNavigation() {
 
     when (currentPage) {
         SettingsPage.MAIN -> SettingsMainScreen(
+            listState = mainListState,
             onBack = { (context as? AppCompatActivity)?.finish() },
             onNavigateToHideApps = { currentPage = SettingsPage.HIDE_APPS },
             onNavigateToRenameApps = { currentPage = SettingsPage.RENAME_APPS },

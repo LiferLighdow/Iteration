@@ -16,4 +16,12 @@
     <string name="remove_or_uninstall_msg">请选择要对此应用执行的操作：</string>
     <string name="delete_home_desc">从主屏幕移除，保留在应用库中</string>
     <string name="uninstall_desc">从设备中永久卸载此应用</string>
+    <string name="builtin_wallpaper_readonly">内置预设壁纸（只读）</string>
+    <string name="wallpaper_color_overlay">色彩遮罩</string>
+    <string name="wallpaper_delete_color_overlay">删除已设置的遮罩</string>
+    <string name="app_menu_title">应用菜单</string>
+    <string name="app_menu_desc">选择要在应用菜单中显示的选项</string>
+    <string name="app_menu_at_least_one">至少必须保留一个选项</string>
+    <string name="desktop_menu_title">桌面菜单</string>
+    <string name="desktop_menu_desc">选择要在桌面长按菜单中显示的选项</string>
 </resources>

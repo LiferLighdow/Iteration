@@ -1,6 +1,8 @@
 package com.liferlighdow.iteration.ui.settings
 
+import android.annotation.SuppressLint
 import androidx.appcompat.app.AppCompatActivity
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -8,8 +10,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -39,10 +43,12 @@ import com.liferlighdow.iteration.utils.GestureAction
 import com.liferlighdow.iteration.utils.IconShape
 import com.liferlighdow.iteration.viewmodel.*
 
+@SuppressLint("LocalContextGetResourceValueCall")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DesktopSettingsScreen(onBack: () -> Unit) {
     val viewModel: MainViewModel = viewModel()
+    val context = LocalContext.current
     val desktopRows by viewModel.desktopRows.collectAsState()
     val hideAppLabel by viewModel.hideAppLabel.collectAsState()
     val dockStyle by viewModel.dockStyle.collectAsState()
@@ -466,29 +472,174 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
             // --- Home Menu Options ---
             item {
                 SettingsSection(title = stringResource(R.string.home_menu_options)) {
-                    Text(
-                        stringResource(R.string.home_menu_desc),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                    )
                     val menuOptions by viewModel.homeMenuOptions.collectAsState()
-                    val availableOptions = listOf(
-                        "delete_home" to R.string.menu_delete_home,
-                        "edit" to R.string.menu_edit,
-                        "uninstall" to R.string.menu_uninstall,
-                        "shortcuts" to R.string.menu_shortcuts,
-                        "freeze" to R.string.menu_freeze,
-                        "hide" to R.string.menu_hide,
-                        "favorite" to R.string.menu_add_favorite,
-                        "app_info" to R.string.menu_app_info
+                    var showAppMenuDialog by remember { mutableStateOf(false) }
+                    val desktopMenuOptions by viewModel.desktopMenuOptions.collectAsState()
+                    var showDesktopMenuDialog by remember { mutableStateOf(false) }
+
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.app_menu_title)) },
+                        supportingContent = { Text(stringResource(R.string.app_menu_desc)) },
+                        leadingContent = { Icon(Icons.Default.Menu, null, tint = MaterialTheme.colorScheme.primary) },
+                        trailingContent = { Icon(Icons.Default.ChevronRight, null) },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier.clickable { showAppMenuDialog = true }
                     )
-                    availableOptions.forEach { (key, resId) ->
-                        val isChecked = menuOptions.contains(key)
-                        SettingSwitchItem(
-                            title = stringResource(resId),
-                            checked = isChecked,
-                            onCheckedChange = { viewModel.setHomeMenuOption(key, it) }
+
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.desktop_menu_title)) },
+                        supportingContent = { Text(stringResource(R.string.desktop_menu_desc)) },
+                        leadingContent = { Icon(Icons.Default.Menu, null, tint = MaterialTheme.colorScheme.primary) },
+                        trailingContent = { Icon(Icons.Default.ChevronRight, null) },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier.clickable { showDesktopMenuDialog = true }
+                    )
+
+                    if (showDesktopMenuDialog) {
+                        var tempSelected by remember(desktopMenuOptions) { mutableStateOf(desktopMenuOptions.toMutableSet()) }
+                        val availableDesktopOptions = listOf(
+                            "add_widget" to R.string.menu_add_widget,
+                            "add_shortcut" to R.string.menu_add_shortcut,
+                            "new_folder" to R.string.menu_new_folder,
+                            "delete_page" to R.string.menu_delete_page,
+                            "wallpaper" to R.string.menu_wallpaper,
+                            "set_default" to R.string.menu_set_default,
+                            "settings" to R.string.menu_launcher_settings
+                        )
+
+                        AlertDialog(
+                            onDismissRequest = { showDesktopMenuDialog = false },
+                            title = { Text(stringResource(R.string.desktop_menu_title)) },
+                            text = {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .verticalScroll(rememberScrollState())
+                                ) {
+                                    availableDesktopOptions.forEach { (key, resId) ->
+                                        val isChecked = tempSelected.contains(key)
+                                        val isLockedOption = isDesktopLocked && key != "wallpaper" && key != "settings"
+
+                                        ListItem(
+                                            headlineContent = { 
+                                                Text(
+                                                    stringResource(resId),
+                                                    color = if (isLockedOption) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onSurface
+                                                ) 
+                                            },
+                                            supportingContent = if (isLockedOption) {
+                                                { Text("鎖定桌面時停用", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error) }
+                                            } else null,
+                                            trailingContent = {
+                                                Checkbox(
+                                                    checked = isChecked && !isLockedOption,
+                                                    enabled = !isLockedOption,
+                                                    onCheckedChange = null
+                                                )
+                                            },
+                                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable(enabled = !isLockedOption) {
+                                                    val newSet = tempSelected.toMutableSet()
+                                                    if (isChecked) {
+                                                        if (newSet.size > 1) {
+                                                            newSet.remove(key)
+                                                            tempSelected = newSet
+                                                        } else {
+                                                            Toast.makeText(context, context.getString(R.string.app_menu_at_least_one), Toast.LENGTH_SHORT).show()
+                                                        }
+                                                    } else {
+                                                        newSet.add(key)
+                                                        tempSelected = newSet
+                                                    }
+                                                }
+                                        )
+                                    }
+                                }
+                            },
+                            confirmButton = {
+                                Button(onClick = {
+                                    if (tempSelected.isNotEmpty()) {
+                                        viewModel.setDesktopMenuOptions(tempSelected)
+                                        showDesktopMenuDialog = false
+                                    } else {
+                                        Toast.makeText(context, context.getString(R.string.app_menu_at_least_one), Toast.LENGTH_SHORT).show()
+                                    }
+                                }) { Text(stringResource(R.string.save)) }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showDesktopMenuDialog = false }) { Text(stringResource(R.string.cancel)) }
+                            }
+                        )
+                    }
+
+                    if (showAppMenuDialog) {
+                        var tempSelected by remember(menuOptions) { mutableStateOf(menuOptions.toMutableSet()) }
+                        val availableOptions = listOf(
+                            "delete_home" to R.string.menu_delete_home,
+                            "edit" to R.string.menu_edit,
+                            "uninstall" to R.string.menu_uninstall,
+                            "shortcuts" to R.string.menu_shortcuts,
+                            "freeze" to R.string.menu_freeze,
+                            "hide" to R.string.menu_hide,
+                            "favorite" to R.string.menu_add_favorite,
+                            "app_info" to R.string.menu_app_info
+                        )
+
+                        AlertDialog(
+                            onDismissRequest = { showAppMenuDialog = false },
+                            title = { Text(stringResource(R.string.app_menu_title)) },
+                            text = {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .verticalScroll(rememberScrollState())
+                                ) {
+                                    availableOptions.forEach { (key, resId) ->
+                                        val isChecked = tempSelected.contains(key)
+                                        ListItem(
+                                            headlineContent = { Text(stringResource(resId)) },
+                                            trailingContent = {
+                                                Checkbox(
+                                                    checked = isChecked,
+                                                    onCheckedChange = null
+                                                )
+                                            },
+                                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    val newSet = tempSelected.toMutableSet()
+                                                    if (isChecked) {
+                                                        if (newSet.size > 1) {
+                                                            newSet.remove(key)
+                                                            tempSelected = newSet
+                                                        } else {
+                                                            Toast.makeText(context, context.getString(R.string.app_menu_at_least_one), Toast.LENGTH_SHORT).show()
+                                                        }
+                                                    } else {
+                                                        newSet.add(key)
+                                                        tempSelected = newSet
+                                                    }
+                                                }
+                                        )
+                                    }
+                                }
+                            },
+                            confirmButton = {
+                                Button(onClick = {
+                                    if (tempSelected.isNotEmpty()) {
+                                        viewModel.setHomeMenuOptions(tempSelected)
+                                        showAppMenuDialog = false
+                                    } else {
+                                        Toast.makeText(context, context.getString(R.string.app_menu_at_least_one), Toast.LENGTH_SHORT).show()
+                                    }
+                                }) { Text(stringResource(R.string.save)) }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showAppMenuDialog = false }) { Text(stringResource(R.string.cancel)) }
+                            }
                         )
                     }
                 }
