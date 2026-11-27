@@ -3,6 +3,8 @@ package com.liferlighdow.iteration.ui.settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
@@ -129,18 +132,57 @@ fun SettingSwitchItem(
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SettingSliderItem(
     label: String,
     value: Float,
+    defaultValue: Float,
     onValueChange: (Float) -> Unit,
     valueRange: ClosedFloatingPointRange<Float> = 0f..100f,
     steps: Int = 0,
-    onIncrement: () -> Unit,
-    onDecrement: () -> Unit
+    onIncrement: () -> Unit = { onValueChange((value + 1f).coerceAtMost(valueRange.endInclusive)) },
+    onDecrement: () -> Unit = { onValueChange((value - 1f).coerceAtLeast(valueRange.start)) }
 ) {
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val isDefault = kotlin.math.abs(value - defaultValue) < 0.001f
+
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-        Text(text = label, style = MaterialTheme.typography.bodyMedium)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = label, style = MaterialTheme.typography.bodyMedium)
+            Spacer(modifier = Modifier.width(8.dp))
+            if (isDefault) {
+                Text(
+                    text = "(Default)",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .combinedClickable(
+                            onClick = {},
+                            onLongClick = {
+                                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                                onValueChange(defaultValue)
+                            }
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = "Reset to default",
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+        }
+
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onDecrement) {
                 Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.decrease))
@@ -333,4 +375,108 @@ fun ColorPicker(
             }
         }
     }
+}
+
+@Composable
+fun IterationLoadingDialog(
+    message: String = stringResource(R.string.processing)
+) {
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = {},
+        properties = androidx.compose.ui.window.DialogProperties(
+            dismissOnBackPress = false,
+            dismissOnClickOutside = false
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .size(120.dp)
+                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                CircularProgressIndicator()
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun IterationTextInputDialog(
+    title: String,
+    initialValue: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit,
+    placeholder: String? = null,
+    isError: Boolean = false,
+    errorMessage: String? = null,
+    isLoading: Boolean = false
+) {
+    var textValue by remember { mutableStateOf(initialValue) }
+
+    AlertDialog(
+        onDismissRequest = { if (!isLoading) onDismiss() },
+        title = { Text(title) },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                if (isLoading) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().height(100.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator(modifier = Modifier.size(36.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = stringResource(R.string.processing),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                } else {
+                    OutlinedTextField(
+                        value = textValue,
+                        onValueChange = { textValue = it },
+                        placeholder = placeholder?.let { { Text(it) } },
+                        singleLine = true,
+                        isError = isError,
+                        enabled = !isLoading,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    if (isError && errorMessage != null) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = errorMessage,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { if (!isLoading) onConfirm(textValue) },
+                enabled = !isLoading
+            ) {
+                Text(stringResource(R.string.save))
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = { if (!isLoading) onDismiss() },
+                enabled = !isLoading
+            ) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
 }

@@ -120,6 +120,7 @@ fun AppLibrarySettingsScreen(onBack: () -> Unit) {
                 SettingSliderItem(
                     label = stringResource(R.string.folder_shape) + ": ${(libraryCornerRadius * 100).toInt()}%",
                     value = libraryCornerRadius * 100f,
+                    defaultValue = 15f,
                     onValueChange = { viewModel.setLibraryCornerRadius(it / 100f) },
                     valueRange = 0f..50f,
                     steps = 0,

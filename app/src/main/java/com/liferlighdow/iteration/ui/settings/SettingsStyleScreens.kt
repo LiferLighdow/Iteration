@@ -143,6 +143,7 @@ fun IconThemeScreen(onBack: () -> Unit, onNavigateToChangeIcon: () -> Unit) {
                     SettingSliderItem(
                         label = stringResource(R.string.change_icon_shape) + ": ${(iconCornerRadius * 100).toInt()}%",
                         value = iconCornerRadius * 100f,
+                        defaultValue = 25f,
                         onValueChange = { viewModel.setIconCornerRadius(it / 100f) },
                         valueRange = 0f..50f,
                         steps = 0,

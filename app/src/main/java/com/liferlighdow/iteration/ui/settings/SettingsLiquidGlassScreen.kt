@@ -479,6 +479,7 @@ fun EffectEditorBase(
             SettingSliderItem(
                 label = stringResource(R.string.blur_radius_label, (blurRadius * 5).toInt()),
                 value = (blurRadius * 5).coerceIn(0f, 100f),
+                defaultValue = 0f,
                 onValueChange = { onBlurChange(it / 5f) },
                 onIncrement = { onBlurChange(((blurRadius * 5 + 1f).coerceAtMost(100f)) / 5f) },
                 onDecrement = { onBlurChange(((blurRadius * 5 - 1f).coerceAtLeast(0f)) / 5f) }
@@ -488,6 +489,7 @@ fun EffectEditorBase(
             SettingSliderItem(
                 label = stringResource(R.string.refraction_height_label, refractionHeight.toInt()),
                 value = refractionHeight,
+                defaultValue = 24f,
                 onValueChange = onRefractionHeightChange,
                 onIncrement = { onRefractionHeightChange((refractionHeight + 1f).coerceAtMost(100f)) },
                 onDecrement = { onRefractionHeightChange((refractionHeight - 1f).coerceAtLeast(0f)) }
@@ -497,6 +499,7 @@ fun EffectEditorBase(
             SettingSliderItem(
                 label = stringResource(R.string.refraction_amount_label, refractionAmount.toInt()),
                 value = refractionAmount,
+                defaultValue = 48f,
                 onValueChange = onRefractionAmountChange,
                 onIncrement = { onRefractionAmountChange((refractionAmount + 1f).coerceAtMost(100f)) },
                 onDecrement = { onRefractionAmountChange((refractionAmount - 1f).coerceAtLeast(0f)) }
@@ -525,6 +528,7 @@ fun EffectEditorBase(
                 SettingSliderItem(
                     label = stringResource(R.string.hue, hue.toInt()),
                     value = hue,
+                    defaultValue = 0f,
                     valueRange = 0f..360f,
                     onValueChange = onHueChange,
                     onIncrement = { onHueChange((hue + 5f).coerceAtMost(360f)) },
@@ -535,6 +539,7 @@ fun EffectEditorBase(
                 SettingSliderItem(
                     label = stringResource(R.string.saturation, (saturation * 100).toInt()),
                     value = saturation * 100f,
+                    defaultValue = 100f,
                     valueRange = 0f..100f,
                     onValueChange = { onSatChange(it / 100f) },
                     onIncrement = { onSatChange(((saturation * 100f + 5f).coerceAtMost(100f)) / 100f) },
@@ -545,6 +550,7 @@ fun EffectEditorBase(
                 SettingSliderItem(
                     label = stringResource(R.string.brightness, (brightness * 100).toInt()),
                     value = brightness * 100f,
+                    defaultValue = 100f,
                     valueRange = 0f..100f,
                     onValueChange = { onBriChange(it / 100f) },
                     onIncrement = { onBriChange(((brightness * 100f + 5f).coerceAtMost(100f)) / 100f) },
@@ -555,6 +561,7 @@ fun EffectEditorBase(
                 SettingSliderItem(
                     label = stringResource(R.string.alpha, (alpha * 100).toInt()),
                     value = alpha * 100f,
+                    defaultValue = 100f,
                     valueRange = 0f..100f,
                     onValueChange = { onAlphaChange(it / 100f) },
                     onIncrement = { onAlphaChange(((alpha * 100f + 5f).coerceAtMost(100f)) / 100f) },

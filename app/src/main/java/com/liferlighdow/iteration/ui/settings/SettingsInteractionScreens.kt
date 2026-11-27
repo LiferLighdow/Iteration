@@ -192,27 +192,15 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
                     )
 
                     if (!showNavigationBar) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.VerticalAlignTop, null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(stringResource(R.string.dock_offset_label, dockOffset.toInt()), style = MaterialTheme.typography.bodyMedium)
-                            }
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(onClick = { viewModel.setDockOffset((dockOffset - 1f).coerceAtLeast(0f)) }) {
-                                    Icon(Icons.Default.Remove, contentDescription = null)
-                                }
-                                Slider(
-                                    value = dockOffset,
-                                    onValueChange = { viewModel.setDockOffset(it) },
-                                    valueRange = 0f..20f,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                IconButton(onClick = { viewModel.setDockOffset((dockOffset + 1f).coerceAtMost(20f)) }) {
-                                    Icon(Icons.Default.Add, contentDescription = null)
-                                }
-                            }
-                        }
+                        SettingSliderItem(
+                            label = stringResource(R.string.dock_offset_label, dockOffset.toInt()),
+                            value = dockOffset,
+                            defaultValue = 0f,
+                            onValueChange = { viewModel.setDockOffset(it) },
+                            valueRange = 0f..20f,
+                            onIncrement = { viewModel.setDockOffset((dockOffset + 1f).coerceAtMost(20f)) },
+                            onDecrement = { viewModel.setDockOffset((dockOffset - 1f).coerceAtLeast(0f)) }
+                        )
                     }
                 }
             }
@@ -326,6 +314,61 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
                 }
             }
 
+            // --- Background Overlay (全域背景遮罩) ---
+            item {
+                SettingsSection(title = stringResource(R.string.wallpaper_color_overlay)) {
+                    val globalColorOverlay by viewModel.wallpaperColorOverlay.collectAsState()
+                    var showGlobalColorOverlayDialog by remember { mutableStateOf(false) }
+
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.wallpaper_color_overlay)) },
+                        supportingContent = { Text(if (globalColorOverlay != 0) stringResource(R.string.customized) else stringResource(R.string.unknown)) },
+                        leadingContent = { Icon(Icons.Default.FormatColorFill, null, tint = MaterialTheme.colorScheme.primary) },
+                        trailingContent = { Icon(Icons.Default.ChevronRight, null) },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier.clickable { showGlobalColorOverlayDialog = true }
+                    )
+
+                    if (globalColorOverlay != 0) {
+                        ListItem(
+                            headlineContent = { Text(stringResource(R.string.wallpaper_delete_color_overlay), color = MaterialTheme.colorScheme.error) },
+                            leadingContent = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            modifier = Modifier.clickable {
+                                viewModel.setWallpaperColorOverlay(0)
+                            }
+                        )
+                    }
+
+                    if (showGlobalColorOverlayDialog) {
+                        var tempOverlayColor by remember(globalColorOverlay) { mutableIntStateOf(if (globalColorOverlay != 0) globalColorOverlay else 0x50000000) }
+
+                        AlertDialog(
+                            onDismissRequest = { showGlobalColorOverlayDialog = false },
+                            title = { Text(stringResource(R.string.wallpaper_color_overlay)) },
+                            text = {
+                                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                                    ColorPicker(
+                                        initialColor = tempOverlayColor,
+                                        onColorChanged = { tempOverlayColor = it },
+                                        showAlpha = true
+                                    )
+                                }
+                            },
+                            confirmButton = {
+                                Button(onClick = {
+                                    viewModel.setWallpaperColorOverlay(tempOverlayColor)
+                                    showGlobalColorOverlayDialog = false
+                                }) { Text(stringResource(R.string.save)) }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showGlobalColorOverlayDialog = false }) { Text(stringResource(R.string.cancel)) }
+                            }
+                        )
+                    }
+                }
+            }
+
             // --- Bottom Bar ---
             item {
                 SettingsSection(title = stringResource(R.string.settings_bottom_bar)) {
@@ -417,54 +460,30 @@ fun DesktopSettingsScreen(onBack: () -> Unit) {
 
                         if (dockTheme != DockTheme.FOLLOW_SYSTEM) {
                             val dockOpacity by viewModel.dockOpacity.collectAsState()
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.Opacity, null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Text(stringResource(R.string.dock_opacity_label, (dockOpacity * 100).toInt()), style = MaterialTheme.typography.bodyMedium)
-                                }
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    IconButton(onClick = { viewModel.setDockOpacity((dockOpacity - 0.05f).coerceAtLeast(0f)) }) {
-                                        Icon(Icons.Default.Remove, contentDescription = null)
-                                    }
-                                    Slider(
-                                        value = dockOpacity.coerceIn(0f, 1f),
-                                        onValueChange = { viewModel.setDockOpacity(it) },
-                                        valueRange = 0f..1f,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    IconButton(onClick = { viewModel.setDockOpacity((dockOpacity + 0.05f).coerceAtMost(1f)) }) {
-                                        Icon(Icons.Default.Add, contentDescription = null)
-                                    }
-                                }
-                            }
+                            SettingSliderItem(
+                                label = stringResource(R.string.dock_opacity_label, (dockOpacity * 100).toInt()),
+                                value = dockOpacity * 100f,
+                                defaultValue = 30f,
+                                onValueChange = { viewModel.setDockOpacity(it / 100f) },
+                                valueRange = 0f..100f,
+                                onIncrement = { viewModel.setDockOpacity(((dockOpacity * 100f + 5f).coerceAtMost(100f)) / 100f) },
+                                onDecrement = { viewModel.setDockOpacity(((dockOpacity * 100f - 5f).coerceAtLeast(0f)) / 100f) }
+                            )
                         }
 
 
                     }
 
                     if (dockStyle == DockStyle.MODERN) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.RoundedCorner, null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(stringResource(R.string.dock_radius_label, dockCornerRadius.toInt()), style = MaterialTheme.typography.bodyMedium)
-                            }
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(onClick = { viewModel.setDockCornerRadius((dockCornerRadius - 1f).coerceAtLeast(0f)) }) {
-                                    Icon(Icons.Default.Remove, contentDescription = null)
-                                }
-                                Slider(
-                                    value = dockCornerRadius.coerceIn(0f, 50f),
-                                    onValueChange = { viewModel.setDockCornerRadius(it) },
-                                    valueRange = 0f..50f,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                IconButton(onClick = { viewModel.setDockCornerRadius((dockCornerRadius + 1f).coerceAtMost(50f)) }) {
-                                    Icon(Icons.Default.Add, contentDescription = null)
-                                }
-                            }
-                        }
+                        SettingSliderItem(
+                            label = stringResource(R.string.dock_radius_label, dockCornerRadius.toInt()),
+                            value = dockCornerRadius,
+                            defaultValue = 42f,
+                            onValueChange = { viewModel.setDockCornerRadius(it) },
+                            valueRange = 0f..50f,
+                            onIncrement = { viewModel.setDockCornerRadius((dockCornerRadius + 1f).coerceAtMost(50f)) },
+                            onDecrement = { viewModel.setDockCornerRadius((dockCornerRadius - 1f).coerceAtLeast(0f)) }
+                        )
                     }
                 }
             }

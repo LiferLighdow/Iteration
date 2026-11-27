@@ -15,8 +15,7 @@ data class WallpaperConfig(
     val emojiPatternStyle: String? = null,
     val renderingMode: String? = null,
     val mediaType: String? = null, // "IMAGE", "VIDEO", "GIF"
-    val mediaPath: String? = null,
-    val colorOverlay: Int? = null
+    val mediaPath: String? = null
 )
 
 enum class EmojiRenderingMode {

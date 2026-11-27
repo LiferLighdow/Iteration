@@ -608,26 +608,30 @@ fun SettingsMainScreen(
     }
 
     if (showExportNameDialog) {
-        var name by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { showExportNameDialog = false },
-            title = { Text(stringResource(R.string.export_name_title)) },
-            text = { OutlinedTextField(value = name, onValueChange = { name = it }, placeholder = { Text(stringResource(R.string.export_name_hint)) }, singleLine = true, modifier = Modifier.fillMaxWidth()) },
-            confirmButton = {
-                Button(onClick = {
+        var isExporting by remember { mutableStateOf(false) }
+        IterationTextInputDialog(
+            title = stringResource(R.string.export_name_title),
+            initialValue = "",
+            placeholder = stringResource(R.string.export_name_hint),
+            isLoading = isExporting,
+            onDismiss = { if (!isExporting) showExportNameDialog = false },
+            onConfirm = { name ->
+                if (!isExporting) {
+                    isExporting = true
                     viewModel.exportConfigToFile(name) { success, path ->
+                        isExporting = false
                         if (success) {
                             showExportNameDialog = false
                             Toast.makeText(context, context.getString(R.string.export_success) + "\n" + path, Toast.LENGTH_LONG).show()
                         } else if (path == "EXISTS") {
                             showBackupNameConflict = if (name.isBlank()) "Default" else name
+                            showExportNameDialog = false
                         } else {
                             Toast.makeText(context, context.getString(R.string.export_failed, path), Toast.LENGTH_SHORT).show()
                         }
                     }
-                }) { Text(stringResource(R.string.confirm)) }
-            },
-            dismissButton = { TextButton(onClick = { showExportNameDialog = false }) { Text(stringResource(R.string.cancel)) } }
+                }
+            }
         )
     }
 
@@ -725,25 +729,25 @@ fun SettingsMainScreen(
         }
 
         if (showRenameBackupDialog != null) {
-            var newName by remember { mutableStateOf(showRenameBackupDialog!!.name.substringBeforeLast(".")) }
-            AlertDialog(
-                onDismissRequest = { showRenameBackupDialog = null },
-                title = { Text(stringResource(R.string.rename_backup_title)) },
-                text = { OutlinedTextField(value = newName, onValueChange = { newName = it }, singleLine = true, modifier = Modifier.fillMaxWidth()) },
-                confirmButton = {
-                    Button(onClick = {
-                        viewModel.renameBackupFile(showRenameBackupDialog!!, newName) { success, msg ->
-                            if (success) { 
-                                showRenameBackupDialog = null
-                                Toast.makeText(context, context.getString(R.string.done), Toast.LENGTH_SHORT).show()
-                                refreshFiles()
-                            }
-                            else if (msg == "EXISTS") showBackupNameConflict = newName
-                            else Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+            val fileToRename = showRenameBackupDialog!!
+            IterationTextInputDialog(
+                title = stringResource(R.string.rename_backup_title),
+                initialValue = fileToRename.name.substringBeforeLast("."),
+                onDismiss = { showRenameBackupDialog = null },
+                onConfirm = { newName ->
+                    viewModel.renameBackupFile(fileToRename, newName) { success, msg ->
+                        if (success) { 
+                            showRenameBackupDialog = null
+                            Toast.makeText(context, context.getString(R.string.done), Toast.LENGTH_SHORT).show()
+                            refreshFiles()
                         }
-                    }) { Text(stringResource(R.string.save)) }
-                },
-                dismissButton = { TextButton(onClick = { showRenameBackupDialog = null }) { Text(stringResource(R.string.cancel)) } }
+                        else if (msg == "EXISTS") {
+                            showBackupNameConflict = newName
+                            showRenameBackupDialog = null
+                        }
+                        else Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                    }
+                }
             )
         }
     }

@@ -191,7 +191,6 @@ fun MainViewModel.applyWallpaperPreset(preset: WallpaperPreset, destinationFlags
                         cfg.themeMode?.let { try { setThemeMode(ThemeMode.valueOf(it)) } catch(e: Exception) {} }
                         cfg.isMaterialYou?.let { setMaterialYouEnabled(it) }
                         cfg.wallpaperColor?.let { setCustomWallpaperColor(it) }
-                        cfg.colorOverlay?.let { setWallpaperColorOverlay(it) } ?: setWallpaperColorOverlay(0)
                         cfg.emojiText?.let { setEmojiWallpaperText(if (mode == EmojiRenderingMode.FULL) "" else it) }
                         cfg.emojiPatternStyle?.let { try { setEmojiPatternStyle(EmojiPatternStyle.valueOf(it)) } catch(e: Exception) {} }
                     }
@@ -264,43 +263,6 @@ fun MainViewModel.applyWallpaperPreset(preset: WallpaperPreset, destinationFlags
             e.printStackTrace()
         } finally {
             _isApplyingWallpaper.value = false
-        }
-    }
-}
-
-fun MainViewModel.updatePresetColorOverlay(preset: WallpaperPreset, color: Int) {
-    viewModelScope.launch(Dispatchers.IO) {
-        val documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
-        val wallpaperDir = File(documentsDir, "Iteration/Wallpaper/${preset.name}")
-        if (color != 0 && !wallpaperDir.exists()) wallpaperDir.mkdirs()
-
-        val configFile = File(wallpaperDir, "config.json")
-        val existingConfig = if (configFile.exists()) {
-            try { Json.decodeFromString<WallpaperConfig>(configFile.readText()) } catch (e: Exception) { null }
-        } else null
-
-        val newConfig = (existingConfig ?: WallpaperConfig()).copy(colorOverlay = if (color == 0) null else color)
-        
-        if (configFile.exists()) {
-            if (newConfig.blur == null && newConfig.refractionHeight == null && newConfig.refractionAmount == null &&
-                newConfig.chromaticAberration == null && newConfig.themeMode == null && newConfig.isMaterialYou == null &&
-                newConfig.wallpaperColor == null && newConfig.emojiText == null && newConfig.emojiPatternStyle == null &&
-                newConfig.renderingMode == null && newConfig.mediaType == null && newConfig.mediaPath == null &&
-                newConfig.colorOverlay == null) {
-                configFile.delete()
-            } else {
-                configFile.writeText(Json.encodeToString(newConfig))
-            }
-        } else if (color != 0) {
-            configFile.writeText(Json.encodeToString(newConfig))
-        }
-
-        loadWallpaperPresets()
-        withContext(Dispatchers.Main) {
-            setWallpaperColorOverlay(color)
-            if (_currentWallpaperPresetName.value == preset.name) {
-                applyWallpaperPreset(preset)
-            }
         }
     }
 }

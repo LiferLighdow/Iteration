@@ -24,4 +24,5 @@
     <string name="app_menu_at_least_one">至少必须保留一个选项</string>
     <string name="desktop_menu_title">桌面菜单</string>
     <string name="desktop_menu_desc">选择要在桌面长按菜单中显示的选项</string>
+    <string name="processing">处理中&#8230;</string>
 </resources>

@@ -56,7 +56,6 @@ fun SettingsWallpaperScreen(onBack: () -> Unit) {
     var pickedUri by remember { mutableStateOf<Uri?>(null) }
     var showTypeDialog by remember { mutableStateOf(false) }
     var showColorPicker by remember { mutableStateOf(false) }
-    var showColorOverlayPickerForPreset by remember { mutableStateOf<WallpaperPreset?>(null) }
     var selectedPresetForMenu by remember { mutableStateOf<WallpaperPreset?>(null) }
     var originalBitmapForCrop by remember { mutableStateOf<Bitmap?>(null) }
     var showRenameDialog by remember { mutableStateOf<WallpaperPreset?>(null) }
@@ -391,27 +390,6 @@ fun SettingsWallpaperScreen(onBack: () -> Unit) {
             title = { Text(selectedPresetForMenu!!.name) },
             text = {
                 Column {
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.wallpaper_color_overlay)) },
-                        leadingContent = { Icon(Icons.Default.FormatColorFill, null) },
-                        modifier = Modifier.clickable {
-                            showColorOverlayPickerForPreset = selectedPresetForMenu
-                            selectedPresetForMenu = null
-                        }
-                    )
-
-                    if (selectedPresetForMenu!!.config?.colorOverlay != null && selectedPresetForMenu!!.config?.colorOverlay != 0) {
-                        ListItem(
-                            headlineContent = { Text(stringResource(R.string.wallpaper_delete_color_overlay), color = MaterialTheme.colorScheme.error) },
-                            leadingContent = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
-                            modifier = Modifier.clickable {
-                                val preset = selectedPresetForMenu!!
-                                selectedPresetForMenu = null
-                                viewModel.updatePresetColorOverlay(preset, 0)
-                            }
-                        )
-                    }
-
                     if (selectedPresetForMenu!!.resId == null) {
                         if (selectedPresetForMenu!!.originalPath != null) {
                             ListItem(
@@ -456,59 +434,20 @@ fun SettingsWallpaperScreen(onBack: () -> Unit) {
         )
     }
 
-    if (showColorOverlayPickerForPreset != null) {
-        val preset = showColorOverlayPickerForPreset!!
-        var tempOverlayColor by remember { mutableIntStateOf(preset.config?.colorOverlay ?: 0) }
-
-        AlertDialog(
-            onDismissRequest = { showColorOverlayPickerForPreset = null },
-            title = { Text(stringResource(R.string.wallpaper_color_overlay)) },
-            text = {
-                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    ColorPicker(
-                        initialColor = if (tempOverlayColor != 0) tempOverlayColor else 0x50000000.toInt(),
-                        onColorChanged = { tempOverlayColor = it },
-                        showAlpha = true
-                    )
-                }
-            },
-            confirmButton = {
-                Button(onClick = {
-                    viewModel.updatePresetColorOverlay(preset, tempOverlayColor)
-                    showColorOverlayPickerForPreset = null
-                }) { Text(stringResource(R.string.save)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showColorOverlayPickerForPreset = null }) { Text(stringResource(R.string.cancel)) }
-            }
-        )
-    }
-
     if (showRenameDialog != null) {
-        var newName by remember { mutableStateOf(showRenameDialog!!.name) }
-        AlertDialog(
-            onDismissRequest = { showRenameDialog = null },
-            title = { Text(stringResource(R.string.rename)) },
-            text = {
-                OutlinedTextField(
-                    value = newName,
-                    onValueChange = { newName = it },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            confirmButton = {
-                Button(onClick = {
-                    if (newName != showRenameDialog!!.name && presets.any { it.name == newName }) {
-                        showNameConflictWarning = newName
-                    } else {
-                        viewModel.renameWallpaperPreset(showRenameDialog!!, newName)
-                        showRenameDialog = null
-                    }
-                }) { Text(stringResource(R.string.save)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showRenameDialog = null }) { Text(stringResource(R.string.cancel)) }
+        val preset = showRenameDialog!!
+        IterationTextInputDialog(
+            title = stringResource(R.string.rename),
+            initialValue = preset.name,
+            onDismiss = { showRenameDialog = null },
+            onConfirm = { newName ->
+                if (newName != preset.name && presets.any { it.name == newName }) {
+                    showNameConflictWarning = newName
+                    showRenameDialog = null
+                } else {
+                    viewModel.renameWallpaperPreset(preset, newName)
+                    showRenameDialog = null
+                }
             }
         )
     }

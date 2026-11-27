@@ -868,72 +868,32 @@ fun AdvancedSettingsScreen(onBack: () -> Unit) {
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    Text(
-                        stringResource(R.string.icon_size_current, effectiveIconSize),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-                    ) {
-                        IconButton(onClick = {
-                            viewModel.setIconSizePx((effectiveIconSize - 16).coerceAtLeast(32))
-                        }) {
-                            Icon(Icons.Default.Remove, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        }
-
-                        Slider(
-                            value = effectiveIconSize.toFloat(),
-                            onValueChange = { 
-                                // 滑動時同樣進行 16px 對齊
+                    SettingSliderItem(
+                        label = stringResource(R.string.icon_size_current, effectiveIconSize),
+                        value = effectiveIconSize.toFloat(),
+                        defaultValue = snappedDefault.toFloat(),
+                        onValueChange = { 
+                            if (it == snappedDefault.toFloat()) {
+                                viewModel.setIconSizePx(-1)
+                            } else {
                                 val snapped = (Math.round(it / 16f) * 16).coerceIn(32, 256)
-                                viewModel.setIconSizePx(snapped) 
-                            },
-                            valueRange = 32f..256f,
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        IconButton(onClick = {
-                            viewModel.setIconSizePx((effectiveIconSize + 16).coerceAtMost(256))
-                        }) {
-                            Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                viewModel.setIconSizePx(snapped)
+                            }
+                        },
+                        valueRange = 32f..256f,
+                        onIncrement = {
+                            val next = (effectiveIconSize + 16).coerceAtMost(256)
+                            viewModel.setIconSizePx(next)
+                        },
+                        onDecrement = {
+                            val prev = (effectiveIconSize - 16).coerceAtLeast(32)
+                            viewModel.setIconSizePx(prev)
                         }
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        TextButton(
-                            onClick = { viewModel.applyRecommendedIconSize() },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.textButtonColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-                        ) {
-                            Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.icon_size_recommend))
-                        }
-                        
-                        TextButton(
-                            onClick = { viewModel.setIconSizePx(-1) },
-                            enabled = iconSize != -1,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(stringResource(R.string.restore_default))
-                        }
-                    }
-
-                    Text(
-                        stringResource(R.string.icon_size_recommend_desc),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline,
-                        modifier = Modifier.padding(top = 8.dp)
                     )
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp))
 
-                    // --- 新增：Icon 尺寸微調 (95% - 105%) ---
+                    // --- Icon Scale ---
                     val iconScale by viewModel.iconScale.collectAsState()
                     Text(
                         stringResource(R.string.icon_scale_title),
@@ -948,37 +908,19 @@ fun AdvancedSettingsScreen(onBack: () -> Unit) {
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    Text(
-                        stringResource(R.string.icon_scale_current, (iconScale * 100).roundToInt()),
-                        style = MaterialTheme.typography.bodyMedium
+                    SettingSliderItem(
+                        label = stringResource(R.string.icon_scale_current, (iconScale * 100).roundToInt()),
+                        value = iconScale,
+                        defaultValue = 1.0f,
+                        onValueChange = { viewModel.setIconScale(it) },
+                        valueRange = 0.8f..1.2f,
+                        onIncrement = { viewModel.setIconScale((iconScale + 0.02f).coerceAtMost(1.2f)) },
+                        onDecrement = { viewModel.setIconScale((iconScale - 0.02f).coerceAtLeast(0.8f)) }
                     )
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-                    ) {
-                        IconButton(onClick = {
-                            viewModel.setIconScale((iconScale - 0.002f).coerceAtLeast(0.8f))
-                        }) {
-                            Icon(Icons.Default.Remove, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        }
-
-                        Slider(
-                            value = iconScale,
-                            onValueChange = { viewModel.setIconScale(it) },
-                            valueRange = 0.8f..1.2f,
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        IconButton(onClick = {
-                            viewModel.setIconScale((iconScale + 0.002f).coerceAtMost(1.2f))
-                        }) {
-                            Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        }
-                    }
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp))
 
+                    // --- Icon Cache Size ---
                     Text(
                         stringResource(R.string.icon_cache_size_title),
                         style = MaterialTheme.typography.titleMedium,
@@ -992,34 +934,15 @@ fun AdvancedSettingsScreen(onBack: () -> Unit) {
                     
                     Spacer(modifier = Modifier.height(16.dp))
                     
-                    Text(
-                        stringResource(R.string.icon_cache_current, cacheSize),
-                        style = MaterialTheme.typography.bodyMedium
+                    SettingSliderItem(
+                        label = stringResource(R.string.icon_cache_current, cacheSize),
+                        value = cacheSize.toFloat(),
+                        defaultValue = 250f,
+                        onValueChange = { viewModel.setIconCacheSize(it.roundToInt()) },
+                        valueRange = 250f..1000f,
+                        onIncrement = { viewModel.setIconCacheSize((cacheSize + 10).coerceAtMost(1000)) },
+                        onDecrement = { viewModel.setIconCacheSize((cacheSize - 10).coerceAtLeast(250)) }
                     )
-                    
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-                    ) {
-                        IconButton(onClick = { 
-                            viewModel.setIconCacheSize((cacheSize - 10).coerceAtLeast(250)) 
-                        }) {
-                            Icon(Icons.Default.Remove, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        }
-                        
-                        Slider(
-                            value = cacheSize.toFloat(),
-                            onValueChange = { viewModel.setIconCacheSize(it.roundToInt()) },
-                            valueRange = 250f..1000f,
-                            modifier = Modifier.weight(1f)
-                        )
-                        
-                        IconButton(onClick = { 
-                            viewModel.setIconCacheSize((cacheSize + 10).coerceAtMost(1000)) 
-                        }) {
-                            Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        }
-                    }
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp))
 
@@ -1055,34 +978,16 @@ fun AdvancedSettingsScreen(onBack: () -> Unit) {
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Text(
-                        stringResource(R.string.pager_snap_threshold_current, pagerSnapThreshold),
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(top = 8.dp)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    SettingSliderItem(
+                        label = stringResource(R.string.pager_snap_threshold_current, pagerSnapThreshold),
+                        value = pagerSnapThreshold,
+                        defaultValue = 0.4f,
+                        onValueChange = { viewModel.setPagerSnapThreshold(it) },
+                        valueRange = 0.1f..0.4f,
+                        onIncrement = { viewModel.setPagerSnapThreshold((pagerSnapThreshold + 0.05f).coerceAtMost(0.4f)) },
+                        onDecrement = { viewModel.setPagerSnapThreshold((pagerSnapThreshold - 0.05f).coerceAtLeast(0.1f)) }
                     )
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-                    ) {
-                        IconButton(onClick = {
-                            viewModel.setPagerSnapThreshold((pagerSnapThreshold - 0.05f).coerceAtLeast(0.1f))
-                        }) {
-                            Icon(Icons.Default.Remove, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        }
-
-                        Slider(
-                            value = pagerSnapThreshold,
-                            onValueChange = { viewModel.setPagerSnapThreshold(it) },
-                            valueRange = 0.1f..0.4f,
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        IconButton(onClick = {
-                            viewModel.setPagerSnapThreshold((pagerSnapThreshold + 0.05f).coerceAtMost(0.4f))
-                        }) {
-                            Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        }
-                    }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -1096,34 +1001,16 @@ fun AdvancedSettingsScreen(onBack: () -> Unit) {
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Text(
-                        stringResource(R.string.pager_damping_ratio_current, pagerDampingRatio),
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(top = 8.dp)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    SettingSliderItem(
+                        label = stringResource(R.string.pager_damping_ratio_current, pagerDampingRatio),
+                        value = pagerDampingRatio,
+                        defaultValue = 1.0f,
+                        onValueChange = { viewModel.setPagerDampingRatio(it) },
+                        valueRange = 0.8f..1.2f,
+                        onIncrement = { viewModel.setPagerDampingRatio((pagerDampingRatio + 0.05f).coerceAtMost(1.2f)) },
+                        onDecrement = { viewModel.setPagerDampingRatio((pagerDampingRatio - 0.05f).coerceAtLeast(0.8f)) }
                     )
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-                    ) {
-                        IconButton(onClick = {
-                            viewModel.setPagerDampingRatio((pagerDampingRatio - 0.05f).coerceAtLeast(0.8f))
-                        }) {
-                            Icon(Icons.Default.Remove, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        }
-
-                        Slider(
-                            value = pagerDampingRatio,
-                            onValueChange = { viewModel.setPagerDampingRatio(it) },
-                            valueRange = 0.8f..1.2f,
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        IconButton(onClick = {
-                            viewModel.setPagerDampingRatio((pagerDampingRatio + 0.05f).coerceAtMost(1.2f))
-                        }) {
-                            Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        }
-                    }
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp))
 
@@ -1154,40 +1041,20 @@ fun AdvancedSettingsScreen(onBack: () -> Unit) {
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Text(
-                        stringResource(R.string.desktop_long_press_duration_current, desktopLongPressTimeout),
-                        style = MaterialTheme.typography.bodyMedium
+                    Spacer(modifier = Modifier.height(8.dp))
+                    SettingSliderItem(
+                        label = stringResource(R.string.desktop_long_press_duration_current, desktopLongPressTimeout),
+                        value = desktopLongPressTimeout.toFloat(),
+                        defaultValue = 500f,
+                        onValueChange = { viewModel.setDesktopLongPressTimeout(it.roundToInt().toLong()) },
+                        valueRange = 100f..1000f,
+                        onIncrement = { viewModel.setDesktopLongPressTimeout((desktopLongPressTimeout + 50L).coerceAtMost(1000L)) },
+                        onDecrement = { viewModel.setDesktopLongPressTimeout((desktopLongPressTimeout - 50L).coerceAtLeast(100L)) }
                     )
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-                    ) {
-                        IconButton(onClick = {
-                            viewModel.setDesktopLongPressTimeout((desktopLongPressTimeout - 50L).coerceAtLeast(100L))
-                        }) {
-                            Icon(Icons.Default.Remove, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        }
-
-                        Slider(
-                            value = desktopLongPressTimeout.toFloat(),
-                            onValueChange = { viewModel.setDesktopLongPressTimeout(it.roundToInt().toLong().coerceIn(100L, 1000L)) },
-                            valueRange = 100f..1000f,
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        IconButton(onClick = {
-                            viewModel.setDesktopLongPressTimeout((desktopLongPressTimeout + 50L).coerceAtMost(1000L))
-                        }) {
-                            Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        }
-                    }
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp))
 
+                    // --- Update Check Interval ---
                     Text(
                         stringResource(R.string.settings_update_check_interval),
                         style = MaterialTheme.typography.titleMedium,
@@ -1198,37 +1065,16 @@ fun AdvancedSettingsScreen(onBack: () -> Unit) {
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Text(
-                        stringResource(R.string.settings_update_check_hours, updateInterval),
-                        style = MaterialTheme.typography.bodyMedium
+                    Spacer(modifier = Modifier.height(8.dp))
+                    SettingSliderItem(
+                        label = stringResource(R.string.settings_update_check_hours, updateInterval),
+                        value = updateInterval.toFloat(),
+                        defaultValue = 24f,
+                        onValueChange = { viewModel.setUpdateCheckInterval(it.roundToInt()) },
+                        valueRange = 0f..36f,
+                        onIncrement = { viewModel.setUpdateCheckInterval((updateInterval + 1).coerceAtMost(36)) },
+                        onDecrement = { viewModel.setUpdateCheckInterval((updateInterval - 1).coerceAtLeast(0)) }
                     )
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-                    ) {
-                        IconButton(onClick = {
-                            viewModel.setUpdateCheckInterval((updateInterval - 1).coerceAtLeast(0))
-                        }) {
-                            Icon(Icons.Default.Remove, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        }
-
-                        Slider(
-                            value = updateInterval.toFloat(),
-                            onValueChange = { viewModel.setUpdateCheckInterval(it.roundToInt()) },
-                            valueRange = 0f..36f,
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        IconButton(onClick = {
-                            viewModel.setUpdateCheckInterval((updateInterval + 1).coerceAtMost(36))
-                        }) {
-                            Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        }
-                    }
                 }
             }
         }
@@ -2015,12 +1861,14 @@ fun WorkshopLayerTab(widget: WidgetModel) {
             Text(stringResource(R.string.workshop_tab_layer), style = MaterialTheme.typography.titleLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
         }
         item {
-            Text("Global Scale", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-            Slider(
+            SettingSliderItem(
+                label = "Global Scale",
                 value = custom.globalScale,
+                defaultValue = 1.0f,
                 onValueChange = { viewModel.updateCustomWidgetGlobal(widget.id, scale = it) },
                 valueRange = 0.5f..2.5f,
-                modifier = Modifier.padding(top = 8.dp)
+                onIncrement = { viewModel.updateCustomWidgetGlobal(widget.id, scale = (custom.globalScale + 0.1f).coerceAtMost(2.5f)) },
+                onDecrement = { viewModel.updateCustomWidgetGlobal(widget.id, scale = (custom.globalScale - 0.1f).coerceAtLeast(0.5f)) }
             )
         }
         item {
@@ -2172,12 +2020,16 @@ fun WorkshopComponentDetailEditor(
             item {
                 Text("Appearance", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                 Column(modifier = Modifier.padding(top = 8.dp)) {
-                    Text("Font Size: ${component.fontSize}")
-                    Slider(
+                    SettingSliderItem(
+                        label = "Font Size: ${component.fontSize}",
                         value = component.fontSize.toFloat(),
+                        defaultValue = 16f,
                         onValueChange = { onUpdate(component.copy(fontSize = it.toInt())) },
-                        valueRange = 8f..120f
+                        valueRange = 8f..120f,
+                        onIncrement = { onUpdate(component.copy(fontSize = (component.fontSize + 1).coerceAtMost(120))) },
+                        onDecrement = { onUpdate(component.copy(fontSize = (component.fontSize - 1).coerceAtLeast(8))) }
                     )
+                    Spacer(Modifier.height(8.dp))
                     Text("Color")
                     ColorPicker(initialColor = component.color, onColorChanged = { onUpdate(component.copy(color = it)) })
                 }
@@ -2208,12 +2060,14 @@ fun WorkshopComponentDetailEditor(
 
             if (component.shapeType == CustomShapeType.RECTANGLE) {
                 item {
-                    Text("Corner Radius: ${component.cornerRadius.toInt()}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                    Slider(
+                    SettingSliderItem(
+                        label = "Corner Radius: ${component.cornerRadius.toInt()}",
                         value = component.cornerRadius,
+                        defaultValue = 0f,
                         onValueChange = { onUpdate(component.copy(cornerRadius = it)) },
                         valueRange = 0f..200f,
-                        modifier = Modifier.padding(top = 4.dp)
+                        onIncrement = { onUpdate(component.copy(cornerRadius = (component.cornerRadius + 1f).coerceAtMost(200f))) },
+                        onDecrement = { onUpdate(component.copy(cornerRadius = (component.cornerRadius - 1f).coerceAtLeast(0f))) }
                     )
                 }
             }
@@ -2249,13 +2103,27 @@ fun WorkshopComponentDetailEditor(
             }
             item {
                 Text("Dimensions", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                Column(modifier = Modifier.padding(top = 8.dp)) {
-                    Text("Size: ${component.size.toInt()}")
-                    Slider(value = component.size, onValueChange = { onUpdate(component.copy(size = it)) }, valueRange = 10f..400f)
+                Column(modifier = Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SettingSliderItem(
+                        label = "Size: ${component.size.toInt()}",
+                        value = component.size,
+                        defaultValue = 100f,
+                        onValueChange = { onUpdate(component.copy(size = it)) },
+                        valueRange = 10f..400f,
+                        onIncrement = { onUpdate(component.copy(size = (component.size + 5f).coerceAtMost(400f))) },
+                        onDecrement = { onUpdate(component.copy(size = (component.size - 5f).coerceAtLeast(10f))) }
+                    )
                     
                     if (component.isCircular) {
-                        Text("Stroke Width: ${component.strokeWidth.toInt()}")
-                        Slider(value = component.strokeWidth, onValueChange = { onUpdate(component.copy(strokeWidth = it)) }, valueRange = 1f..60f)
+                        SettingSliderItem(
+                            label = "Stroke Width: ${component.strokeWidth.toInt()}",
+                            value = component.strokeWidth,
+                            defaultValue = 10f,
+                            onValueChange = { onUpdate(component.copy(strokeWidth = it)) },
+                            valueRange = 1f..60f,
+                            onIncrement = { onUpdate(component.copy(strokeWidth = (component.strokeWidth + 1f).coerceAtMost(60f))) },
+                            onDecrement = { onUpdate(component.copy(strokeWidth = (component.strokeWidth - 1f).coerceAtLeast(1f))) }
+                        )
                     }
                 }
             }
@@ -2289,11 +2157,25 @@ fun WorkshopComponentDetailEditor(
             }
             item {
                 Text("Appearance", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                Column(modifier = Modifier.padding(top = 8.dp)) {
-                    Text("Corner Radius: ${component.cornerRadius.toInt()}")
-                    Slider(value = component.cornerRadius, onValueChange = { onUpdate(component.copy(cornerRadius = it)) }, valueRange = 0f..200f)
-                    Text("Opacity: ${(component.opacity * 100).toInt()}%")
-                    Slider(value = component.opacity, onValueChange = { onUpdate(component.copy(opacity = it)) }, valueRange = 0f..1f)
+                Column(modifier = Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SettingSliderItem(
+                        label = "Corner Radius: ${component.cornerRadius.toInt()}",
+                        value = component.cornerRadius,
+                        defaultValue = 0f,
+                        onValueChange = { onUpdate(component.copy(cornerRadius = it)) },
+                        valueRange = 0f..200f,
+                        onIncrement = { onUpdate(component.copy(cornerRadius = (component.cornerRadius + 1f).coerceAtMost(200f))) },
+                        onDecrement = { onUpdate(component.copy(cornerRadius = (component.cornerRadius - 1f).coerceAtLeast(0f))) }
+                    )
+                    SettingSliderItem(
+                        label = "Opacity: ${(component.opacity * 100).toInt()}%",
+                        value = component.opacity * 100f,
+                        defaultValue = 100f,
+                        onValueChange = { onUpdate(component.copy(opacity = it / 100f)) },
+                        valueRange = 0f..100f,
+                        onIncrement = { onUpdate(component.copy(opacity = ((component.opacity * 100f + 5f).coerceAtMost(100f)) / 100f)) },
+                        onDecrement = { onUpdate(component.copy(opacity = ((component.opacity * 100f - 5f).coerceAtLeast(0f)) / 100f)) }
+                    )
                 }
             }
         }
