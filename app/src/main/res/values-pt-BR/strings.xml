@@ -523,6 +523,7 @@
     <string name="app_menu_at_least_one">At least one option must be selected</string>
     <string name="desktop_menu_title">Desktop Menu</string>
     <string name="desktop_menu_desc">Select options to display in desktop long-press menu</string>
+    <string name="processing">Processing&#8230;</string>
     <string name="settings_language">Language</string>
     <string name="language_english">English</string>
     <string name="language_chinese_tw">Chinese (Traditional)</string>
@@ -621,8 +622,6 @@
     <string name="icon_size_title">Icon Size</string>
     <string name="icon_size_desc">Adjust the rendering resolution of app icons (32px to 256px).</string>
     <string name="icon_size_current">Current Size: %1$d px</string>
-    <string name="icon_size_recommend">Recommended for Device</string>
-    <string name="icon_size_recommend_desc">Matches resolution to your physical screen pixels for optimal clarity and performance.</string>
     <string name="icon_scale_title">Icon Size Fine-tuning</string>
     <string name="icon_scale_desc">Fine-tune the display size of icons on the desktop (80%% to 120%%).</string>
     <string name="icon_scale_current">Current Scale: %1$d%%</string>
